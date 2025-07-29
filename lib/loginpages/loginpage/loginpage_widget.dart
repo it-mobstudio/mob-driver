@@ -1,6 +1,8 @@
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -318,8 +320,35 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                               ),
                             ),
                             FFButtonWidget(
-                              onPressed: () {
-                                print('Button pressed ...');
+                              onPressed: () async {
+                                _model.status = await LoginOTPCall.call(
+                                  emailOrPhone: int.tryParse(
+                                      _model.mobileNumberTextController.text),
+                                );
+
+                                if ((_model.status?.jsonBody ?? '')) {
+                                  context.pushNamed(
+                                      OTPVerificationWidget.routeName);
+                                } else {
+                                  await showDialog(
+                                    context: context,
+                                    builder: (alertDialogContext) {
+                                      return AlertDialog(
+                                        title: Text('false'),
+                                        content: Text('Invalid Login'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(
+                                                alertDialogContext),
+                                            child: Text('Ok'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                }
+
+                                safeSetState(() {});
                               },
                               text: 'Continue',
                               options: FFButtonOptions(

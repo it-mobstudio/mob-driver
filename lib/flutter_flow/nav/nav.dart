@@ -64,6 +64,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: LoginpageWidget.routeName,
           path: LoginpageWidget.routePath,
           builder: (context, params) => LoginpageWidget(),
+        ),
+        FFRoute(
+          name: OTPVerificationWidget.routeName,
+          path: OTPVerificationWidget.routePath,
+          builder: (context, params) => OTPVerificationWidget(),
         )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );
