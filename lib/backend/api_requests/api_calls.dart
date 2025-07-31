@@ -8,17 +8,15 @@ export 'api_manager.dart' show ApiCallResponse;
 const _kPrivateApiFunctionName = 'ffPrivateApiCall';
 
 class LoginOTPCall {
+  /// Calls the login OTP API with the given phone/email and type.
   static Future<ApiCallResponse> call({
-    int? emailOrPhone,
-    bool? isPhone,
+    required int emailOrPhone,
+    bool isPhone = true,
   }) async {
-    emailOrPhone ??= null;
-
-    final ffApiRequestBody = '''
-{
-  "email_or_phone": 9884681650,
-  "isPhone": true
-}''';
+    final Map<String, dynamic> body = {
+      'email_or_phone': emailOrPhone,
+      'isPhone': isPhone,
+    };
     return ApiManager.instance.makeApiCall(
       callName: 'loginOTP',
       apiUrl:
@@ -28,7 +26,7 @@ class LoginOTPCall {
         'Content-Type': 'application/json',
       },
       params: {},
-      body: ffApiRequestBody,
+      body: json.encode(body),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,

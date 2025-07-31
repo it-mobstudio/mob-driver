@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 
 import '/index.dart';
+import '../../loginpage/splash_screen.dart';
 
 export 'package:go_router/go_router.dart';
 export 'serialization_util.dart';
@@ -33,31 +34,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       debugLogDiagnostics: true,
       refreshListenable: appStateNotifier,
       navigatorKey: appNavigatorKey,
-      errorBuilder: (context, state) => appStateNotifier.showSplashImage
-          ? Builder(
-              builder: (context) => Container(
-                color: Colors.transparent,
-                child: Image.asset(
-                  'assets/images/vnimc_1.png',
-                  fit: BoxFit.fill,
-                ),
-              ),
-            )
-          : LoginpageWidget(),
+      errorBuilder: (context, state) =>
+          appStateNotifier.showSplashImage ? SplashScreen() : LoginpageWidget(),
       routes: [
         FFRoute(
           name: '_initialize',
           path: '/',
           builder: (context, _) => appStateNotifier.showSplashImage
-              ? Builder(
-                  builder: (context) => Container(
-                    color: Colors.transparent,
-                    child: Image.asset(
-                      'assets/images/vnimc_1.png',
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                )
+              ? SplashScreen()
               : LoginpageWidget(),
         ),
         FFRoute(
