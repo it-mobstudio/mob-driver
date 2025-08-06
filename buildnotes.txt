@@ -1,0 +1,12 @@
+Run application
+>>flutter run  
+
+Clean APP
+>>flutter clean
+>>flutter pub get 
+
+Build Android
+>>flutter build apk
+
+Clean Logs
+>>git rm -r --cached .dart_tool

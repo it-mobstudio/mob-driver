@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 
 import '/index.dart';
+import '../../productlisting/product_listing_page.dart';
+import '../../productdetails/productdetailpage.dart';
 import '../../loginpage/splash_screen.dart';
 
 export 'package:go_router/go_router.dart';
@@ -52,8 +54,41 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: OTPVerificationWidget.routeName,
           path: OTPVerificationWidget.routePath,
-          builder: (context, params) => OTPVerificationWidget(),
-        )
+          builder: (context, params) => OTPVerificationWidget(
+            phoneNumber:
+                params.getParam<String>('phoneNumber', ParamType.String) ?? '',
+          ),
+        ),
+        FFRoute(
+          name: SignupWidget.routeName,
+          path: SignupWidget.routePath,
+          builder: (context, params) => SignupWidget(
+            phoneNumber:
+                params.getParam<String>('phoneNumber', ParamType.String) ?? '',
+          ),
+        ),
+        FFRoute(
+          name: AddressSelectionWidget.routeName,
+          path: AddressSelectionWidget.routePath,
+          builder: (context, params) => AddressSelectionWidget(),
+        ),
+        FFRoute(
+          name: HomepageWidget.routeName,
+          path: HomepageWidget.routePath,
+          builder: (context, params) => HomepageWidget(),
+        ),
+        FFRoute(
+          name: ProductListingPage.routeName,
+          path: ProductListingPage.routePath,
+          builder: (context, params) => ProductListingPage(
+            category: params.getParam('category', ParamType.String) ?? '',
+          ),
+        ),
+        FFRoute(
+          name: ProductDetailPage.routeName,
+          path: ProductDetailPage.routePath,
+          builder: (context, params) => const ProductDetailPage(),
+        ),
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );
 

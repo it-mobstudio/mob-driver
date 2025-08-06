@@ -215,8 +215,11 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                               : 'Failed to send OTP. Please try again.';
                       if (status) {
                         if (mounted) {
-                          // Use GoRouter navigation to OTPVerificationWidget
-                          context.go(OTPVerificationWidget.routePath);
+                          // Use GoRouter navigation to OTPVerificationWidget and pass mobile number
+                          context.go(
+                            OTPVerificationWidget.routePath,
+                            extra: {'phoneNumber': '+91 $mobile'},
+                          );
                         }
                       } else {
                         await showDialog(
