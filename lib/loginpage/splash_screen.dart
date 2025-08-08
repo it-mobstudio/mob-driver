@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'loginpage_widget.dart';
+import 'loginpage_widget.dart'; // Ensure this import is correct
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -9,29 +9,36 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   @override
-  @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 500000), () {
+    Timer(const Duration(seconds: 3), () { // Reduced timer for testing
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
             builder: (_) =>
-                LoginpageWidget()), // <-- Use your login widget class name here
+                LoginpageWidget()),
       );
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Optional: Get screen dimensions for debugging
+    // final screenHeight = MediaQuery.of(context).size.height;
+    // final screenWidth = MediaQuery.of(context).size.width;
+    // print("Screen Height: $screenHeight, Screen Width: $screenWidth");
+
     return Scaffold(
       body: Stack(
-        fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/images/background.png',
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/background.png',
+              fit: BoxFit.cover,
+              // You can experiment with alignment if the default center crop isn't what you want
+              // alignment: Alignment.center, // Default
+              // alignment: Alignment.topCenter, // If you want to prioritize showing the top
+              // alignment: Alignment.bottomCenter, // If you want to prioritize showing the bottom (but it might still crop if too tall)
+            ),
           ),
           Center(
             child: Column(

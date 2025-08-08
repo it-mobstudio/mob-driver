@@ -165,8 +165,12 @@ class _SignupWidgetState extends State<SignupWidget> {
                             ),
                           ),
                         ),
+                      ],
+                    ),
+                    Row(
+                      children: [
                         Text(
-                          ' for free by adding GSTIN',
+                          'adding GSTIN',
                           style: GoogleFonts.inter(
                             color: Color(0xFF0A243F),
                             fontWeight: FontWeight.w500,

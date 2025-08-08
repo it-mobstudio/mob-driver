@@ -64,7 +64,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                         'assets/images/login_top_items.png',
                         fit: BoxFit.contain,
                         width: double.infinity,
-                        height: 180,
+                        // height: 100,
                       ),
                     ),
                     SizedBox(height: 24),

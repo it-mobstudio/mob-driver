@@ -78,18 +78,18 @@ class MainScaffold extends StatelessWidget {
           BottomNavigationBarItem(
             icon: SvgPicture.asset(
               'assets/icons/projects.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF6C7C8C),
-                BlendMode.srcIn,
-              ),
+              // colorFilter: const ColorFilter.mode(
+              //   Color(0xFF6C7C8C),
+              //   BlendMode.srcIn,
+              // ),
               height: 24,
             ),
             activeIcon: SvgPicture.asset(
               'assets/icons/projects.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF0A243F),
-                BlendMode.srcIn,
-              ),
+              // colorFilter: const ColorFilter.mode(
+              //   Color(0xFF6C7C8C),
+              //   BlendMode.srcIn,
+              // ),
               height: 24,
             ),
             label: 'Projects',
@@ -116,18 +116,18 @@ class MainScaffold extends StatelessWidget {
           BottomNavigationBarItem(
             icon: SvgPicture.asset(
               'assets/icons/profile.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF6C7C8C),
-                BlendMode.srcIn,
-              ),
+              // colorFilter: const ColorFilter.mode(
+              //   Color(0xFF6C7C8C),
+              //   BlendMode.srcIn,
+              // ),
               height: 24,
             ),
             activeIcon: SvgPicture.asset(
               'assets/icons/profile.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF0A243F),
-                BlendMode.srcIn,
-              ),
+              // colorFilter: const ColorFilter.mode(
+              //   Color(0xFF0A243F),
+              //   BlendMode.srcIn,
+              // ),
               height: 24,
             ),
             label: 'Profile',
@@ -207,6 +207,8 @@ class MainScaffold extends StatelessWidget {
   }
 
   Widget _topSearchBar(BuildContext context) {
+    final FocusNode _focusNode = FocusNode();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
       child: Row(
@@ -220,9 +222,15 @@ class MainScaffold extends StatelessWidget {
             const SizedBox(width: 16),
           Expanded(
             child: TextField(
-              readOnly: true,
+              focusNode: _focusNode,
+              onChanged: (val) {
+                if (val.isNotEmpty) {
+                  context.push('/search');
+                }
+              },
               onTap: () {
-                // Navigate to search page or show search dialog
+                // Optional fallback in case focusNode doesn't fire
+                context.push('/search');
               },
               decoration: InputDecoration(
                 hintText: "Search for product, category, brand...",
@@ -235,7 +243,7 @@ class MainScaffold extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
               ),
             ),
           ),
@@ -243,4 +251,5 @@ class MainScaffold extends StatelessWidget {
       ),
     );
   }
+
 }

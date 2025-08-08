@@ -9,6 +9,7 @@ import '/index.dart';
 import '../../productlisting/product_listing_page.dart';
 import '../../productdetails/productdetailpage.dart';
 import '../../loginpage/splash_screen.dart';
+import '../../components/topsearchpage.dart';
 
 export 'package:go_router/go_router.dart';
 export 'serialization_util.dart';
@@ -88,6 +89,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: ProductDetailPage.routeName,
           path: ProductDetailPage.routePath,
           builder: (context, params) => const ProductDetailPage(),
+        ),
+        FFRoute(
+          name: SearchPage.routeName,
+          path: SearchPage.routePath,
+          builder: (context, params) => const SearchPage(),
         ),
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

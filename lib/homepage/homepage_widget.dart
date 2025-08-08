@@ -320,35 +320,38 @@ class HomepageWidget extends StatelessWidget {
 
   Widget _mobStarPromo() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Container(
         decoration: BoxDecoration(
           color: Color(0xFF3B5998),
           borderRadius: BorderRadius.circular(16),
         ),
         padding: EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("mob STAR",
-                style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18)),
-            SizedBox(height: 8),
-            Text("Get points on every order you place!",
-                style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
-            SizedBox(height: 12),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Color(0xFF3B5998),
+        child: SizedBox( // Wrap Column with SizedBox
+          width: double.infinity, // Make the SizedBox (and thus the Column) want to be full width
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("mob STAR",
+                  style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18)),
+              SizedBox(height: 8),
+              Text("Get points on every order you place!",
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
+              SizedBox(height: 12),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Color(0xFF3B5998),
+                ),
+                onPressed: () {},
+                child: Text("Shop now",
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
               ),
-              onPressed: () {},
-              child: Text("Shop now",
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
