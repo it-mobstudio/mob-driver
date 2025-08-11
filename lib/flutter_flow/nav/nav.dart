@@ -10,7 +10,11 @@ import '../../productlisting/product_listing_page.dart';
 import '../../productdetails/productdetailpage.dart';
 import '../../loginpage/splash_screen.dart';
 import '../../components/topsearchpage.dart';
-
+import '../../cart/cart_page.dart';
+import '../../checkout/checkout_address_page.dart';
+import '../../checkout/checkout_order_review_page.dart';
+import '../../checkout/checkout_payment_page.dart';
+import '../../checkout/order_placed_page.dart';
 export 'package:go_router/go_router.dart';
 export 'serialization_util.dart';
 
@@ -94,6 +98,31 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: SearchPage.routeName,
           path: SearchPage.routePath,
           builder: (context, params) => const SearchPage(),
+        ),
+        FFRoute(
+          name: CartPage.routeName,
+          path: CartPage.routePath,
+          builder: (context, params) => const CartPage(),
+        ),
+        FFRoute(
+          name: CheckoutAddressPage.routeName,
+          path: CheckoutAddressPage.routePath,
+          builder: (context, params) => const CheckoutAddressPage(),
+        ),
+        FFRoute(
+          name: CheckoutOrderReviewPage.routeName,
+          path: CheckoutOrderReviewPage.routePath,
+          builder: (context, params) => const CheckoutOrderReviewPage(),
+        ),
+        FFRoute(
+          name: CheckoutPaymentPage.routeName,
+          path: CheckoutPaymentPage.routePath,
+          builder: (context, params) => const CheckoutPaymentPage(),
+        ),
+        FFRoute(
+          name: OrderPlacedPage.routeName,
+          path: OrderPlacedPage.routePath,
+          builder: (context, params) => const OrderPlacedPage(),
         ),
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

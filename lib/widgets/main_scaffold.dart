@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../cart/cart_page.dart';
 
 class MainScaffold extends StatelessWidget {
   final Widget child;
@@ -33,7 +34,7 @@ class MainScaffold extends StatelessWidget {
         context.go('/profile');
         break;
       case 4:
-        context.go('/cart');
+        context.go(CartPage.routePath);
         break;
     }
   }
@@ -94,25 +95,25 @@ class MainScaffold extends StatelessWidget {
             ),
             label: 'Projects',
           ),
-          // BottomNavigationBarItem(
-          //   icon: SvgPicture.asset(
-          //     'assets/icons/mobstar.svg',
-          //     colorFilter: const ColorFilter.mode(
-          //       Color(0xFF6C7C8C),
-          //       BlendMode.srcIn,
-          //     ),
-          //     height: 24,
-          //   ),
-          //   activeIcon: SvgPicture.asset(
-          //     'assets/icons/mobstar.svg',
-          //     colorFilter: const ColorFilter.mode(
-          //       Color(0xFF0A243F),
-          //       BlendMode.srcIn,
-          //     ),
-          //     height: 24,
-          //   ),
-          //   label: 'Mobstar',
-          // ),
+          BottomNavigationBarItem(
+            icon: SvgPicture.asset(
+              'assets/icons/mobstar.svg',
+              colorFilter: const ColorFilter.mode(
+                Color(0xFF6C7C8C),
+                BlendMode.srcIn,
+              ),
+              height: 24,
+            ),
+            activeIcon: SvgPicture.asset(
+              'assets/icons/mobstar.svg',
+              colorFilter: const ColorFilter.mode(
+                Color(0xFF0A243F),
+                BlendMode.srcIn,
+              ),
+              height: 24,
+            ),
+            label: 'Mobstar',
+          ),
           BottomNavigationBarItem(
             icon: SvgPicture.asset(
               'assets/icons/profile.svg',
@@ -243,7 +244,7 @@ class MainScaffold extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
                 contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
               ),
             ),
           ),
@@ -251,5 +252,4 @@ class MainScaffold extends StatelessWidget {
       ),
     );
   }
-
 }
