@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:m_o_b_demand_side/RFQ/RfqFormPage.dart';
 import '../widgets/main_scaffold.dart';
 import 'filter_bottom_sheet.dart';
 import 'package:go_router/go_router.dart';
@@ -48,7 +49,7 @@ class ProductListingPage extends StatelessWidget {
               itemCount: (products.length / 2).ceil() + 1, // +1 for bottom card
               itemBuilder: (context, index) {
                 if (index == (products.length / 2).ceil()) {
-                  return _bottomCard();
+                  return _bottomCard(context);
                 }
                 int i = index * 2;
                 return Row(
@@ -169,7 +170,6 @@ class ProductListingPage extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        // Navigator.pushNamed(context, '/ProductDetailPage');
         GoRouter.of(context).go('/ProductDetailPage');
       },
       child: Container(
@@ -286,7 +286,7 @@ class ProductListingPage extends StatelessWidget {
     );
   }
 
-  Widget _bottomCard() {
+  Widget _bottomCard(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 24),
       padding: const EdgeInsets.all(16),
@@ -318,7 +318,9 @@ class ProductListingPage extends StatelessWidget {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            onPressed: () {},
+            onPressed: () {
+              GoRouter.of(context).go(RfqFormPage.routePath);
+            },
             child: Text("Send a request",
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           ),

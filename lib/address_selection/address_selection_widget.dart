@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import '../flutter_flow/flutter_flow_theme.dart';
 
 class AddressSelectionWidget extends StatelessWidget {
   const AddressSelectionWidget({super.key});
@@ -10,19 +10,20 @@ class AddressSelectionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.primaryBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.primaryBackground,
         automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Color(0xFF0A243F)),
+          icon: Icon(Icons.arrow_back_ios, color: theme.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         elevation: 0.0,
         title: Text('Search location',
-            style: GoogleFonts.interTight(
-                color: Color(0xFF0A243F),
+            style: theme.typography.titleLarge.copyWith(
+                color: theme.textPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 20)),
         centerTitle: true,
@@ -37,25 +38,49 @@ class AddressSelectionWidget extends StatelessWidget {
               TextField(
                 decoration: InputDecoration(
                   hintText: 'Search for area, street name..',
-                  prefixIcon: Icon(Icons.search, color: Color(0xFFAFB4C0)),
+                  prefixIcon: Icon(Icons.search, color: theme.border),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: theme.secondaryBackground,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                    borderSide: BorderSide(color: theme.border),
                   ),
                   contentPadding:
                       EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                 ),
               ),
               SizedBox(height: 16),
-              ListTile(
-                leading: Icon(Icons.my_location, color: Color(0xFF0360E5)),
-                title: Text('Detect my location',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
-                subtitle: Text('Koramangala, Bengaluru',
-                    style: GoogleFonts.inter(color: Color(0xFF6C7C8C))),
-                onTap: () {},
+              GestureDetector(
+                onTap: () {
+                  GoRouter.of(context)
+                      .go('/map_location'); // Navigate to map location page
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: theme.secondaryBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.my_location, color: theme.primary),
+                      SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Detect my location',
+                              style: theme.typography.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: theme.textDarkGrey)),
+                          Text('Koramangala, Bengaluru',
+                              style: theme.typography.bodyMedium
+                                  .copyWith(color: theme.textDarkGrey)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
               SizedBox(height: 8),
               GestureDetector(
@@ -63,25 +88,25 @@ class AddressSelectionWidget extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: theme.secondaryBackground,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Color(0xFFE0E0E0)),
+                    border: Border.all(color: theme.border),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.add, color: Color(0xFF0360E5)),
+                      Icon(Icons.add, color: theme.primary),
                       SizedBox(width: 8),
                       Text('Add new address',
-                          style:
-                              GoogleFonts.inter(fontWeight: FontWeight.w500)),
+                          style: theme.typography.bodyMedium
+                              .copyWith(fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),
               ),
               SizedBox(height: 24),
               Text('Your saved address',
-                  style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w600, fontSize: 16)),
+                  style: theme.typography.bodyMedium
+                      .copyWith(fontWeight: FontWeight.w600, fontSize: 16)),
               SizedBox(height: 12),
               Expanded(
                 child: ListView(
@@ -122,6 +147,7 @@ class AddressSelectionWidget extends StatelessWidget {
 
   Widget _addressCard(BuildContext context, String name, String address,
       String tag, String project) {
+    final theme = FlutterFlowTheme.of(context);
     return GestureDetector(
       onTap: () {
         GoRouter.of(context).go('/homepage');
@@ -130,9 +156,9 @@ class AddressSelectionWidget extends StatelessWidget {
         margin: EdgeInsets.only(bottom: 12),
         padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.secondaryBackground,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Color(0xFFE0E0E0)),
+          border: Border.all(color: theme.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,38 +167,38 @@ class AddressSelectionWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(name,
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
-                Icon(Icons.more_horiz, color: Color(0xFFAFB4C0)),
+                    style: theme.typography.bodyMedium
+                        .copyWith(fontWeight: FontWeight.bold, fontSize: 16)),
+                Icon(Icons.more_horiz, color: theme.border),
               ],
             ),
             SizedBox(height: 4),
             Text(address,
-                style:
-                    GoogleFonts.inter(color: Color(0xFF6C7C8C), fontSize: 14)),
+                style: theme.typography.bodyMedium
+                    .copyWith(color: theme.textDarkGrey, fontSize: 14)),
             SizedBox(height: 8),
             Row(
               children: [
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Color(0xFFF2F6F9),
+                    color: theme.alternate,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(tag,
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w500, fontSize: 12)),
+                      style: theme.typography.bodyMedium
+                          .copyWith(fontWeight: FontWeight.w500, fontSize: 12)),
                 ),
                 SizedBox(width: 8),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Color(0xFFFFE066),
+                    color: theme.warning,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(project,
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w500, fontSize: 12)),
+                      style: theme.typography.bodyMedium
+                          .copyWith(fontWeight: FontWeight.w500, fontSize: 12)),
                 ),
               ],
             ),

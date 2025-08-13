@@ -68,6 +68,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'MOB Demand Side',
@@ -80,10 +81,24 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         brightness: Brightness.light,
         useMaterial3: false,
+        scaffoldBackgroundColor: theme.primaryBackground,
+        textTheme: TextTheme(
+          bodyMedium: theme.typography.bodyMedium,
+          // ...add other text styles as needed
+        ),
+        primaryColor: theme.primary,
+        // ...add other color properties as needed
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         useMaterial3: false,
+        scaffoldBackgroundColor: theme.primaryBackground,
+        textTheme: TextTheme(
+          bodyMedium: theme.typography.bodyMedium,
+          // ...add other text styles as needed
+        ),
+        primaryColor: theme.primary,
+        // ...add other color properties as needed
       ),
       themeMode: _themeMode,
       routerConfig: _router,

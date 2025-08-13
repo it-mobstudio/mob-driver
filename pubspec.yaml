@@ -78,11 +78,16 @@ dependencies:
   url_launcher_platform_interface: 2.3.2
   url_launcher_web: 2.4.1
   url_launcher_windows: 3.1.4
-  flutter_svg: ^2.0.7
-
+  flutter_svg: ^2.0.9
+  flutter_azure_speech: ^0.0.6
+  permission_handler: ^11.3.1
+  # azure_speech_recognition_null_safety: ^0.9.6
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.0
+  google_maps_flutter: ^2.5.0
+  geolocator: ^9.0.2
+  geocoding: ^2.1.0
 
 dependency_overrides:
   http: 1.4.0
@@ -117,6 +122,19 @@ flutter:
     - assets/icons/
     - assets/environment_values/
 
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Bold.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+        - asset: assets/fonts/Inter-SemiBold.ttf
+    - family: InterTight
+      fonts:
+        - asset: assets/fonts/InterTight-Regular.ttf
+        - asset: assets/fonts/InterTight-Bold.ttf
+        - asset: assets/fonts/InterTight-Medium.ttf
+        - asset: assets/fonts/InterTight-SemiBold.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.

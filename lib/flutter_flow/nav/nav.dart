@@ -15,6 +15,9 @@ import '../../checkout/checkout_address_page.dart';
 import '../../checkout/checkout_order_review_page.dart';
 import '../../checkout/checkout_payment_page.dart';
 import '../../checkout/order_placed_page.dart';
+import '../../address_selection/map_location_widget.dart';
+import '../../RFQ/RfqFormPage.dart';
+import '../../RFQ/RfqSuccessPage.dart';
 export 'package:go_router/go_router.dart';
 export 'serialization_util.dart';
 
@@ -123,6 +126,21 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: OrderPlacedPage.routeName,
           path: OrderPlacedPage.routePath,
           builder: (context, params) => const OrderPlacedPage(),
+        ),
+        FFRoute(
+          name: MapLocationWidget.routeName,
+          path: MapLocationWidget.routePath,
+          builder: (context, params) => const MapLocationWidget(),
+        ),
+        FFRoute(
+          name: RfqFormPage.routeName,
+          path: RfqFormPage.routePath,
+          builder: (context, params) => const RfqFormPage(),
+        ),
+        FFRoute(
+          name: RfqSuccessPage.routeName,
+          path: RfqSuccessPage.routePath,
+          builder: (context, params) => const RfqSuccessPage(),
         ),
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

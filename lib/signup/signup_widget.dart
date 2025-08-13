@@ -186,7 +186,10 @@ class _SignupWidgetState extends State<SignupWidget> {
                             color: Color(0xFFFA7A1A), size: 20),
                         SizedBox(width: 8),
                         Text('View RFQ price for items',
-                            style: GoogleFonts.inter(fontSize: 14)),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Color(0xFF6C7C8C),
+                            )),
                       ],
                     ),
                     SizedBox(height: 8),
@@ -196,7 +199,10 @@ class _SignupWidgetState extends State<SignupWidget> {
                             color: Color(0xFFFA7A1A), size: 20),
                         SizedBox(width: 8),
                         Text('Place order with RFQ price',
-                            style: GoogleFonts.inter(fontSize: 14)),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Color(0xFF6C7C8C),
+                            )),
                       ],
                     ),
                     SizedBox(height: 16),
@@ -270,7 +276,6 @@ class _SignupWidgetState extends State<SignupWidget> {
                 height: 56,
                 child: ElevatedButton(
                   onPressed: () {
-                    // TODO: Handle sign up logic
                     context.go('/address_selection');
                   },
                   style: ElevatedButton.styleFrom(

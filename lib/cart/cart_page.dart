@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/main_scaffold.dart';
 import '../../checkout/checkout_address_page.dart';
+import '../../conversational_ai/conversationalai.dart'; // contains AIBottomSheet
 
 class CartItem {
   final String title;
@@ -167,6 +168,11 @@ class _CartPageState extends State<CartPage> {
 
         // Fixed bottom checkout bar
         _bottomCheckoutBar(total),
+        Positioned(
+          bottom: 80, // just above checkout bar
+          right: 20,
+          child: _floatingAIMic(context),
+        ),
       ],
     );
   }
@@ -675,6 +681,40 @@ class _CartPageState extends State<CartPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _floatingAIMic(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showAIBottomSheet(context),
+      child: Container(
+        width: 62,
+        height: 62,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [Color(0xFF6F79FF), Color(0xFF8A3CFF)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.mic, color: Colors.white, size: 28),
+      ),
+    );
+  }
+
+  void _showAIBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AIBottomSheet(), // from conversationalai.dart
     );
   }
 }

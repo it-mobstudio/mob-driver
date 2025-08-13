@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/components/whychoosemob.dart';
+import 'package:m_o_b_demand_side/environment_values.dart';
 import '../widgets/main_scaffold.dart';
+import '../backend/api_requests/api_calls.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class HomepageWidget extends StatelessWidget {
   const HomepageWidget({super.key});
@@ -34,7 +38,7 @@ class HomepageWidget extends StatelessWidget {
             _productCarousel(),
             _sectionTitle("Walls that reflect you"),
             _productCarousel(),
-            _infoCard(),
+            _infoCard(context),
             SizedBox(height: 24),
           ],
         ),
@@ -147,62 +151,47 @@ class HomepageWidget extends StatelessWidget {
   }
 
   Widget _categoryGrid(BuildContext context) {
-    final categories = [
-      "Sustainable",
-      "Building material",
-      "Bathroom & plumbing",
-      "Hardware",
-      "Living & decor",
-      "Paints & wallpapers",
-      "Electric & lights",
-      "Tools & machines",
-      "Kitchen",
-      "Doors & windows",
-      "Flooring",
-      "Heating & cooling",
-      "Tiles",
-      "Cleaning",
-      "Garden",
-      "Automotive",
-    ];
-    final icons = [
-      Icons.eco,
-      Icons.apartment,
-      Icons.shower,
-      Icons.build,
-      Icons.chair,
-      Icons.format_paint,
-      Icons.lightbulb,
-      Icons.construction,
-      Icons.kitchen,
-      Icons.door_front_door,
-      Icons.layers,
-      Icons.ac_unit,
-      Icons.grid_on,
-      Icons.cleaning_services,
-      Icons.grass,
-      Icons.directions_car,
-    ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        itemCount: categories.length,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.7,
-        ),
-        itemBuilder: (context, i) {
-          return _categoryItem(context, categories[i], icons[i]);
+      child: FutureBuilder<ApiCallResponse>(
+        future: HomeDataCall.call(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError ||
+              !snapshot.hasData ||
+              snapshot.data?.jsonBody == null) {
+            return Center(child: Text('Failed to load categories'));
+          }
+          final data = snapshot.data!.jsonBody; // <-- Use directly, no decode
+          final categories = (data['data']?['categories'] as List?) ?? [];
+          if (categories.isEmpty) {
+            return Center(child: Text('No categories found'));
+          }
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: categories.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.7,
+            ),
+            itemBuilder: (context, i) {
+              final category = categories[i];
+              final label = category['name'] ?? '';
+              final imageUrl = category['image'] as String?;
+              return _categoryItem(context, label, imageUrl);
+            },
+          );
         },
       ),
     );
   }
 
-  Widget _categoryItem(BuildContext context, String label, IconData icon) {
+  Widget _categoryItem(BuildContext context, String label, String? imageUrl) {
     return InkWell(
       onTap: () => GoRouter.of(context).go('/productlisting'),
       child: Column(
@@ -212,8 +201,19 @@ class HomepageWidget extends StatelessWidget {
               color: Color(0xFFF2F6F9),
               borderRadius: BorderRadius.circular(12),
             ),
-            padding: EdgeInsets.all(12),
-            child: Icon(icon, color: Color(0xFF0A243F), size: 28),
+            // padding: EdgeInsets.all(12),
+            child: imageUrl != null && imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    // width: 28,
+                    // height: 28,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.category,
+                        color: Color(0xFF0A243F),
+                        size: 28),
+                  )
+                : Icon(Icons.category, color: Color(0xFF0A243F), size: 28),
           ),
           SizedBox(height: 6),
           Text(label,
@@ -226,31 +226,38 @@ class HomepageWidget extends StatelessWidget {
   }
 
   Widget _brandList() {
-    final brands = [
-      "Fixit",
-      "Pidilite",
-      "Ultratech",
-      "Kajaria",
-      "Bosch",
-      "Jaquar"
-    ];
     return SizedBox(
       height: 100,
       child: ListView.separated(
         padding: EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
-        itemCount: brands.length,
+        itemCount: brandLogos.length,
         separatorBuilder: (_, __) => SizedBox(width: 12),
         itemBuilder: (context, i) {
+          final brand = brandLogos[i];
           return Container(
-            width: 80,
+            width: double.tryParse(brand['width'] ?? '80') ?? 80,
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Center(
-              child: Text(brands[i],
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  brand['logo'] ?? '',
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.contain,
+                ),
+                SizedBox(height: 6),
+                Text(
+                  brand['name'] ?? '',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ],
             ),
           );
         },
@@ -327,8 +334,8 @@ class HomepageWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
         padding: EdgeInsets.all(20),
-        child: SizedBox( // Wrap Column with SizedBox
-          width: double.infinity, // Make the SizedBox (and thus the Column) want to be full width
+        child: SizedBox(
+          width: double.infinity,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -357,27 +364,224 @@ class HomepageWidget extends StatelessWidget {
     );
   }
 
-  Widget _infoCard() {
+  Widget _infoCard(BuildContext context) {
+    const double cardHeight = 64;
+    const BorderRadius radius = BorderRadius.all(Radius.circular(18));
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Color(0xFFF2F6F9),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.info_outline, color: Color(0xFF0A243F)),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text("Why choose mad over buildings?",
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: radius,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: () => _showPromiseSheet(context),
+          child: SizedBox(
+            height: cardHeight,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Background image with rounded corners
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: radius,
+                    child: Image.asset(
+                      'images/mobStar_bg.png', // gradient bg
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+
+                // Content row
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                            width: 36), // spacing for the left-floating icon
+                        Expanded(
+                          child: Text(
+                            'Why choose mad over\nbuildings?',
+                            maxLines: 2,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Right arrow in white circular chip
+                        Container(
+                          height: 36,
+                          width: 36,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: SvgPicture.asset(
+                            'images/Arrow.svg',
+                            width: 16,
+                            height: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Left “badge/gear” icon peeking out of the card
+                Positioned(
+                  left: -8, // negative to let it stick out like the design
+                  top: (cardHeight - 36) / 2,
+                  child: SizedBox(
+                    height: 36,
+                    width: 36,
+                    child: SvgPicture.asset('images/mobstar_Tick.svg'),
+                  ),
+                ),
+              ],
             ),
-            Icon(Icons.arrow_forward_ios, color: Color(0xFF0A243F), size: 16),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  Future<void> _showPromiseSheet(BuildContext context) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      useSafeArea: true,
+      builder: (ctx) => const PromiseSheet(), // Use public PromiseSheet
+    );
+  }
+}
+
+Widget _productCarousel() {
+  return SizedBox(
+    height: 180,
+    child: ListView.separated(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      scrollDirection: Axis.horizontal,
+      itemCount: 4,
+      separatorBuilder: (_, __) => SizedBox(width: 12),
+      itemBuilder: (context, i) {
+        return _productCard();
+      },
+    ),
+  );
+}
+
+Widget _productCard() {
+  return Container(
+    width: 140,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      border: Border.all(color: Color(0xFFE0E0E0)),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    padding: EdgeInsets.all(12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Color(0xFF1DC37A),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text("30% OFF",
+                  style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold)),
+            ),
+            Spacer(),
+            Icon(Icons.add_circle_outline, color: Color(0xFF0A243F)),
+          ],
+        ),
+        SizedBox(height: 12),
+        Text("Jaquar Sink Mixer",
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        SizedBox(height: 6),
+        Text("₹2400",
+            style:
+                GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
+        SizedBox(height: 4),
+        Text("Get by today evening",
+            style: GoogleFonts.inter(fontSize: 10, color: Color(0xFF6C7C8C))),
+      ],
+    ),
+  );
+}
+
+Widget _mobStarPromo() {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+    child: Container(
+      decoration: BoxDecoration(
+        color: Color(0xFF3B5998),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: EdgeInsets.all(20),
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("mob STAR",
+                style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18)),
+            SizedBox(height: 8),
+            Text("Get points on every order you place!",
+                style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
+            SizedBox(height: 12),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Color(0xFF3B5998),
+              ),
+              onPressed: () {},
+              child: Text("Shop now",
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _infoCard() {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+    child: Container(
+      decoration: BoxDecoration(
+        color: Color(0xFFF2F6F9),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: Color(0xFF0A243F)),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text("Why choose mad over buildings?",
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+          Icon(Icons.arrow_forward_ios, color: Color(0xFF0A243F), size: 16),
+        ],
+      ),
+    ),
+  );
 }

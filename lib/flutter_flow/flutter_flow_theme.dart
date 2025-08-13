@@ -98,7 +98,11 @@ abstract class FlutterFlowTheme {
 
   String get displayLargeFamily => typography.displayLargeFamily;
   bool get displayLargeIsCustom => typography.displayLargeIsCustom;
-  TextStyle get displayLarge => typography.displayLarge;
+  TextStyle get displayLarge => GoogleFonts.interTight(
+        color: this.primaryText,
+        fontWeight: FontWeight.w600,
+        fontSize: 64.0,
+      );
   String get displayMediumFamily => typography.displayMediumFamily;
   bool get displayMediumIsCustom => typography.displayMediumIsCustom;
   TextStyle get displayMedium => typography.displayMedium;
@@ -153,7 +157,7 @@ class LightModeTheme extends FlutterFlowTheme {
   @Deprecated('Use tertiary instead')
   Color get tertiaryColor => tertiary;
 
-  late Color primary = const Color(0xFF4B39EF);
+  late Color primary = const Color(0xFF2973F0);
   late Color secondary = const Color(0xFF39D2C0);
   late Color tertiary = const Color(0xFFEE8B60);
   late Color alternate = const Color(0xFFE0E3E7);

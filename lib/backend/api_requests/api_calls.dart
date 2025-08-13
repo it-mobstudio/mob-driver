@@ -38,6 +38,25 @@ class LoginOTPCall {
   }
 }
 
+class HomeDataCall {
+  /// Calls the home API to fetch categories and other home data.
+  static Future<ApiCallResponse> call() async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'homeData',
+      apiUrl: 'https://uat.madoverbuilding.com/api/home/',
+      callType: ApiCallType.GET,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
 class ApiPagingParams {
   int nextPageNumber = 0;
   int numItems = 0;
