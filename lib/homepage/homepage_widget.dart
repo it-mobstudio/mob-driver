@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/environment_values.dart';
 import '../widgets/main_scaffold.dart';
 import '../backend/api_requests/api_calls.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:m_o_b_demand_side/RFQ/RfqFormPage.dart';
 
 class HomepageWidget extends StatelessWidget {
   const HomepageWidget({super.key});
@@ -23,7 +24,7 @@ class HomepageWidget extends StatelessWidget {
             _searchBar(),
             _banner(),
             SizedBox(height: 16),
-            _quickActions(),
+            _quickActions(context),
             SizedBox(height: 16),
             _sectionTitle("Explore by categories"),
             _categoryGrid(context),
@@ -97,42 +98,53 @@ class HomepageWidget extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child:
-            Image.asset('assets/banner_free_delivery.png', fit: BoxFit.cover),
+            Image.asset('assets/images/PromotionBanner.png', fit: BoxFit.cover),
       ),
     );
   }
 
-  Widget _quickActions() {
+  Widget _quickActions(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          _actionCard("Quote request", Icons.description),
+          _actionCard("Quote request", Icons.description, () {
+            GoRouter.of(context).go(RfqFormPage.routePath);
+          }),
           SizedBox(width: 12),
-          _actionCard("Line of credit", Icons.credit_card),
+          _actionCard("Line of credit", Icons.credit_card, () {
+            GoRouter.of(context).go(RfqFormPage.routePath);
+          }),
         ],
       ),
     );
   }
 
-  Widget _actionCard(String title, IconData icon) {
+  Widget _actionCard(String title, IconData icon, VoidCallback onTap) {
     return Expanded(
-      child: Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: Color(0xFF0A243F)),
-            SizedBox(height: 8),
-            Text(title,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: Color(0xFF0A243F)),
+              SizedBox(height: 8),
+              Text(
+                title,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w500, fontSize: 13)),
-          ],
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -365,7 +377,7 @@ class HomepageWidget extends StatelessWidget {
   }
 
   Widget _infoCard(BuildContext context) {
-    const double cardHeight = 64;
+    const double cardHeight = 76;
     const BorderRadius radius = BorderRadius.all(Radius.circular(18));
 
     return Padding(

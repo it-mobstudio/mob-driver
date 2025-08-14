@@ -146,6 +146,7 @@ class MainScaffold extends StatelessWidget {
                 ),
                 Positioned(
                   right: 0,
+                  top: 0,
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
@@ -155,7 +156,7 @@ class MainScaffold extends StatelessWidget {
                     constraints:
                         const BoxConstraints(minWidth: 16, minHeight: 16),
                     child: Text(
-                      '11',
+                      '0',
                       style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 10,

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:m_o_b_demand_side/RFQ/RfqSuccessPage.dart';
-import '../RFQ/RfqSuccessPage.dart';
+import 'package:m_o_b_demand_side/widgets/main_scaffold.dart';
 
 class RfqFormPage extends StatefulWidget {
   const RfqFormPage({super.key});
@@ -18,9 +18,9 @@ class RfqFormPage extends StatefulWidget {
 class _RfqFormPageState extends State<RfqFormPage> {
   final _formKey = GlobalKey<FormState>();
 
-  final _name = TextEditingController(text: 'Johnathan wick');
-  final _phone = TextEditingController(text: '8964545451');
-  final _email = TextEditingController(text: 'johnathanwick@gmail.com');
+  final _name = TextEditingController(text: '');
+  final _phone = TextEditingController(text: '');
+  final _email = TextEditingController(text: '');
   final _gst = TextEditingController();
   final _city = TextEditingController();
   final _pincode = TextEditingController();
@@ -41,135 +41,100 @@ class _RfqFormPageState extends State<RfqFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F6F3), // pale green like figma
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Content
-            ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-              children: [
-                _searchBar(context),
-                const SizedBox(height: 16),
-                Text('Request for quotation',
-                    style: GoogleFonts.inter(
-                        fontSize: 22, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text('Tell us about your requirement',
-                    style: GoogleFonts.inter(
-                        fontSize: 13, color: const Color(0xFF6C7C8C))),
-                const SizedBox(height: 16),
-                _sectionHeader('Customer details',
-                    leading: Icons.person_2_outlined),
-                const SizedBox(height: 8),
-                _formCard(context),
-                const SizedBox(height: 16),
-                _sectionHeader('Select photos or files',
-                    leading: Icons.insert_drive_file_outlined),
-                const SizedBox(height: 8),
-                _uploadCard(),
-                const SizedBox(height: 12),
-                if (_fileAttached)
-                  _attachedFileTile(onRemove: () {
-                    setState(() => _fileAttached = false);
-                  }),
-                const SizedBox(height: 16),
-                _howItWorksCard(),
-              ],
-            ),
+    return MainScaffold(
+      // backgroundColor: const Color(0xFFF0F6F3), // pale green like figma
+      currentIndex: 0,
+      // child: SafeArea(
+      child: Stack(
+        children: [
+          // Content
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+            children: [
+              Text('Request for quotation',
+                  style: GoogleFonts.inter(
+                      fontSize: 22, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text('Tell us about your requirement',
+                  style: GoogleFonts.inter(
+                      fontSize: 13, color: const Color(0xFF6C7C8C))),
+              const SizedBox(height: 16),
+              _sectionHeader('Customer details',
+                  leading: Icons.person_2_outlined),
+              const SizedBox(height: 8),
+              _formCard(context),
+              const SizedBox(height: 16),
+              _sectionHeader('Select photos or files',
+                  leading: Icons.insert_drive_file_outlined),
+              const SizedBox(height: 8),
+              _uploadCard(),
+              const SizedBox(height: 12),
+              if (_fileAttached)
+                _attachedFileTile(onRemove: () {
+                  setState(() => _fileAttached = false);
+                }),
+              const SizedBox(height: 16),
+              _howItWorksCard(),
+            ],
+          ),
 
-            // Fixed footer CTA (mockup 1 & 2)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: SafeArea(
-                top: false,
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                          color: Color(0x14000000),
-                          blurRadius: 12,
-                          offset: Offset(0, -4))
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => GoRouter.of(context).pop(),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                          ),
-                          child: const Text('Cancel'),
+          // Fixed footer CTA (mockup 1 & 2)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                        color: Color(0x14000000),
+                        blurRadius: 12,
+                        offset: Offset(0, -4))
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => GoRouter.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
                         ),
+                        child: const Text('Cancel'),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2563EB),
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(48),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                          ),
-                          child: const Text('Submit RFQ'),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
                         ),
+                        child: const Text('Submit RFQ'),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+      // ),
     );
   }
 
   // ---------- pieces ----------
-
-  Widget _searchBar(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => GoRouter.of(context).pop(),
-        ),
-        Expanded(
-          child: Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE1E6ED)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: const [
-                Icon(Icons.search, size: 20, color: Color(0xFF6C7C8C)),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text('Search for product, category, brand...',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Color(0xFF6C7C8C))),
-                ),
-                Icon(Icons.mic_none, size: 20, color: Color(0xFF6C7C8C)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _sectionHeader(String title, {IconData? leading}) {
     return Row(
@@ -207,7 +172,7 @@ class _RfqFormPageState extends State<RfqFormPage> {
         );
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
@@ -256,7 +221,7 @@ class _RfqFormPageState extends State<RfqFormPage> {
       child: Column(
         children: [
           Container(
-            height: 52,
+            height: 100,
             width: double.infinity,
             decoration: BoxDecoration(
               color: const Color(0xFFF7FAFF),
@@ -303,8 +268,7 @@ class _RfqFormPageState extends State<RfqFormPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Regalia materials requirements.pdf',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                Text('', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
