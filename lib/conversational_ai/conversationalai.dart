@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_azure_speech/flutter_azure_speech.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum AIState { idle, listening, replying, suggestions }
 
@@ -67,7 +68,22 @@ class _AIBottomSheetState extends State<AIBottomSheet>
     super.dispose();
   }
 
+  Future<void> requestMicPermission() async {
+    var status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      // setState(() {
+      //   _error = 'Microphone permission denied.';
+      // });
+      throw Exception('Microphone permission denied');
+    }
+  }
+
   Future<void> _startListening() async {
+    try {
+      await requestMicPermission();
+    } catch (_) {
+      return;
+    }
     debugPrint("hi");
 
     if (!_speechReady) {

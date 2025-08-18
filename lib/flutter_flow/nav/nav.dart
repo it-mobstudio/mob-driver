@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:m_o_b_demand_side/RFQ/rfq.dart';
+import 'package:m_o_b_demand_side/RFQ/rfq_details_page.dart';
 import 'package:provider/provider.dart';
 
 import '/flutter_flow/flutter_flow_util.dart';
@@ -141,6 +143,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: RfqSuccessPage.routeName,
           path: RfqSuccessPage.routePath,
           builder: (context, params) => const RfqSuccessPage(),
+        ),
+        FFRoute(
+          name: RfqPage.routeName,
+          path: RfqPage.routePath,
+          builder: (context, params) => const RfqPage(),
+        ),
+        FFRoute(
+          name: RfqDetailsPage.routeName,
+          path: RfqDetailsPage.routePath,
+          builder: (context, state) => const RfqDetailsPage(),
         ),
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

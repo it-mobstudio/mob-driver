@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:m_o_b_demand_side/RFQ/RfqFormPage.dart';
-import '../RFQ/RfqFormPage.dart';
+import '../RFQ/rfq.dart';
 
 class RfqSuccessPage extends StatelessWidget {
   const RfqSuccessPage({super.key});
@@ -65,8 +65,7 @@ class RfqSuccessPage extends StatelessWidget {
                 children: [
                   OutlinedButton(
                     onPressed: () {
-                      // TODO: navigate to RFQ details (if you have a details page)
-                      GoRouter.of(context).pop();
+                      context.goNamed(RfqPage.routeName);
                     },
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
