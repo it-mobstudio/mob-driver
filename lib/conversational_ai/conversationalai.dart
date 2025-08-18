@@ -1,26 +1,19 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_azure_speech/flutter_azure_speech.dart';
-import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 enum AIState { idle, listening, replying, suggestions }
 
 class AIBottomSheet extends StatefulWidget {
   const AIBottomSheet({
     super.key,
-    this.onTranscription, // notify parent if you want
-    this.azureKey =
-        '96Cpk5574y1anPuFmmlMqHSHcliEr8kM7EETr7RwTcvnPqe2MROlJQQJ99BGACGhslBXJ3w3AAAYACOG1UPt', // ⛔️ don’t hardcode in prod
-    this.azureRegion = 'centralindia',
-    this.defaultLocale = 'en-IN', // you can set hi-IN, ta-IN, te-IN, etc.
+    this.onTranscription,
+    this.defaultLocale = 'en_IN', // or hi_IN, ta_IN, etc.
   });
 
   final void Function(String text)? onTranscription;
-  final String azureKey;
-  final String azureRegion;
   final String defaultLocale;
 
   @override
@@ -36,44 +29,53 @@ class _AIBottomSheetState extends State<AIBottomSheet>
     duration: const Duration(milliseconds: 900),
   )..repeat(reverse: true);
 
-  final _speech = FlutterAzureSpeech();
+  // STT
+  final stt.SpeechToText _speech = stt.SpeechToText();
   bool _speechReady = false;
+
+  // TTS
+  final FlutterTts _flutterTts = FlutterTts();
+
   String _lastUserUtterance = '';
+  String _agentReply = '';
 
   @override
   void initState() {
     super.initState();
-    _initAzure();
+    _initSpeech();
+    _initTTS();
   }
 
-  Future<void> _initAzure() async {
-    if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
-      debugPrint('Azure STT not available on this platform.');
-      return;
-    }
-    try {
-      await _speech.initialize(widget.azureKey, widget.azureRegion);
-      if (mounted) setState(() => _speechReady = true);
-    } on PlatformException catch (e, st) {
-      debugPrint('Azure init PlatformException: ${e.code} ${e.message}');
-      debugPrint('$st');
-    } catch (e, st) {
-      debugPrint('Azure init error: $e\n$st');
-    }
+  Future<void> _initSpeech() async {
+    final available = await _speech.initialize(
+      onStatus: (s) => debugPrint("STT status: $s"),
+      onError: (e) => debugPrint("STT error: $e"),
+    );
+    if (mounted) setState(() => _speechReady = available);
+  }
+
+  Future<void> _initTTS() async {
+    await _flutterTts.setLanguage(widget.defaultLocale.replaceAll('_', '-'));
+    await _flutterTts.setSpeechRate(0.9);
+    await _flutterTts.setPitch(1.0);
+  }
+
+  Future<void> _speak(String text) async {
+    if (text.isEmpty) return;
+    await _flutterTts.stop();
+    await _flutterTts.speak(text);
   }
 
   @override
   void dispose() {
     _bars.dispose();
+    _flutterTts.stop();
     super.dispose();
   }
 
   Future<void> requestMicPermission() async {
     var status = await Permission.microphone.request();
     if (!status.isGranted) {
-      // setState(() {
-      //   _error = 'Microphone permission denied.';
-      // });
       throw Exception('Microphone permission denied');
     }
   }
@@ -84,50 +86,52 @@ class _AIBottomSheetState extends State<AIBottomSheet>
     } catch (_) {
       return;
     }
-    debugPrint("hi");
 
     if (!_speechReady) {
-      try {
-        await _speech.initialize(widget.azureKey, widget.azureRegion);
-        if (!mounted) return;
-        setState(() => _speechReady = true);
-      } on PlatformException catch (e, st) {
-        debugPrint('initialize failed: ${e.code} ${e.message}');
-        return; // bail; don’t proceed to getSpeechToText
-      } catch (e, st) {
-        debugPrint('initialize failed (generic): $e\n$st');
-        return;
-      }
+      await _initSpeech();
+      if (!_speechReady) return;
     }
 
     setState(() {
       state = AIState.listening;
       _lastUserUtterance = '';
+      _agentReply = '';
     });
 
-    try {
-      final text = await _speech.getSpeechToText(widget.defaultLocale);
-      if (!mounted) return;
+    _speech.listen(
+      localeId: widget.defaultLocale,
+      onResult: (result) async {
+        if (result.finalResult) {
+          final text = result.recognizedWords;
+          debugPrint("🎤 User: $text");
+          if (text.isNotEmpty) {
+            _lastUserUtterance = text;
+            widget.onTranscription?.call(text);
+            await _fetchAIReply(text);
+          } else {
+            setState(() => state = AIState.idle);
+          }
+        }
+      },
+    );
+  }
 
-      if (text != null && text.trim().isNotEmpty) {
-        _lastUserUtterance = text.trim();
-        widget.onTranscription?.call(_lastUserUtterance);
-        setState(() => state = AIState.replying);
-      } else {
-        setState(() => state = AIState.idle);
-      }
-    } on PlatformException catch (e, st) {
-      debugPrint('getSpeechToText PlatformException: ${e.code} ${e.message}');
-      setState(() => state = AIState.idle);
-    } catch (e, st) {
-      debugPrint('Azure STT error: $e\n$st');
-      setState(() => state = AIState.idle);
-    }
+  Future<void> _fetchAIReply(String userText) async {
+    setState(() => state = AIState.replying);
+
+    // Replace this dummy text with a real backend call
+    final reply =
+        "I found some great options for '$userText'. Would you like to see them?";
+
+    _agentReply = reply;
+    await _speak(reply);
+
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _stopOrContinueFlow() {
-    // You can decide how to transition:
-    // From replying -> suggestions (as in your original code)
+    _speech.stop();
     setState(() => state = AIState.suggestions);
   }
 
@@ -174,7 +178,7 @@ class _AIBottomSheetState extends State<AIBottomSheet>
                 ),
               ),
 
-              // Body (scrollable)
+              // Body
               Expanded(
                 child: ListView(
                   controller: controller,
@@ -188,7 +192,7 @@ class _AIBottomSheetState extends State<AIBottomSheet>
                 ),
               ),
 
-              // Footer controls
+              // Footer
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
                 child: _footerControls(),
@@ -212,7 +216,7 @@ class _AIBottomSheetState extends State<AIBottomSheet>
         _BigRoundButton(
           icon: Icons.mic,
           label: 'AI',
-          onTap: _startListening, // 🔗 Azure STT
+          onTap: _startListening,
         ),
       ],
     );
@@ -239,10 +243,7 @@ class _AIBottomSheetState extends State<AIBottomSheet>
         const SizedBox(height: 16),
         if (_lastUserUtterance.isNotEmpty) _bubbleFromUser(_lastUserUtterance),
         const SizedBox(height: 12),
-        _bubbleFromAgent(
-          // TODO: Replace this with your real assistant reply
-          'Got it! Working on the best matches. Want to add to cart?',
-        ),
+        _bubbleFromAgent(_agentReply),
       ],
     );
   }
@@ -260,7 +261,6 @@ class _AIBottomSheetState extends State<AIBottomSheet>
         const SizedBox(height: 12),
         OutlinedButton(
           onPressed: () {
-            // You can go back to listening quickly
             setState(() => state = AIState.listening);
             _startListening();
           },
@@ -282,16 +282,11 @@ class _AIBottomSheetState extends State<AIBottomSheet>
       case AIState.idle:
         return _micFooterButton(onTap: _startListening);
       case AIState.listening:
-        // While listening, keep the waveform in the footer is unusual.
-        // Keeping your layout: left pause (advance), middle waveform, right close.
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _circleIcon(Icons.pause, onTap: () {
-              // No explicit "stop" in plugin; the call ends when user stops talking.
-              // Here, we force a UI transition if you want.
-              setState(() => state = AIState.replying);
-            }),
+            _circleIcon(Icons.pause,
+                onTap: () => setState(() => state = AIState.replying)),
             _WaveBars(controller: _bars),
             _circleIcon(Icons.close, onTap: () => Navigator.pop(context)),
           ],
