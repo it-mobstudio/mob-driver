@@ -49,17 +49,16 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Color(0xFFC1EBD9),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(32),
-                    bottomRight: Radius.circular(32),
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/background-green.png'),
+                    fit: BoxFit.cover,
                   ),
                 ),
                 child: Column(
                   children: [
                     SizedBox(height: 48),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0),
+                      padding: EdgeInsets.symmetric(horizontal: 0),
                       child: Image.asset(
                         'assets/images/login_top_items.png',
                         fit: BoxFit.contain,
@@ -126,25 +125,29 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                         color: Color(0xFFAFB4C0),
                       ),
                       Expanded(
-                        child: TextFormField(
-                          controller: model.mobileNumberTextController,
-                          focusNode: model.mobileNumberFocusNode,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Enter mobile number',
-                            hintStyle: GoogleFonts.inter(
-                              color: Color(0xFFAFB4C0),
-                              fontWeight: FontWeight.w400,
+                        child: SizedBox(
+                          height: 56, // Increase this value as needed
+                          child: TextFormField(
+                            controller: model.mobileNumberTextController,
+                            focusNode: model.mobileNumberFocusNode,
+                            keyboardType: TextInputType.phone,
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Enter mobile number',
+                              hintStyle: GoogleFonts.inter(
+                                color: Color(0xFFAFB4C0),
+                                fontWeight: FontWeight.w400,
+                                fontSize: 16,
+                              ),
+                              isDense: false,
+                              contentPadding:
+                                  EdgeInsets.symmetric(vertical: 24),
+                            ),
+                            style: GoogleFonts.inter(
+                              color: Color(0xFF0A243F),
+                              fontWeight: FontWeight.w500,
                               fontSize: 16,
                             ),
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          style: GoogleFonts.inter(
-                            color: Color(0xFF0A243F),
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
                           ),
                         ),
                       ),
@@ -278,7 +281,14 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Color(0xFFE0E0E0)),
+                      border: Border.all(color: Color(0xFFDEDEDE)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.10),
+                          blurRadius: 8,
+                          offset: Offset(0, 0),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: Image.asset(
@@ -295,7 +305,14 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Color(0xFFE0E0E0)),
+                      border: Border.all(color: Color(0xFFDEDEDE)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.10),
+                          blurRadius: 8,
+                          offset: Offset(0, 0),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: Image.asset(

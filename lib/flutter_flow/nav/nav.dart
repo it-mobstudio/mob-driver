@@ -90,9 +90,19 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: ProductListingPage.routeName,
           path: ProductListingPage.routePath,
-          builder: (context, params) => ProductListingPage(
-            category: params.getParam('category', ParamType.String) ?? '',
-          ),
+          builder: (context, params) {
+            String category = '';
+            String slug = '';
+            if (params.state.extra != null && params.state.extra is Map) {
+              final extra = params.state.extra as Map;
+              category = extra['category'] ?? '';
+              slug = extra['slug'] ?? '';
+            } else {
+              category = params.getParam('category', ParamType.String) ?? '';
+              slug = params.getParam('slug', ParamType.String) ?? '';
+            }
+            return ProductListingPage(category: category, slug: slug);
+          },
         ),
         FFRoute(
           name: ProductDetailPage.routeName,

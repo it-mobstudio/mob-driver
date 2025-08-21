@@ -21,6 +21,8 @@ environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
+  record: ^4.4.0
+  just_audio: ^0.9.36
 
   flutter:
     sdk: flutter
@@ -89,11 +91,11 @@ dependencies:
   google_maps_flutter: ^2.5.0
   geolocator: ^9.0.2
   geocoding: ^2.1.0  
-  speech_to_text: ^6.6.2     # For voice input
-  flutter_tts: ^3.6.3        # For AI response playback
+  # speech_to_text: ^6.6.2     # For voice input
+  # flutter_tts: ^3.6.3        # For AI response playback
   # flutter_azure_speech: ^0.0.6
-  
 
+  
 
 dependency_overrides:
   http: 1.4.0

@@ -5,8 +5,6 @@ import 'api_manager.dart';
 
 export 'api_manager.dart' show ApiCallResponse;
 
-const _kPrivateApiFunctionName = 'ffPrivateApiCall';
-
 class LoginOTPCall {
   /// Calls the login OTP API with the given phone/email and type.
   static Future<ApiCallResponse> call({
@@ -44,6 +42,62 @@ class HomeDataCall {
     return ApiManager.instance.makeApiCall(
       callName: 'homeData',
       apiUrl: 'https://uat.madoverbuilding.com/api/home/',
+      callType: ApiCallType.GET,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class CheckOTPCall {
+  /// Calls the check OTP API with the given phone and otp.
+  static Future<ApiCallResponse> call({
+    required String phone,
+    required String otp,
+  }) async {
+    final Map<String, dynamic> body = {
+      'email_or_phone': phone,
+      'otp': otp,
+    };
+    return ApiManager.instance.makeApiCall(
+      callName: 'checkOTP',
+      apiUrl:
+          'https://uat.madoverbuilding.com/api/accounts/mob_user/auth/check_otp/',
+      callType: ApiCallType.POST,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: json.encode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class BrowseProductsCall {
+  /// Calls the browse products API for a given category name.
+  static Future<ApiCallResponse> call({
+    required String categoryName,
+    int page = 1,
+    bool isProfessional = true,
+  }) async {
+    final apiUrl =
+        'https://uat.madoverbuilding.com/api/home/$categoryName/browse_products/?page=$page&is_professional=$isProfessional';
+    return ApiManager.instance.makeApiCall(
+      callName: 'browseProducts',
+      apiUrl: apiUrl,
       callType: ApiCallType.GET,
       headers: {
         'Content-Type': 'application/json',

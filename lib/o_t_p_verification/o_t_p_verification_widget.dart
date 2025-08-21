@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'o_t_p_verification_model.dart';
 export 'o_t_p_verification_model.dart';
+import '/backend/api_requests/api_calls.dart'; // Add this import for CheckOTPCall
 
 /// OTP Verification Screen
 class OTPVerificationWidget extends StatefulWidget {
@@ -72,7 +73,11 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
           backgroundColor: Colors.white,
           automaticallyImplyLeading: false,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: Color(0xFF0A243F)),
+            icon: Image.asset(
+              'assets/images/back-arrow.png',
+              width: 24,
+              height: 24,
+            ),
             onPressed: () => context.go('/loginpage'),
           ),
           elevation: 0.0,
@@ -85,7 +90,8 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
               children: [
                 SizedBox(height: 24),
                 Text(
-                  'OTP Verification',
+                  'OTP\nVerification',
+                  textAlign: TextAlign.left,
                   style: GoogleFonts.interTight(
                     color: Color(0xFF0A243F),
                     fontSize: 28,
@@ -115,56 +121,111 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                 SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
-                  children: List.generate(4, (i) {
-                    return Container(
-                      width: 56,
-                      height: 56,
-                      margin: EdgeInsets.only(right: i < 3 ? 16 : 0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _otpFocusNodes[i].hasFocus
-                              ? Color(0xFF0A243F)
-                              : Color(0xFFAFB4C0),
-                          width: 2,
+                  children: [
+                    for (int i = 0; i < 4; i++) ...[
+                      Expanded(
+                        child: Container(
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _otpFocusNodes[i].hasFocus
+                                  ? Color(0xFF0A243F)
+                                  : Color(0xFFAFB4C0),
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: TextField(
+                              controller: _otpControllers[i],
+                              focusNode: _otpFocusNodes[i],
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              maxLength: 1,
+                              style: GoogleFonts.interTight(
+                                color: Color(0xFF0A243F),
+                                fontSize: 24,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              decoration: InputDecoration(
+                                counterText: '',
+                                border: InputBorder.none,
+                              ),
+                              onChanged: (val) async {
+                                if (val.isNotEmpty && i < 3) {
+                                  FocusScope.of(context)
+                                      .requestFocus(_otpFocusNodes[i + 1]);
+                                } else if (val.isEmpty && i > 0) {
+                                  FocusScope.of(context)
+                                      .requestFocus(_otpFocusNodes[i - 1]);
+                                }
+                                // If all OTP fields are filled, call OTP API
+                                if (_otpControllers
+                                    .every((c) => c.text.isNotEmpty)) {
+                                  final otp =
+                                      _otpControllers.map((c) => c.text).join();
+                                  // Remove '+91' and spaces from phone number
+                                  String phone = widget.phoneNumber
+                                      .replaceAll('+91', '')
+                                      .replaceAll(' ', '');
+                                  final response = await CheckOTPCall.call(
+                                    phone: phone,
+                                    otp: otp,
+                                  );
+                                  final jsonBody = response.jsonBody;
+                                  final status = jsonBody is Map &&
+                                      jsonBody['status'] == true;
+                                  final message = jsonBody is Map &&
+                                          jsonBody['message'] != null
+                                      ? jsonBody['message'].toString()
+                                      : 'OTP verification failed.';
+                                  if (status) {
+                                    final data = jsonBody['data'];
+                                    final newAccount = data != null &&
+                                        data['newAccount'] == true;
+                                    if (newAccount) {
+                                      if (mounted) {
+                                        context.go('/signup', extra: {
+                                          'phoneNumber': widget.phoneNumber
+                                        });
+                                      }
+                                    } else {
+                                      // Store tokens securely (in-memory for now)
+
+                                      // TODO: Use a secure storage solution for tokens
+                                      // Example: await FlutterSecureStorage().write(key: 'accessToken', value: accessToken);
+                                      if (mounted) {
+                                        context.go('/homepage');
+                                      }
+                                    }
+                                  } else {
+                                    await showDialog(
+                                      context: context,
+                                      builder: (alertDialogContext) {
+                                        return AlertDialog(
+                                          title: Text('OTP Failed'),
+                                          content: Text(message),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(
+                                                  alertDialogContext),
+                                              child: Text('Ok'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                          ),
                         ),
                       ),
-                      child: Center(
-                        child: TextField(
-                          controller: _otpControllers[i],
-                          focusNode: _otpFocusNodes[i],
-                          textAlign: TextAlign.center,
-                          keyboardType: TextInputType.number,
-                          maxLength: 1,
-                          style: GoogleFonts.interTight(
-                            color: Color(0xFF0A243F),
-                            fontSize: 24,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: '',
-                            border: InputBorder.none,
-                          ),
-                          onChanged: (val) {
-                            if (val.isNotEmpty && i < 3) {
-                              FocusScope.of(context)
-                                  .requestFocus(_otpFocusNodes[i + 1]);
-                            } else if (val.isEmpty && i > 0) {
-                              FocusScope.of(context)
-                                  .requestFocus(_otpFocusNodes[i - 1]);
-                            }
-                            // If all OTP fields are filled, navigate to signup
-                            if (_otpControllers
-                                .every((c) => c.text.isNotEmpty)) {
-                              context.go('/signup',
-                                  extra: {'phoneNumber': widget.phoneNumber});
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  }),
+                      if (i < 3) SizedBox(width: 16),
+                    ]
+                  ],
                 ),
                 SizedBox(height: 24),
                 Text(

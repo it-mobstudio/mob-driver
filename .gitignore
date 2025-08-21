@@ -2,3 +2,4 @@
 .dart_tool/chrome-device/Default/commerce_subscription_db/LOG.old
 /.dart_tool
 /build
+*.log

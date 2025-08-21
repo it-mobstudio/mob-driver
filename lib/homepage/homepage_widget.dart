@@ -20,8 +20,6 @@ class HomepageWidget extends StatelessWidget {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            _locationHeader(),
-            _searchBar(),
             _banner(),
             SizedBox(height: 16),
             _quickActions(context),
@@ -47,56 +45,16 @@ class HomepageWidget extends StatelessWidget {
     );
   }
 
-  Widget _locationHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          Icon(Icons.location_on, color: Colors.green),
-          SizedBox(width: 4),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Iris Society",
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                Text("D-102, Magarpatta, Hadapsar, Pune",
-                    style: GoogleFonts.inter(fontSize: 12)),
-              ],
-            ),
-          ),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.grey.shade300,
-            child: Icon(Icons.person, color: Colors.black),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _searchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: "Search “Fevicol”",
-          prefixIcon: Icon(Icons.search),
-          fillColor: Color(0xFFF2F6F9),
-          filled: true,
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none),
-        ),
-      ),
-    );
-  }
-
   Widget _banner() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(12),
+        bottomRight: Radius.circular(12),
+        topLeft: Radius.circular(0),
+        topRight: Radius.circular(0),
+      ),
+      child: SizedBox(
+        width: double.infinity,
         child:
             Image.asset('assets/images/PromotionBanner.png', fit: BoxFit.cover),
       ),
@@ -195,7 +153,8 @@ class HomepageWidget extends StatelessWidget {
               final category = categories[i];
               final label = category['name'] ?? '';
               final imageUrl = category['image'] as String?;
-              return _categoryItem(context, label, imageUrl);
+              final slug = category['slug'] as String?;
+              return _categoryItem(context, label, imageUrl, slug);
             },
           );
         },
@@ -203,9 +162,11 @@ class HomepageWidget extends StatelessWidget {
     );
   }
 
-  Widget _categoryItem(BuildContext context, String label, String? imageUrl) {
+  Widget _categoryItem(
+      BuildContext context, String label, String? imageUrl, String? slug) {
     return InkWell(
-      onTap: () => GoRouter.of(context).go('/productlisting'),
+      onTap: () => GoRouter.of(context)
+          .go('/productlisting', extra: {'category': label, 'slug': slug}),
       child: Column(
         children: [
           Container(

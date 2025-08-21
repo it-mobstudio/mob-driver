@@ -138,8 +138,10 @@ class _CartPageState extends State<CartPage> {
   // App_159: full UI long scroll; bottom bar stays fixed
   Widget _buildCartWithItems() {
     final double savings = 7200; // mock
-    final double subtotal =
-        items.fold(0, (sum, i) => sum + (i.unitPrice * i.qty.toDouble()));
+    final double subtotal = items.fold(
+      0,
+      (sum, i) => sum + (i.unitPrice * i.qty.toDouble()),
+    );
     final double shipping = 500;
     final double tax = 433;
     final double total =
@@ -184,14 +186,12 @@ class _CartPageState extends State<CartPage> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Row(
         children: [
-          Text('My cart',
-              style:
-                  GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700)),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.more_horiz),
-            onPressed: () {},
+          Text(
+            'My cart',
+            style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700),
           ),
+          const Spacer(),
+          IconButton(icon: const Icon(Icons.more_horiz), onPressed: () {}),
         ],
       ),
     );
@@ -211,19 +211,31 @@ class _CartPageState extends State<CartPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Shipping to:  Iris Society',
-                  style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w600, fontSize: 14)),
+              Text(
+                'Shipping to:  Iris Society',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('Legros Mission Suite 804 Plains Apt 613..',
-                  style: GoogleFonts.inter(
-                      fontSize: 12, color: const Color(0xFF6C7C8C))),
+              Text(
+                'Legros Mission Suite 804 Plains Apt 613..',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: const Color(0xFF6C7C8C),
+                ),
+              ),
             ],
           ),
           const Spacer(),
-          Text('CHANGE',
-              style: GoogleFonts.inter(
-                  color: const Color(0xFF2B7FFF), fontWeight: FontWeight.w700))
+          Text(
+            'CHANGE',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF2B7FFF),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -241,9 +253,13 @@ class _CartPageState extends State<CartPage> {
         children: [
           const Text('💰  Your total savings'),
           const Spacer(),
-          Text('₹${savings.toStringAsFixed(0)}',
-              style: GoogleFonts.inter(
-                  color: const Color(0xFF179F4B), fontWeight: FontWeight.w700)),
+          Text(
+            '₹${savings.toStringAsFixed(0)}',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF179F4B),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -275,7 +291,7 @@ class _CartPageState extends State<CartPage> {
             color: Colors.black12.withOpacity(0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -286,20 +302,28 @@ class _CartPageState extends State<CartPage> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: const Color(0xFFE8F5FF),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
             ),
             child: Row(
               children: [
-                Text('Store delivery',
-                    style: GoogleFonts.inter(
-                        decoration: TextDecoration.underline,
-                        color: const Color(0xFF1575D6),
-                        fontWeight: FontWeight.w700)),
+                Text(
+                  'Store delivery',
+                  style: GoogleFonts.inter(
+                    decoration: TextDecoration.underline,
+                    color: const Color(0xFF1575D6),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const Spacer(),
-                Text('₹ 250',
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w700, color: Colors.black87)),
+                Text(
+                  '₹ 250',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
               ],
             ),
           ),
@@ -309,13 +333,21 @@ class _CartPageState extends State<CartPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Sold by $sellerCode',
-                    style: GoogleFonts.inter(
-                        fontSize: 12, color: Colors.grey[700])),
+                Text(
+                  'Sold by $sellerCode',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text('Arrives by tomorrow evening',
-                    style: GoogleFonts.inter(
-                        fontSize: 12, fontWeight: FontWeight.w600)),
+                Text(
+                  'Arrives by tomorrow evening',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 ...sellerItems
                     .map((i) => _cartLineItem(i))
@@ -324,7 +356,7 @@ class _CartPageState extends State<CartPage> {
                   ..removeLast(),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -347,8 +379,10 @@ class _CartPageState extends State<CartPage> {
               color: const Color(0xFFF0F4FF),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text('${it.qty}',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            child: Text(
+              '${it.qty}',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            ),
           ),
           const SizedBox(width: 10),
 
@@ -370,26 +404,39 @@ class _CartPageState extends State<CartPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(it.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                Text(
+                  it.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 6),
-                Text('₹ ${it.unitPrice.toStringAsFixed(0)} /unit',
-                    style: GoogleFonts.inter(
-                        fontSize: 12, color: const Color(0xFF6C7C8C))),
+                Text(
+                  '₹ ${it.unitPrice.toStringAsFixed(0)} /unit',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF6C7C8C),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 InkWell(
                   onTap: () {},
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.delete_outline,
-                          size: 16, color: Colors.grey.shade700),
+                      Icon(
+                        Icons.delete_outline,
+                        size: 16,
+                        color: Colors.grey.shade700,
+                      ),
                       const SizedBox(width: 6),
-                      Text('Remove',
-                          style: GoogleFonts.inter(
-                              fontSize: 12, color: Colors.grey.shade700)),
+                      Text(
+                        'Remove',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -403,9 +450,13 @@ class _CartPageState extends State<CartPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('₹${(it.unitPrice * it.qty).toStringAsFixed(0)}',
-                  style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w700, fontSize: 14)),
+              Text(
+                '₹${(it.unitPrice * it.qty).toStringAsFixed(0)}',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
               const SizedBox(height: 8),
               _qtyControl(
                 qty: it.qty,
@@ -441,14 +492,21 @@ class _CartPageState extends State<CartPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _roundIconButton(Icons.remove, onTap: () {
-            if (qty > 1) onChanged(qty - 1);
-          }),
+          _roundIconButton(
+            Icons.remove,
+            onTap: () {
+              if (qty > 1) onChanged(qty - 1);
+            },
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text('$qty',
-                style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w700, fontSize: 14)),
+            child: Text(
+              '$qty',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
           ),
           _roundIconButton(Icons.add, onTap: () => onChanged(qty + 1)),
         ],
@@ -502,30 +560,43 @@ class _CartPageState extends State<CartPage> {
           _kvRow('Subtotal', '₹ ${subtotal.toStringAsFixed(2)}'),
           _kvRow('Shipping', '₹ ${shipping.toStringAsFixed(2)}'),
           _kvRow('Total tax', '₹ ${tax.toStringAsFixed(2)}'),
-          _kvRow('Savings', '₹ 1055.00',
-              valueStyle: GoogleFonts.inter(
-                  color: Colors.green, fontWeight: FontWeight.w700)),
+          _kvRow(
+            'Savings',
+            '₹ 1055.00',
+            valueStyle: GoogleFonts.inter(
+              color: Colors.green,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const Divider(height: 20),
-          _kvRow('Total to pay',
-              '₹ ${(subtotal + shipping + tax - 1055).toStringAsFixed(2)}',
-              keyStyle: GoogleFonts.inter(fontWeight: FontWeight.w700),
-              valueStyle: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          _kvRow(
+            'Total to pay',
+            '₹ ${(subtotal + shipping + tax - 1055).toStringAsFixed(2)}',
+            keyStyle: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            valueStyle: GoogleFonts.inter(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
               const Text('You will earn '),
-              const Text('🪙 1150',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              const Text(
+                '🪙 1150',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
               const Text(' points on this purchase'),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _kvRow(String k, String v,
-      {TextStyle? keyStyle, TextStyle? valueStyle}) {
+  Widget _kvRow(
+    String k,
+    String v, {
+    TextStyle? keyStyle,
+    TextStyle? valueStyle,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -552,9 +623,11 @@ class _CartPageState extends State<CartPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text('Purchase later (or)\nRecheck prices',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              child: Text(
+                'Purchase later (or)\nRecheck prices',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -567,8 +640,10 @@ class _CartPageState extends State<CartPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text('QUOTE REQUEST (RFQ)',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              child: Text(
+                'QUOTE REQUEST (RFQ)',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ],
@@ -608,11 +683,16 @@ class _CartPageState extends State<CartPage> {
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: Text('₹ ${total.toStringAsFixed(0)}',
-                      style: GoogleFonts.inter(
-                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    '₹ ${total.toStringAsFixed(0)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -627,11 +707,16 @@ class _CartPageState extends State<CartPage> {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: Text('Proceed to checkout',
-                      style: GoogleFonts.inter(
-                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    'Proceed to checkout',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -714,7 +799,11 @@ class _CartPageState extends State<CartPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const AIBottomSheet(), // from conversationalai.dart
+      builder: (_) => AzureConversationalAI(
+        azureKey: 'YOUR_AZURE_KEY',
+        azureRegion: 'YOUR_AZURE_REGION',
+        locale: 'en-US',
+      ),
     );
   }
 }

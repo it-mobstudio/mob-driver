@@ -10,6 +10,7 @@ class MainScaffold extends StatelessWidget {
   final int currentIndex;
   final bool showTopSearchBar;
   final bool showBackButton;
+  final bool showLocationheader;
 
   const MainScaffold({
     Key? key,
@@ -17,6 +18,7 @@ class MainScaffold extends StatelessWidget {
     required this.currentIndex,
     this.showTopSearchBar = true,
     this.showBackButton = false,
+    this.showLocationheader = true,
   }) : super(key: key);
 
   void _onTabSelected(BuildContext context, int index) {
@@ -45,7 +47,25 @@ class MainScaffold extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          if (showTopSearchBar) _topSearchBar(context),
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF0A243F),
+                  Color(0xFF778CC6),
+                ],
+              ),
+            ),
+            child: Column(
+              children: [
+                if (showLocationheader) _locationHeader(),
+                if (showTopSearchBar) _topSearchBar(context),
+              ],
+            ),
+          ),
           Expanded(child: child),
         ],
       ),
@@ -202,6 +222,38 @@ class MainScaffold extends StatelessWidget {
               ],
             ),
             label: 'Cart',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _locationHeader() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 32, left: 16, right: 16, bottom: 10),
+      child: Row(
+        children: [
+          Icon(Icons.location_on, color: Colors.green),
+          SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Iris Society",
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    )),
+                Text("D-102, Magarpatta, Hadapsar, Pune",
+                    style:
+                        GoogleFonts.inter(color: Colors.white, fontSize: 12)),
+              ],
+            ),
+          ),
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.grey.shade300,
+            child: Icon(Icons.person, color: Colors.black),
           ),
         ],
       ),
