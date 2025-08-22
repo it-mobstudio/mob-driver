@@ -1,8 +1,6 @@
+import 'api_manager.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-
-import 'api_manager.dart';
-
 export 'api_manager.dart' show ApiCallResponse;
 
 class LoginOTPCall {
@@ -97,6 +95,29 @@ class BrowseProductsCall {
         'https://uat.madoverbuilding.com/api/home/$categoryName/browse_products/?page=$page&is_professional=$isProfessional';
     return ApiManager.instance.makeApiCall(
       callName: 'browseProducts',
+      apiUrl: apiUrl,
+      callType: ApiCallType.GET,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class ProductDetailsCall {
+  /// Calls the product details API for a given product slug.
+  static Future<ApiCallResponse> call({
+    required String slug,
+  }) async {
+    final apiUrl =
+        'https://uat.madoverbuilding.com/api/home/$slug/get_product_details/';
+    return ApiManager.instance.makeApiCall(
+      callName: 'productDetails',
       apiUrl: apiUrl,
       callType: ApiCallType.GET,
       headers: {

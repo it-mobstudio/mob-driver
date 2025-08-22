@@ -107,8 +107,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         ),
         FFRoute(
           name: ProductDetailPage.routeName,
-          path: ProductDetailPage.routePath,
-          builder: (context, params) => const ProductDetailPage(),
+          path: '/ProductDetailPage/:slug',
+          builder: (context, params) => ProductDetailPage(
+              slug: params.getParam('slug', ParamType.String)),
         ),
         FFRoute(
           name: SearchPage.routeName,
