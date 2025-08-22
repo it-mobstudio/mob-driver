@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:m_o_b_demand_side/RFQ/showAcceptQuoteSheet.dart';
 
+// << add this >>
+import '../widgets/main_scaffold.dart';
+
 class RfqDetailsPage extends StatelessWidget {
   const RfqDetailsPage({super.key});
 
@@ -14,148 +17,114 @@ class RfqDetailsPage extends StatelessWidget {
     final border = const Color(0xFFE6ECF2);
     final ink = const Color(0xFF0A243F);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Container(height: 112, color: mint), // mint header tint
-          SafeArea(
-            child: Column(
-              children: [
-                // Top search row
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Search for product, category, brand…',
-                            prefixIcon: const Icon(Icons.search),
-                            filled: true,
-                            fillColor: const Color(0xFFF2F6F9),
-                            isDense: true,
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide.none,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+    return MainScaffold(
+      currentIndex: 3, // Profile tab
+      // no title => no AppBar (keeps your custom header/search UI)
+      child: Container(
+        color: Colors.white,
+        child: Stack(
+          children: [
+            Container(height: 112, color: mint), // mint header tint
+            SafeArea(
+              child: Column(
+                children: [
+                  // Top search row
+
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      children: [
+                        // RFQ id + status + placed on
+                        Text('RFQ_000000101',
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: ink)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            _statusPill('Quotation generated'),
+                            const SizedBox(width: 8),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      _circleIcon(Icons.mic_none),
-                    ],
+                        const SizedBox(height: 6),
+                        Text('Placed on: 6 Feb 2022, 10:32am',
+                            style: GoogleFonts.inter(
+                                fontSize: 12, color: const Color(0xFF6C7C8C))),
+                        const SizedBox(height: 16),
+
+                        Text('MOB Quotes',
+                            style: GoogleFonts.inter(
+                                fontSize: 16, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 12),
+
+                        // Quote 1 (no comments)
+                        _quoteCard(
+                          title: 'Quote 1',
+                          time: 'Today, 10:24 am',
+                          items: 2,
+                          total: 10800,
+                          showComments: false,
+                          onAccept: () {
+                            showAcceptQuoteSheet(
+                              context,
+                              quoteTitle: 'Quote 1',
+                              itemsCount: 8,
+                              totalAmount: 31250,
+                              timeText: 'Today, 10:24 am',
+                            );
+                          },
+                          onViewQuotation: () {},
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Quote 2 (with comments block)
+                        _quoteCard(
+                          title: 'Quote 2',
+                          time: 'Today, 10:24 am',
+                          items: 2,
+                          total: 10800,
+                          showComments: true,
+                          onAccept: () {
+                            showAcceptQuoteSheet(
+                              context,
+                              quoteTitle: 'Quote 1',
+                              itemsCount: 8,
+                              totalAmount: 31250,
+                              timeText: 'Today, 10:24 am',
+                            );
+                          },
+                          onViewQuotation: () {},
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Requested tracker + attachments + comments
+                        _requestedBlock(border),
+
+                        const SizedBox(height: 20),
+
+                        // Customer info
+                        _customerInfo(),
+
+                        const SizedBox(height: 12),
+
+                        // GST row
+                        _gstRow(),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
                   ),
-                ),
-
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                    children: [
-                      // RFQ id + status + placed on
-                      Text('RFQ_000000101',
-                          style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: ink)),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _statusPill('Quotation generated'),
-                          const SizedBox(width: 8),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text('Placed on: 6 Feb 2022, 10:32am',
-                          style: GoogleFonts.inter(
-                              fontSize: 12, color: const Color(0xFF6C7C8C))),
-                      const SizedBox(height: 16),
-
-                      Text('MOB Quotes',
-                          style: GoogleFonts.inter(
-                              fontSize: 16, fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 12),
-
-                      // Quote 1 (no comments)
-                      _quoteCard(
-                        title: 'Quote 1',
-                        time: 'Today, 10:24 am',
-                        items: 2,
-                        total: 10800,
-                        showComments: false,
-                        onAccept: () {
-                          showAcceptQuoteSheet(
-                            context,
-                            quoteTitle: 'Quote 1',
-                            itemsCount: 8,
-                            totalAmount: 31250,
-                            timeText: 'Today, 10:24 am',
-                          );
-                        },
-                        onViewQuotation: () {},
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Quote 2 (with comments block)
-                      _quoteCard(
-                        title: 'Quote 2',
-                        time: 'Today, 10:24 am',
-                        items: 2,
-                        total: 10800,
-                        showComments: true,
-                        onAccept: () {
-                          showAcceptQuoteSheet(
-                            context,
-                            quoteTitle: 'Quote 1',
-                            itemsCount: 8,
-                            totalAmount: 31250,
-                            timeText: 'Today, 10:24 am',
-                          );
-                        },
-                        onViewQuotation: () {},
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Requested tracker + attachments + comments
-                      _requestedBlock(border),
-
-                      const SizedBox(height: 20),
-
-                      // Customer info
-                      _customerInfo(),
-
-                      const SizedBox(height: 12),
-
-                      // GST row
-                      _gstRow(),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   // ---------- small widgets ----------
-
-  static Widget _circleIcon(IconData icon) => Container(
-        width: 40,
-        height: 40,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Color(0xFFE9EEF3),
-        ),
-        child: Icon(icon, color: Colors.black87),
-      );
 
   static Widget _statusPill(String text) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -373,12 +342,8 @@ class RfqDetailsPage extends StatelessWidget {
             : null,
       );
 
-  static Widget _stepLine() => Expanded(
-        child: Container(
-          height: 3,
-          color: const Color(0xFFE9EEF3),
-        ),
-      );
+  static Widget _stepLine() =>
+      Expanded(child: Container(height: 3, color: const Color(0xFFE9EEF3)));
 
   static Widget _fileTile(String name) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

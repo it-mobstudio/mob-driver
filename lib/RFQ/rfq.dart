@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
 import 'rfq_details_page.dart'; // if you navigate to details
+import '../widgets/main_scaffold.dart'; // <-- add this
 
 // ---- Mock model -------------------------------------------------------------
 class RfqItem {
@@ -78,9 +79,11 @@ class _RfqListPageState extends State<RfqPage> {
   Widget build(BuildContext context) {
     final mint = const Color(0xFFE9F4F1); // header tint
     final ink = const Color(0xFF0A243F);
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
+
+    return MainScaffold(
+      currentIndex: 3, // Profile tab (change if needed)
+      // No title => no AppBar; keeps your custom header/search look
+      child: Stack(
         children: [
           // Mint header background
           Container(height: 112, color: mint),
@@ -88,34 +91,20 @@ class _RfqListPageState extends State<RfqPage> {
             child: Column(
               children: [
                 // Top search bar row
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.black),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      Expanded(
-                          child: _searchField(_headerSearch,
-                              hint: 'Search for product, category, brand…',
-                              dense: true)),
-                      const SizedBox(width: 8),
-                      _iconCircle(Icons.mic_none),
-                    ],
-                  ),
-                ),
 
                 // Title
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('Quotation request',
-                        style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: ink)),
+                    child: Text(
+                      'Quotation request',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: ink,
+                      ),
+                    ),
                   ),
                 ),
 
@@ -175,18 +164,6 @@ class _RfqListPageState extends State<RfqPage> {
     );
   }
 
-  Widget _iconCircle(IconData icon) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Color(0xFFE9EEF3),
-      ),
-      child: Icon(icon, color: Colors.black87),
-    );
-  }
-
   Widget _sortButton() {
     return OutlinedButton.icon(
       onPressed: () {},
@@ -237,10 +214,8 @@ class _RfqListPageState extends State<RfqPage> {
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF3A4B5B))),
                         const SizedBox(height: 4),
-                        Text(
-                          'Placed on: ${_fmtDate(it.placedOn)}',
-                          style: small,
-                        ),
+                        Text('Placed on: ${_fmtDate(it.placedOn)}',
+                            style: small),
                       ],
                     ),
                   ),
@@ -254,10 +229,7 @@ class _RfqListPageState extends State<RfqPage> {
 
             // Status row
             InkWell(
-              onTap: () {
-                context.go(
-                    '/rfq-details'); // or context.goNamed(RfqDetailsPage.routeName)
-              },
+              onTap: () => context.go(RfqDetailsPage.routePath),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                 child: Row(
@@ -268,10 +240,8 @@ class _RfqListPageState extends State<RfqPage> {
                           children: [
                             Text(it.status, style: title),
                             const SizedBox(height: 4),
-                            Text(
-                              '${it.documents} document attached',
-                              style: small,
-                            ),
+                            Text('${it.documents} document attached',
+                                style: small),
                           ]),
                     ),
                     const Icon(Icons.chevron_right, color: Colors.black54),

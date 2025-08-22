@@ -27,7 +27,7 @@ class HomepageWidget extends StatelessWidget {
             _sectionTitle("Explore by categories"),
             _categoryGrid(context),
             _sectionTitle("Top brands for you"),
-            _brandList(),
+            _brandList(context),
             _sectionTitle("Trending in your area"),
             _productCarousel(),
             _sectionTitle("Say no to water leak"),
@@ -198,45 +198,114 @@ class HomepageWidget extends StatelessWidget {
     );
   }
 
-  Widget _brandList() {
-    return SizedBox(
-      height: 100,
-      child: ListView.separated(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        scrollDirection: Axis.horizontal,
-        itemCount: brandLogos.length,
-        separatorBuilder: (_, __) => SizedBox(width: 12),
-        itemBuilder: (context, i) {
-          final brand = brandLogos[i];
-          return Container(
-            width: double.tryParse(brand['width'] ?? '80') ?? 80,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  brand['logo'] ?? '',
-                  width: 48,
-                  height: 48,
-                  fit: BoxFit.contain,
+  Widget _brandList(BuildContext context) {
+    const crossCount = 3;
+    const gap = 16.0;
+    const pagePad = 16.0;
+
+    final w = MediaQuery.of(context).size.width;
+    final tile = (w - (pagePad * 2) - gap * (crossCount - 1)) / crossCount;
+    final rows = (brandLogos.length / crossCount).ceil();
+    final gridH = rows * tile + (rows - 1) * gap;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: pagePad),
+      child: SizedBox(
+        height: gridH,
+        child: GridView.builder(
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossCount,
+            mainAxisSpacing: gap,
+            crossAxisSpacing: gap,
+            childAspectRatio: 1, // square tiles
+          ),
+          itemCount: brandLogos.length,
+          itemBuilder: (context, i) {
+            final img = brandLogos[i]['logo'] ?? '';
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                color: const Color(0xFFffffff),
+                child: Center(
+                  child: FractionallySizedBox(
+                    widthFactor: 0.96,
+                    heightFactor: 0.96,
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      alignment: Alignment.center,
+                      child:
+                          Image.asset(img, filterQuality: FilterQuality.high),
+                    ),
+                  ),
                 ),
-                SizedBox(height: 6),
-                Text(
-                  brand['name'] ?? '',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold, fontSize: 12),
-                ),
-              ],
-            ),
-          );
-        },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
+
+  // Widget _brandList() {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(horizontal: 16),
+  //     child: SizedBox(
+  //       // let the grid decide the item height; no fixed 300 if you want it to grow
+  //       child: GridView.builder(
+  //         physics: const NeverScrollableScrollPhysics(),
+  //         shrinkWrap: true,
+  //         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+  //           crossAxisCount: 3,
+  //           mainAxisSpacing: 16,
+  //           crossAxisSpacing: 16,
+  //           childAspectRatio: 1, // square cards
+  //         ),
+  //         itemCount: brandLogos.length,
+  //         itemBuilder: (context, i) {
+  //           final brand = brandLogos[i];
+  //           final String path = brand['logo'] ?? '';
+  //           final bool isLogoOnly = (brand['isLogo'] == true) ||
+  //               path.toLowerCase().contains('logo'); // simple heuristic
+
+  //           return ClipRRect(
+  //             borderRadius: BorderRadius.circular(12),
+  //             child: ColoredBox(
+  //               color: const Color(0xFFF4F7FB), // light bluish bg like the mock
+  //               child: Stack(
+  //                 fit: StackFit.expand,
+  //                 children: [
+  //                   // Image fills the entire tile; no AspectRatio wrapper.
+  //                   Padding(
+  //                     padding: const EdgeInsets.all(8),
+  //                     child: isLogoOnly
+  //                         // Logos: keep proportions but use up most of the tile.
+  //                         ? FractionallySizedBox(
+  //                             widthFactor: 0.9,
+  //                             heightFactor: 0.9,
+  //                             child: FittedBox(
+  //                               fit: BoxFit.contain,
+  //                               alignment: Alignment.center,
+  //                               child: Image.asset(path),
+  //                             ),
+  //                           )
+  //                         // Pack/product shots: fill the card (no empty gaps).
+  //                         : FittedBox(
+  //                             fit: BoxFit.cover,
+  //                             alignment: Alignment.center,
+  //                             child: Image.asset(path),
+  //                           ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           );
+  //         },
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _productCarousel() {
     return SizedBox(

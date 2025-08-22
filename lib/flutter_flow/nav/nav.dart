@@ -20,6 +20,7 @@ import '../../checkout/order_placed_page.dart';
 import '../../address_selection/map_location_widget.dart';
 import '../../RFQ/RfqFormPage.dart';
 import '../../RFQ/RfqSuccessPage.dart';
+import '../../myaccount/myaccount.dart';
 export 'package:go_router/go_router.dart';
 export 'serialization_util.dart';
 
@@ -163,6 +164,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: RfqDetailsPage.routeName,
           path: RfqDetailsPage.routePath,
           builder: (context, state) => const RfqDetailsPage(),
+        ),
+        FFRoute(
+          name: MyAccountWidget.routeName,
+          path: MyAccountWidget.routePath,
+          builder: (context, state) => const MyAccountWidget(),
         ),
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

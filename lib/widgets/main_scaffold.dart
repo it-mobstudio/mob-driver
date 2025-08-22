@@ -33,7 +33,7 @@ class MainScaffold extends StatelessWidget {
         context.go('/mobstar');
         break;
       case 3:
-        context.go('/profile');
+        context.go('/myaccount');
         break;
       case 4:
         context.go(CartPage.routePath);
@@ -209,7 +209,7 @@ class MainScaffold extends StatelessWidget {
                     constraints:
                         const BoxConstraints(minWidth: 16, minHeight: 16),
                     child: Text(
-                      '11',
+                      '0',
                       style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 10,
