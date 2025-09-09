@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:m_o_b_demand_side/backend/api_requests/api_calls.dart';
 import '../flutter_flow/flutter_flow_theme.dart';
 
 class ProductCard extends StatelessWidget {
@@ -62,43 +63,69 @@ class ProductCard extends StatelessWidget {
                 // No rating in API, so skip rating UI
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             Center(
               child: imageUrl != null && imageUrl.isNotEmpty
-                  ? Image.network(imageUrl, height: 70, fit: BoxFit.contain)
+                  ? Image.network(imageUrl, height: 55, fit: BoxFit.contain)
                   : Image.asset('assets/images/Image-coming-soon.png',
-                      height: 70, fit: BoxFit.contain),
+                      height: 55, fit: BoxFit.contain),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             // Plus button below image, right aligned, circular background
             Row(
               children: [
                 const Spacer(),
-                Container(
-                  decoration: BoxDecoration(
-                    color: FlutterFlowTheme.of(context).primaryBackground,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: FlutterFlowTheme.of(context)
-                            .alternate
-                            .withOpacity(0.2),
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
+                GestureDetector(
+                  onTap: () async {
+                    final response = await AddToCartCall.call(
+                      items: [
+                        {
+                          "product": product['vendorPricings']
+                                  ?['vendor_product_id'] ??
+                              product['id'],
+                          "quantity": 1
+                        }
+                      ],
+                    );
+                    // Parse the response and show a snackbar with the message
+                    final message = response.jsonBody?['message'] ??
+                        response.jsonBody?['detail'] ??
+                        'Something went wrong';
+                    final isSuccess = response.jsonBody?['status'] == true;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(message),
+                        backgroundColor: isSuccess ? Colors.green : Colors.red,
+                        duration: const Duration(seconds: 2),
                       ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(12),
-                  child: Image.asset(
-                    'assets/images/plus.png',
-                    height: 16,
-                    width: 16,
-                    fit: BoxFit.contain,
+                    );
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: FlutterFlowTheme.of(context).primaryBackground,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: FlutterFlowTheme.of(context)
+                              .alternate
+                              .withOpacity(0.2),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: Image.asset(
+                      'assets/images/plus.png',
+                      height: 16,
+                      width: 16,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 2),
             Text(name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -106,7 +133,7 @@ class ProductCard extends StatelessWidget {
                     .typography
                     .bodyMedium
                     .copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
-            const SizedBox(height: 6),
+            const SizedBox(height: 2),
             Row(
               children: [
                 Text('₹$priceStr',
@@ -129,7 +156,7 @@ class ProductCard extends StatelessWidget {
                               decoration: TextDecoration.lineThrough)),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Row(
               children: [
                 Icon(Icons.flash_on,

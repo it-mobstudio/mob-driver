@@ -21,22 +21,24 @@ class HomepageWidget extends StatelessWidget {
         child: Column(
           children: [
             _banner(),
-            SizedBox(height: 16),
+            SizedBox(height: 24),
             _quickActions(context),
-            SizedBox(height: 16),
+            SizedBox(height: 24),
             _sectionTitle("Explore by categories"),
             _categoryGrid(context),
+            SizedBox(height: 24),
             _sectionTitle("Top brands for you"),
             _brandList(context),
-            _sectionTitle("Trending in your area"),
-            _productCarousel(),
-            _sectionTitle("Say no to water leak"),
-            _productCarousel(),
-            _mobStarPromo(),
-            _sectionTitle("Built to last longer"),
-            _productCarousel(),
-            _sectionTitle("Walls that reflect you"),
-            _productCarousel(),
+            // _sectionTitle("Trending in your area"),
+            // _productCarousel(),
+            // _sectionTitle("Say no to water leak"),
+            // _productCarousel(),
+            // _mobStarPromo(),
+            // _sectionTitle("Built to last longer"),
+            // _productCarousel(),
+            // _sectionTitle("Walls that reflect you"),
+            // _productCarousel(),
+            SizedBox(height: 24),
             _infoCard(context),
             SizedBox(height: 24),
           ],
@@ -63,47 +65,122 @@ class HomepageWidget extends StatelessWidget {
 
   Widget _quickActions(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          _actionCard("Quote request", Icons.description, () {
-            GoRouter.of(context).go(RfqFormPage.routePath);
-          }),
-          SizedBox(width: 12),
-          _actionCard("Line of credit", Icons.credit_card, () {
-            GoRouter.of(context).go(RfqFormPage.routePath);
-          }),
-        ],
-      ),
-    );
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            _actionCard(
+              "Quote request",
+              "Share your handwritten or typed quote",
+              "assets/images/delivery_box.png",
+              () {
+                GoRouter.of(context).go(RfqFormPage.routePath);
+              },
+            ),
+            SizedBox(width: 12),
+            _actionCard(
+              "Line of credit",
+              "Get credit upto 50 lakhs anywhere in India",
+              "assets/images/3d-hands-holding.png",
+              () {
+                GoRouter.of(context).go(RfqFormPage.routePath);
+              },
+            ),
+          ],
+        ));
   }
 
-  Widget _actionCard(String title, IconData icon, VoidCallback onTap) {
+  Widget _actionCard(
+      String title, String subtitle, String imagePath, VoidCallback onTap) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: Color(0xFF0A243F)),
-              SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
+            height: 163,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(0),
+              child: Stack(
+                children: [
+                  // Centered text
+                  // Align(
+                  //   alignment: Alignment.centerLeft,
+
+                  //   child: Column(
+                  //     mainAxisSize: MainAxisSize.min,
+                  //     crossAxisAlignment: CrossAxisAlignment.start,
+                  //     children: [
+                  //       Text(
+                  //         title,
+                  //         textAlign: TextAlign.left,
+                  //         style: GoogleFonts.inter(
+                  //           fontWeight: FontWeight.w700,
+                  //           fontSize: 15,
+                  //         ),
+                  //       ),
+                  //       SizedBox(height: 6),
+
+                  //       Text(
+                  //         subtitle,
+                  //         textAlign: TextAlign.left,
+                  //         style: GoogleFonts.inter(
+                  //           fontWeight: FontWeight.w400,
+                  //           fontSize: 12,
+                  //           color: Colors.black54,
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.all(16), // <-- Added padding here
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            textAlign: TextAlign.left,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 17,
+                              color: Color(0xFF0A243F),
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            subtitle,
+                            textAlign: TextAlign.left,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Icon/image at bottom right
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Image.asset(
+                      imagePath,
+                      width: 90,
+                      height: 90,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            )),
       ),
     );
   }
@@ -201,12 +278,15 @@ class HomepageWidget extends StatelessWidget {
   Widget _brandList(BuildContext context) {
     const crossCount = 3;
     const gap = 16.0;
-    const pagePad = 16.0;
+    const pagePad = 0.0;
+    const minTile = 0.0;
 
     final w = MediaQuery.of(context).size.width;
-    final tile = (w - (pagePad * 2) - gap * (crossCount - 1)) / crossCount;
+    // final tile = (w - (pagePad * 2) - gap * (crossCount - 1)) / crossCount;
+    final tile = ((w - (pagePad * 2) - gap * (crossCount - 1)) / crossCount)
+        .clamp(minTile, double.infinity);
     final rows = (brandLogos.length / crossCount).ceil();
-    final gridH = rows * tile + (rows - 1) * gap;
+    final gridH = (rows * tile + (rows - 1) * gap);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: pagePad),

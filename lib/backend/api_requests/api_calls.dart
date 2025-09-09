@@ -113,9 +113,13 @@ class ProductDetailsCall {
   /// Calls the product details API for a given product slug.
   static Future<ApiCallResponse> call({
     required String slug,
+    String? mobSku,
   }) async {
-    final apiUrl =
+    String apiUrl =
         'https://uat.madoverbuilding.com/api/home/$slug/get_product_details/';
+    if (mobSku != null && mobSku.isNotEmpty) {
+      apiUrl += '?mob_sku=$mobSku';
+    }
     return ApiManager.instance.makeApiCall(
       callName: 'productDetails',
       apiUrl: apiUrl,
@@ -125,6 +129,33 @@ class ProductDetailsCall {
       },
       params: {},
       returnBody: true,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class AddToCartCall {
+  /// Calls the add to cart API with a list of products and quantities.
+  static Future<ApiCallResponse> call({
+    required List<Map<String, dynamic>> items,
+  }) async {
+    final apiUrl =
+        'https://uat.madoverbuilding.com/api/orders/cart/add_to_cart/';
+    return ApiManager.instance.makeApiCall(
+      callName: 'addToCart',
+      apiUrl: apiUrl,
+      callType: ApiCallType.POST,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: json.encode(items),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,

@@ -96,6 +96,13 @@ class _ProductListingPageState extends State<ProductListingPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           _subCategoryList(_subCategories),
+          SizedBox(height: 24),
+          Container(
+            width: double.infinity,
+            color: const Color(0xFFF1F1F2),
+            child: const SizedBox(height: 12),
+          ),
+          SizedBox(height: 12),
           _filterRow(context),
           Expanded(
             child: _error != null
@@ -169,7 +176,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: SizedBox(
-        height: 80,
+        height: 110, // slightly taller to fit image + text nicely
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -177,28 +184,38 @@ class _ProductListingPageState extends State<ProductListingPage> {
           separatorBuilder: (_, __) => const SizedBox(width: 12),
           itemBuilder: (context, index) {
             final sub = subs[index];
-            final name = sub['sub_category_name'];
-            final image = sub['image'];
+            final name = sub['sub_category_name'] as String? ?? '';
+            final image = sub['image'] as String? ?? '';
+
             return Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  height: 48,
-                  width: 48,
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F6F9),
+                    color: const Color(0xFFF1F1F2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: (image != null && image.toString().isNotEmpty)
+                  padding: const EdgeInsets.all(8), // 👈 padding inside box
+                  child: (image.isNotEmpty)
                       ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           child: Image.network(image, fit: BoxFit.cover),
                         )
                       : const Icon(Icons.chair_outlined, size: 28),
                 ),
                 const SizedBox(height: 6),
-                Text(name,
+                SizedBox(
+                  width: 72,
+                  child: Text(
+                    name,
                     style: GoogleFonts.inter(fontSize: 11),
-                    textAlign: TextAlign.center)
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             );
           },
@@ -211,7 +228,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           _filterChip("Filter", Icons.tune, onTap: () {
             showModalBottomSheet(
