@@ -21,6 +21,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   List<dynamic> similarProducts = [];
   bool isLoading = true;
   String? error;
+  int cartQuantity = 0;
   // Attribute selection state
   // Dynamic variant selection state
   Map<String, String?> selectedVariants = {};
@@ -86,9 +87,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      // Keep bottom nav visible; product detail is under Home tab
       currentIndex: 0,
-      // No AppBar; custom header below
       child: isLoading
           ? const Center(child: CircularProgressIndicator())
           : error != null
@@ -593,5 +592,124 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         .split(' ')
         .map((w) => w.isNotEmpty ? w[0].toUpperCase() + w.substring(1) : '')
         .join(' ');
+  }
+
+  // Add this method to your _ProductDetailPageState
+  Widget _addToCartFooter() {
+    final vendorPricing = product?['vendorPricings'] ?? {};
+    final price = vendorPricing['vendor_selling_price'] ?? 0;
+    final oldPrice = product?['maximum_retail_price'] ?? 0;
+    final discount = vendorPricing['discount'] ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Price section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('₹$price',
+                      style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green)),
+                  const SizedBox(width: 8),
+                  if ((oldPrice is num && oldPrice > 0) ||
+                      (oldPrice is String && oldPrice.isNotEmpty))
+                    Text('₹$oldPrice',
+                        style: GoogleFonts.inter(
+                            decoration: TextDecoration.lineThrough,
+                            fontSize: 14,
+                            color: Colors.grey)),
+                  const SizedBox(width: 8),
+                  if ((discount is num && discount > 0) ||
+                      (discount is String && discount.toString() != '0'))
+                    Text('$discount% off',
+                        style: GoogleFonts.inter(
+                            fontSize: 13, color: Colors.green)),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                  '₹11500', // You can update this to your actual MRP or other info
+                  style: GoogleFonts.inter(fontSize: 14, color: Colors.black)),
+            ],
+          ),
+          const Spacer(),
+          // Add to cart or quantity selector
+          cartQuantity == 0
+              ? SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24)),
+                      minimumSize: const Size(120, 48),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        cartQuantity = 1;
+                      });
+                      // Add to cart API call here
+                    },
+                    child: Text('ADD',
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                )
+              : Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.grey.shade300),
+                    color: Colors.white,
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        onPressed: () {
+                          setState(() {
+                            if (cartQuantity > 1) {
+                              cartQuantity--;
+                            } else {
+                              cartQuantity = 0;
+                            }
+                          });
+                          // Update cart API call here
+                        },
+                      ),
+                      Text('$cartQuantity',
+                          style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          setState(() {
+                            cartQuantity++;
+                          });
+                          // Update cart API call here
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+        ],
+      ),
+    );
   }
 }
