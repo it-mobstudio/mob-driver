@@ -36,9 +36,21 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                   const SizedBox(height: 8),
                   _redeemSection(),
                   const SizedBox(height: 12),
-                  _paymentOptionCard(),
-                  const SizedBox(height: 10),
-                  _razorpayTile(),
+                  RadioGroup<int>(
+                    groupValue: option,
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => option = v);
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        _paymentOptionCard(),
+                        const SizedBox(height: 10),
+                        _razorpayTile(),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   _viewCouponsTile(),
                   const SizedBox(height: 12),
@@ -117,10 +129,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Radio<int>(
-              value: 0,
-              groupValue: option,
-              onChanged: (v) => setState(() => option = v!)),
+          const Radio<int>(value: 0),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,10 +189,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       ),
       child: Row(
         children: [
-          Radio<int>(
-              value: 1,
-              groupValue: option,
-              onChanged: (v) => setState(() => option = v!)),
+          const Radio<int>(value: 1),
           const SizedBox(width: 8),
           Text('Pay using Razorpay',
               style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
@@ -247,7 +253,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                     fontWeight: bold ? FontWeight.w700 : FontWeight.w500)),
             const Spacer(),
             Text(
-              (saving && v < 0 ? '- ' : '') + '₹ ${v.abs().toStringAsFixed(2)}',
+              '${saving && v < 0 ? '- ' : ''}₹ ${v.abs().toStringAsFixed(2)}',
               style: GoogleFonts.inter(
                 fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
                 color: saving ? Colors.green : null,

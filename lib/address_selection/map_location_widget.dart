@@ -98,10 +98,14 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
 
   void _onCameraIdle() {
     if (_map == null) return;
+    final size = MediaQuery.of(context).size;
     _map!.getVisibleRegion().then((_) async {
+      if (!mounted) {
+        return;
+      }
       final target = await _map!.getLatLng(ScreenCoordinate(
-        x: (MediaQuery.of(context).size.width ~/ 2),
-        y: (MediaQuery.of(context).size.height ~/ 2),
+        x: (size.width ~/ 2),
+        y: (size.height ~/ 2),
       ));
       _pickedLatLng = target;
       _reverseGeocode(target);
@@ -241,7 +245,7 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.85),
+        color: Colors.black.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

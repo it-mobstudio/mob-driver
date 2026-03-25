@@ -3,8 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'backend/firebase/firebase_config.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
-import 'flutter_flow/flutter_flow_util.dart';
+import 'core/auth/auth_session.dart';
+import '/core/app_runtime/flutter_flow_theme.dart';
+import 'core/app_runtime/flutter_flow_util.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,21 +19,24 @@ void main() async {
   await environmentValues.initialize();
 
   await initFirebase();
+  await AuthSession.instance.initialize();
 
   await FlutterFlowTheme.initialize();
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
-  @override
-  State<MyApp> createState() => _MyAppState();
+  const MyApp({super.key});
 
-  static _MyAppState of(BuildContext context) =>
-      context.findAncestorStateOfType<_MyAppState>()!;
+  @override
+  State<MyApp> createState() => MyAppState();
+
+  static MyAppState of(BuildContext context) =>
+      context.findAncestorStateOfType<MyAppState>()!;
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   ThemeMode _themeMode = FlutterFlowTheme.themeMode;
 
   late AppStateNotifier _appStateNotifier;
@@ -61,6 +65,9 @@ class _MyAppState extends State<MyApp> {
 
     // Show splash for 5 seconds
     Future.delayed(const Duration(seconds: 5), () {
+      if (!mounted) {
+        return;
+      }
       safeSetState(() => _appStateNotifier.stopShowingSplashImage());
     });
   }
@@ -76,7 +83,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'MOB Demand Side',
-      localizationsDelegates: [
+      localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

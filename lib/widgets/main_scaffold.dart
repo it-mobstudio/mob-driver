@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../homepage/homepage_widget.dart';
+import '../myaccount/my_account.dart';
 import '../../cart/cart_page.dart';
 
 class MainScaffold extends StatelessWidget {
@@ -13,32 +15,38 @@ class MainScaffold extends StatelessWidget {
   final bool showLocationheader;
 
   const MainScaffold({
-    Key? key,
+    super.key,
     required this.child,
     required this.currentIndex,
     this.showTopSearchBar = true,
     this.showBackButton = false,
     this.showLocationheader = true,
-  }) : super(key: key);
+  });
 
   void _onTabSelected(BuildContext context, int index) {
     switch (index) {
       case 0:
-        context.go('/homepage');
+        context.go(HomepageWidget.routePath);
         break;
       case 1:
-        context.go('/projects');
+        _showComingSoon(context, 'Projects');
         break;
       case 2:
-        context.go('/mobstar');
+        _showComingSoon(context, 'Mobstar');
         break;
       case 3:
-        context.go('/myaccount');
+        context.go(MyAccountWidget.routePath);
         break;
       case 4:
         context.go(CartPage.routePath);
         break;
     }
+  }
+
+  void _showComingSoon(BuildContext context, String tabName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$tabName is coming soon')),
+    );
   }
 
   @override
@@ -233,8 +241,8 @@ class MainScaffold extends StatelessWidget {
       padding: const EdgeInsets.only(top: 32, left: 16, right: 16, bottom: 10),
       child: Row(
         children: [
-          Icon(Icons.location_on, color: Colors.green),
-          SizedBox(width: 4),
+          const Icon(Icons.location_on, color: Colors.green),
+          const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,7 +261,7 @@ class MainScaffold extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundColor: Colors.grey.shade300,
-            child: Icon(Icons.person, color: Colors.black),
+            child: const Icon(Icons.person, color: Colors.black),
           ),
         ],
       ),
@@ -261,8 +269,6 @@ class MainScaffold extends StatelessWidget {
   }
 
   Widget _topSearchBar(BuildContext context) {
-    final FocusNode _focusNode = FocusNode();
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
       child: Row(
@@ -276,14 +282,7 @@ class MainScaffold extends StatelessWidget {
             const SizedBox(width: 16),
           Expanded(
             child: TextField(
-              focusNode: _focusNode,
-              onChanged: (val) {
-                if (val.isNotEmpty) {
-                  context.push('/search');
-                }
-              },
               onTap: () {
-                // Optional fallback in case focusNode doesn't fire
                 context.push('/search');
               },
               decoration: InputDecoration(

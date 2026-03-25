@@ -1,30 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/backend/api_requests/api_calls.dart';
-import '../flutter_flow/flutter_flow_theme.dart';
+import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
+import '../core/app_runtime/flutter_flow_theme.dart';
 
 class ProductCard extends StatelessWidget {
-  final Map<String, dynamic> product;
+  final ProductModel product;
   final VoidCallback? onTap;
 
-  const ProductCard({Key? key, required this.product, this.onTap})
-      : super(key: key);
+  const ProductCard({super.key, required this.product, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final vendorPricing = product['vendorPricings'] ?? {};
-    final name = product['item_name_title'] ?? '';
-    final price = vendorPricing['vendor_selling_price'] ?? 0;
-    final oldPrice = product['maximum_retail_price'] ?? 0;
-    final priceStr = double.tryParse(price.toString())?.toStringAsFixed(2) ??
-        price.toString();
-    final oldPriceStr =
-        double.tryParse(oldPrice.toString())?.toStringAsFixed(2) ??
-            oldPrice.toString();
-    final discount = vendorPricing['discount'] ?? 0;
-    final delivery = vendorPricing['fullfillment_latency'] ?? '';
-    final imageUrl = (product['images'] != null && product['images'].isNotEmpty)
-        ? product['images'][0]['image']
-        : null;
+    final name = product.title;
+    final price = product.vendorPricing.vendorSellingPrice;
+    final oldPrice = product.maximumRetailPrice;
+    final priceStr = price.toStringAsFixed(2);
+    final oldPriceStr = oldPrice.toStringAsFixed(2);
+    final discount = product.vendorPricing.discount;
+    final delivery = product.vendorPricing.fullfillmentLatency;
+    final imageUrl = product.primaryImageUrl;
 
     return SizedBox(
       width: 164,
@@ -44,9 +38,7 @@ class ProductCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  (discount != null &&
-                          discount != 0 &&
-                          discount.toString().isNotEmpty)
+                  (discount != 0 && discount.toString().isNotEmpty)
                       ? Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
@@ -54,7 +46,7 @@ class ProductCard extends StatelessWidget {
                             color: FlutterFlowTheme.of(context).secondary,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text('${discount}% OFF',
+                          child: Text('$discount% OFF',
                               style: FlutterFlowTheme.of(context)
                                   .typography
                                   .labelSmall
@@ -91,7 +83,7 @@ class ProductCard extends StatelessWidget {
                 child: SizedBox(
                   width: 132,
                   height: 132,
-                  child: imageUrl != null && imageUrl.isNotEmpty
+                  child: imageUrl.isNotEmpty
                       ? Image.network(
                           imageUrl,
                           width: 132,
@@ -116,17 +108,20 @@ class ProductCard extends StatelessWidget {
                       final response = await AddToCartCall.call(
                         items: [
                           {
-                            "product": product['vendorPricings']
-                                    ?['vendor_product_id'] ??
-                                product['id'],
+                            "product": product.addToCartProductId,
                             "quantity": 1
                           }
                         ],
                       );
+                      if (!context.mounted) {
+                        return;
+                      }
                       // Parse the response and show a snackbar with the message
-                      final message = response.jsonBody?['message'] ??
-                          response.jsonBody?['detail'] ??
-                          'Something went wrong';
+                      final message =
+                          (response.jsonBody?['message'] ??
+                                  response.jsonBody?['detail'] ??
+                                  'Something went wrong')
+                              .toString();
                       final isSuccess = response.jsonBody?['status'] == true;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -145,9 +140,9 @@ class ProductCard extends StatelessWidget {
                           BoxShadow(
                             color: FlutterFlowTheme.of(context)
                                 .alternate
-                                .withOpacity(0.2),
+                                .withValues(alpha: 0.2),
                             blurRadius: 6,
-                            offset: Offset(0, 2),
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
@@ -182,7 +177,7 @@ class ProductCard extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                               fontSize: 15)),
                   const SizedBox(width: 6),
-                  if (oldPrice != null && oldPrice != 0)
+                  if (oldPrice != 0)
                     Text('₹$oldPriceStr',
                         style: FlutterFlowTheme.of(context)
                             .typography

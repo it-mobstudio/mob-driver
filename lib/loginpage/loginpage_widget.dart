@@ -1,5 +1,5 @@
-import '/backend/api_requests/api_calls.dart';
-import '/flutter_flow/flutter_flow_util.dart';
+import '/features/auth/repositories/auth_repository.dart';
+import '/core/app_runtime/flutter_flow_util.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
 
@@ -19,6 +19,7 @@ class LoginpageWidget extends StatefulWidget {
 }
 
 class _LoginpageWidgetState extends State<LoginpageWidget> {
+  final AuthRepository _authRepository = const AuthRepository();
   LoginpageModel? _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
@@ -29,6 +30,12 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
     _model = LoginpageModel();
     _model?.mobileNumberTextController ??= TextEditingController();
     _model?.mobileNumberFocusNode ??= FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _model?.dispose();
+    super.dispose();
   }
 
   @override
@@ -48,7 +55,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
             children: [
               Container(
                 width: double.infinity,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   image: DecorationImage(
                     image: AssetImage('assets/images/background-green.png'),
                     fit: BoxFit.cover,
@@ -56,9 +63,9 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                 ),
                 child: Column(
                   children: [
-                    SizedBox(height: 48),
+                    const SizedBox(height: 48),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 0),
                       child: Image.asset(
                         'assets/images/login_top_items.png',
                         fit: BoxFit.contain,
@@ -66,31 +73,31 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                         // height: 100,
                       ),
                     ),
-                    SizedBox(height: 24),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
                   children: [
                     Text(
                       'Construction & interior materials delivered same day',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
-                        color: Color(0xFF0A243F),
+                        color: const Color(0xFF0A243F),
                         fontWeight: FontWeight.bold,
                         fontSize: 22,
                         height: 1.3,
                       ),
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     Text(
                       'Log in or sign up',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
-                        color: Color(0xFF6C7C8C),
+                        color: const Color(0xFF6C7C8C),
                         fontWeight: FontWeight.w500,
                         fontSize: 16,
                       ),
@@ -98,31 +105,31 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                   ],
                 ),
               ),
-              SizedBox(height: 28),
+              const SizedBox(height: 28),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Color(0xFFE0E0E0)),
+                    border: Border.all(color: const Color(0xFFE0E0E0)),
                   ),
                   child: Row(
                     children: [
-                      SizedBox(width: 16),
+                      const SizedBox(width: 16),
                       Text(
                         '+91',
                         style: GoogleFonts.inter(
-                          color: Color(0xFF0A243F),
+                          color: const Color(0xFF0A243F),
                           fontWeight: FontWeight.w500,
                           fontSize: 16,
                         ),
                       ),
                       Container(
-                        margin: EdgeInsets.symmetric(horizontal: 12),
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
                         width: 1,
                         height: 24,
-                        color: Color(0xFFAFB4C0),
+                        color: const Color(0xFFAFB4C0),
                       ),
                       Expanded(
                         child: SizedBox(
@@ -135,16 +142,16 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                               border: InputBorder.none,
                               hintText: 'Enter mobile number',
                               hintStyle: GoogleFonts.inter(
-                                color: Color(0xFFAFB4C0),
+                                color: const Color(0xFFAFB4C0),
                                 fontWeight: FontWeight.w400,
                                 fontSize: 16,
                               ),
                               isDense: false,
                               contentPadding:
-                                  EdgeInsets.symmetric(vertical: 24),
+                                  const EdgeInsets.symmetric(vertical: 24),
                             ),
                             style: GoogleFonts.inter(
-                              color: Color(0xFF0A243F),
+                              color: const Color(0xFF0A243F),
                               fontWeight: FontWeight.w500,
                               fontSize: 16,
                             ),
@@ -155,9 +162,9 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -166,18 +173,18 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                       final mobile =
                           model.mobileNumberTextController.text.trim();
                       if (mobile.isEmpty || mobile.length != 10) {
-                        await showDialog(
+                        await showDialog<void>(
                           context: context,
                           builder: (alertDialogContext) {
                             return AlertDialog(
-                              title: Text('Invalid Number'),
-                              content: Text(
+                              title: const Text('Invalid Number'),
+                              content: const Text(
                                   'Please enter a valid 10-digit mobile number.'),
                               actions: [
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.pop(alertDialogContext),
-                                  child: Text('Ok'),
+                                  child: const Text('Ok'),
                                 ),
                               ],
                             );
@@ -187,18 +194,18 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                       }
                       final parsedMobile = int.tryParse(mobile);
                       if (parsedMobile == null) {
-                        await showDialog(
+                        await showDialog<void>(
                           context: context,
                           builder: (alertDialogContext) {
                             return AlertDialog(
-                              title: Text('Invalid Number'),
-                              content: Text(
+                              title: const Text('Invalid Number'),
+                              content: const Text(
                                   'Please enter a valid 10-digit mobile number.'),
                               actions: [
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.pop(alertDialogContext),
-                                  child: Text('Ok'),
+                                  child: const Text('Ok'),
                                 ),
                               ],
                             );
@@ -206,36 +213,32 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                         );
                         return;
                       }
-                      model.status = await LoginOTPCall.call(
+                      final otpResult = await _authRepository.sendOtp(
                         emailOrPhone: parsedMobile,
                       );
-                      final responseJson = model.status?.jsonBody;
-                      final status =
-                          responseJson is Map && responseJson['status'] == true;
-                      final message =
-                          responseJson is Map && responseJson['message'] != null
-                              ? responseJson['message'].toString()
-                              : 'Failed to send OTP. Please try again.';
-                      if (status) {
-                        if (mounted) {
-                          // Use GoRouter navigation to OTPVerificationWidget and pass mobile number
-                          context.go(
-                            OTPVerificationWidget.routePath,
-                            extra: {'phoneNumber': '+91 $mobile'},
-                          );
-                        }
+                      if (!context.mounted) {
+                        return;
+                      }
+                      if (otpResult.success) {
+                        context.go(
+                          OTPVerificationWidget.routePath,
+                          extra: {'phoneNumber': '+91 $mobile'},
+                        );
                       } else {
-                        await showDialog(
+                        if (!context.mounted) {
+                          return;
+                        }
+                        await showDialog<void>(
                           context: context,
                           builder: (alertDialogContext) {
                             return AlertDialog(
-                              title: Text('Login Failed'),
-                              content: Text(message),
+                              title: const Text('Login Failed'),
+                              content: Text(otpResult.message),
                               actions: [
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.pop(alertDialogContext),
-                                  child: Text('Ok'),
+                                  child: const Text('Ok'),
                                 ),
                               ],
                             );
@@ -245,7 +248,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                       setState(() {});
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF0360E5),
+                      backgroundColor: const Color(0xFF0360E5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),
@@ -262,16 +265,16 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                   ),
                 ),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Text(
                 'Or',
                 style: GoogleFonts.inter(
-                  color: Color(0xFF6C7C8C),
+                  color: const Color(0xFF6C7C8C),
                   fontWeight: FontWeight.w500,
                   fontSize: 16,
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -281,12 +284,12 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Color(0xFFDEDEDE)),
+                      border: Border.all(color: const Color(0xFFDEDEDE)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.10),
+                          color: Colors.black.withValues(alpha: 0.10),
                           blurRadius: 8,
-                          offset: Offset(0, 0),
+                          offset: const Offset(0, 0),
                         ),
                       ],
                     ),
@@ -298,19 +301,19 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                       ),
                     ),
                   ),
-                  SizedBox(width: 24),
+                  const SizedBox(width: 24),
                   Container(
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Color(0xFFDEDEDE)),
+                      border: Border.all(color: const Color(0xFFDEDEDE)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.10),
+                          color: Colors.black.withValues(alpha: 0.10),
                           blurRadius: 8,
-                          offset: Offset(0, 0),
+                          offset: const Offset(0, 0),
                         ),
                       ],
                     ),
@@ -324,7 +327,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                   ),
                 ],
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
             ],
           ),
         ),

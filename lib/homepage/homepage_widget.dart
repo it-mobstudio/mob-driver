@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:m_o_b_demand_side/components/whychoosemob.dart';
+import 'package:m_o_b_demand_side/components/why_choose_mob.dart';
 import 'package:m_o_b_demand_side/environment_values.dart';
+import 'package:m_o_b_demand_side/features/home/models/home_models.dart';
+import 'package:m_o_b_demand_side/features/home/repositories/home_repository.dart';
+import 'package:m_o_b_demand_side/productlisting/product_listing_page.dart';
 import '../widgets/main_scaffold.dart';
-import '../backend/api_requests/api_calls.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:m_o_b_demand_side/RFQ/RfqFormPage.dart';
+import 'package:m_o_b_demand_side/rfq/rfq_form_page.dart';
 
 class HomepageWidget extends StatelessWidget {
   const HomepageWidget({super.key});
   static const String routeName = 'Homepage';
   static const String routePath = '/homepage';
+  static const HomeRepository _homeRepository = HomeRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -21,12 +24,12 @@ class HomepageWidget extends StatelessWidget {
         child: Column(
           children: [
             _banner(),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _quickActions(context),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _sectionTitle("Explore by categories"),
             _categoryGrid(context),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _sectionTitle("Top brands for you"),
             _brandList(context),
             // _sectionTitle("Trending in your area"),
@@ -38,9 +41,9 @@ class HomepageWidget extends StatelessWidget {
             // _productCarousel(),
             // _sectionTitle("Walls that reflect you"),
             // _productCarousel(),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _infoCard(context),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -76,7 +79,7 @@ class HomepageWidget extends StatelessWidget {
                 GoRouter.of(context).go(RfqFormPage.routePath);
               },
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             _actionCard(
               "Line of credit",
               "Get credit upto 50 lakhs anywhere in India",
@@ -99,7 +102,7 @@ class HomepageWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
             ),
             child: Padding(
               padding: const EdgeInsets.all(0),
@@ -150,10 +153,10 @@ class HomepageWidget extends StatelessWidget {
                             style: GoogleFonts.inter(
                               fontWeight: FontWeight.w700,
                               fontSize: 17,
-                              color: Color(0xFF0A243F),
+                              color: const Color(0xFF0A243F),
                             ),
                           ),
-                          SizedBox(height: 6),
+                          const SizedBox(height: 6),
                           Text(
                             subtitle,
                             textAlign: TextAlign.left,
@@ -200,27 +203,24 @@ class HomepageWidget extends StatelessWidget {
   Widget _categoryGrid(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: FutureBuilder<ApiCallResponse>(
-        future: HomeDataCall.call(),
+      child: FutureBuilder<List<HomeCategoryModel>>(
+        future: _homeRepository.getCategories(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError ||
-              !snapshot.hasData ||
-              snapshot.data?.jsonBody == null) {
-            return Center(child: Text('Failed to load categories'));
+          if (snapshot.hasError || !snapshot.hasData) {
+            return const Center(child: Text('Failed to load categories'));
           }
-          final data = snapshot.data!.jsonBody; // <-- Use directly, no decode
-          final categories = (data['data']?['categories'] as List?) ?? [];
+          final categories = snapshot.data!;
           if (categories.isEmpty) {
-            return Center(child: Text('No categories found'));
+            return const Center(child: Text('No categories found'));
           }
           return GridView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: categories.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 4,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
@@ -228,9 +228,9 @@ class HomepageWidget extends StatelessWidget {
             ),
             itemBuilder: (context, i) {
               final category = categories[i];
-              final label = category['name'] ?? '';
-              final imageUrl = category['image'] as String?;
-              final slug = category['slug'] as String?;
+              final label = category.name;
+              final imageUrl = category.imageUrl;
+              final slug = category.slug;
               return _categoryItem(context, label, imageUrl, slug);
             },
           );
@@ -243,12 +243,12 @@ class HomepageWidget extends StatelessWidget {
       BuildContext context, String label, String? imageUrl, String? slug) {
     return InkWell(
       onTap: () => GoRouter.of(context)
-          .go('/productlisting', extra: {'category': label, 'slug': slug}),
+          .go(ProductListingPage.routePath, extra: {'category': label, 'slug': slug}),
       child: Column(
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Color(0xFFF2F6F9),
+              color: const Color(0xFFF2F6F9),
               borderRadius: BorderRadius.circular(12),
             ),
             // padding: EdgeInsets.all(12),
@@ -258,14 +258,14 @@ class HomepageWidget extends StatelessWidget {
                     // width: 28,
                     // height: 28,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Icon(
+                    errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.category,
                         color: Color(0xFF0A243F),
                         size: 28),
                   )
-                : Icon(Icons.category, color: Color(0xFF0A243F), size: 28),
+                : const Icon(Icons.category, color: Color(0xFF0A243F), size: 28),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(label,
               textAlign: TextAlign.center,
               style:
@@ -387,104 +387,6 @@ class HomepageWidget extends StatelessWidget {
   //   );
   // }
 
-  Widget _productCarousel() {
-    return SizedBox(
-      height: 180,
-      child: ListView.separated(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        scrollDirection: Axis.horizontal,
-        itemCount: 4,
-        separatorBuilder: (_, __) => SizedBox(width: 12),
-        itemBuilder: (context, i) {
-          return _productCard();
-        },
-      ),
-    );
-  }
-
-  Widget _productCard() {
-    return Container(
-      width: 140,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Color(0xFFE0E0E0)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Color(0xFF1DC37A),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text("30% OFF",
-                    style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold)),
-              ),
-              Spacer(),
-              Icon(Icons.add_circle_outline, color: Color(0xFF0A243F)),
-            ],
-          ),
-          SizedBox(height: 12),
-          Text("Jaquar Sink Mixer",
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          SizedBox(height: 6),
-          Text("₹2400",
-              style:
-                  GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-          SizedBox(height: 4),
-          Text("Get by today evening",
-              style: GoogleFonts.inter(fontSize: 10, color: Color(0xFF6C7C8C))),
-        ],
-      ),
-    );
-  }
-
-  Widget _mobStarPromo() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Color(0xFF3B5998),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: EdgeInsets.all(20),
-        child: SizedBox(
-          width: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("mob STAR",
-                  style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18)),
-              SizedBox(height: 8),
-              Text("Get points on every order you place!",
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
-              SizedBox(height: 12),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Color(0xFF3B5998),
-                ),
-                onPressed: () {},
-                child: Text("Shop now",
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _infoCard(BuildContext context) {
     const double cardHeight = 76;
@@ -585,125 +487,3 @@ class HomepageWidget extends StatelessWidget {
   }
 }
 
-Widget _productCarousel() {
-  return SizedBox(
-    height: 180,
-    child: ListView.separated(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      scrollDirection: Axis.horizontal,
-      itemCount: 4,
-      separatorBuilder: (_, __) => SizedBox(width: 12),
-      itemBuilder: (context, i) {
-        return _productCard();
-      },
-    ),
-  );
-}
-
-Widget _productCard() {
-  return Container(
-    width: 140,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      border: Border.all(color: Color(0xFFE0E0E0)),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    padding: EdgeInsets.all(12),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Color(0xFF1DC37A),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text("30% OFF",
-                  style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold)),
-            ),
-            Spacer(),
-            Icon(Icons.add_circle_outline, color: Color(0xFF0A243F)),
-          ],
-        ),
-        SizedBox(height: 12),
-        Text("Jaquar Sink Mixer",
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        SizedBox(height: 6),
-        Text("₹2400",
-            style:
-                GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-        SizedBox(height: 4),
-        Text("Get by today evening",
-            style: GoogleFonts.inter(fontSize: 10, color: Color(0xFF6C7C8C))),
-      ],
-    ),
-  );
-}
-
-Widget _mobStarPromo() {
-  return Padding(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-    child: Container(
-      decoration: BoxDecoration(
-        color: Color(0xFF3B5998),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: EdgeInsets.all(20),
-      child: SizedBox(
-        width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("mob STAR",
-                style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18)),
-            SizedBox(height: 8),
-            Text("Get points on every order you place!",
-                style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
-            SizedBox(height: 12),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Color(0xFF3B5998),
-              ),
-              onPressed: () {},
-              child: Text("Shop now",
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-Widget _infoCard() {
-  return Padding(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-    child: Container(
-      decoration: BoxDecoration(
-        color: Color(0xFFF2F6F9),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: Color(0xFF0A243F)),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text("Why choose mad over buildings?",
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ),
-          Icon(Icons.arrow_forward_ios, color: Color(0xFF0A243F), size: 16),
-        ],
-      ),
-    ),
-  );
-}

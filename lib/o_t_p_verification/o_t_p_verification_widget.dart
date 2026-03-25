@@ -1,10 +1,12 @@
-import '/flutter_flow/flutter_flow_util.dart';
+import '/core/app_runtime/flutter_flow_util.dart';
+import '/features/auth/repositories/auth_repository.dart';
+import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'o_t_p_verification_model.dart';
 export 'o_t_p_verification_model.dart';
-import '/backend/api_requests/api_calls.dart'; // Add this import for CheckOTPCall
+import '/core/auth/auth_session.dart';
 
 /// OTP Verification Screen
 class OTPVerificationWidget extends StatefulWidget {
@@ -12,13 +14,14 @@ class OTPVerificationWidget extends StatefulWidget {
   const OTPVerificationWidget({super.key, required this.phoneNumber});
 
   static String routeName = 'OTPVerification';
-  static String routePath = '/OTPVerification';
+  static String routePath = '/otp-verification';
 
   @override
   State<OTPVerificationWidget> createState() => _OTPVerificationWidgetState();
 }
 
 class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
+  final AuthRepository _authRepository = const AuthRepository();
   late OTPVerificationModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
@@ -35,7 +38,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => OTPVerificationModel());
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendSeconds > 0) {
         setState(() {
           _resendSeconds--;
@@ -78,7 +81,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
               width: 24,
               height: 24,
             ),
-            onPressed: () => context.go('/loginpage'),
+            onPressed: () => context.go(LoginpageWidget.routePath),
           ),
           elevation: 0.0,
         ),
@@ -88,29 +91,29 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
                 Text(
                   'OTP\nVerification',
                   textAlign: TextAlign.left,
                   style: GoogleFonts.interTight(
-                    color: Color(0xFF0A243F),
+                    color: const Color(0xFF0A243F),
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 RichText(
                   text: TextSpan(
                     text: 'OTP has been sent to ',
                     style: GoogleFonts.inter(
-                      color: Color(0xFF0A243F),
+                      color: const Color(0xFF0A243F),
                       fontSize: 16,
                     ),
                     children: [
                       TextSpan(
                         text: widget.phoneNumber,
                         style: GoogleFonts.inter(
-                          color: Color(0xFF0A243F),
+                          color: const Color(0xFF0A243F),
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -118,7 +121,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                     ],
                   ),
                 ),
-                SizedBox(height: 32),
+                const SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
@@ -131,8 +134,8 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: _otpFocusNodes[i].hasFocus
-                                  ? Color(0xFF0A243F)
-                                  : Color(0xFFAFB4C0),
+                                  ? const Color(0xFF0A243F)
+                                  : const Color(0xFFAFB4C0),
                               width: 2,
                             ),
                           ),
@@ -144,11 +147,11 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                               keyboardType: TextInputType.number,
                               maxLength: 1,
                               style: GoogleFonts.interTight(
-                                color: Color(0xFF0A243F),
+                                color: const Color(0xFF0A243F),
                                 fontSize: 24,
                                 fontWeight: FontWeight.w500,
                               ),
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 counterText: '',
                                 border: InputBorder.none,
                               ),
@@ -169,48 +172,49 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                                   String phone = widget.phoneNumber
                                       .replaceAll('+91', '')
                                       .replaceAll(' ', '');
-                                  final response = await CheckOTPCall.call(
+                                  final verifyResult =
+                                      await _authRepository.verifyOtp(
                                     phone: phone,
                                     otp: otp,
                                   );
-                                  final jsonBody = response.jsonBody;
-                                  final status = jsonBody is Map &&
-                                      jsonBody['status'] == true;
-                                  final message = jsonBody is Map &&
-                                          jsonBody['message'] != null
-                                      ? jsonBody['message'].toString()
-                                      : 'OTP verification failed.';
-                                  if (status) {
-                                    final data = jsonBody['data'];
-                                    final newAccount = data != null &&
-                                        data['newAccount'] == true;
-                                    if (newAccount) {
-                                      if (mounted) {
-                                        context.go('/signup', extra: {
-                                          'phoneNumber': widget.phoneNumber
-                                        });
-                                      }
+                                  if (!context.mounted) {
+                                    return;
+                                  }
+                                  if (verifyResult.success) {
+                                    if (verifyResult.newAccount) {
+                                      context.go(SignupWidget.routePath, extra: {
+                                        'phoneNumber': widget.phoneNumber
+                                      });
                                     } else {
-                                      // Store tokens securely (in-memory for now)
-
-                                      // TODO: Use a secure storage solution for tokens
-                                      // Example: await FlutterSecureStorage().write(key: 'accessToken', value: accessToken);
-                                      if (mounted) {
-                                        context.go('/homepage');
+                                      if (verifyResult.accessToken != null &&
+                                          verifyResult.accessToken!.isNotEmpty) {
+                                        await AuthSession.instance.saveTokens(
+                                          accessToken:
+                                              verifyResult.accessToken!,
+                                          refreshToken:
+                                              verifyResult.refreshToken,
+                                        );
                                       }
+                                      if (!context.mounted) {
+                                        return;
+                                      }
+                                      context.go(HomepageWidget.routePath);
                                     }
                                   } else {
-                                    await showDialog(
+                                    if (!context.mounted) {
+                                      return;
+                                    }
+                                    await showDialog<void>(
                                       context: context,
                                       builder: (alertDialogContext) {
                                         return AlertDialog(
-                                          title: Text('OTP Failed'),
-                                          content: Text(message),
+                                          title: const Text('OTP Failed'),
+                                          content: Text(verifyResult.message),
                                           actions: [
                                             TextButton(
                                               onPressed: () => Navigator.pop(
                                                   alertDialogContext),
-                                              child: Text('Ok'),
+                                              child: const Text('Ok'),
                                             ),
                                           ],
                                         );
@@ -223,17 +227,17 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                           ),
                         ),
                       ),
-                      if (i < 3) SizedBox(width: 16),
+                      if (i < 3) const SizedBox(width: 16),
                     ]
                   ],
                 ),
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
                 Text(
                   _resendSeconds > 0
                       ? 'Resend OTP in ${_resendSeconds}s'
                       : 'Resend OTP',
                   style: GoogleFonts.inter(
-                    color: Color(0xFFAFB4C0),
+                    color: const Color(0xFFAFB4C0),
                     fontSize: 16,
                   ),
                 ),
@@ -244,4 +248,5 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
       ),
     );
   }
+
 }

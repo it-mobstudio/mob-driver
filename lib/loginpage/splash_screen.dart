@@ -1,25 +1,13 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'loginpage_widget.dart'; // Ensure this import is correct
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Timer(const Duration(seconds: 3), () { // Reduced timer for testing
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-            builder: (_) =>
-                LoginpageWidget()),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     // Optional: Get screen dimensions for debugging

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:m_o_b_demand_side/RFQ/showAcceptQuoteSheet.dart';
+import 'package:m_o_b_demand_side/rfq/show_accept_quote_sheet.dart';
 
 // << add this >>
 import '../widgets/main_scaffold.dart';
@@ -13,9 +13,9 @@ class RfqDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mint = const Color(0xFFE9F4F1);
-    final border = const Color(0xFFE6ECF2);
-    final ink = const Color(0xFF0A243F);
+    const mint = Color(0xFFE9F4F1);
+    const border = Color(0xFFE6ECF2);
+    const ink = Color(0xFF0A243F);
 
     return MainScaffold(
       currentIndex: 3, // Profile tab
@@ -379,7 +379,8 @@ class RfqDetailsPage extends StatelessWidget {
                   fontSize: 13, decoration: TextDecoration.underline)),
           const SizedBox(height: 6),
           Text('RFQ details will be sent to this phone number and email',
-              style: GoogleFonts.inter(fontSize: 12, color: Color(0xFF6C7C8C))),
+              style:
+                  GoogleFonts.inter(fontSize: 12, color: const Color(0xFF6C7C8C))),
         ],
       );
 

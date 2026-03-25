@@ -11,7 +11,7 @@ import 'package:equatable/equatable.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:mime_type/mime_type.dart';
 
-import '/flutter_flow/uploaded_file.dart';
+import '/core/app_runtime/uploaded_file.dart';
 
 import 'get_streamed_response.dart';
 
@@ -212,8 +212,12 @@ class ApiCallResponse {
   static ApiCallResponse fromCloudCallResponse(Map<String, dynamic> response) =>
       ApiCallResponse(
         response['body'],
-        ApiManager.toStringMap(response['headers'] ?? {}),
-        response['statusCode'] ?? 400,
+        ApiManager.toStringMap(
+          response['headers'] is Map ? response['headers'] as Map : {},
+        ),
+        response['statusCode'] is int
+            ? response['statusCode'] as int
+            : int.tryParse(response['statusCode']?.toString() ?? '') ?? 400,
       );
 }
 
@@ -229,6 +233,18 @@ class ApiManager {
   // If your API calls need authentication, populate this field once
   // the user has authenticated. Alter this as needed.
   static String? _accessToken;
+  static void setAccessToken(String? token) => _accessToken = token;
+  static String? get accessToken => _accessToken;
+  static Future<String?> Function()? _refreshAccessTokenHandler;
+  static Future<void> Function()? _onAuthFailedHandler;
+  static Future<String?>? _refreshInFlight;
+  static void setAuthRecoveryHandlers({
+    Future<String?> Function()? refreshAccessToken,
+    Future<void> Function()? onAuthFailed,
+  }) {
+    _refreshAccessTokenHandler = refreshAccessToken;
+    _onAuthFailedHandler = onAuthFailed;
+  }
   // You may want to call this if, for example, you make a change to the
   // database and no longer want the cached result of a call that may
   // have changed.
@@ -306,7 +322,11 @@ class ApiManager {
       final request =
           http.Request(type.toString().split('.').last, Uri.parse(apiUrl))
             ..headers.addAll(toStringMap(headers));
-      request.body = postBody;
+      if (postBody is List<int>) {
+        request.bodyBytes = postBody;
+      } else {
+        request.body = postBody?.toString() ?? '';
+      }
       final streamedResponse = await getStreamedResponse(request);
       return ApiCallResponse(
         null,
@@ -474,13 +494,25 @@ class ApiManager {
     ApiCallOptions? options,
     http.Client? client,
   }) async {
+    final requestHeaders = Map<String, dynamic>.from(headers);
+    final requestParams = Map<String, dynamic>.from(params);
+    var resolvedApiUrl = apiUrl;
+
+    // Modify for your specific needs if this differs from your API.
+    if (_accessToken != null) {
+      requestHeaders[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
+    }
+    if (!resolvedApiUrl.startsWith('http')) {
+      resolvedApiUrl = 'https://$resolvedApiUrl';
+    }
+
     final callOptions = options ??
         ApiCallOptions(
           callName: callName,
           callType: callType,
-          apiUrl: apiUrl,
-          headers: headers,
-          params: params,
+          apiUrl: resolvedApiUrl,
+          headers: requestHeaders,
+          params: requestParams,
           bodyType: bodyType,
           body: body,
           returnBody: returnBody,
@@ -490,13 +522,6 @@ class ApiManager {
           cache: cache,
           isStreamingApi: isStreamingApi,
         );
-    // Modify for your specific needs if this differs from your API.
-    if (_accessToken != null) {
-      headers[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
-    }
-    if (!apiUrl.startsWith('http')) {
-      apiUrl = 'https://$apiUrl';
-    }
 
     // If we've already made this exact call before and caching is on,
     // return the cached result.
@@ -504,28 +529,28 @@ class ApiManager {
       return _apiCache[callOptions]!;
     }
 
-    ApiCallResponse result;
-    try {
+    Future<ApiCallResponse> performRequest(
+      Map<String, dynamic> requestHeaders,
+    ) async {
       switch (callType) {
         case ApiCallType.GET:
-          result = await urlRequest(
+          return urlRequest(
             callType,
-            apiUrl,
-            headers,
-            params,
+            resolvedApiUrl,
+            requestHeaders,
+            requestParams,
             returnBody,
             decodeUtf8,
             isStreamingApi,
             client: client,
           );
-          break;
         case ApiCallType.DELETE:
-          result = alwaysAllowBody
-              ? await requestWithBody(
+          return alwaysAllowBody
+              ? requestWithBody(
                   callType,
-                  apiUrl,
-                  headers,
-                  params,
+                  resolvedApiUrl,
+                  requestHeaders,
+                  requestParams,
                   body,
                   bodyType,
                   returnBody,
@@ -535,25 +560,24 @@ class ApiManager {
                   isStreamingApi,
                   client: client,
                 )
-              : await urlRequest(
+              : urlRequest(
                   callType,
-                  apiUrl,
-                  headers,
-                  params,
+                  resolvedApiUrl,
+                  requestHeaders,
+                  requestParams,
                   returnBody,
                   decodeUtf8,
                   isStreamingApi,
                   client: client,
                 );
-          break;
         case ApiCallType.POST:
         case ApiCallType.PUT:
         case ApiCallType.PATCH:
-          result = await requestWithBody(
+          return requestWithBody(
             callType,
-            apiUrl,
-            headers,
-            params,
+            resolvedApiUrl,
+            requestHeaders,
+            requestParams,
             body,
             bodyType,
             returnBody,
@@ -563,7 +587,28 @@ class ApiManager {
             isStreamingApi,
             client: client,
           );
-          break;
+      }
+    }
+
+    ApiCallResponse result;
+    var handledAuthFailure = false;
+    try {
+      result = await performRequest(requestHeaders);
+
+      if (result.statusCode == 401 && _shouldAttemptRefresh(callName)) {
+        final refreshedToken = await _refreshAccessToken();
+        if (refreshedToken != null && refreshedToken.isNotEmpty) {
+          requestHeaders[HttpHeaders.authorizationHeader] =
+              'Bearer $refreshedToken';
+          result = await performRequest(requestHeaders);
+        } else {
+          await _handleAuthFailure();
+          handledAuthFailure = true;
+        }
+      }
+
+      if (result.statusCode == 401 && !handledAuthFailure) {
+        await _handleAuthFailure();
       }
 
       // If caching is on, cache the result (if present).
@@ -575,5 +620,49 @@ class ApiManager {
     }
 
     return result;
+  }
+
+  static bool _shouldAttemptRefresh(String callName) {
+    if (_refreshAccessTokenHandler == null) {
+      return false;
+    }
+    if (_accessToken == null || _accessToken!.isEmpty) {
+      return false;
+    }
+    const nonRefreshableCalls = <String>{
+      'loginOTP',
+      'checkOTP',
+      'refreshAccessToken',
+    };
+    return !nonRefreshableCalls.contains(callName);
+  }
+
+  static Future<String?> _refreshAccessToken() async {
+    if (_refreshAccessTokenHandler == null) {
+      return null;
+    }
+    if (_refreshInFlight != null) {
+      return _refreshInFlight!;
+    }
+    _refreshInFlight = _refreshAccessTokenHandler!.call();
+    try {
+      final token = await _refreshInFlight;
+      if (token != null && token.isNotEmpty) {
+        _accessToken = token;
+      }
+      return token;
+    } catch (_) {
+      return null;
+    } finally {
+      _refreshInFlight = null;
+    }
+  }
+
+  static Future<void> _handleAuthFailure() async {
+    if (_onAuthFailedHandler != null) {
+      try {
+        await _onAuthFailedHandler!.call();
+      } catch (_) {}
+    }
   }
 }

@@ -1,7 +1,12 @@
 import 'api_manager.dart';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:m_o_b_demand_side/core/config/app_config.dart';
+
 export 'api_manager.dart' show ApiCallResponse;
+
+const Map<String, String> _jsonHeaders = {
+  'Content-Type': 'application/json',
+};
 
 class LoginOTPCall {
   /// Calls the login OTP API with the given phone/email and type.
@@ -15,12 +20,9 @@ class LoginOTPCall {
     };
     return ApiManager.instance.makeApiCall(
       callName: 'loginOTP',
-      apiUrl:
-          'https://uat.madoverbuilding.com/api/accounts/mob_user/auth/send_otp/',
+      apiUrl: AppConfig.apiUri('/accounts/mob_user/auth/send_otp/').toString(),
       callType: ApiCallType.POST,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: _jsonHeaders,
       params: {},
       body: json.encode(body),
       bodyType: BodyType.JSON,
@@ -39,11 +41,9 @@ class HomeDataCall {
   static Future<ApiCallResponse> call() async {
     return ApiManager.instance.makeApiCall(
       callName: 'homeData',
-      apiUrl: 'https://uat.madoverbuilding.com/api/home/',
+      apiUrl: AppConfig.apiUri('/home/').toString(),
       callType: ApiCallType.GET,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: _jsonHeaders,
       params: {},
       returnBody: true,
       cache: false,
@@ -66,11 +66,9 @@ class CheckOTPCall {
     return ApiManager.instance.makeApiCall(
       callName: 'checkOTP',
       apiUrl:
-          'https://uat.madoverbuilding.com/api/accounts/mob_user/auth/check_otp/',
+          AppConfig.apiUri('/accounts/mob_user/auth/check_otp/').toString(),
       callType: ApiCallType.POST,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: _jsonHeaders,
       params: {},
       body: json.encode(body),
       bodyType: BodyType.JSON,
@@ -91,15 +89,18 @@ class BrowseProductsCall {
     int page = 1,
     bool isProfessional = true,
   }) async {
-    final apiUrl =
-        'https://uat.madoverbuilding.com/api/home/$categoryName/browse_products/?page=$page&is_professional=$isProfessional';
+    final apiUrl = AppConfig.apiUri(
+      '/home/$categoryName/browse_products/',
+      queryParameters: {
+        'page': page,
+        'is_professional': isProfessional,
+      },
+    ).toString();
     return ApiManager.instance.makeApiCall(
       callName: 'browseProducts',
       apiUrl: apiUrl,
       callType: ApiCallType.GET,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: _jsonHeaders,
       params: {},
       returnBody: true,
       cache: false,
@@ -115,18 +116,39 @@ class ProductDetailsCall {
     required String slug,
     String? mobSku,
   }) async {
-    String apiUrl =
-        'https://uat.madoverbuilding.com/api/home/$slug/get_product_details/';
-    if (mobSku != null && mobSku.isNotEmpty) {
-      apiUrl += '?mob_sku=$mobSku';
-    }
+    final apiUrl = AppConfig.apiUri(
+      '/home/$slug/get_product_details/',
+      queryParameters: mobSku != null && mobSku.isNotEmpty
+          ? {'mob_sku': mobSku}
+          : null,
+    ).toString();
     return ApiManager.instance.makeApiCall(
       callName: 'productDetails',
       apiUrl: apiUrl,
       callType: ApiCallType.GET,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: _jsonHeaders,
+      params: {},
+      returnBody: true,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class ProductSearchCall {
+  static Future<ApiCallResponse> call({
+    required String query,
+  }) async {
+    final apiUrl = AppConfig.apiUri(
+      '/home/product_search/',
+      queryParameters: {'search': query},
+    ).toString();
+    return ApiManager.instance.makeApiCall(
+      callName: 'productSearch',
+      apiUrl: apiUrl,
+      callType: ApiCallType.GET,
+      headers: _jsonHeaders,
       params: {},
       returnBody: true,
       cache: false,
@@ -141,15 +163,12 @@ class AddToCartCall {
   static Future<ApiCallResponse> call({
     required List<Map<String, dynamic>> items,
   }) async {
-    final apiUrl =
-        'https://uat.madoverbuilding.com/api/orders/cart/add_to_cart/';
+    final apiUrl = AppConfig.apiUri('/orders/cart/add_to_cart/').toString();
     return ApiManager.instance.makeApiCall(
       callName: 'addToCart',
       apiUrl: apiUrl,
       callType: ApiCallType.POST,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: _jsonHeaders,
       params: {},
       body: json.encode(items),
       bodyType: BodyType.JSON,
@@ -177,34 +196,6 @@ class ApiPagingParams {
   @override
   String toString() =>
       'PagingParams(nextPageNumber: $nextPageNumber, numItems: $numItems, lastResponse: $lastResponse,)';
-}
-
-String _toEncodable(dynamic item) {
-  return item;
-}
-
-String _serializeList(List? list) {
-  list ??= <String>[];
-  try {
-    return json.encode(list, toEncodable: _toEncodable);
-  } catch (_) {
-    if (kDebugMode) {
-      print("List serialization failed. Returning empty list.");
-    }
-    return '[]';
-  }
-}
-
-String _serializeJson(dynamic jsonVar, [bool isList = false]) {
-  jsonVar ??= (isList ? [] : {});
-  try {
-    return json.encode(jsonVar, toEncodable: _toEncodable);
-  } catch (_) {
-    if (kDebugMode) {
-      print("Json serialization failed. Returning empty json.");
-    }
-    return isList ? '[]' : '{}';
-  }
 }
 
 String? escapeStringForJson(String? input) {

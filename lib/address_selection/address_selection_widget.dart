@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../flutter_flow/flutter_flow_theme.dart';
+import 'package:m_o_b_demand_side/address_selection/map_location_widget.dart';
+import 'package:m_o_b_demand_side/homepage/homepage_widget.dart';
+import '../core/app_runtime/flutter_flow_theme.dart';
 
 class AddressSelectionWidget extends StatelessWidget {
   const AddressSelectionWidget({super.key});
@@ -34,7 +36,7 @@ class AddressSelectionWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextField(
                 decoration: InputDecoration(
                   hintText: 'Search for area, street name..',
@@ -46,17 +48,17 @@ class AddressSelectionWidget extends StatelessWidget {
                     borderSide: BorderSide(color: theme.border),
                   ),
                   contentPadding:
-                      EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                      const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               GestureDetector(
                 onTap: () {
                   GoRouter.of(context)
-                      .go('/map_location'); // Navigate to map location page
+                      .go(MapLocationWidget.routePath); // Navigate to map location page
                 },
                 child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                   decoration: BoxDecoration(
                     color: theme.secondaryBackground,
                     borderRadius: BorderRadius.circular(12),
@@ -65,7 +67,7 @@ class AddressSelectionWidget extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(Icons.my_location, color: theme.primary),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -82,11 +84,11 @@ class AddressSelectionWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               GestureDetector(
                 onTap: () {},
                 child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                   decoration: BoxDecoration(
                     color: theme.secondaryBackground,
                     borderRadius: BorderRadius.circular(12),
@@ -95,7 +97,7 @@ class AddressSelectionWidget extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(Icons.add, color: theme.primary),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text('Add new address',
                           style: theme.typography.bodyMedium
                               .copyWith(fontWeight: FontWeight.w500)),
@@ -103,11 +105,11 @@ class AddressSelectionWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Text('Your saved address',
                   style: theme.typography.bodyMedium
                       .copyWith(fontWeight: FontWeight.w600, fontSize: 16)),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Expanded(
                 child: ListView(
                   children: [
@@ -150,11 +152,11 @@ class AddressSelectionWidget extends StatelessWidget {
     final theme = FlutterFlowTheme.of(context);
     return GestureDetector(
       onTap: () {
-        GoRouter.of(context).go('/homepage');
+        GoRouter.of(context).go(HomepageWidget.routePath);
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: 12),
-        padding: EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: theme.secondaryBackground,
           borderRadius: BorderRadius.circular(12),
@@ -172,15 +174,15 @@ class AddressSelectionWidget extends StatelessWidget {
                 Icon(Icons.more_horiz, color: theme.border),
               ],
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(address,
                 style: theme.typography.bodyMedium
                     .copyWith(color: theme.textDarkGrey, fontSize: 14)),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: theme.alternate,
                     borderRadius: BorderRadius.circular(4),
@@ -189,9 +191,9 @@ class AddressSelectionWidget extends StatelessWidget {
                       style: theme.typography.bodyMedium
                           .copyWith(fontWeight: FontWeight.w500, fontSize: 12)),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: theme.warning,
                     borderRadius: BorderRadius.circular(4),

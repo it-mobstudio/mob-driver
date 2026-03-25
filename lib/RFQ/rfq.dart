@@ -36,7 +36,6 @@ class RfqPage extends StatefulWidget {
 }
 
 class _RfqListPageState extends State<RfqPage> {
-  final TextEditingController _headerSearch = TextEditingController();
   final TextEditingController _inlineSearch = TextEditingController();
 
   final items = const <RfqItem>[
@@ -77,8 +76,8 @@ class _RfqListPageState extends State<RfqPage> {
 
   @override
   Widget build(BuildContext context) {
-    final mint = const Color(0xFFE9F4F1); // header tint
-    final ink = const Color(0xFF0A243F);
+    const mint = Color(0xFFE9F4F1); // header tint
+    const ink = Color(0xFF0A243F);
 
     return MainScaffold(
       currentIndex: 3, // Profile tab (change if needed)
@@ -179,8 +178,8 @@ class _RfqListPageState extends State<RfqPage> {
   }
 
   Widget _rfqCard(BuildContext context, RfqItem it) {
-    final subtle = const Color(0xFFF2F6F9);
-    final border = const Color(0xFFE8EEF5);
+    const subtle = Color(0xFFF2F6F9);
+    const border = Color(0xFFE8EEF5);
     final title = GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600);
     final small =
         GoogleFonts.inter(fontSize: 12, color: const Color(0xFF6C7C8C));

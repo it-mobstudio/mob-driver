@@ -1,7 +1,17 @@
-
-
+include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
     - lib/custom_code/**
     - lib/flutter_flow/custom_functions.dart
+    - lib/flutter_flow/**
+  language:
+    strict-casts: true
+    strict-inference: true
+
+linter:
+  rules:
+    avoid_print: true
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+    use_super_parameters: true

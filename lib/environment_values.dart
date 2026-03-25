@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class FFDevEnvironmentValues {
@@ -20,20 +21,20 @@ class FFDevEnvironmentValues {
       final String response =
           await rootBundle.loadString(environmentValuesPath);
       final data = await json.decode(response);
-      print('environment values: $data');
+      debugPrint('environment values: $data');
     } catch (e) {
-      print('Error loading environment values: $e');
+      debugPrint('Error loading environment values: $e');
     }
   }
 }
 
 const List<Map<String, String>> brandLogos = [
-  {"logo": "images/brands/drfixit.png", "width": "138"},
-  {"logo": "images/brands/pidilite.png", "width": "138"},
-  {"logo": "images/brands/ultratech.png", "width": "138"},
-  {"logo": "images/brands/kajaria.png", "width": "138"},
-  {"logo": "images/brands/bosch.png", "width": "138"},
-  {"logo": "images/brands/jaquar.png", "width": "138"},
+  {"logo": "assets/images/Brands/drfixit.png", "width": "138"},
+  {"logo": "assets/images/Brands/pidilite.png", "width": "138"},
+  {"logo": "assets/images/Brands/ultratech.png", "width": "138"},
+  {"logo": "assets/images/Brands/Kajaria.png", "width": "138"},
+  {"logo": "assets/images/Brands/bosch.png", "width": "138"},
+  {"logo": "assets/images/Brands/jaquar.png", "width": "138"},
 
   // {"logo": "images/brands/jsw.webp", "width": "138", "name": "JSW Neosteel"},
   // {"logo": "images/brands/jaquar.webp", "width": "138", "name": "Jaquar"},

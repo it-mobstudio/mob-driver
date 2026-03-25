@@ -4,6 +4,10 @@ Run application
 Clean APP
 >>flutter clean
 >>flutter pub get 
+flutter clean
+flutter pub get
+flutter analyze
+flutter test
 
 Build Android
 >>flutter build apk
