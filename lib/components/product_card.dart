@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/backend/api_requests/api_calls.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 import '../core/app_runtime/flutter_flow_theme.dart';
@@ -84,11 +86,25 @@ class ProductCard extends StatelessWidget {
                   width: 132,
                   height: 132,
                   child: imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
                           width: 132,
                           height: 132,
                           fit: BoxFit.contain,
+                          memCacheWidth: 264,
+                          placeholder: (context, url) => const Center(
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Image.asset(
+                            'assets/images/Image-coming-soon.png',
+                            width: 132,
+                            height: 132,
+                            fit: BoxFit.contain,
+                          ),
                         )
                       : Image.asset(
                           'assets/images/Image-coming-soon.png',
@@ -123,6 +139,12 @@ class ProductCard extends StatelessWidget {
                                   'Something went wrong')
                               .toString();
                       final isSuccess = response.jsonBody?['status'] == true;
+                      AnalyticsService.instance.logAddToCart(
+                        productId: product.addToCartProductId.toString(),
+                        slug: product.slug,
+                        price: product.vendorPricing.vendorSellingPrice.toDouble(),
+                        success: isSuccess,
+                      );
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(message),

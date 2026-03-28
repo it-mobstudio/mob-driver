@@ -223,6 +223,7 @@ class ApiCallResponse {
 
 class ApiManager {
   ApiManager._();
+  static const Duration _requestTimeout = Duration(seconds: 25);
 
   // Cache that will ensure identical calls are not repeatedly made.
   static Map<ApiCallOptions, ApiCallResponse> _apiCache = {};
@@ -280,7 +281,8 @@ class ApiManager {
       final request =
           http.Request(callType.toString().split('.').last, Uri.parse(apiUrl))
             ..headers.addAll(toStringMap(headers));
-      final streamedResponse = await getStreamedResponse(request);
+      final streamedResponse =
+          await getStreamedResponse(request).timeout(_requestTimeout);
       return ApiCallResponse(
         null,
         streamedResponse.headers,
@@ -291,8 +293,10 @@ class ApiManager {
     final makeRequest = callType == ApiCallType.GET
         ? (client != null ? client.get : http.get)
         : (client != null ? client.delete : http.delete);
-    final response =
-        await makeRequest(Uri.parse(apiUrl), headers: toStringMap(headers));
+    final response = await makeRequest(
+      Uri.parse(apiUrl),
+      headers: toStringMap(headers),
+    ).timeout(_requestTimeout);
     return ApiCallResponse.fromHttpResponse(response, returnBody, decodeUtf8);
   }
 
@@ -327,7 +331,8 @@ class ApiManager {
       } else {
         request.body = postBody?.toString() ?? '';
       }
-      final streamedResponse = await getStreamedResponse(request);
+      final streamedResponse =
+          await getStreamedResponse(request).timeout(_requestTimeout);
       return ApiCallResponse(
         null,
         streamedResponse.headers,
@@ -347,8 +352,11 @@ class ApiManager {
       ApiCallType.PATCH: client != null ? client.patch : http.patch,
       ApiCallType.DELETE: client != null ? client.delete : http.delete,
     }[type]!;
-    final response = await requestFn(Uri.parse(apiUrl),
-        headers: toStringMap(headers), body: postBody);
+    final response = await requestFn(
+      Uri.parse(apiUrl),
+      headers: toStringMap(headers),
+      body: postBody,
+    ).timeout(_requestTimeout);
     return ApiCallResponse.fromHttpResponse(response, returnBody, decodeUtf8);
   }
 
@@ -399,7 +407,8 @@ class ApiManager {
       ..files.addAll(files);
     nonFileParams.forEach((key, value) => request.fields[key] = value);
 
-    final response = await http.Response.fromStream(await request.send());
+    final streamed = await request.send().timeout(_requestTimeout);
+    final response = await http.Response.fromStream(streamed);
     return ApiCallResponse.fromHttpResponse(response, returnBody, decodeUtf8);
   }
 

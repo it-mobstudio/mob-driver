@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
+import 'package:m_o_b_demand_side/core/network/app_error.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/products/repositories/products_repository.dart';
 
@@ -41,10 +43,17 @@ class ProductDetailController extends ChangeNotifier {
       product = response.product;
       similarProducts = response.similarProducts;
       _syncVariantState(response.product);
+      AnalyticsService.instance.logProductViewed(
+        slug: response.product.slug,
+        title: response.product.title,
+      );
       isLoading = false;
       notifyListeners();
     } catch (e) {
-      error = e.toString();
+      error = userMessageFromError(
+        e,
+        fallbackMessage: 'Unable to load product details. Please try again.',
+      );
       isLoading = false;
       notifyListeners();
     }

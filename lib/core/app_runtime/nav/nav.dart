@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/address_selection/map_location_widget.dart';
 import 'package:m_o_b_demand_side/cart/cart_page.dart';
 import 'package:m_o_b_demand_side/checkout/checkout_address_page.dart';
@@ -48,6 +49,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       debugLogDiagnostics: kDebugMode,
       refreshListenable: appStateNotifier,
       navigatorKey: appNavigatorKey,
+      observers: <NavigatorObserver>[AnalyticsService.instance.observer],
       errorBuilder: (context, state) => appStateNotifier.showSplashImage
           ? const SplashScreen()
           : (AuthSession.instance.isAuthenticated
@@ -117,6 +119,38 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: '${ProductDetailPage.routePath}/:slug',
           builder: (context, params) => ProductDetailPage(
               slug: params.getParam<String>('slug', ParamType.string) ?? ''),
+        ),
+        FFRoute(
+          name: 'CategoryWebAlias',
+          path: '/home/:slug',
+          builder: (context, params) {
+            final categorySlug =
+                params.getParam<String>('slug', ParamType.string) ?? '';
+            final categoryName = categorySlug
+                .split('-')
+                .where((part) => part.isNotEmpty)
+                .map((part) =>
+                    '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}')
+                .join(' ');
+            return ProductListingPage(
+              category: categoryName,
+              slug: categorySlug,
+            );
+          },
+        ),
+        FFRoute(
+          name: 'ProductDetailHomeWebAlias',
+          path: '/home/product-details/:slug',
+          builder: (context, params) => ProductDetailPage(
+            slug: params.getParam<String>('slug', ParamType.string) ?? '',
+          ),
+        ),
+        FFRoute(
+          name: 'ProductDetailWebAlias',
+          path: '/products/:slug',
+          builder: (context, params) => ProductDetailPage(
+            slug: params.getParam<String>('slug', ParamType.string) ?? '',
+          ),
         ),
         FFRoute(
           name: SearchPage.routeName,

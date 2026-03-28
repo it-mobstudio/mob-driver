@@ -1,4 +1,5 @@
 import '/backend/api_requests/api_calls.dart';
+import '/core/network/app_error.dart';
 import '/features/products/models/product_models.dart';
 
 class ProductsRepository {
@@ -12,6 +13,12 @@ class ProductsRepository {
       categoryName: categorySlug,
       page: page,
     );
+    if (!response.succeeded) {
+      throw appExceptionFromApiResponse(
+        response,
+        fallbackMessage: 'Unable to load products right now.',
+      );
+    }
     final data = _extractDataMap(response.jsonBody);
 
     final products = (data['results'] as List? ?? <dynamic>[])
@@ -45,6 +52,12 @@ class ProductsRepository {
       slug: slug,
       mobSku: mobSku,
     );
+    if (!response.succeeded) {
+      throw appExceptionFromApiResponse(
+        response,
+        fallbackMessage: 'Unable to load product details right now.',
+      );
+    }
     final data = _extractDataMap(response.jsonBody);
     final productMap = data['product'] is Map
         ? Map<String, dynamic>.from(data['product'] as Map)
@@ -67,6 +80,12 @@ class ProductsRepository {
     required String query,
   }) async {
     final response = await ProductSearchCall.call(query: query);
+    if (!response.succeeded) {
+      throw appExceptionFromApiResponse(
+        response,
+        fallbackMessage: 'Unable to search products right now.',
+      );
+    }
     final data = _extractDataMap(response.jsonBody);
     return (data['results'] as List? ?? <dynamic>[])
         .whereType<Map>()

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/components/why_choose_mob.dart';
 import 'package:m_o_b_demand_side/environment_values.dart';
 import 'package:m_o_b_demand_side/features/home/models/home_models.dart';
@@ -15,6 +17,8 @@ class HomepageWidget extends StatelessWidget {
   static const String routeName = 'Homepage';
   static const String routePath = '/homepage';
   static const HomeRepository _homeRepository = HomeRepository();
+  static final Future<List<HomeCategoryModel>> _categoriesFuture =
+      _homeRepository.getCategories();
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +208,7 @@ class HomepageWidget extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: FutureBuilder<List<HomeCategoryModel>>(
-        future: _homeRepository.getCategories(),
+        future: _categoriesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -242,8 +246,16 @@ class HomepageWidget extends StatelessWidget {
   Widget _categoryItem(
       BuildContext context, String label, String? imageUrl, String? slug) {
     return InkWell(
-      onTap: () => GoRouter.of(context)
-          .go(ProductListingPage.routePath, extra: {'category': label, 'slug': slug}),
+      onTap: () {
+        AnalyticsService.instance.logCategoryOpened(
+          category: label,
+          slug: slug ?? '',
+        );
+        GoRouter.of(context).go(
+          ProductListingPage.routePath,
+          extra: {'category': label, 'slug': slug},
+        );
+      },
       child: Column(
         children: [
           Container(
@@ -253,15 +265,17 @@ class HomepageWidget extends StatelessWidget {
             ),
             // padding: EdgeInsets.all(12),
             child: imageUrl != null && imageUrl.isNotEmpty
-                ? Image.network(
-                    imageUrl,
-                    // width: 28,
-                    // height: 28,
+                ? CachedNetworkImage(
+                    imageUrl: imageUrl,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.category,
-                        color: Color(0xFF0A243F),
-                        size: 28),
+                    memCacheWidth: 140,
+                    placeholder: (context, url) =>
+                        const SizedBox(height: 28, width: 28),
+                    errorWidget: (context, url, error) => const Icon(
+                      Icons.category,
+                      color: Color(0xFF0A243F),
+                      size: 28,
+                    ),
                   )
                 : const Icon(Icons.category, color: Color(0xFF0A243F), size: 28),
           ),

@@ -11,9 +11,14 @@ flutter test
 
 Build Android
 >>flutter build apk
+>>flutter build appbundle --release
 
 Clean Logs
 >>git rm -r --cached .dart_tool
 
 >>flutter run -d emulator-5554
 
+>>Key pass - mobit$1234
+
+Build Release location
+>>D:\Praveen\MOB\Projects\mob-mobileapp\build\app\outputs\bundle\release

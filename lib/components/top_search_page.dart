@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/products/repositories/products_repository.dart';
 import 'package:m_o_b_demand_side/productdetails/product_detail_page.dart';
@@ -80,6 +82,10 @@ class _SearchPageState extends State<SearchPage> {
         _results = parsed;
         _loading = false;
       });
+      AnalyticsService.instance.logSearch(
+        query: q,
+        resultCount: parsed.length,
+      );
     } catch (e) {
       setState(() {
         _error = 'Something went wrong. Please try again.+\n${e.toString()}';
@@ -319,7 +325,15 @@ class _SearchPageState extends State<SearchPage> {
               child: r.primaryImageUrl.isNotEmpty
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(r.primaryImageUrl, fit: BoxFit.cover),
+                      child: CachedNetworkImage(
+                        imageUrl: r.primaryImageUrl,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 80,
+                        placeholder: (context, url) =>
+                            const SizedBox.shrink(),
+                        errorWidget: (context, url, error) =>
+                            const Icon(Icons.image, color: Colors.grey),
+                      ),
                     )
                   : const Icon(Icons.image, color: Colors.grey),
             ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/features/products/controllers/product_detail_controller.dart';
 import 'package:m_o_b_demand_side/features/products/widgets/product_detail_sections.dart';
+import 'package:m_o_b_demand_side/widgets/error_state_view.dart';
 import 'package:m_o_b_demand_side/widgets/main_scaffold.dart';
+import 'package:m_o_b_demand_side/widgets/skeleton_loader.dart';
 
 class ProductDetailPage extends StatefulWidget {
   static const String routeName = 'ProductDetailPage';
@@ -39,11 +41,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         animation: _controller,
         builder: (context, _) {
           if (_controller.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const ProductDetailSkeleton();
           }
 
           if (_controller.error != null) {
-            return Center(child: Text('Error: ${_controller.error}'));
+            return ErrorStateView(
+              message: _controller.error!,
+              onRetry: () => _controller.load(),
+            );
           }
 
           final product = _controller.product;

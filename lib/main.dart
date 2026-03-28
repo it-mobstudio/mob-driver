@@ -1,7 +1,12 @@
+import 'dart:async';
+
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'backend/analytics/analytics_service.dart';
 import 'backend/firebase/firebase_config.dart';
 import 'core/auth/auth_session.dart';
 import '/core/app_runtime/flutter_flow_theme.dart';
@@ -9,21 +14,38 @@ import 'core/app_runtime/flutter_flow_util.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
-  GoRouter.optionURLReflectsImperativeAPIs = true;
-  usePathUrlStrategy();
+  runZonedGuarded(() async {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+    GoRouter.optionURLReflectsImperativeAPIs = true;
+    usePathUrlStrategy();
 
-  final environmentValues = FFDevEnvironmentValues();
-  await environmentValues.initialize();
+    final environmentValues = FFDevEnvironmentValues();
+    await environmentValues.initialize();
 
-  await initFirebase();
-  await AuthSession.instance.initialize();
+    await initFirebase();
+    await AnalyticsService.instance.enableCollection();
 
-  await FlutterFlowTheme.initialize();
+    if (!kIsWeb) {
+      final crashlytics = FirebaseCrashlytics.instance;
+      await crashlytics.setCrashlyticsCollectionEnabled(true);
+      FlutterError.onError = crashlytics.recordFlutterFatalError;
+      PlatformDispatcher.instance.onError = (error, stack) {
+        crashlytics.recordError(error, stack, fatal: true);
+        return true;
+      };
+    }
 
-  runApp(const MyApp());
+    await AuthSession.instance.initialize();
+    await FlutterFlowTheme.initialize();
+    runApp(const MyApp());
+  }, (error, stack) async {
+    if (!kIsWeb) {
+      await FirebaseCrashlytics.instance
+          .recordError(error, stack, fatal: true);
+    }
+  });
 }
 
 class MyApp extends StatefulWidget {

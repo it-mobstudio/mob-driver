@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:m_o_b_demand_side/components/product_card.dart';
@@ -75,7 +76,17 @@ class ProductImagesCarousel extends StatelessWidget {
             itemBuilder: (_, index) {
               final imageUrl = images[index].url;
               return imageUrl.isNotEmpty
-                  ? Image.network(imageUrl, fit: BoxFit.cover)
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      memCacheWidth: 900,
+                      placeholder: (context, url) =>
+                          const Center(child: CircularProgressIndicator()),
+                      errorWidget: (context, url, error) => Image.asset(
+                        'assets/images/Image-coming-soon.png',
+                        fit: BoxFit.cover,
+                      ),
+                    )
                   : Image.asset(
                       'assets/images/Image-coming-soon.png',
                       fit: BoxFit.cover,

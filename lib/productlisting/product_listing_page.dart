@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:m_o_b_demand_side/core/network/app_error.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/products/repositories/products_repository.dart';
 import 'package:m_o_b_demand_side/productdetails/product_detail_page.dart';
 import 'package:m_o_b_demand_side/rfq/rfq_form_page.dart';
+import 'package:m_o_b_demand_side/widgets/error_state_view.dart';
+import 'package:m_o_b_demand_side/widgets/skeleton_loader.dart';
 import '../widgets/main_scaffold.dart';
 import 'filter_bottom_sheet.dart';
 import 'package:go_router/go_router.dart';
@@ -30,6 +34,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
   int _currentPage = 1;
   bool _isLoading = false;
   bool _hasMore = true;
+  bool _loadMoreFailed = false;
   String? _error;
 
   @override
@@ -49,6 +54,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200 &&
         !_isLoading &&
+        !_loadMoreFailed &&
         _hasMore) {
       _fetchProducts();
     }
@@ -80,17 +86,42 @@ class _ProductListingPageState extends State<ProductListingPage> {
                   ? response.pagination.nextPage
                   : _currentPage + 1;
         }
+        _loadMoreFailed = false;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (_products.isEmpty) {
+        setState(() {
+          _error = userMessageFromError(
+            e,
+            fallbackMessage: 'Unable to load products. Please try again.',
+          );
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _loadMoreFailed = true;
+        });
+      }
     }
+  }
+
+  Future<void> _retryInitialLoad() async {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _products.clear();
+      _currentPage = 1;
+      _hasMore = true;
+      _loadMoreFailed = false;
+      _error = null;
+    });
+    await _fetchProducts();
   }
 
   @override
@@ -119,9 +150,12 @@ class _ProductListingPageState extends State<ProductListingPage> {
           _filterRow(context),
           Expanded(
             child: _error != null
-                ? Center(child: Text('Error: $_error'))
+                ? ErrorStateView(
+                    message: _error!,
+                    onRetry: _retryInitialLoad,
+                  )
                 : _products.isEmpty && _isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const ProductGridSkeleton()
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -132,11 +166,27 @@ class _ProductListingPageState extends State<ProductListingPage> {
                         itemBuilder: (context, index) {
                           if (_hasMore &&
                               index == (_products.length / 2).ceil()) {
-                            return const Center(
+                            if (_isLoading) {
+                              return const Center(
                                 child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: CircularProgressIndicator(),
-                            ));
+                                  padding: EdgeInsets.all(16),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+                            if (_loadMoreFailed) {
+                              return Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: OutlinedButton.icon(
+                                    onPressed: _fetchProducts,
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Retry loading more'),
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
                           }
                           if (index ==
                               (_products.length / 2).ceil() +
@@ -209,7 +259,21 @@ class _ProductListingPageState extends State<ProductListingPage> {
                   child: (image.isNotEmpty)
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(image, fit: BoxFit.cover),
+                          child: CachedNetworkImage(
+                            imageUrl: image,
+                            fit: BoxFit.cover,
+                            memCacheWidth: 144,
+                            placeholder: (context, url) => const Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.chair_outlined, size: 28),
+                          ),
                         )
                       : const Icon(Icons.chair_outlined, size: 28),
                 ),
