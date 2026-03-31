@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/components/why_choose_mob.dart';
@@ -83,7 +83,7 @@ class HomepageWidget extends StatelessWidget {
                 GoRouter.of(context).go(RfqFormPage.routePath);
               },
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             _actionCard(
               "Line of credit",
               "Get credit upto 50 lakhs anywhere in India",
@@ -102,91 +102,67 @@ class HomepageWidget extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-            height: 163,
+            height: 152,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+              border: Border.all(color: const Color(0xFFD6D6D6)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 14,
+                  offset: const Offset(0, 0),
+                ),
+              ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(0),
-              child: Stack(
-                children: [
-                  // Centered text
-                  // Align(
-                  //   alignment: Alignment.centerLeft,
-
-                  //   child: Column(
-                  //     mainAxisSize: MainAxisSize.min,
-                  //     crossAxisAlignment: CrossAxisAlignment.start,
-                  //     children: [
-                  //       Text(
-                  //         title,
-                  //         textAlign: TextAlign.left,
-                  //         style: GoogleFonts.inter(
-                  //           fontWeight: FontWeight.w700,
-                  //           fontSize: 15,
-                  //         ),
-                  //       ),
-                  //       SizedBox(height: 6),
-
-                  //       Text(
-                  //         subtitle,
-                  //         textAlign: TextAlign.left,
-                  //         style: GoogleFonts.inter(
-                  //           fontWeight: FontWeight.w400,
-                  //           fontSize: 12,
-                  //           color: Colors.black54,
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding:
-                          const EdgeInsets.all(16), // <-- Added padding here
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            textAlign: TextAlign.left,
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 17,
-                              color: const Color(0xFF0A243F),
-                            ),
+            child: Stack(
+              clipBehavior: Clip.hardEdge,
+              children: [
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          textAlign: TextAlign.left,
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
+                            height: 24 / 17,
+                            color: const Color(0xFF0A243F),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            subtitle,
-                            textAlign: TextAlign.left,
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w400,
-                              fontSize: 12,
-                              color: Colors.black54,
-                            ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          subtitle,
+                          textAlign: TextAlign.left,
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w400,
+                            fontSize: 12,
+                            height: 16 / 12,
+                            color: const Color(0xFF767C8F),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  // Icon/image at bottom right
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Image.asset(
-                      imagePath,
-                      width: 90,
-                      height: 90,
-                      fit: BoxFit.contain,
-                    ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Image.asset(
+                    imagePath,
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.bottomRight,
                   ),
-                ],
-              ),
+                ),
+              ],
             )),
       ),
     );
@@ -199,7 +175,7 @@ class HomepageWidget extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Text(title,
             style:
-                GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
+                GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 17)),
       ),
     );
   }
@@ -277,7 +253,8 @@ class HomepageWidget extends StatelessWidget {
                       size: 28,
                     ),
                   )
-                : const Icon(Icons.category, color: Color(0xFF0A243F), size: 28),
+                : const Icon(Icons.category,
+                    color: Color(0xFF0A243F), size: 28),
           ),
           const SizedBox(height: 6),
           Text(label,
@@ -401,7 +378,6 @@ class HomepageWidget extends StatelessWidget {
   //   );
   // }
 
-
   Widget _infoCard(BuildContext context) {
     const double cardHeight = 76;
     const BorderRadius radius = BorderRadius.all(Radius.circular(18));
@@ -500,4 +476,3 @@ class HomepageWidget extends StatelessWidget {
     );
   }
 }
-

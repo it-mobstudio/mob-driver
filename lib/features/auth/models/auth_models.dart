@@ -15,6 +15,7 @@ class VerifyOtpResult {
     required this.newAccount,
     this.accessToken,
     this.refreshToken,
+    this.userDetails,
   });
 
   final bool success;
@@ -22,4 +23,5 @@ class VerifyOtpResult {
   final bool newAccount;
   final String? accessToken;
   final String? refreshToken;
+  final Map<String, dynamic>? userDetails;
 }

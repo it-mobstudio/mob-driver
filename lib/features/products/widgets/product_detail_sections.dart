@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:m_o_b_demand_side/components/product_card.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 import 'package:m_o_b_demand_side/productdetails/product_detail_page.dart';
@@ -39,7 +39,7 @@ class ProductDetailTopHeader extends StatelessWidget {
   }
 }
 
-class ProductImagesCarousel extends StatelessWidget {
+class ProductImagesCarousel extends StatefulWidget {
   const ProductImagesCarousel({
     super.key,
     required this.images,
@@ -48,52 +48,79 @@ class ProductImagesCarousel extends StatelessWidget {
   final List<ProductImageRef> images;
 
   @override
-  Widget build(BuildContext context) {
-    if (images.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: SizedBox(
-          height: 220,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
-              'assets/images/Image-coming-soon.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-      );
-    }
+  State<ProductImagesCarousel> createState() => _ProductImagesCarouselState();
+}
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: SizedBox(
-        height: 220,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: PageView.builder(
-            itemCount: images.length,
+class _ProductImagesCarouselState extends State<ProductImagesCarousel> {
+  int _currentIndex = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final images = widget.images;
+    return Container(
+      color: Colors.white,
+      height: 280,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            itemCount: images.isEmpty ? 1 : images.length,
+            onPageChanged: (i) => setState(() => _currentIndex = i),
             itemBuilder: (_, index) {
-              final imageUrl = images[index].url;
-              return imageUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 900,
-                      placeholder: (context, url) =>
-                          const Center(child: CircularProgressIndicator()),
-                      errorWidget: (context, url, error) => Image.asset(
+              final imageUrl = images.isEmpty ? '' : images[index].url;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.contain,
+                        memCacheWidth: 900,
+                        placeholder: (context, url) => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                        errorWidget: (context, url, error) => Image.asset(
+                          'assets/images/Image-coming-soon.png',
+                          fit: BoxFit.contain,
+                        ),
+                      )
+                    : Image.asset(
                         'assets/images/Image-coming-soon.png',
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                       ),
-                    )
-                  : Image.asset(
-                      'assets/images/Image-coming-soon.png',
-                      fit: BoxFit.cover,
-                    );
+              );
             },
           ),
-        ),
+          if (images.length > 1)
+            Positioned(
+              bottom: 10,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(images.length, (i) {
+                  final isActive = i == _currentIndex;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: isActive ? 16 : 6,
+                    height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? const Color(0xFF0A243F)
+                          : const Color(0xFFD0D4DC),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                }),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -113,72 +140,105 @@ class ProductInfoBlock extends StatelessWidget {
     final oldPrice = product.maximumRetailPrice;
     final discount = product.vendorPricing.discount;
 
-    final priceStr =
-        double.tryParse(price.toString())?.toStringAsFixed(2) ?? '$price';
-    final oldPriceStr =
-        double.tryParse(oldPrice.toString())?.toStringAsFixed(2) ?? '$oldPrice';
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Product title
           Text(
             product.title,
-            style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.bold),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Mob partner ID: ${product.vendorPricing.bmpId}',
-              style: GoogleFonts.inter(fontSize: 12),
+            style: GoogleFonts.inter(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF0A243F),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'MOBSKU: ${product.mobSku}',
-              style: GoogleFonts.inter(fontSize: 12),
-            ),
+          const SizedBox(height: 8),
+          // IDs
+          Text(
+            'Mob partner ID: ${product.vendorPricing.bmpId}',
+            style:
+                GoogleFonts.inter(fontSize: 12, color: const Color(0xFF8A8A8A)),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 2),
+          Text(
+            'MOBSKU: ${product.mobSku}',
+            style:
+                GoogleFonts.inter(fontSize: 12, color: const Color(0xFF8A8A8A)),
+          ),
+          const SizedBox(height: 12),
+          // Rating row
           Row(
             children: [
-              Text(
-                '₹$priceStr',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF56A77A),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star, size: 12, color: Colors.white),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${product.rating}',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              if (oldPrice > 0)
-                Text(
-                  '₹$oldPriceStr',
-                  style: GoogleFonts.inter(
-                    decoration: TextDecoration.lineThrough,
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-              const SizedBox(width: 8),
-              if (discount > 0)
-                Text(
-                  '$discount% OFF',
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.orange),
-                ),
+              const SizedBox(width: 12),
+              Container(width: 1, height: 12, color: const Color(0xFFD0D4DC)),
+              const SizedBox(width: 12),
+              Text(
+                '${product.reviewCount} reviews',
+                style: GoogleFonts.inter(
+                    fontSize: 13, color: const Color(0xFF0A243F)),
+              ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 12),
+          // Price row
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              const Icon(Icons.star, size: 14, color: Colors.amber),
-              const SizedBox(width: 4),
               Text(
-                '${product.rating} (${product.reviewCount} reviews)',
-                style: GoogleFonts.inter(fontSize: 12),
+                '₹ ${price.toStringAsFixed(0)}',
+                style: GoogleFonts.inter(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0A243F),
+                ),
               ),
+              if (oldPrice > 0) ...[
+                const SizedBox(width: 12),
+                Text(
+                  '₹ ${oldPrice.toStringAsFixed(0)}',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: const Color(0xFFB5B5B5),
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+              ],
+              if (discount > 0) ...[
+                const SizedBox(width: 12),
+                Text(
+                  '$discount% off',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF01A685),
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -206,24 +266,78 @@ class DeliveryInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: const Color(0xFFEEF7E9),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.delivery_dining, size: 20, color: Colors.green),
-            const SizedBox(width: 12),
-            Text(
-              'Will be delivered before tomorrow evening',
-              style: GoogleFonts.inter(fontSize: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Delivery time row
+          Row(
+            children: [
+              const Icon(Icons.local_shipping_outlined,
+                  size: 20, color: Color(0xFF01A685)),
+              const SizedBox(width: 10),
+              RichText(
+                text: TextSpan(
+                  style: GoogleFonts.inter(
+                      fontSize: 12, color: const Color(0xFF0A243F)),
+                  children: [
+                    const TextSpan(text: 'Will be delivered before '),
+                    TextSpan(
+                      text: 'tomorrow evening',
+                      style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0A243F)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Yellow purchase banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8E6B6),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
-        ),
+            child: Text(
+              'Purchase from the same seller to save on delivery cost',
+              style: GoogleFonts.inter(
+                  fontSize: 12, color: const Color(0xFF0A243F)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Warranty badges
+          Row(
+            children: [
+              _warrantyBadge(Icons.replay_rounded, '7 days free\nreturn'),
+              const SizedBox(width: 24),
+              _warrantyBadge(Icons.verified_outlined, '2 Years\nwarranty'),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _warrantyBadge(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF0A243F)),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF0A243F),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -239,16 +353,17 @@ class KeyFeaturesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _SectionHeader(title: 'Product Details'),
+          const SizedBox(height: 10),
           Text(
-            'Key Features',
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+            description,
+            style:
+                GoogleFonts.inter(fontSize: 12, color: const Color(0xFF0A243F)),
           ),
-          const SizedBox(height: 6),
-          Text(description, style: GoogleFonts.inter(fontSize: 12)),
         ],
       ),
     );
@@ -266,15 +381,12 @@ class ProductDetailsTableSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Product Details',
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
+          _SectionHeader(title: 'Specifications'),
+          const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -351,16 +463,17 @@ class SpecificationsSection extends StatelessWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _SectionHeader(title: 'Key Features'),
+          const SizedBox(height: 10),
           Text(
-            'Specifications',
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+            formatted,
+            style:
+                GoogleFonts.inter(fontSize: 12, color: const Color(0xFF0A243F)),
           ),
-          const SizedBox(height: 6),
-          Text(formatted, style: GoogleFonts.inter(fontSize: 12)),
         ],
       ),
     );
@@ -378,32 +491,28 @@ class SimilarProductsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (products.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24),
-        child: Text('No similar products found.'),
-      );
+      return const SizedBox.shrink();
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Similar Products',
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 220,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: products.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return SizedBox(
-                  width: 160,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: _SectionHeader(title: 'View similar items'),
+        ),
+        SizedBox(
+          height: 340,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 15),
+                child: SizedBox(
+                  width: 164,
                   child: ProductCard(
                     product: product,
                     onTap: () {
@@ -412,12 +521,12 @@ class SimilarProductsSection extends StatelessWidget {
                       );
                     },
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -448,7 +557,8 @@ class VariantOptionsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final key in keys)
-            if ((variants[key] ?? const <ProductVariantOption>[]).isNotEmpty) ...[
+            if ((variants[key] ?? const <ProductVariantOption>[])
+                .isNotEmpty) ...[
               Text(
                 'Select ${_beautifyVariantKey(key)}',
                 style: GoogleFonts.inter(
@@ -490,9 +600,34 @@ class VariantOptionsSection extends StatelessWidget {
     return key
         .replaceAll('_', ' ')
         .split(' ')
-        .map((word) => word.isNotEmpty
-            ? word[0].toUpperCase() + word.substring(1)
-            : '')
+        .map((word) =>
+            word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '')
         .join(' ');
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF0A243F),
+            ),
+          ),
+        ),
+        const Icon(Icons.keyboard_arrow_down_rounded,
+            size: 20, color: Color(0xFF0A243F)),
+      ],
+    );
   }
 }

@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:m_o_b_demand_side/core/network/app_error.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/products/repositories/products_repository.dart';
@@ -81,10 +81,9 @@ class _ProductListingPageState extends State<ProductListingPage> {
         _subCategories = response.subCategories;
         _hasMore = response.pagination.isNextPage;
         if (_hasMore) {
-          _currentPage =
-              response.pagination.nextPage > 0
-                  ? response.pagination.nextPage
-                  : _currentPage + 1;
+          _currentPage = response.pagination.nextPage > 0
+              ? response.pagination.nextPage
+              : _currentPage + 1;
         }
         _loadMoreFailed = false;
         _isLoading = false;
@@ -136,17 +135,14 @@ class _ProductListingPageState extends State<ProductListingPage> {
     // Use sub_categories from API
     return MainScaffold(
       currentIndex: 0,
+      showLocationheader: false,
+      showBackButton: true,
+      headerBackgroundColor: const Color(0xFFE8F2EF),
+      searchHintText: 'Search for product, category, brand..',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           _subCategoryList(_subCategories),
-          const SizedBox(height: 24),
-          Container(
-            width: double.infinity,
-            color: const Color(0xFFF1F1F2),
-            child: const SizedBox(height: 12),
-          ),
-          const SizedBox(height: 12),
           _filterRow(context),
           Expanded(
             child: _error != null
@@ -201,20 +197,20 @@ class _ProductListingPageState extends State<ProductListingPage> {
                                   product: _products[i],
                                   onTap: () {
                                     final slug = _products[i].slug;
-                                    GoRouter.of(context)
-                                        .go('${ProductDetailPage.routePath}/$slug');
+                                    GoRouter.of(context).go(
+                                        '${ProductDetailPage.routePath}/$slug');
                                   },
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 15),
                               if (i + 1 < _products.length)
                                 Expanded(
                                   child: ProductCard(
                                     product: _products[i + 1],
                                     onTap: () {
                                       final slug = _products[i + 1].slug;
-                                      GoRouter.of(context)
-                                          .go('${ProductDetailPage.routePath}/$slug');
+                                      GoRouter.of(context).go(
+                                          '${ProductDetailPage.routePath}/$slug');
                                     },
                                   ),
                                 )
@@ -231,78 +227,101 @@ class _ProductListingPageState extends State<ProductListingPage> {
   }
 
   Widget _subCategoryList(List<SubCategoryModel> subs) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: SizedBox(
-        height: 110, // slightly taller to fit image + text nicely
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: subs.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 12),
-          itemBuilder: (context, index) {
-            final sub = subs[index];
-            final name = sub.name;
-            final image = sub.image;
-
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F1F2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.all(8), // 👈 padding inside box
-                  child: (image.isNotEmpty)
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: image,
-                            fit: BoxFit.cover,
-                            memCacheWidth: 144,
-                            placeholder: (context, url) => const Center(
-                              child: SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                            errorWidget: (context, url, error) =>
-                                const Icon(Icons.chair_outlined, size: 28),
-                          ),
-                        )
-                      : const Icon(Icons.chair_outlined, size: 28),
-                ),
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: 72,
-                  child: Text(
-                    name,
-                    style: GoogleFonts.inter(fontSize: 11),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            );
-          },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Text(
+            widget.category,
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+              color: const Color(0xFF0A243F),
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 116,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: subs.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (context, index) {
+              final sub = subs[index];
+              final name = sub.name;
+              final image = sub.image;
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 73,
+                    height: 73,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F1F2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: (image.isNotEmpty)
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: CachedNetworkImage(
+                              imageUrl: image,
+                              fit: BoxFit.cover,
+                              memCacheWidth: 146,
+                              placeholder: (context, url) => const Center(
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) =>
+                                  const Icon(Icons.chair_outlined, size: 28),
+                            ),
+                          )
+                        : const Icon(Icons.chair_outlined, size: 28),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: 73,
+                    child: Text(
+                      name,
+                      style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF0A243F)),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          color: const Color(0xFFF1F1F2),
+          height: 12,
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 
   Widget _filterRow(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          _filterChip("Filter", Icons.tune, onTap: () {
+          _filterChip('Filter', icon: Icons.tune_rounded, onTap: () {
             showModalBottomSheet<void>(
               context: context,
               isScrollControlled: true,
@@ -313,29 +332,41 @@ class _ProductListingPageState extends State<ProductListingPage> {
               builder: (_) => const FilterBottomSheet(),
             );
           }),
-          _filterChip("Sort by", Icons.swap_vert),
-          _filterChip("Same day delivery", Icons.flash_on),
+          const SizedBox(width: 8),
+          _filterChip('Sort by', icon: Icons.keyboard_arrow_down_rounded),
+          const SizedBox(width: 8),
+          _filterChip('Same day delivery'),
         ],
       ),
     );
   }
 
-  Widget _filterChip(String label, IconData icon, {VoidCallback? onTap}) {
-    return InkWell(
+  Widget _filterChip(String label, {IconData? icon, VoidCallback? onTap}) {
+    return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF2F6F9),
-          borderRadius: BorderRadius.circular(24),
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFDEDEDE)),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: const Color(0xFF0A243F)),
-            const SizedBox(width: 6),
-            Text(label,
-                style: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF0A243F),
+              ),
+            ),
+            if (icon != null) ...[
+              const SizedBox(width: 4),
+              Icon(icon, size: 14, color: const Color(0xFF0A243F)),
+            ],
           ],
         ),
       ),
@@ -344,41 +375,65 @@ class _ProductListingPageState extends State<ProductListingPage> {
 
   Widget _bottomCard(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 24),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      height: 138,
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7F1),
+        color: const Color(0xFFF8E6B6),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Icon(Icons.search, size: 32, color: Color(0xFFFA6332)),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("Can’t find a product?",
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w700, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text("Suggest the item you want and we will try to add it.",
-                    style: GoogleFonts.inter(fontSize: 12)),
+                Text(
+                  "Can't find what you're looking for?",
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: const Color(0xFF0A243F),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Suggest the item you want and we will try to add it.",
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF0A243F).withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () {
+                    GoRouter.of(context).go(RfqFormPage.routePath);
+                  },
+                  child: Container(
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: const Color(0xFF0A243F)),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Send a request',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF0A243F),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFA6332),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            onPressed: () {
-              GoRouter.of(context).go(RfqFormPage.routePath);
-            },
-            child: Text("Send a request",
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           ),
         ],
       ),

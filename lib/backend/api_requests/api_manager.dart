@@ -2,7 +2,6 @@
 
 import 'dart:convert';
 import 'dart:core';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
@@ -509,7 +508,7 @@ class ApiManager {
 
     // Modify for your specific needs if this differs from your API.
     if (_accessToken != null) {
-      requestHeaders[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
+      requestHeaders['Authorization'] = 'Bearer $_accessToken';
     }
     if (!resolvedApiUrl.startsWith('http')) {
       resolvedApiUrl = 'https://$resolvedApiUrl';
@@ -607,8 +606,7 @@ class ApiManager {
       if (result.statusCode == 401 && _shouldAttemptRefresh(callName)) {
         final refreshedToken = await _refreshAccessToken();
         if (refreshedToken != null && refreshedToken.isNotEmpty) {
-          requestHeaders[HttpHeaders.authorizationHeader] =
-              'Bearer $refreshedToken';
+          requestHeaders['Authorization'] = 'Bearer $refreshedToken';
           result = await performRequest(requestHeaders);
         } else {
           await _handleAuthFailure();

@@ -9,23 +9,64 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'backend/analytics/analytics_service.dart';
 import 'backend/firebase/firebase_config.dart';
 import 'core/auth/auth_session.dart';
+import 'loginpage/splash_screen.dart';
 import '/core/app_runtime/flutter_flow_theme.dart';
 import 'core/app_runtime/flutter_flow_util.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runZonedGuarded(() async {
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
+  runZonedGuarded(() {
+    runApp(const AppBootstrap());
+  }, (error, stack) async {
+    if (!kIsWeb) {
+      await FirebaseCrashlytics.instance
+          .recordError(error, stack, fatal: true);
+    }
+  });
+}
+
+class AppBootstrap extends StatefulWidget {
+  const AppBootstrap({super.key});
+
+  @override
+  State<AppBootstrap> createState() => _AppBootstrapState();
+}
+
+class _AppBootstrapState extends State<AppBootstrap> {
+  late final Future<void> _bootstrapFuture = _bootstrap();
+
+  Future<void> _bootstrap() async {
+    try {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Orientation init warning: $e');
+      }
+    }
     GoRouter.optionURLReflectsImperativeAPIs = true;
-    usePathUrlStrategy();
+    if (kIsWeb) {
+      try {
+        usePathUrlStrategy();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('URL strategy warning: $e');
+        }
+      }
+    }
 
     final environmentValues = FFDevEnvironmentValues();
     await environmentValues.initialize();
 
     await initFirebase();
-    await AnalyticsService.instance.enableCollection();
+    try {
+      await AnalyticsService.instance.enableCollection();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Analytics init warning: $e');
+      }
+    }
 
     if (!kIsWeb) {
       final crashlytics = FirebaseCrashlytics.instance;
@@ -37,15 +78,37 @@ void main() async {
       };
     }
 
-    await AuthSession.instance.initialize();
-    await FlutterFlowTheme.initialize();
-    runApp(const MyApp());
-  }, (error, stack) async {
-    if (!kIsWeb) {
-      await FirebaseCrashlytics.instance
-          .recordError(error, stack, fatal: true);
+    try {
+      await AuthSession.instance.initialize();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Auth session init warning: $e');
+      }
     }
-  });
+    try {
+      await FlutterFlowTheme.initialize();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Theme init warning: $e');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _bootstrapFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: SplashScreen(),
+          );
+        }
+        return const MyApp();
+      },
+    );
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -84,14 +147,6 @@ class MyAppState extends State<MyApp> {
 
     _appStateNotifier = AppStateNotifier.instance;
     _router = createRouter(_appStateNotifier);
-
-    // Show splash for 5 seconds
-    Future.delayed(const Duration(seconds: 5), () {
-      if (!mounted) {
-        return;
-      }
-      safeSetState(() => _appStateNotifier.stopShowingSplashImage());
-    });
   }
 
   void setThemeMode(ThemeMode mode) => safeSetState(() {

@@ -37,6 +37,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   Widget build(BuildContext context) {
     return MainScaffold(
       currentIndex: 0,
+      showLocationheader: false,
+      showBackButton: true,
+      headerBackgroundColor: const Color(0xFFE8F2EF),
+      searchHintText: 'Search for product, category, brand..',
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
@@ -59,8 +63,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           return ListView(
             padding: const EdgeInsets.all(0),
             children: [
-              ProductDetailTopHeader(onBack: () => Navigator.of(context).pop()),
-              const SizedBox(height: 16),
               ProductImagesCarousel(images: product.images),
               const SizedBox(height: 16),
               ProductInfoBlock(product: product),

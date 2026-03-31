@@ -47,12 +47,15 @@ class AuthRepository {
       newAccount: data['newAccount'] == true,
       accessToken: _readFirstString(
         data,
-        const ['access_token', 'accessToken', 'token', 'jwt'],
+        const ['access', 'access_token', 'accessToken', 'token', 'jwt'],
       ),
       refreshToken: _readFirstString(
         data,
-        const ['refresh_token', 'refreshToken'],
+        const ['refresh', 'refresh_token', 'refreshToken'],
       ),
+      userDetails: data['data'] is Map
+          ? Map<String, dynamic>.from(data['data'] as Map)
+          : null,
     );
   }
 

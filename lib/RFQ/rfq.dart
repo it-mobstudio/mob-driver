@@ -1,323 +1,373 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
+import 'package:m_o_b_demand_side/widgets/main_scaffold.dart';
 
-import 'rfq_details_page.dart'; // if you navigate to details
-import '../widgets/main_scaffold.dart'; // <-- add this
+import 'rfq_details_page.dart';
 
-// ---- Mock model -------------------------------------------------------------
-class RfqItem {
+// â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class RfqPage extends StatelessWidget {
+  const RfqPage({super.key});
+  static const routeName = 'RfqListPage';
+  static const routePath = '/rfqs';
+
+  @override
+  Widget build(BuildContext context) {
+    return const MainScaffold(
+      currentIndex: 3,
+      showLocationheader: false,
+      showBackButton: true,
+      headerBackgroundColor: Color(0xFFE8F2EF),
+      searchHintText: 'Search for product, category, brand..',
+      child: _RfqBody(),
+    );
+  }
+}
+
+// â”€â”€â”€ Data Model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+enum _RfqStatus { requested, quotationGenerated, convertedToOrder }
+
+class _RfqData {
   final String id;
   final String placedOn;
-  final int amount;
-  final String status; // Requested / Quotation generated / Converted to order
+  final String amount;
+  final _RfqStatus status;
   final int documents;
   final int quotations;
-  final bool convertedToOrder;
-  const RfqItem({
+
+  const _RfqData({
     required this.id,
     required this.placedOn,
     required this.amount,
     required this.status,
     required this.documents,
     required this.quotations,
-    this.convertedToOrder = false,
   });
+
+  String get statusLabel => switch (status) {
+        _RfqStatus.requested => 'Requested',
+        _RfqStatus.quotationGenerated => 'Quotation generated',
+        _RfqStatus.convertedToOrder => 'Converted to order',
+      };
 }
 
-// ---- Page -------------------------------------------------------------------
-class RfqPage extends StatefulWidget {
-  const RfqPage({super.key});
-  static const routeName = 'RfqListPage';
-  static const routePath = '/rfqs';
+// â”€â”€â”€ Body â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  @override
-  State<RfqPage> createState() => _RfqListPageState();
-}
+class _RfqBody extends StatelessWidget {
+  const _RfqBody();
 
-class _RfqListPageState extends State<RfqPage> {
-  final TextEditingController _inlineSearch = TextEditingController();
-
-  final items = const <RfqItem>[
-    RfqItem(
-      id: 'MOB8967855HJS6',
-      placedOn: '2022, 1, 30',
-      amount: 31250,
-      status: 'Quotation generated',
+  static const _items = <_RfqData>[
+    _RfqData(
+      id: 'MOB9867855HJS6',
+      placedOn: 'Placed on: 30 Jan 2022',
+      amount: 'â‚¹ 31250',
+      status: _RfqStatus.quotationGenerated,
       documents: 1,
       quotations: 2,
     ),
-    RfqItem(
-      id: 'MOB8967855HJS6',
-      placedOn: '2022, 1, 30',
-      amount: 31250,
-      status: 'Requested',
+    _RfqData(
+      id: 'MOB9867855HJS6',
+      placedOn: 'Placed on: 30 Jan 2022',
+      amount: 'â‚¹ 31250',
+      status: _RfqStatus.requested,
       documents: 1,
       quotations: 0,
     ),
-    RfqItem(
-      id: 'MOB8967855HJS6',
-      placedOn: '2022, 1, 30',
-      amount: 31250,
-      status: 'Requested',
+    _RfqData(
+      id: 'MOB9867855HJS6',
+      placedOn: 'Placed on: 30 Jan 2022',
+      amount: 'â‚¹ 31250',
+      status: _RfqStatus.requested,
       documents: 1,
       quotations: 0,
     ),
-    RfqItem(
-      id: 'MOB8967855HJS6',
-      placedOn: '2022, 1, 30',
-      amount: 31250,
-      status: 'Converted to order',
+    _RfqData(
+      id: 'MOB9867855HJS6',
+      placedOn: 'Placed on: 30 Jan 2022',
+      amount: 'â‚¹ 31250',
+      status: _RfqStatus.convertedToOrder,
       documents: 1,
       quotations: 2,
-      convertedToOrder: true,
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    const mint = Color(0xFFE9F4F1); // header tint
-    const ink = Color(0xFF0A243F);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Title
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Text(
+            'Quotation request',
+            style: GoogleFonts.inter(
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0A243F),
+              height: 28 / 19,
+            ),
+          ),
+        ),
 
-    return MainScaffold(
-      currentIndex: 3, // Profile tab (change if needed)
-      // No title => no AppBar; keeps your custom header/search look
-      child: Stack(
-        children: [
-          // Mint header background
-          Container(height: 112, color: mint),
-          SafeArea(
-            child: Column(
+        const SizedBox(height: 16),
+
+        // Inline search
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: const [
+                BoxShadow(color: Color(0x1A000000), blurRadius: 3),
+              ],
+            ),
+            child: Row(
               children: [
-                // Top search bar row
-
-                // Title
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Quotation request',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: ink,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Inline RFQ search + sort
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _searchField(_inlineSearch,
-                            hint: "Search all RFQ's"),
-                      ),
-                      const SizedBox(width: 12),
-                      _sortButton(),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // List
-                Expanded(
-                  child: ListView.separated(
-                    padding:
-                        const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (_, i) => _rfqCard(context, items[i]),
+                const SizedBox(width: 16),
+                const Icon(Icons.search, size: 18, color: Color(0xFF6C7C8C)),
+                const SizedBox(width: 8),
+                Text(
+                  "Search all RFQ's",
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF6C7C8C),
+                    height: 18 / 12,
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  // ---- Widgets --------------------------------------------------------------
-
-  Widget _searchField(TextEditingController c,
-      {required String hint, bool dense = false}) {
-    return TextField(
-      controller: c,
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: const Icon(Icons.search),
-        isDense: dense,
-        filled: true,
-        fillColor: const Color(0xFFF2F6F9),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        border: OutlineInputBorder(
-          borderSide: BorderSide.none,
-          borderRadius: BorderRadius.circular(12),
         ),
-      ),
+
+        const SizedBox(height: 16),
+
+        // Sort chip
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFDEDEDE)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Sort by',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF0A243F),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 14,
+                  color: Color(0xFF0A243F),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // List
+        Expanded(
+          child: ColoredBox(
+            color: const Color(0xFFF0F0F0),
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              itemCount: _items.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _RfqCard(item: _items[index]),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
+}
 
-  Widget _sortButton() {
-    return OutlinedButton.icon(
-      onPressed: () {},
-      icon: const Icon(Icons.sort, size: 18),
-      label: const Text('Sort by'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.black87,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        side: const BorderSide(color: Color(0xFFE3E8EF)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
+// â”€â”€â”€ Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  Widget _rfqCard(BuildContext context, RfqItem it) {
-    const subtle = Color(0xFFF2F6F9);
-    const border = Color(0xFFE8EEF5);
-    final title = GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600);
-    final small =
-        GoogleFonts.inter(fontSize: 12, color: const Color(0xFF6C7C8C));
+class _RfqCard extends StatelessWidget {
+  final _RfqData item;
+  const _RfqCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasButton = item.quotations > 0;
 
     return Container(
       decoration: BoxDecoration(
-        color: subtle,
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
       ),
-      padding: const EdgeInsets.all(6),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: border),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          children: [
-            // Header row (id + amount)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ID + amount
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  item.id,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF0A243F),
+                  ),
+                ),
+                Text(
+                  item.amount,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0A243F),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Placed on
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+            child: Text(
+              item.placedOn,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF67696D),
+              ),
+            ),
+          ),
+
+          // Divider
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Divider(height: 1, thickness: 0.5, color: Color(0xFFD0D4DC)),
+          ),
+
+          // Status row (tappable)
+          GestureDetector(
+            onTap: () => context.push(RfqDetailsPage.routePath),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(it.id,
-                            style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF3A4B5B))),
+                        Text(
+                          item.statusLabel,
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0A243F),
+                            height: 22 / 15,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text('Placed on: ${_fmtDate(it.placedOn)}',
-                            style: small),
+                        Text(
+                          '${item.documents} document attached',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF67696D),
+                            height: 18 / 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  Text('₹ ${it.amount}',
-                      style: GoogleFonts.inter(
-                          fontSize: 14, fontWeight: FontWeight.w700)),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xFF0A243F),
+                    size: 18,
+                  ),
                 ],
               ),
             ),
-            const Divider(height: 1),
+          ),
 
-            // Status row
-            InkWell(
-              onTap: () => context.go(RfqDetailsPage.routePath),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                child: Row(
-                  children: [
+          // CTA buttons
+          if (hasButton) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  if (item.status == _RfqStatus.convertedToOrder) ...[
                     Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(it.status, style: title),
-                            const SizedBox(height: 4),
-                            Text('${it.documents} document attached',
-                                style: small),
-                          ]),
-                    ),
-                    const Icon(Icons.chevron_right, color: Colors.black54),
-                  ],
-                ),
-              ),
-            ),
-
-            // Bottom CTA row (varies)
-            if (it.convertedToOrder || it.quotations > 0)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: Row(
-                  children: [
-                    if (it.convertedToOrder) ...[
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(42),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24)),
-                          ),
-                          child: const Text('View order'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => context.go(RfqDetailsPage.routePath),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(42),
+                      child: OutlinedButton(
+                        onPressed: () {},
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                              color: Color(0xFFDEDEDE), width: 1.5),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24)),
-                          elevation: 0,
+                              borderRadius: BorderRadius.circular(32)),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
                         ),
                         child: Text(
-                          'View ${it.quotations} ${it.quotations == 1 ? 'quotation' : 'quotations'}',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          'View order',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0A243F),
+                          ),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                   ],
-                ),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => context.push(RfqDetailsPage.routePath),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0360E5),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(32)),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                      child: Text(
+                        'View ${item.quotations} ${item.quotations == 1 ? 'quotation' : 'quotations'}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
           ],
-        ),
+
+          const SizedBox(height: 14),
+        ],
       ),
     );
-  }
-
-  String _fmtDate(String date) {
-    final parts = date.split(', ');
-    if (parts.length != 3) return date;
-
-    final year = int.tryParse(parts[0]) ?? 0;
-    final month = int.tryParse(parts[1]) ?? 0;
-    final day = int.tryParse(parts[2]) ?? 0;
-
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    final dateObj = DateTime(year, month, day);
-    return '${dateObj.day} ${months[dateObj.month - 1]} ${dateObj.year}';
   }
 }

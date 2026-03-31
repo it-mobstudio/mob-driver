@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import '/backend/api_requests/api_manager.dart';
 
@@ -25,7 +24,7 @@ AppException appExceptionFromApiResponse(
   final statusCode = response.statusCode;
   final exception = response.exception;
 
-  if (exception is SocketException) {
+  if (_isSocketException(exception)) {
     return AppException(
       'No internet connection. Check your network and retry.',
       statusCode: statusCode,
@@ -71,7 +70,7 @@ String userMessageFromError(
   if (error is AppException) {
     return error.message;
   }
-  if (error is SocketException) {
+  if (_isSocketException(error)) {
     return 'No internet connection. Check your network and retry.';
   }
   if (error is TimeoutException) {
@@ -79,3 +78,6 @@ String userMessageFromError(
   }
   return fallbackMessage;
 }
+
+bool _isSocketException(Object? error) =>
+    error?.runtimeType.toString() == 'SocketException';

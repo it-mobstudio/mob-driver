@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../core/auth/auth_session.dart';
 import '../loginpage/loginpage_widget.dart';
+import '../orders/orders_page.dart';
+import '../rfq/rfq.dart';
 import '../widgets/main_scaffold.dart';
 
 class MyAccountWidget extends StatelessWidget {
@@ -78,55 +80,55 @@ class _ProfileBody extends StatelessWidget {
                 _MenuItemData(
                   icon: CupertinoIcons.cube_box_fill,
                   title: 'Orders',
-                  onTap: () => _showComingSoon(context, 'Orders'),
+                  onTap: (ctx) => ctx.push(OrdersPage.routePath),
                 ),
-                _MenuItemData(
-                  icon: CupertinoIcons.arrow_2_squarepath,
-                  title: 'Resell order',
-                  onTap: () => _showComingSoon(context, 'Resell order'),
-                ),
+                // _MenuItemData(
+                //   icon: CupertinoIcons.arrow_2_squarepath,
+                //   title: 'Resell order',
+                //   onTap: () => _showComingSoon(context, 'Resell order'),
+                // ),
                 _MenuItemData(
                   icon: CupertinoIcons.doc_on_doc_fill,
-                  title: 'My RFQ’s',
-                  onTap: () => _showComingSoon(context, 'My RFQs'),
+                  title: "My RFQ's",
+                  onTap: (ctx) => ctx.push(RfqPage.routePath),
                 ),
                 _MenuItemData(
                   icon: CupertinoIcons.heart_fill,
                   title: 'Wishlist',
-                  onTap: () => _showComingSoon(context, 'Wishlist'),
+                  onTap: (ctx) => _showComingSoon(ctx, 'Wishlist'),
                 ),
                 _MenuItemData(
                   icon: CupertinoIcons.person_fill,
                   title: 'Personal info',
-                  onTap: () => _showComingSoon(context, 'Personal info'),
+                  onTap: (ctx) => _showComingSoon(ctx, 'Personal info'),
                 ),
                 _MenuItemData(
                   icon: CupertinoIcons.location_solid,
                   title: 'Address',
-                  onTap: () => _showComingSoon(context, 'Address'),
+                  onTap: (ctx) => _showComingSoon(ctx, 'Address'),
                 ),
-                _MenuItemData(
-                  icon: CupertinoIcons.creditcard_fill,
-                  title: 'My payments',
-                  onTap: () => _showComingSoon(context, 'Payments'),
-                ),
+                // _MenuItemData(
+                //   icon: CupertinoIcons.creditcard_fill,
+                //   title: 'My payments',
+                //   onTap: (ctx) => _showComingSoon(ctx, 'Payments'),
+                // ),
                 _MenuItemData(
                   icon: CupertinoIcons.money_dollar_circle_fill,
                   title: 'Wallet & points',
-                  onTap: () => _showComingSoon(context, 'Wallet & points'),
+                  onTap: (ctx) => _showComingSoon(ctx, 'Wallet & points'),
                 ),
-                _MenuItemData(
-                  icon: CupertinoIcons.gift_fill,
-                  title: 'Refer and earn',
-                  onTap: () => _showComingSoon(context, 'Refer and earn'),
-                ),
+                // _MenuItemData(
+                //   icon: CupertinoIcons.gift_fill,
+                //   title: 'Refer and earn',
+                //   onTap: (ctx) => _showComingSoon(ctx, 'Refer and earn'),
+                // ),
                 _MenuItemData(
                   icon: CupertinoIcons.arrow_right_square_fill,
                   title: 'Logout',
-                  onTap: () async {
+                  onTap: (ctx) async {
                     await AuthSession.instance.signOut();
-                    if (context.mounted) {
-                      context.go(LoginpageWidget.routePath);
+                    if (ctx.mounted) {
+                      ctx.go(LoginpageWidget.routePath);
                     }
                   },
                 ),
@@ -301,7 +303,7 @@ class _StatTile extends StatelessWidget {
 class _MenuItemData {
   final IconData icon;
   final String title;
-  final VoidCallback onTap;
+  final void Function(BuildContext) onTap;
   _MenuItemData({required this.icon, required this.title, required this.onTap});
 }
 
@@ -320,7 +322,7 @@ class _MenuSection extends StatelessWidget {
       itemBuilder: (context, index) {
         final item = items[index];
         return ListTile(
-          onTap: item.onTap,
+          onTap: () => item.onTap(context),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           leading: CircleAvatar(

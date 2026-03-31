@@ -4,7 +4,9 @@ import 'package:m_o_b_demand_side/checkout/checkout_address_page.dart';
 import 'package:m_o_b_demand_side/conversational_ai/conversational_ai.dart';
 import 'package:m_o_b_demand_side/features/cart/controllers/cart_controller.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
+import 'package:m_o_b_demand_side/widgets/error_state_view.dart';
 import 'package:m_o_b_demand_side/widgets/main_scaffold.dart';
+import 'package:m_o_b_demand_side/loginpage/loginpage_widget.dart';
 
 class CartPage extends StatefulWidget {
   static const String routeName = 'CartPage';
@@ -23,6 +25,7 @@ class _CartPageState extends State<CartPage> {
   void initState() {
     super.initState();
     _controller = CartController();
+    _controller.loadCart();
   }
 
   @override
@@ -34,18 +37,62 @@ class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      currentIndex: 4,
+      currentIndex: 2,
+      showLocationheader: false,
+      showBackButton: false,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF7F7F7),
         body: SafeArea(
           child: AnimatedBuilder(
             animation: _controller,
             builder: (context, _) {
+              if (_controller.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (_controller.errorMessage != null &&
+                  _controller.errorMessage!.isNotEmpty &&
+                  _controller.items.isEmpty) {
+                return ErrorStateView(
+                  title: 'Unable to load cart',
+                  message: _controller.errorMessage!,
+                  onRetry: () => _controller.loadCart(),
+                );
+              }
+              if (_controller.requiresLogin) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.lock_outline, size: 40),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Login to access your cart',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () =>
+                              context.go(LoginpageWidget.routePath),
+                          child: const Text('Go to Login'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
               return _controller.isEmpty
-                  ? const EmptyCartBody(
+                  ? EmptyCartBody(
                       topBar: CartTopBar(),
-                      shippingTile: ShippingTile(),
-                      micPill: AiMicPill(),
+                      shippingTile: ShippingTile(
+                        title: _controller.shippingTitle,
+                        subtitle: _controller.shippingSubtitle,
+                      ),
+                      micPill: const AiMicPill(),
                     )
                   : _buildCartWithItems(context);
             },
@@ -64,7 +111,10 @@ class _CartPageState extends State<CartPage> {
               sellerCode: entry.key,
               sellerItems: entry.value,
               onQtyChanged: _controller.updateQuantity,
+              onQtyInputChanged: _controller.onQuantityInputChanged,
               onRemove: _controller.removeItem,
+              isUpdatingCart: _controller.isUpdatingCart,
+              updatingItemKey: _controller.updatingItemKey,
             ),
           ),
         )
@@ -72,31 +122,67 @@ class _CartPageState extends State<CartPage> {
 
     return Stack(
       children: [
-        ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 140),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const CartTopBar(),
-            const ShippingTile(),
-            const SavingsStrip(savings: CartController.savingsBannerAmount),
-            const SizedBox(height: 8),
-            ...sellerSections,
-            const ViewCouponsTile(),
-            const SizedBox(height: 12),
-            OrderDetailsCard(
-              subtotal: _controller.subtotal,
-              shipping: _controller.shipping,
-              tax: _controller.tax,
-              savings: _controller.savings,
-              total: _controller.total,
+            // Non-scrollable header: title + full-width gray divider
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: CartTopBar(),
             ),
-            const SizedBox(height: 12),
-            const CartActionRow(),
-            const SizedBox(height: 12),
+            Container(height: 12, color: const Color(0xFFF1F1F2)),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 140),
+                children: [
+                  ShippingTile(
+                    title: _controller.shippingTitle,
+                    subtitle: _controller.shippingSubtitle,
+                  ),
+                  SavingsStrip(
+                    savings: _controller.savings,
+                  ),
+                  const SizedBox(height: 8),
+                  if (_controller.hasRfqItems)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF4F0),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'Cart has ${_controller.rfqItemCount} RFQ item(s) without price. Proceed with checkout only for priced items.',
+                        style: const TextStyle(
+                          color: Color(0xFF8A3A00),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  ...sellerSections,
+                  const ViewCouponsTile(),
+                  const SizedBox(height: 12),
+                  OrderDetailsCard(
+                    subtotal: _controller.subtotal,
+                    shipping: _controller.shipping,
+                    tax: _controller.tax,
+                    savings: _controller.savings,
+                    total: _controller.total,
+                  ),
+                  const SizedBox(height: 12),
+                  const CartActionRow(),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
           ],
         ),
         BottomCheckoutBar(
           total: _controller.total,
-          onProceed: () => GoRouter.of(context).go(CheckoutAddressPage.routePath),
+          onProceed: () =>
+              GoRouter.of(context).go(CheckoutAddressPage.routePath),
         ),
         Positioned(
           bottom: 80,

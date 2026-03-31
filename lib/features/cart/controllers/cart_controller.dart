@@ -1,27 +1,50 @@
 import 'package:flutter/foundation.dart';
+import 'package:m_o_b_demand_side/backend/api_requests/api_calls.dart';
+import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/core/network/app_error.dart';
 import 'package:m_o_b_demand_side/features/cart/models/cart_item.dart';
 
 class CartController extends ChangeNotifier {
   CartController({List<CartItem>? initialItems})
-      : _items = List<CartItem>.from(initialItems ?? _demoItems);
-
-  static const double defaultShipping = 500;
-  static const double defaultTax = 433;
-  static const double defaultSavings = 1055;
-  static const double savingsBannerAmount = 7200;
+      : _items = List<CartItem>.from(initialItems ?? const <CartItem>[]);
 
   List<CartItem> _items;
+  bool _isLoading = false;
+  String? _errorMessage;
+  String? _actionErrorMessage;
+  bool _isUpdatingCart = false;
+  String? _updatingItemKey;
+  bool _requiresLogin = false;
+  int _rfqItemCount = 0;
+
+  double _subtotal = 0;
+  double _shipping = 0;
+  double _tax = 0;
+  double _savings = 0;
+  double _total = 0;
+  int _itemCount = 0;
+  String _shippingTitle = 'Shipping address';
+  String _shippingSubtitle = 'Add an address to continue';
 
   List<CartItem> get items => List<CartItem>.unmodifiable(_items);
   bool get isEmpty => _items.isEmpty;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  String? get actionErrorMessage => _actionErrorMessage;
+  bool get isUpdatingCart => _isUpdatingCart;
+  String? get updatingItemKey => _updatingItemKey;
+  bool get requiresLogin => _requiresLogin;
+  int get rfqItemCount => _rfqItemCount;
+  bool get hasRfqItems => _rfqItemCount > 0;
+  int get itemCount => _itemCount;
 
-  double get subtotal =>
-      _items.fold<double>(0, (sum, item) => sum + item.lineTotal);
-
-  double get shipping => defaultShipping;
-  double get tax => defaultTax;
-  double get savings => defaultSavings;
-  double get total => subtotal + shipping + tax - savings;
+  double get subtotal => _subtotal;
+  double get shipping => _shipping;
+  double get tax => _tax;
+  double get savings => _savings;
+  double get total => _total;
+  String get shippingTitle => _shippingTitle;
+  String get shippingSubtitle => _shippingSubtitle;
 
   Map<String, List<CartItem>> get itemsBySeller {
     final bySeller = <String, List<CartItem>>{};
@@ -32,56 +55,499 @@ class CartController extends ChangeNotifier {
   }
 
   void updateQuantity(CartItem item, int newQty) {
-    final index = _items.indexOf(item);
-    if (index < 0) {
-      return;
-    }
-
     if (newQty <= 0) {
       removeItem(item);
       return;
     }
-
-    _items[index] = _items[index].copyWith(qty: newQty);
-    notifyListeners();
+    _changeQuantity(item, newQty);
   }
 
   void removeItem(CartItem item) {
-    _items = _items.where((e) => e != item).toList();
+    _deleteItem(item);
+  }
+
+  void onQuantityInputChanged(CartItem item, String value) {
+    final parsed = int.tryParse(value.trim());
+    if (parsed == null) {
+      return;
+    }
+    if (parsed <= 0) {
+      removeItem(item);
+      return;
+    }
+    _changeQuantity(item, parsed);
+  }
+
+  Future<void> loadCart() async {
+    if (!AuthSession.instance.isAuthenticated) {
+      _requiresLogin = true;
+      _isLoading = false;
+      _errorMessage = null;
+      _items = <CartItem>[];
+      notifyListeners();
+      return;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    _actionErrorMessage = null;
+    _requiresLogin = false;
     notifyListeners();
+
+    try {
+      final response = await GetCartCall.call(userDetails: true);
+      if (!response.succeeded) {
+        throw appExceptionFromApiResponse(
+          response,
+          fallbackMessage: 'Unable to load cart. Please try again.',
+        );
+      }
+
+      final body = response.jsonBody is Map
+          ? Map<String, dynamic>.from(response.jsonBody as Map)
+          : <String, dynamic>{};
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      _applyServerData(data);
+    } catch (e) {
+      _items = <CartItem>[];
+      _rfqItemCount = 0;
+      _subtotal = 0;
+      _shipping = 0;
+      _tax = 0;
+      _savings = 0;
+      _total = 0;
+      _errorMessage = userMessageFromError(
+        e is Object ? e : Exception(e.toString()),
+        fallbackMessage: 'Unable to load cart. Please try again.',
+      );
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _changeQuantity(CartItem item, int newQty) async {
+    final itemKey = item.itemKey.isNotEmpty
+        ? item.itemKey
+        : (item.vendorProductId.isNotEmpty ? item.vendorProductId : item.title);
+    if (_isUpdatingCart) {
+      return;
+    }
+    if (item.vendorProductId.isEmpty) {
+      _errorMessage = 'Unable to update this cart item right now.';
+      notifyListeners();
+      return;
+    }
+
+    _isUpdatingCart = true;
+    _updatingItemKey = itemKey;
+    _actionErrorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await AddToCartCall.call(
+        items: [
+          {
+            'product': item.vendorProductId,
+            'quantity': newQty,
+          },
+        ],
+      );
+
+      if (!response.succeeded) {
+        throw appExceptionFromApiResponse(
+          response,
+          fallbackMessage: 'Unable to update cart item. Please try again.',
+        );
+      }
+
+      final body = response.jsonBody is Map
+          ? Map<String, dynamic>.from(response.jsonBody as Map)
+          : <String, dynamic>{};
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      _applyServerData(data);
+    } catch (e) {
+      _actionErrorMessage = userMessageFromError(
+        e is Object ? e : Exception(e.toString()),
+        fallbackMessage: 'Unable to update cart item. Please try again.',
+      );
+    } finally {
+      _isUpdatingCart = false;
+      _updatingItemKey = null;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _deleteItem(CartItem item) async {
+    final itemKey = item.itemKey.isNotEmpty
+        ? item.itemKey
+        : (item.vendorProductId.isNotEmpty ? item.vendorProductId : item.title);
+    if (_isUpdatingCart) {
+      return;
+    }
+    if (item.cartItemId.isEmpty) {
+      if (item.vendorProductId.isNotEmpty) {
+        await _changeQuantity(item, 0);
+        return;
+      }
+      _errorMessage = 'Unable to delete this cart item right now.';
+      notifyListeners();
+      return;
+    }
+
+    _isUpdatingCart = true;
+    _updatingItemKey = itemKey;
+    _actionErrorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await RemoveCartItemCall.call(cartItemId: item.cartItemId);
+      if (!response.succeeded) {
+        throw appExceptionFromApiResponse(
+          response,
+          fallbackMessage: 'Unable to delete cart item. Please try again.',
+        );
+      }
+
+      final body = response.jsonBody is Map
+          ? Map<String, dynamic>.from(response.jsonBody as Map)
+          : <String, dynamic>{};
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      _applyServerData(data);
+    } catch (e) {
+      _actionErrorMessage = userMessageFromError(
+        e is Object ? e : Exception(e.toString()),
+        fallbackMessage: 'Unable to delete cart item. Please try again.',
+      );
+    } finally {
+      _isUpdatingCart = false;
+      _updatingItemKey = null;
+      notifyListeners();
+    }
+  }
+
+  void _applyServerData(Map<String, dynamic> data) {
+    final itemMaps = _extractCartItemMapsFromServerData(data);
+    _items = itemMaps.map(CartItem.fromMap).toList();
+    _itemCount = _readFirstInt(
+      data,
+      const ['item_count', 'itemCount'],
+      fallback: _items.fold<int>(0, (sum, item) => sum + item.qty),
+    );
+
+    _subtotal = _readFirstNum(
+      data,
+      const ['sub_cart_total', 'subTotal', 'subtotal'],
+      fallback: _items.fold<double>(0, (sum, item) => sum + item.lineTotal),
+    ).toDouble();
+    _shipping = _readFirstNum(
+      data,
+      const ['shipping', 'shipping_charge', 'shippingCharges'],
+    ).toDouble();
+    _tax = _readFirstNum(
+      data,
+      const ['tax', 'total_tax', 'tax_total'],
+    ).toDouble();
+    _savings = _readFirstNum(
+      data,
+      const ['savings', 'discount'],
+    ).toDouble();
+    _total = _readFirstNum(
+      data,
+      const ['total', 'cart_total'],
+      fallback: _subtotal + _shipping + _tax - _savings,
+    ).toDouble();
+    _rfqItemCount = _extractRfqItemCount(data['quote_cart']);
+    _setShippingDetails(data['user_details']);
+  }
+
+  List<Map<String, dynamic>> _extractCartItemMapsFromServerData(
+    Map<String, dynamic> data,
+  ) {
+    final result = <Map<String, dynamic>>[];
+
+    final subcarts = _toMapList(data['subcarts']);
+    result.addAll(_itemsFromSubcarts(subcarts));
+
+    final quickCommerce = data['quick_commerce'];
+    if (quickCommerce is Map) {
+      final quickSubcarts = _toMapList(quickCommerce['subcarts']);
+      result.addAll(_itemsFromSubcarts(quickSubcarts));
+
+      final quickProducts = _toMapList(quickCommerce['quick_products']);
+      result.addAll(quickProducts);
+    } else if (quickCommerce is List) {
+      result.addAll(_itemsFromSubcarts(_toMapList(quickCommerce)));
+    }
+
+    if (result.isNotEmpty) {
+      return result;
+    }
+
+    return _extractCartItemMaps(data);
+  }
+
+  List<Map<String, dynamic>> _itemsFromSubcarts(List<Map<String, dynamic>> subcarts) {
+    final result = <Map<String, dynamic>>[];
+    for (final subcart in subcarts) {
+      final vendor = subcart['vendor'] is Map
+          ? Map<String, dynamic>.from(subcart['vendor'] as Map)
+          : <String, dynamic>{};
+      final sellerCode = _readFirstString(
+        vendor,
+        const ['bmp_id', 'seller_code', 'sellerCode', 'vendor_code'],
+        fallback: 'STORE',
+      );
+
+      final items = _toMapList(subcart['items']);
+      for (final item in items) {
+        final product = item['product'] is Map
+            ? Map<String, dynamic>.from(item['product'] as Map)
+            : <String, dynamic>{};
+        final merged = <String, dynamic>{
+          ...product,
+          ...item,
+          'seller_code': item['seller_code'] ?? sellerCode,
+          'quantity': item['quantity'] ?? item['qty'] ?? 1,
+          'vendor_product_id':
+              item['vendor_product_id'] ?? product['vendor_product_id'],
+          'cart_item_id': item['cart_item_id'] ?? item['id'],
+          'vendor_selling_price':
+              item['vendor_selling_price'] ?? product['vendor_selling_price'],
+          'item_name_title': item['item_name_title'] ?? product['item_name_title'],
+          'image': item['image'] ?? product['image'] ?? product['product_image'],
+        };
+        result.add(merged);
+      }
+    }
+    return result;
+  }
+
+  List<Map<String, dynamic>> _extractCartItemMaps(Map<String, dynamic> data) {
+    final candidateLists = <dynamic>[];
+    const keys = <String>[
+      'items',
+      'cart_items',
+      'cartItems',
+      'products',
+      'cart_products',
+      'cartProducts',
+      'results',
+      'data',
+    ];
+    for (final key in keys) {
+      final value = data[key];
+      if (value is List) {
+        candidateLists.add(value);
+      }
+    }
+
+    if (candidateLists.isEmpty) {
+      final directList = data.values.whereType<List>();
+      candidateLists.addAll(directList);
+    }
+
+    final flattened = <Map<String, dynamic>>[];
+    for (final list in candidateLists) {
+      for (final item in list as List) {
+        if (item is Map) {
+          final map = Map<String, dynamic>.from(item);
+          if (_looksLikeCartItem(map)) {
+            flattened.add(map);
+            continue;
+          }
+          final nested = _extractNestedItemMaps(map);
+          flattened.addAll(nested);
+        }
+      }
+    }
+    return flattened;
+  }
+
+  List<Map<String, dynamic>> _extractNestedItemMaps(Map<String, dynamic> map) {
+    final result = <Map<String, dynamic>>[];
+    for (final value in map.values) {
+      if (value is Map) {
+        final nestedMap = Map<String, dynamic>.from(value);
+        if (_looksLikeCartItem(nestedMap)) {
+          result.add(nestedMap);
+        } else {
+          result.addAll(_extractNestedItemMaps(nestedMap));
+        }
+      } else if (value is List) {
+        for (final item in value) {
+          if (item is Map) {
+            final nestedMap = Map<String, dynamic>.from(item);
+            if (_looksLikeCartItem(nestedMap)) {
+              result.add(nestedMap);
+            } else {
+              result.addAll(_extractNestedItemMaps(nestedMap));
+            }
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  bool _looksLikeCartItem(Map<String, dynamic> map) {
+    const titleKeys = <String>[
+      'item_name_title',
+      'title',
+      'name',
+      'product_name',
+      'item_name',
+    ];
+    const qtyKeys = <String>['quantity', 'qty', 'count', 'cart_quantity'];
+    const priceKeys = <String>[
+      'vendor_selling_price',
+      'selling_price',
+      'unit_price',
+      'price',
+      'amount',
+    ];
+
+    final hasTitle = titleKeys.any((k) => (map[k]?.toString().trim() ?? '').isNotEmpty);
+    final hasQty = qtyKeys.any((k) => num.tryParse(map[k]?.toString() ?? '') != null);
+    final hasPrice =
+        priceKeys.any((k) => num.tryParse(map[k]?.toString() ?? '') != null);
+    return hasTitle || (hasQty && hasPrice);
+  }
+
+  List<Map<String, dynamic>> _toMapList(dynamic value) {
+    if (value is! List) {
+      return const <Map<String, dynamic>>[];
+    }
+    return value
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  int _extractRfqItemCount(dynamic quoteCart) {
+    if (quoteCart is Map) {
+      final items = quoteCart['items'];
+      if (items is List) {
+        return items.length;
+      }
+      final subcarts = quoteCart['subcarts'];
+      if (subcarts is List) {
+        return subcarts
+            .whereType<Map>()
+            .fold<int>(0, (sum, sc) => sum + _listLength(sc['items']));
+      }
+      return 0;
+    }
+    if (quoteCart is List) {
+      return quoteCart.whereType<Map>().fold<int>(
+            0,
+            (sum, sc) => sum + _listLength(sc['items']),
+          );
+    }
+    return 0;
+  }
+
+  int _listLength(dynamic value) => value is List ? value.length : 0;
+
+  void _setShippingDetails(dynamic userDetailsRaw) {
+    if (userDetailsRaw is! Map) {
+      _shippingTitle = 'Shipping address';
+      _shippingSubtitle = 'Add an address to continue';
+      return;
+    }
+    final userDetails = Map<String, dynamic>.from(userDetailsRaw);
+    final project = userDetails['project'] is Map
+        ? Map<String, dynamic>.from(userDetails['project'] as Map)
+        : <String, dynamic>{};
+    final projectName = _readFirstString(
+      project,
+      const ['project_name', 'name'],
+    );
+
+    final name = _readFirstString(
+      userDetails,
+      const ['name', 'full_name', 'username'],
+    );
+    _shippingTitle = projectName.isNotEmpty
+        ? 'Shipping to: $projectName'
+        : (name.isNotEmpty ? 'Shipping to: $name' : 'Shipping address');
+
+    final line1 = _readFirstString(
+      userDetails,
+      const ['address_line_1', 'address1', 'address'],
+    );
+    final line2 = _readFirstString(
+      userDetails,
+      const ['address_line_2', 'address2'],
+    );
+    final city = _readFirstString(userDetails, const ['city']);
+    final state = _readFirstString(userDetails, const ['state']);
+    final pincode = _readFirstString(userDetails, const ['pincode', 'zip']);
+
+    final parts = <String>[
+      line1,
+      line2,
+      city,
+      state,
+      pincode,
+    ].where((e) => e.isNotEmpty).toList();
+    _shippingSubtitle =
+        parts.isNotEmpty ? parts.join(', ') : 'Address unavailable';
+  }
+
+  String _readFirstString(
+    Map<String, dynamic> map,
+    List<String> keys, {
+    String fallback = '',
+  }) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return fallback;
+  }
+
+  int _readFirstInt(
+    Map<String, dynamic> map,
+    List<String> keys, {
+    int fallback = 0,
+  }) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value is int) {
+        return value;
+      }
+      final parsed = int.tryParse(value?.toString() ?? '');
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    return fallback;
+  }
+
+  num _readFirstNum(
+    Map<String, dynamic> map,
+    List<String> keys, {
+    num fallback = 0,
+  }) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value is num) {
+        return value;
+      }
+      final parsed = num.tryParse(value?.toString() ?? '');
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    return fallback;
   }
 }
-
-const List<CartItem> _demoItems = <CartItem>[
-  CartItem(
-    title:
-        'Hindware 121 mm Round Brass Silver Wall Mount Overhead Rain Shower F1…',
-    imageAsset: 'assets/sample_product.png',
-    qty: 1,
-    unitPrice: 4250,
-    sellerCode: 'BENG-098',
-  ),
-  CartItem(
-    title:
-        'Hindware 4 inch Round Brass Silver Wall Mount Overhead Shower, F160119',
-    imageAsset: 'assets/sample_product.png',
-    qty: 2,
-    unitPrice: 1533,
-    sellerCode: 'BENG-098',
-  ),
-  CartItem(
-    title: 'Hindware Overhead Shower 150 mm White ABS Round, F160216',
-    imageAsset: 'assets/sample_product.png',
-    qty: 3,
-    unitPrice: 2325,
-    sellerCode: 'BENG-004',
-  ),
-  CartItem(
-    title:
-        'Hindware Single Flow Overhead Round Shower Single Flow, Rain Flow, 23…',
-    imageAsset: 'assets/sample_product.png',
-    qty: 4,
-    unitPrice: 3175,
-    sellerCode: 'BENG-004',
-  ),
-];

@@ -164,13 +164,72 @@ class AddToCartCall {
     required List<Map<String, dynamic>> items,
   }) async {
     final apiUrl = AppConfig.apiUri('/orders/cart/add_to_cart/').toString();
+    final body = <String, dynamic>{'items': items};
     return ApiManager.instance.makeApiCall(
       callName: 'addToCart',
       apiUrl: apiUrl,
       callType: ApiCallType.POST,
       headers: _jsonHeaders,
       params: {},
-      body: json.encode(items),
+      body: json.encode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetCartCall {
+  /// Calls the get cart API.
+  static Future<ApiCallResponse> call({
+    bool userDetails = true,
+  }) async {
+    final apiUrl = AppConfig.apiUri(
+      '/orders/cart/get_cart/',
+      queryParameters: {
+        'userDetails': userDetails,
+      },
+    ).toString();
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'getCart',
+      apiUrl: apiUrl,
+      callType: ApiCallType.GET,
+      headers: _jsonHeaders,
+      params: const {},
+      returnBody: true,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class RemoveCartItemCall {
+  /// Calls the remove cart item API.
+  static Future<ApiCallResponse> call({
+    required String cartItemId,
+  }) async {
+    final apiUrl = AppConfig.apiUri('/orders/cart/remove_cart_item/').toString();
+    final body = <String, dynamic>{
+      'cart_item_id': cartItemId,
+      'cartItemId': cartItemId,
+      'id': cartItemId,
+      'cart_item_ids': [cartItemId],
+      'cartItemIds': [cartItemId],
+    };
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'removeCartItem',
+      apiUrl: apiUrl,
+      callType: ApiCallType.POST,
+      headers: _jsonHeaders,
+      params: const {},
+      body: json.encode(body),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,

@@ -1,7 +1,7 @@
 // lib/rfq/rfq_form_page.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:m_o_b_demand_side/rfq/rfq_success_page.dart';
 import 'package:m_o_b_demand_side/widgets/main_scaffold.dart';
 

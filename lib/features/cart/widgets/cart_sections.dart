@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:m_o_b_demand_side/features/cart/models/cart_item.dart';
+import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
 
 class CartTopBar extends StatelessWidget {
   const CartTopBar({super.key});
@@ -8,62 +9,84 @@ class CartTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Row(
-        children: [
-          Text(
-            'My cart',
-            style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-          const Spacer(),
-          IconButton(icon: const Icon(Icons.more_horiz), onPressed: () {}),
-        ],
+      padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
+      child: Text(
+        'My cart',
+        style: GoogleFonts.inter(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: const Color(0xFF0A243F),
+          height: 22 / 15,
+        ),
       ),
     );
   }
 }
 
 class ShippingTile extends StatelessWidget {
-  const ShippingTile({super.key});
+  const ShippingTile({
+    super.key,
+    this.title = 'Shipping to: Iris Society',
+    this.subtitle = 'Legros Mission Suite 804 Plains Apt 613..',
+  });
+
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F9FC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8EEF5)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Shipping to: Iris Society',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFF0A243F),
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'Shipping to:  ',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF0A243F),
+                        ),
+                      ),
+                      TextSpan(
+                        text: title.replaceFirst('Shipping to: ', ''),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0A243F),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Legros Mission Suite 804 Plains Apt 613..',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: const Color(0xFF6C7C8C),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF6C7C8C),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Spacer(),
           Text(
             'CHANGE',
             style: GoogleFonts.inter(
-              color: const Color(0xFF2B7FFF),
-              fontWeight: FontWeight.w700,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2973F0),
             ),
           ),
         ],
@@ -83,21 +106,32 @@ class SavingsStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF8EE),
-        borderRadius: BorderRadius.circular(10),
-      ),
+      height: 41,
+      color: const Color(0xFFE9FAF2),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          const Text('Your total savings'),
+          const Icon(
+            Icons.local_offer,
+            size: 14,
+            color: Color(0xFFFFAB00),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Your total savings',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF0A243F),
+            ),
+          ),
           const Spacer(),
           Text(
             '₹${savings.toStringAsFixed(0)}',
             style: GoogleFonts.inter(
-              color: const Color(0xFF179F4B),
+              fontSize: 14,
               fontWeight: FontWeight.w700,
+              color: const Color(0xFF01A685),
             ),
           ),
         ],
@@ -112,13 +146,19 @@ class SellerSection extends StatelessWidget {
     required this.sellerCode,
     required this.sellerItems,
     required this.onQtyChanged,
+    required this.onQtyInputChanged,
     required this.onRemove,
+    this.isUpdatingCart = false,
+    this.updatingItemKey,
   });
 
   final String sellerCode;
   final List<CartItem> sellerItems;
   final void Function(CartItem item, int quantity) onQtyChanged;
+  final void Function(CartItem item, String quantityText) onQtyInputChanged;
   final void Function(CartItem item) onRemove;
+  final bool isUpdatingCart;
+  final String? updatingItemKey;
 
   @override
   Widget build(BuildContext context) {
@@ -139,9 +179,12 @@ class SellerSection extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(12),
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: const BoxDecoration(
-              color: Color(0xFFE8F5FF),
+              gradient: LinearGradient(
+                colors: [Color(0xFFD3F6F5), Color(0xFFBADEFF)],
+              ),
               borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
@@ -149,17 +192,29 @@ class SellerSection extends StatelessWidget {
                 Text(
                   'Store delivery',
                   style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0A243F),
                     decoration: TextDecoration.underline,
-                    color: const Color(0xFF1575D6),
-                    fontWeight: FontWeight.w700,
+                    decorationStyle: TextDecorationStyle.solid,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '₹ 400',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF767C8F),
+                    decoration: TextDecoration.lineThrough,
                   ),
                 ),
                 const Spacer(),
                 Text(
                   '₹ 250',
                   style: GoogleFonts.inter(
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    color: const Color(0xFF0A243F),
                   ),
                 ),
               ],
@@ -172,23 +227,32 @@ class SellerSection extends StatelessWidget {
               children: [
                 Text(
                   'Sold by $sellerCode',
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700]),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF67696D),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Arrives by tomorrow evening',
                   style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0A243F),
                   ),
                 ),
                 const SizedBox(height: 8),
                 ...sellerItems
                     .map(
-                      (item) => CartLineItem(
+                      (item) => CartProductDetails(
                         item: item,
                         onQtyChanged: (qty) => onQtyChanged(item, qty),
-                        onRemove: () => onRemove(item),
+                        onQtyInputChanged: (value) =>
+                            onQtyInputChanged(item, value),
+                        onDelete: () => onRemove(item),
+                        isBusy:
+                            isUpdatingCart && updatingItemKey == item.itemKey,
                       ),
                     )
                     .expand((widget) => [widget, const SizedBox(height: 12)])
@@ -203,207 +267,40 @@ class SellerSection extends StatelessWidget {
   }
 }
 
-class CartLineItem extends StatelessWidget {
-  const CartLineItem({
-    super.key,
-    required this.item,
-    required this.onQtyChanged,
-    required this.onRemove,
-  });
-
-  final CartItem item;
-  final ValueChanged<int> onQtyChanged;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            height: 26,
-            width: 26,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F4FF),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '${item.qty}',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            height: 54,
-            width: 54,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FC),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE8EEF5)),
-            ),
-            child: Image.asset(item.imageAsset, fit: BoxFit.contain),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '₹ ${item.unitPrice.toStringAsFixed(0)} /unit',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF6C7C8C),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                InkWell(
-                  onTap: onRemove,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.delete_outline,
-                        size: 16,
-                        color: Colors.grey.shade700,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Remove',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '₹${item.lineTotal.toStringAsFixed(0)}',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 8),
-              QuantityControl(qty: item.qty, onChanged: onQtyChanged),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class QuantityControl extends StatelessWidget {
-  const QuantityControl({
-    super.key,
-    required this.qty,
-    required this.onChanged,
-  });
-
-  final int qty;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE1E6ED)),
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          RoundIconButton(
-            icon: Icons.remove,
-            onTap: () {
-              if (qty > 1) {
-                onChanged(qty - 1);
-              }
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
-              '$qty',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          RoundIconButton(icon: Icons.add, onTap: () => onChanged(qty + 1)),
-        ],
-      ),
-    );
-  }
-}
-
-class RoundIconButton extends StatelessWidget {
-  const RoundIconButton({
-    super.key,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: 18),
-      ),
-    );
-  }
-}
-
 class ViewCouponsTile extends StatelessWidget {
   const ViewCouponsTile({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(14),
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F9FC),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8EEF5)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.local_offer_outlined),
+          const Icon(
+            Icons.discount_outlined,
+            size: 16,
+            color: Color(0xFF0A243F),
+          ),
           const SizedBox(width: 10),
-          Text('View all coupons', style: GoogleFonts.inter(fontSize: 14)),
+          Text(
+            'View all coupons',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF0A243F),
+            ),
+          ),
           const Spacer(),
-          const Icon(Icons.chevron_right),
+          const Icon(
+            Icons.chevron_right,
+            size: 20,
+            color: Color(0xFF0A243F),
+          ),
         ],
       ),
     );
@@ -429,40 +326,81 @@ class OrderDetailsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8EEF5)),
       ),
       child: Column(
         children: [
-          _kvRow('Subtotal', '₹ ${subtotal.toStringAsFixed(2)}'),
-          _kvRow('Shipping', '₹ ${shipping.toStringAsFixed(2)}'),
-          _kvRow('Total tax', '₹ ${tax.toStringAsFixed(2)}'),
-          _kvRow(
-            'Savings',
-            '₹ ${savings.toStringAsFixed(2)}',
-            valueStyle: GoogleFonts.inter(
-              color: Colors.green,
-              fontWeight: FontWeight.w700,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            child: Column(
+              children: [
+                _kvRow('Order details', '', isHeading: true),
+                const SizedBox(height: 4),
+                _kvRow('Subtotal', '₹ ${subtotal.toStringAsFixed(2)}'),
+                _kvRow('Shipping', '₹ ${shipping.toStringAsFixed(2)}'),
+                _kvRow(
+                  'Total tax',
+                  '₹ ${tax.toStringAsFixed(2)}',
+                  keyDecorated: true,
+                ),
+                _kvRow(
+                  'Savings',
+                  '₹ ${savings.toStringAsFixed(2)}',
+                  keyDecorated: true,
+                ),
+                const Divider(height: 20),
+                _kvRow(
+                  'Total to pay',
+                  '₹ ${total.toStringAsFixed(2)}',
+                  isTotal: true,
+                ),
+              ],
             ),
           ),
-          const Divider(height: 20),
-          _kvRow(
-            'Total to pay',
-            '₹ ${total.toStringAsFixed(2)}',
-            keyStyle: GoogleFonts.inter(fontWeight: FontWeight.w700),
-            valueStyle: GoogleFonts.inter(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          const Row(
-            children: [
-              Text('You will earn '),
-              Text('1150', style: TextStyle(fontWeight: FontWeight.w700)),
-              Text(' points on this purchase'),
-            ],
+          const SizedBox(height: 12),
+          Container(
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFFDFF8F9),
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'You will earn  ',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF0A243F),
+                  ),
+                ),
+                const Icon(
+                  Icons.star,
+                  size: 16,
+                  color: Color(0xFFFFAB00),
+                ),
+                Text(
+                  '  1150 points',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0A243F),
+                  ),
+                ),
+                Text(
+                  ' on this purchase',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF0A243F),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -472,16 +410,50 @@ class OrderDetailsCard extends StatelessWidget {
   Widget _kvRow(
     String key,
     String value, {
-    TextStyle? keyStyle,
-    TextStyle? valueStyle,
+    bool isHeading = false,
+    bool isTotal = false,
+    bool keyDecorated = false,
   }) {
+    if (isHeading) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            key,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0A243F),
+            ),
+          ),
+        ),
+      );
+    }
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Text(key, style: keyStyle ?? GoogleFonts.inter(fontSize: 14)),
+          Text(
+            key,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: isTotal ? FontWeight.w700 : FontWeight.w400,
+              color:
+                  isTotal ? const Color(0xFF0A243F) : const Color(0xFF67696D),
+              decoration: keyDecorated ? TextDecoration.underline : null,
+              decorationStyle: keyDecorated ? TextDecorationStyle.dotted : null,
+            ),
+          ),
           const Spacer(),
-          Text(value, style: valueStyle ?? GoogleFonts.inter(fontSize: 14)),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: isTotal ? FontWeight.w700 : FontWeight.w500,
+              color: const Color(0xFF0A243F),
+            ),
+          ),
         ],
       ),
     );
@@ -493,39 +465,49 @@ class CartActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Container(
+      height: 66,
       padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Purchase later (or)\nRecheck prices',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-              ),
+          Text(
+            'Purchase later (or)\nRecheck prices',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF0A243F),
+              height: 21 / 14,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+          const Spacer(),
+          OutlinedButton(
+            onPressed: () {},
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              side: const BorderSide(
+                color: Color(0xFFFECB00),
+                width: 2,
               ),
-              child: Text(
-                'QUOTE REQUEST (RFQ)',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(48),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 0,
+              ),
+              minimumSize: const Size(0, 40),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'QUOTE REQUEST (RFQ)',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF0A243F),
               ),
             ),
           ),
@@ -554,65 +536,54 @@ class BottomCheckoutBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          padding: const EdgeInsets.all(12),
+          height: 62,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(16),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black12.withValues(alpha: 0.08),
+                color: Colors.black.withValues(alpha: 0.10),
                 blurRadius: 16,
-                offset: const Offset(0, -4),
+                offset: const Offset(0, -3),
               ),
             ],
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEFF3FF),
-                    foregroundColor: const Color(0xFF0A243F),
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    '₹ ${total.toStringAsFixed(0)}',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          child: ElevatedButton(
+            onPressed: onProceed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0360E5),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(32),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  '₹ ${total.toStringAsFixed(0)}',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    height: 36 / 14,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  onPressed: onProceed,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Proceed to checkout',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                const Spacer(),
+                Text(
+                  'Proceed to checkout',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

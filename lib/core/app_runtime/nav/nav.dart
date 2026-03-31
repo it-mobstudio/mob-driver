@@ -15,6 +15,8 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/index.dart';
 import 'package:m_o_b_demand_side/loginpage/splash_screen.dart';
 import 'package:m_o_b_demand_side/myaccount/my_account.dart';
+import 'package:m_o_b_demand_side/orders/order_detail_page.dart';
+import 'package:m_o_b_demand_side/orders/orders_page.dart';
 import 'package:m_o_b_demand_side/productdetails/product_detail_page.dart';
 import 'package:m_o_b_demand_side/productlisting/product_listing_page.dart';
 import 'package:m_o_b_demand_side/rfq/rfq.dart';
@@ -36,7 +38,7 @@ class AppStateNotifier extends ChangeNotifier {
   static AppStateNotifier? _instance;
   static AppStateNotifier get instance => _instance ??= AppStateNotifier._();
 
-  bool showSplashImage = true;
+  bool showSplashImage = false;
 
   void stopShowingSplashImage() {
     showSplashImage = false;
@@ -212,6 +214,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: MyAccountWidget.routePath,
           builder: (context, state) => const MyAccountWidget(),
         ),
+        FFRoute(
+          name: OrdersPage.routeName,
+          path: OrdersPage.routePath,
+          builder: (context, state) => const OrdersPage(),
+        ),
+        FFRoute(
+          name: OrderDetailPage.routeName,
+          path: OrderDetailPage.routePath,
+          builder: (context, state) => const OrderDetailPage(),
+        ),
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );
 
@@ -374,7 +386,8 @@ class TransitionInfo {
   final Duration duration;
   final Alignment? alignment;
 
-  static TransitionInfo appDefault() => const TransitionInfo(hasTransition: false);
+  static TransitionInfo appDefault() =>
+      const TransitionInfo(hasTransition: false);
 }
 
 class RootPageContext {

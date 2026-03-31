@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/address_selection/address_selection_widget.dart';
 

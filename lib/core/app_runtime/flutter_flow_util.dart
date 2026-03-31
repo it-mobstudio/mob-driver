@@ -1,6 +1,4 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
@@ -203,8 +201,8 @@ Rect? getWidgetBoundingBox(BuildContext context) {
   }
 }
 
-bool get isAndroid => !kIsWeb && Platform.isAndroid;
-bool get isiOS => !kIsWeb && Platform.isIOS;
+bool get isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+bool get isiOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 bool get isWeb => kIsWeb;
 
 const kBreakpointSmall = 479.0;

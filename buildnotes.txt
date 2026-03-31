@@ -17,6 +17,7 @@ Clean Logs
 >>git rm -r --cached .dart_tool
 
 >>flutter run -d emulator-5554
+>>flutter doctor -v
 
 >>Key pass - mobit$1234
 
