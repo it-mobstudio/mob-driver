@@ -5,6 +5,7 @@ class VendorPricing {
     required this.fullfillmentLatency,
     required this.vendorProductId,
     required this.bmpId,
+    required this.quickEcommerceEnabled,
   });
 
   final num vendorSellingPrice;
@@ -12,6 +13,7 @@ class VendorPricing {
   final String fullfillmentLatency;
   final String vendorProductId;
   final String bmpId;
+  final bool quickEcommerceEnabled;
 
   factory VendorPricing.fromMap(Map<String, dynamic> map) {
     return VendorPricing(
@@ -21,6 +23,7 @@ class VendorPricing {
       fullfillmentLatency: map['fullfillment_latency']?.toString() ?? '',
       vendorProductId: map['vendor_product_id']?.toString() ?? '',
       bmpId: map['bmp_id']?.toString() ?? '',
+      quickEcommerceEnabled: _parseBool(map['quick_ecommerce_enabled']),
     );
   }
 }
@@ -51,6 +54,18 @@ class ProductVariantOption {
   }
 }
 
+class ProductChildRef {
+  const ProductChildRef({required this.stock});
+
+  final num stock;
+
+  factory ProductChildRef.fromMap(Map<String, dynamic> map) {
+    return ProductChildRef(
+      stock: num.tryParse(map['stock']?.toString() ?? '0') ?? 0,
+    );
+  }
+}
+
 class ProductModel {
   const ProductModel({
     required this.id,
@@ -66,6 +81,11 @@ class ProductModel {
     required this.images,
     required this.features,
     required this.variants,
+    required this.badgeOption,
+    required this.stock,
+    required this.stockDetailsStock,
+    required this.quickEcommerceEnabled,
+    required this.childProducts,
   });
 
   final String id;
@@ -81,11 +101,28 @@ class ProductModel {
   final List<ProductImageRef> images;
   final Map<String, String> features;
   final Map<String, List<ProductVariantOption>> variants;
+  final String badgeOption;
+  final num stock;
+  final num stockDetailsStock;
+  final bool quickEcommerceEnabled;
+  final List<ProductChildRef> childProducts;
 
   String get primaryImageUrl => images.isNotEmpty ? images.first.url : '';
   bool get hasVariants => variants.values.any((v) => v.isNotEmpty);
   String get addToCartProductId =>
       vendorPricing.vendorProductId.isNotEmpty ? vendorPricing.vendorProductId : id;
+  bool get isQuickEcommerceEnabled =>
+      quickEcommerceEnabled || vendorPricing.quickEcommerceEnabled;
+  bool get hasVariantLevelStock => childProducts.any((child) => child.stock > 0);
+  int get availableStock {
+    final parsed = stockDetailsStock > 0 ? stockDetailsStock : stock;
+    return parsed > 0 ? parsed.toInt() : 0;
+  }
+  bool get isOutOfStockForQuickProduct =>
+      isQuickEcommerceEnabled &&
+      (hasVariants ? !hasVariantLevelStock : availableStock <= 0);
+  bool get shouldShowNotify =>
+      badgeOption.toLowerCase() == 'sold out' || isOutOfStockForQuickProduct;
 
   factory ProductModel.fromMap(Map<String, dynamic> map) {
     final vendorPricingMap = map['vendorPricings'] is Map
@@ -100,6 +137,12 @@ class ProductModel {
     final variantsMap = map['variants'] is Map
         ? Map<String, dynamic>.from(map['variants'] as Map)
         : <String, dynamic>{};
+    final stockDetails = map['stock_details'] is Map
+        ? Map<String, dynamic>.from(map['stock_details'] as Map)
+        : <String, dynamic>{};
+    final childProductsList = map['child_products'] is List
+        ? List<dynamic>.from(map['child_products'] as List)
+        : <dynamic>[];
 
     return ProductModel(
       id: map['id']?.toString() ?? '',
@@ -131,8 +174,22 @@ class ProductModel {
               .toList(),
         );
       }),
+      badgeOption: map['badge_option']?.toString() ?? '',
+      stock: num.tryParse(map['stock']?.toString() ?? '0') ?? 0,
+      stockDetailsStock:
+          num.tryParse(stockDetails['stock']?.toString() ?? '0') ?? 0,
+      quickEcommerceEnabled: _parseBool(map['quick_ecommerce_enabled']),
+      childProducts: childProductsList
+          .whereType<Map>()
+          .map((e) => ProductChildRef.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
     );
   }
+}
+
+bool _parseBool(dynamic value) {
+  if (value is bool) return value;
+  return value?.toString().toLowerCase() == 'true';
 }
 
 class SubCategoryModel {

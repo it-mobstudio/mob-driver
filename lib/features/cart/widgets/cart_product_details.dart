@@ -87,21 +87,25 @@ class CartProductDetails extends StatelessWidget {
                 if (showDelete) ...[
                   const SizedBox(height: 6),
                   InkWell(
-                    onTap: onDelete,
+                    onTap: isBusy ? null : onDelete,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.delete_outline,
                           size: 16,
-                          color: Colors.grey.shade700,
+                          color: isBusy
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade700,
                         ),
                         const SizedBox(width: 6),
                         Text(
                           'Delete',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: Colors.grey.shade700,
+                            color: isBusy
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade700,
                           ),
                         ),
                       ],

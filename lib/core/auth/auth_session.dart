@@ -15,6 +15,9 @@ class AuthSession {
   static const String _accessTokenKey = 'auth_access_token';
   static const String _refreshTokenKey = 'auth_refresh_token';
   static const String _userDetailsKey = 'auth_user_details';
+  static const String _prefsAccessTokenKey = 'prefs_auth_access_token';
+  static const String _prefsRefreshTokenKey = 'prefs_auth_refresh_token';
+  static const String _prefsUserDetailsKey = 'prefs_auth_user_details';
   static const String _isProFirstTimeKey = 'isProFirstTime';
   static const String _authRefreshPath = String.fromEnvironment(
     'AUTH_REFRESH_PATH',
@@ -42,6 +45,11 @@ class AuthSession {
   }
 
   Future<void> initialize() async {
+    SharedPreferences? prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+    } catch (_) {}
+
     try {
       _accessToken = await _storage.read(key: _accessTokenKey);
       _refreshToken = await _storage.read(key: _refreshTokenKey);
@@ -57,27 +65,61 @@ class AuthSession {
         }
       }
     } catch (_) {
-      _accessToken = null;
-      _refreshToken = null;
-      _userDetails = null;
+      // Fallback to shared preferences below.
     }
+
+    _accessToken = _normalizeString(_accessToken) ??
+        _normalizeString(prefs?.getString(_prefsAccessTokenKey));
+    _refreshToken = _normalizeString(_refreshToken) ??
+        _normalizeString(prefs?.getString(_prefsRefreshTokenKey));
+
+    final secureUserDetailsRaw = await _readSecureUserDetailsRaw();
+    final fallbackUserDetailsRaw = prefs?.getString(_prefsUserDetailsKey);
+    _userDetails = _decodeUserDetails(secureUserDetailsRaw) ??
+        _decodeUserDetails(fallbackUserDetailsRaw);
+
+    // Keep secure storage in sync when fallback values were recovered.
+    if (_accessToken != null && _accessToken!.isNotEmpty) {
+      await _storage.write(key: _accessTokenKey, value: _accessToken);
+      await prefs?.setString(_prefsAccessTokenKey, _accessToken!);
+    }
+    if (_refreshToken != null && _refreshToken!.isNotEmpty) {
+      await _storage.write(key: _refreshTokenKey, value: _refreshToken);
+      await prefs?.setString(_prefsRefreshTokenKey, _refreshToken!);
+    }
+    if (_userDetails != null && _userDetails!.isNotEmpty) {
+      final encoded = jsonEncode(_userDetails);
+      await _storage.write(key: _userDetailsKey, value: encoded);
+      await prefs?.setString(_prefsUserDetailsKey, encoded);
+    }
+
     ApiManager.setAccessToken(_accessToken);
     ApiManager.setAuthRecoveryHandlers(
       refreshAccessToken: refreshAccessToken,
       onAuthFailed: signOut,
     );
+
+    // If access token is unavailable but refresh token exists, recover session.
+    if ((_accessToken == null || _accessToken!.isEmpty) &&
+        _refreshToken != null &&
+        _refreshToken!.isNotEmpty) {
+      await refreshAccessToken();
+    }
   }
 
   Future<void> saveTokens({
     required String accessToken,
     String? refreshToken,
   }) async {
+    final prefs = await SharedPreferences.getInstance();
     _accessToken = accessToken.trim();
     _refreshToken = refreshToken?.trim();
 
     await _storage.write(key: _accessTokenKey, value: _accessToken);
+    await prefs.setString(_prefsAccessTokenKey, _accessToken!);
     if (_refreshToken != null && _refreshToken!.isNotEmpty) {
       await _storage.write(key: _refreshTokenKey, value: _refreshToken);
+      await prefs.setString(_prefsRefreshTokenKey, _refreshToken!);
     }
 
     ApiManager.setAccessToken(_accessToken);
@@ -97,16 +139,20 @@ class AuthSession {
   }
 
   Future<void> saveUserDetails(Map<String, dynamic>? userDetails) async {
+    final prefs = await SharedPreferences.getInstance();
     _userDetails =
         userDetails == null ? null : Map<String, dynamic>.from(userDetails);
     if (_userDetails == null || _userDetails!.isEmpty) {
       await _storage.delete(key: _userDetailsKey);
+      await prefs.remove(_prefsUserDetailsKey);
       return;
     }
+    final encoded = jsonEncode(_userDetails);
     await _storage.write(
       key: _userDetailsKey,
-      value: jsonEncode(_userDetails),
+      value: encoded,
     );
+    await prefs.setString(_prefsUserDetailsKey, encoded);
   }
 
   Future<void> setIsProFirstTime(bool value) async {
@@ -122,6 +168,9 @@ class AuthSession {
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userDetailsKey);
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefsAccessTokenKey);
+    await prefs.remove(_prefsRefreshTokenKey);
+    await prefs.remove(_prefsUserDetailsKey);
     await prefs.remove(_isProFirstTimeKey);
     ApiManager.setAccessToken(null);
     ApiManager.clearCache('homeData');
@@ -181,6 +230,33 @@ class AuthSession {
         return value.trim();
       }
     }
+    return null;
+  }
+
+  String? _normalizeString(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<String?> _readSecureUserDetailsRaw() async {
+    try {
+      return await _storage.read(key: _userDetailsKey);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Map<String, dynamic>? _decodeUserDetails(String? raw) {
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {}
     return null;
   }
 }

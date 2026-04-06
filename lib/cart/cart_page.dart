@@ -145,7 +145,7 @@ class _CartPageState extends State<CartPage> {
                   const SizedBox(height: 8),
                   if (_controller.hasRfqItems)
                     Container(
-                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      margin: const EdgeInsets.fromLTRB(0, 8, 0, 8),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFF4F0),

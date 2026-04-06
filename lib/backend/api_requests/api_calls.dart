@@ -65,8 +65,7 @@ class CheckOTPCall {
     };
     return ApiManager.instance.makeApiCall(
       callName: 'checkOTP',
-      apiUrl:
-          AppConfig.apiUri('/accounts/mob_user/auth/check_otp/').toString(),
+      apiUrl: AppConfig.apiUri('/accounts/mob_user/auth/check_otp/').toString(),
       callType: ApiCallType.POST,
       headers: _jsonHeaders,
       params: {},
@@ -118,9 +117,8 @@ class ProductDetailsCall {
   }) async {
     final apiUrl = AppConfig.apiUri(
       '/home/$slug/get_product_details/',
-      queryParameters: mobSku != null && mobSku.isNotEmpty
-          ? {'mob_sku': mobSku}
-          : null,
+      queryParameters:
+          mobSku != null && mobSku.isNotEmpty ? {'mob_sku': mobSku} : null,
     ).toString();
     return ApiManager.instance.makeApiCall(
       callName: 'productDetails',
@@ -214,7 +212,8 @@ class RemoveCartItemCall {
   static Future<ApiCallResponse> call({
     required String cartItemId,
   }) async {
-    final apiUrl = AppConfig.apiUri('/orders/cart/remove_cart_item/').toString();
+    final apiUrl =
+        AppConfig.apiUri('/orders/cart/remove_cart_item/').toString();
     final body = <String, dynamic>{
       'cart_item_id': cartItemId,
       'cartItemId': cartItemId,
@@ -229,6 +228,41 @@ class RemoveCartItemCall {
       callType: ApiCallType.POST,
       headers: _jsonHeaders,
       params: const {},
+      body: json.encode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class RegisterUserCall {
+  /// Calls the user registration API for new accounts.
+  static Future<ApiCallResponse> call({
+    required String phone,
+    required String name,
+    String? email,
+    String? gstin,
+    String? businessName,
+  }) async {
+    final Map<String, dynamic> body = {
+      'phone': phone,
+      'name': name,
+      if (email != null && email.isNotEmpty) 'email': email,
+      if (gstin != null && gstin.isNotEmpty) 'gstin': gstin,
+      if (businessName != null && businessName.isNotEmpty)
+        'business_name': businessName,
+    };
+    return ApiManager.instance.makeApiCall(
+      callName: 'registerUser',
+      apiUrl: AppConfig.apiUri('/accounts/mob_user/auth/register/').toString(),
+      callType: ApiCallType.POST,
+      headers: _jsonHeaders,
+      params: {},
       body: json.encode(body),
       bodyType: BodyType.JSON,
       returnBody: true,

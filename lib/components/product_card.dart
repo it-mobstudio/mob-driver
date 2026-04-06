@@ -1,42 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
-import 'package:m_o_b_demand_side/backend/api_requests/api_calls.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
+import 'package:m_o_b_demand_side/components/product_cart_action_button.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback? onTap;
+  final int cartQuantity;
+  final bool isCartUpdating;
+  final Future<void> Function(int quantity)? onCartQuantityChanged;
+  final Future<void> Function()? onNotifyTap;
 
-  const ProductCard({super.key, required this.product, this.onTap});
-
-  Future<void> _addToCart(BuildContext context) async {
-    final response = await AddToCartCall.call(
-      items: [
-        {"product": product.addToCartProductId, "quantity": 1}
-      ],
-    );
-    if (!context.mounted) return;
-    final message = (response.jsonBody?['message'] ??
-            response.jsonBody?['detail'] ??
-            'Something went wrong')
-        .toString();
-    final isSuccess = response.jsonBody?['status'] == true;
-    AnalyticsService.instance.logAddToCart(
-      productId: product.addToCartProductId.toString(),
-      slug: product.slug,
-      price: product.vendorPricing.vendorSellingPrice.toDouble(),
-      success: isSuccess,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isSuccess ? Colors.green : Colors.red,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+  const ProductCard({
+    super.key,
+    required this.product,
+    this.onTap,
+    this.cartQuantity = 0,
+    this.isCartUpdating = false,
+    this.onCartQuantityChanged,
+    this.onNotifyTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -129,32 +113,33 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
 
-            // Add to cart button
+            // Cart action button (reusable component)
             Positioned(
               right: 8,
               top: 148,
-              child: GestureDetector(
-                onTap: () => _addToCart(context),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.add,
-                    size: 20,
-                    color: Color(0xFF0A243F),
-                  ),
-                ),
+              child: ProductCartActionButton(
+                product: product,
+                compact: true,
+                onVariantsTap: onTap,
+                showCounter: !product.hasVariants && cartQuantity > 0,
+                quantity: cartQuantity > 0 ? cartQuantity : 1,
+                isFetchingCart: isCartUpdating,
+                onAdd: (quantity) async {
+                  final callback = onCartQuantityChanged;
+                  if (callback != null) {
+                    await callback(quantity);
+                  }
+                },
+                onAddForQuote: (quantity) async {
+                  final callback = onCartQuantityChanged;
+                  if (callback != null) {
+                    await callback(quantity);
+                  }
+                },
+                onQuantityChanged: (qty) {
+                  onCartQuantityChanged?.call(qty);
+                },
+                onNotify: onNotifyTap,
               ),
             ),
 

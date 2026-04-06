@@ -38,6 +38,14 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => OTPVerificationModel());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      if (AuthSession.instance.isAuthenticated) {
+        context.go(HomepageWidget.routePath);
+      }
+    });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendSeconds > 0) {
         setState(() {

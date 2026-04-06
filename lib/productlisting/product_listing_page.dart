@@ -1,9 +1,12 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:m_o_b_demand_side/backend/api_requests/api_calls.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
+import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/network/app_error.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/products/repositories/products_repository.dart';
+import 'package:m_o_b_demand_side/loginpage/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/productdetails/product_detail_page.dart';
 import 'package:m_o_b_demand_side/rfq/rfq_form_page.dart';
 import 'package:m_o_b_demand_side/widgets/error_state_view.dart';
@@ -36,11 +39,14 @@ class _ProductListingPageState extends State<ProductListingPage> {
   bool _hasMore = true;
   bool _loadMoreFailed = false;
   String? _error;
+  final Map<String, int> _cartQtyByProductId = <String, int>{};
+  String? _cartUpdatingProductId;
 
   @override
   void initState() {
     super.initState();
     _fetchProducts();
+    _fetchCartSnapshot();
     _scrollController.addListener(_onScroll);
   }
 
@@ -121,6 +127,220 @@ class _ProductListingPageState extends State<ProductListingPage> {
       _error = null;
     });
     await _fetchProducts();
+    await _fetchCartSnapshot();
+  }
+
+  Future<void> _fetchCartSnapshot() async {
+    if (!AuthSession.instance.isAuthenticated) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _cartQtyByProductId.clear();
+      });
+      return;
+    }
+    try {
+      final response = await GetCartCall.call(userDetails: true);
+      if (!response.succeeded) {
+        return;
+      }
+      final data = _extractDataMap(response.jsonBody);
+      final qtyMap = _extractQtyMap(data);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _cartQtyByProductId
+          ..clear()
+          ..addAll(qtyMap);
+      });
+    } catch (_) {
+      // Non-blocking: listing can still render even when cart snapshot fails.
+    }
+  }
+
+  Future<void> _changeProductQuantity(ProductModel product, int quantity) async {
+    if (product.hasVariants) {
+      final slug = product.slug;
+      if (mounted) {
+        GoRouter.of(context).go('${ProductDetailPage.routePath}/$slug');
+      }
+      return;
+    }
+    if (quantity < 0) {
+      return;
+    }
+    if (!AuthSession.instance.isAuthenticated) {
+      if (mounted) {
+        GoRouter.of(context).go(LoginpageWidget.routePath);
+      }
+      return;
+    }
+
+    final productId = product.addToCartProductId;
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _cartUpdatingProductId = productId;
+    });
+
+    try {
+      final response = await AddToCartCall.call(
+        items: [
+          {'product': productId, 'quantity': quantity}
+        ],
+      );
+
+      if (!response.succeeded) {
+        throw appExceptionFromApiResponse(
+          response,
+          fallbackMessage: 'Unable to update cart item. Please try again.',
+        );
+      }
+
+      final data = _extractDataMap(response.jsonBody);
+      final qtyMap = _extractQtyMap(data);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _cartQtyByProductId
+          ..clear()
+          ..addAll(qtyMap);
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            userMessageFromError(
+              e,
+              fallbackMessage: 'Unable to update cart item. Please try again.',
+            ),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } finally {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _cartUpdatingProductId = null;
+      });
+    }
+  }
+
+  Future<void> _handleNotifyTap(ProductModel product) async {
+    if (!AuthSession.instance.isAuthenticated) {
+      if (mounted) {
+        GoRouter.of(context).go(LoginpageWidget.routePath);
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Notify feature will be enabled soon.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _extractDataMap(dynamic responseBody) {
+    final body = responseBody is Map
+        ? Map<String, dynamic>.from(responseBody as Map)
+        : <String, dynamic>{};
+    return body['data'] is Map
+        ? Map<String, dynamic>.from(body['data'] as Map)
+        : body;
+  }
+
+  Map<String, int> _extractQtyMap(Map<String, dynamic> data) {
+    final result = <String, int>{};
+
+    void addItem(dynamic item) {
+      if (item is! Map) {
+        return;
+      }
+      final map = Map<String, dynamic>.from(item);
+      final productMap = map['product'] is Map
+          ? Map<String, dynamic>.from(map['product'] as Map)
+          : <String, dynamic>{};
+      final productId = (map['vendor_product_id'] ??
+              productMap['vendor_product_id'] ??
+              map['product_id'] ??
+              map['id'])
+          ?.toString();
+      final qty = int.tryParse(
+            (map['quantity'] ?? map['qty'] ?? map['count'] ?? 0).toString(),
+          ) ??
+          0;
+      if (productId == null || productId.isEmpty || qty <= 0) {
+        return;
+      }
+      result[productId] = qty;
+    }
+
+    void addFromSubcart(dynamic subcart) {
+      if (subcart is! Map) {
+        return;
+      }
+      final items = subcart['items'];
+      if (items is! List) {
+        return;
+      }
+      for (final item in items) {
+        addItem(item);
+      }
+    }
+
+    final subcarts = data['subcarts'];
+    if (subcarts is List) {
+      for (final subcart in subcarts) {
+        addFromSubcart(subcart);
+      }
+    }
+
+    final quoteCart = data['quote_cart'];
+    if (quoteCart is Map && quoteCart['items'] is List) {
+      for (final item in quoteCart['items'] as List) {
+        addItem(item);
+      }
+    }
+
+    final quickCommerce = data['quick_commerce'];
+    if (quickCommerce is Map) {
+      if (quickCommerce['subcarts'] is List) {
+        for (final subcart in quickCommerce['subcarts'] as List) {
+          addFromSubcart(subcart);
+        }
+      }
+      if (quickCommerce['quick_products'] is List) {
+        for (final item in quickCommerce['quick_products'] as List) {
+          addItem(item);
+        }
+      }
+    } else if (quickCommerce is List) {
+      for (final subcart in quickCommerce) {
+        addFromSubcart(subcart);
+      }
+    }
+
+    if (data['items'] is List) {
+      for (final item in data['items'] as List) {
+        addItem(item);
+      }
+    }
+
+    return result;
   }
 
   @override
@@ -200,6 +420,14 @@ class _ProductListingPageState extends State<ProductListingPage> {
                                     GoRouter.of(context).go(
                                         '${ProductDetailPage.routePath}/$slug');
                                   },
+                                  cartQuantity:
+                                      _cartQtyByProductId[_products[i].addToCartProductId] ??
+                                          0,
+                                  isCartUpdating:
+                                      _cartUpdatingProductId == _products[i].addToCartProductId,
+                                  onCartQuantityChanged: (quantity) =>
+                                      _changeProductQuantity(_products[i], quantity),
+                                  onNotifyTap: () => _handleNotifyTap(_products[i]),
                                 ),
                               ),
                               const SizedBox(width: 15),
@@ -212,6 +440,16 @@ class _ProductListingPageState extends State<ProductListingPage> {
                                       GoRouter.of(context).go(
                                           '${ProductDetailPage.routePath}/$slug');
                                     },
+                                    cartQuantity: _cartQtyByProductId[
+                                            _products[i + 1].addToCartProductId] ??
+                                        0,
+                                    isCartUpdating: _cartUpdatingProductId ==
+                                        _products[i + 1].addToCartProductId,
+                                    onCartQuantityChanged: (quantity) =>
+                                        _changeProductQuantity(
+                                            _products[i + 1], quantity),
+                                    onNotifyTap: () =>
+                                        _handleNotifyTap(_products[i + 1]),
                                   ),
                                 )
                               else

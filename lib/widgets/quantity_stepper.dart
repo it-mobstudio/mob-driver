@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 
-class QuantityStepper extends StatelessWidget {
+class QuantityStepper extends StatefulWidget {
   const QuantityStepper({
     super.key,
     required this.value,
@@ -21,10 +21,41 @@ class QuantityStepper extends StatelessWidget {
   final double width;
 
   @override
+  State<QuantityStepper> createState() => _QuantityStepperState();
+}
+
+class _QuantityStepperState extends State<QuantityStepper> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: '${widget.value}');
+  }
+
+  @override
+  void didUpdateWidget(QuantityStepper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      final newText = '${widget.value}';
+      _controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       height: 36,
-      width: width,
+      width: widget.width,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFFE1E6ED)),
@@ -35,15 +66,14 @@ class QuantityStepper extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           DecrementButton(
-            isDisabled: isBusy,
-            onTap: onDecrement,
+            isDisabled: widget.isBusy,
+            onTap: widget.onDecrement,
           ),
           SizedBox(
             width: 36,
             child: TextField(
-              controller: TextEditingController(text: '$value')
-                ..selection = TextSelection.collapsed(offset: '$value'.length),
-              enabled: !isBusy && onInputChanged != null,
+              controller: _controller,
+              enabled: !widget.isBusy && widget.onInputChanged != null,
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -56,12 +86,12 @@ class QuantityStepper extends StatelessWidget {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
-              onChanged: onInputChanged,
+              onChanged: widget.onInputChanged,
             ),
           ),
           IncrementButton(
-            isDisabled: isBusy,
-            onTap: onIncrement,
+            isDisabled: widget.isBusy,
+            onTap: widget.onIncrement,
           ),
         ],
       ),

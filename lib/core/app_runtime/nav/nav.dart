@@ -70,23 +70,35 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: LoginpageWidget.routeName,
           path: LoginpageWidget.routePath,
-          builder: (context, params) => const LoginpageWidget(),
+          builder: (context, params) => AuthSession.instance.isAuthenticated
+              ? const HomepageWidget()
+              : const LoginpageWidget(),
         ),
         FFRoute(
           name: OTPVerificationWidget.routeName,
           path: OTPVerificationWidget.routePath,
-          builder: (context, params) => OTPVerificationWidget(
-            phoneNumber:
-                params.getParam<String>('phoneNumber', ParamType.string) ?? '',
-          ),
+          builder: (context, params) => AuthSession.instance.isAuthenticated
+              ? const HomepageWidget()
+              : OTPVerificationWidget(
+                  phoneNumber: params.getParam<String>(
+                        'phoneNumber',
+                        ParamType.string,
+                      ) ??
+                      '',
+                ),
         ),
         FFRoute(
           name: SignupWidget.routeName,
           path: SignupWidget.routePath,
-          builder: (context, params) => SignupWidget(
-            phoneNumber:
-                params.getParam<String>('phoneNumber', ParamType.string) ?? '',
-          ),
+          builder: (context, params) => AuthSession.instance.isAuthenticated
+              ? const HomepageWidget()
+              : SignupWidget(
+                  phoneNumber: params.getParam<String>(
+                        'phoneNumber',
+                        ParamType.string,
+                      ) ??
+                      '',
+                ),
         ),
         FFRoute(
           name: AddressSelectionWidget.routeName,

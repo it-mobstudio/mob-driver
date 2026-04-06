@@ -1,5 +1,6 @@
 import '/features/auth/repositories/auth_repository.dart';
 import '/core/app_runtime/flutter_flow_util.dart';
+import '/core/auth/auth_session.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
 
@@ -30,6 +31,14 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
     _model = LoginpageModel();
     _model?.mobileNumberTextController ??= TextEditingController();
     _model?.mobileNumberFocusNode ??= FocusNode();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      if (AuthSession.instance.isAuthenticated) {
+        context.go(HomepageWidget.routePath);
+      }
+    });
   }
 
   @override
