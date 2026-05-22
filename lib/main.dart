@@ -36,6 +36,8 @@ class _AppBootstrapState extends State<AppBootstrap> {
   late final Future<void> _bootstrapFuture = _bootstrap();
 
   Future<void> _bootstrap() async {
+    final splashDelay = Future<void>.delayed(const Duration(seconds: 3));
+
     try {
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
@@ -92,6 +94,8 @@ class _AppBootstrapState extends State<AppBootstrap> {
         debugPrint('Theme init warning: $e');
       }
     }
+
+    await splashDelay;
   }
 
   @override

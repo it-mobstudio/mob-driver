@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
@@ -20,7 +21,6 @@ export 'dart:math' show min, max;
 export 'dart:typed_data' show Uint8List;
 export 'dart:convert' show jsonEncode, jsonDecode;
 export 'package:intl/intl.dart';
-export 'package:page_transition/page_transition.dart';
 export 'nav/nav.dart';
 
 T valueOrDefault<T>(T? value, T defaultValue) =>
@@ -201,7 +201,8 @@ Rect? getWidgetBoundingBox(BuildContext context) {
   }
 }
 
-bool get isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+bool get isAndroid =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 bool get isiOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 bool get isWeb => kIsWeb;
 

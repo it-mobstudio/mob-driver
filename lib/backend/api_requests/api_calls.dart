@@ -1,5 +1,6 @@
 import 'api_manager.dart';
 import 'dart:convert';
+import '/core/app_runtime/uploaded_file.dart';
 import 'package:m_o_b_demand_side/core/config/app_config.dart';
 
 export 'api_manager.dart' show ApiCallResponse;
@@ -241,30 +242,29 @@ class RemoveCartItemCall {
 }
 
 class RegisterUserCall {
-  /// Calls the user registration API for new accounts.
   static Future<ApiCallResponse> call({
-    required String phone,
     required String name,
+    String? phone,
     String? email,
+    FFUploadedFile? profilePicture,
     String? gstin,
     String? businessName,
   }) async {
-    final Map<String, dynamic> body = {
-      'phone': phone,
-      'name': name,
+    final Map<String, dynamic> formData = {
+      'full_name': name,
+      if (phone != null && phone.isNotEmpty) 'email_or_phone': phone,
       if (email != null && email.isNotEmpty) 'email': email,
-      if (gstin != null && gstin.isNotEmpty) 'gstin': gstin,
-      if (businessName != null && businessName.isNotEmpty)
-        'business_name': businessName,
+      if (profilePicture != null) 'profile_picture': profilePicture,
     };
+
     return ApiManager.instance.makeApiCall(
       callName: 'registerUser',
-      apiUrl: AppConfig.apiUri('/accounts/mob_user/auth/register/').toString(),
+      apiUrl:
+          AppConfig.apiUri('/accounts/mob_user/auth/update_user/').toString(),
       callType: ApiCallType.POST,
-      headers: _jsonHeaders,
-      params: {},
-      body: json.encode(body),
-      bodyType: BodyType.JSON,
+      headers: const {},
+      params: formData,
+      bodyType: BodyType.MULTIPART,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,

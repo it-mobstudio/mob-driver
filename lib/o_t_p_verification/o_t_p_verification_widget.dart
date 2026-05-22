@@ -32,7 +32,8 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
   final List<FocusNode> _otpFocusNodes = List.generate(4, (_) => FocusNode());
 
   int _resendSeconds = 40;
-  late final Timer _timer;
+  Timer? _timer;
+  bool _isResending = false;
 
   @override
   void initState() {
@@ -46,15 +47,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
         context.go(HomepageWidget.routePath);
       }
     });
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_resendSeconds > 0) {
-        setState(() {
-          _resendSeconds--;
-        });
-      } else {
-        timer.cancel();
-      }
-    });
+    _startResendTimer();
   }
 
   @override
@@ -66,7 +59,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
     for (final f in _otpFocusNodes) {
       f.dispose();
     }
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -104,12 +97,12 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                   children: [
                     const SizedBox(height: 24),
                     Text(
-                      'OTP\nVerification',
+                      'OTP Verification',
                       textAlign: TextAlign.left,
                       style: GoogleFonts.inter(
                         color: const Color(0xFF0A243F),
                         fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         height: 1.33,
                       ),
                     ),
@@ -255,16 +248,33 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Text(
-                      _resendSeconds > 0
-                          ? 'Resend OTP in ${_resendSeconds}s'
-                          : 'Resend OTP',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFFAFB4C0),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                    if (_resendSeconds > 0)
+                      Text(
+                        'Resend OTP in ${_resendSeconds}s',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFFAFB4C0),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      )
+                    else
+                      TextButton(
+                        onPressed: _isResending ? null : _resendOtp,
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF0360E5),
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          _isResending ? 'Resending OTP...' : 'Resend OTP',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF0360E5),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -272,6 +282,76 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
           ),
         ),
       ),
+    );
+  }
+
+  void _startResendTimer() {
+    _timer?.cancel();
+    _resendSeconds = 40;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_resendSeconds == 0) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _resendSeconds--;
+      });
+    });
+  }
+
+  Future<void> _resendOtp() async {
+    final phone = widget.phoneNumber
+        .replaceAll('+91', '')
+        .replaceAll(' ', '')
+        .trim();
+    final parsedPhone = int.tryParse(phone);
+    if (parsedPhone == null) {
+      return;
+    }
+
+    setState(() {
+      _isResending = true;
+    });
+
+    final resendResult = await _authRepository.sendOtp(
+      emailOrPhone: parsedPhone,
+    );
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isResending = false;
+    });
+
+    if (resendResult.success) {
+      for (final controller in _otpControllers) {
+        controller.clear();
+      }
+      _otpFocusNodes.first.requestFocus();
+      _startResendTimer();
+      setState(() {});
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (alertDialogContext) {
+        return AlertDialog(
+          title: const Text('Resend OTP Failed'),
+          content: Text(resendResult.message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(alertDialogContext),
+              child: const Text('Ok'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
