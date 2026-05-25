@@ -4,10 +4,10 @@ import '/features/home/models/home_models.dart';
 class HomeRepository {
   const HomeRepository();
 
-  Future<List<HomeCategoryModel>> getCategories() async {
+  Future<HomeDataModel> getHomeData() async {
     final response = await HomeDataCall.call();
     if (response.jsonBody is! Map) {
-      return const <HomeCategoryModel>[];
+      return HomeDataModel.empty;
     }
     final body = Map<String, dynamic>.from(response.jsonBody as Map);
     final data = body['data'] is Map
@@ -15,9 +15,15 @@ class HomeRepository {
         : <String, dynamic>{};
     final categoriesRaw =
         data['categories'] is List ? data['categories'] as List : <dynamic>[];
-    return categoriesRaw
+    final categories = categoriesRaw
         .whereType<Map>()
         .map((e) => HomeCategoryModel.fromMap(Map<String, dynamic>.from(e)))
-        .toList();
+        .toList()
+      ..sort((a, b) => a.index.compareTo(b.index));
+    return HomeDataModel(categories: categories);
+  }
+
+  Future<List<HomeCategoryModel>> getCategories() async {
+    return (await getHomeData()).categories;
   }
 }
