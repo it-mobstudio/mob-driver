@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/homepage/widgets/home_header.dart';
 import 'package:m_o_b_demand_side/homepage/widgets/home_promo_banner.dart';
 import 'package:m_o_b_demand_side/homepage/widgets/home_reward_card.dart';
 import 'package:m_o_b_demand_side/homepage/widgets/home_savings_card.dart';
+import 'package:m_o_b_demand_side/homepage/widgets/home_why_choose_card.dart';
 import 'package:m_o_b_demand_side/homepage/widgets/product_rail_section.dart';
 import 'package:m_o_b_demand_side/homepage/widgets/section_title.dart';
 import 'package:m_o_b_demand_side/widgets/main_scaffold.dart';
@@ -73,6 +74,7 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                   title: 'Deal of the day',
                   categorySlug: 'building-materials',
                 ),
+                const HomeWhyChooseCard(),
                 const ProductRailSection(
                   title: 'Quality electricals at lowest price',
                   categorySlug: 'electrical',

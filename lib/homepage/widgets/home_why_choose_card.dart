@@ -3,8 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/components/why_choose_mob.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 
-class HomeRewardCard extends StatelessWidget {
-  const HomeRewardCard({super.key});
+class HomeWhyChooseCard extends StatelessWidget {
+  const HomeWhyChooseCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class HomeRewardCard extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment(0.00, 0.50),
               end: Alignment(1.00, 0.50),
-              colors: [Color(0xFF232C64), Color(0xFF8373E4)],
+              colors: [Color(0xFF000A18), Color(0xFF838C99)],
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -38,32 +38,19 @@ class HomeRewardCard extends StatelessWidget {
                   width: 40,
                   height: 52,
                   child: SvgPicture.asset(
-                    'assets/images/mobstarcoin.svg',
+                    'assets/images/Whymob.svg',
                     fit: BoxFit.contain,
                   ),
                 ),
               ),
               Positioned(
                 left: 52,
-                top: 17,
+                top: 16,
                 child: SizedBox(
-                  width: 80,
-                  height: 14,
-                  child: SvgPicture.asset(
-                    'assets/images/mobstar logo.svg',
-                    fit: BoxFit.contain,
-                    alignment: Alignment.centerLeft,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 52,
-                top: 37,
-                child: SizedBox(
-                  width: 207,
+                  width: 165,
                   child: Text(
-                    'Earn points on every order',
-                    maxLines: 1,
+                    'Why choose mad over\nbuildings?',
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       color: Colors.white,
