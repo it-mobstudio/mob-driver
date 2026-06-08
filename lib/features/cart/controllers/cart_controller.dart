@@ -4,6 +4,26 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/network/app_error.dart';
 import 'package:m_o_b_demand_side/features/cart/models/cart_item.dart';
 
+class CartAddress {
+  const CartAddress({
+    required this.name,
+    required this.address,
+    this.phone = '',
+    this.tag = '',
+    this.project = '',
+    this.gstNumber = '',
+  });
+
+  final String name;
+  final String address;
+  final String phone;
+  final String tag;
+  final String project;
+  final String gstNumber;
+
+  bool get hasAddress => address.trim().isNotEmpty;
+}
+
 class CartController extends ChangeNotifier {
   CartController({List<CartItem>? initialItems})
       : _items = List<CartItem>.from(initialItems ?? const <CartItem>[]);
@@ -22,9 +42,17 @@ class CartController extends ChangeNotifier {
   double _tax = 0;
   double _savings = 0;
   double _total = 0;
+  int _rewardPoints = 0;
   int _itemCount = 0;
   String _shippingTitle = 'Shipping address';
   String _shippingSubtitle = 'Add an address to continue';
+  String _shippingRecipientName = '';
+  String _shippingAddress = '';
+  String _shippingPhone = '';
+  String _gstNumber = '';
+  String _billingAddress = '';
+  String _billingGstNumber = '';
+  List<CartAddress> _savedAddresses = const <CartAddress>[];
 
   List<CartItem> get items => List<CartItem>.unmodifiable(_items);
   bool get isEmpty => _items.isEmpty;
@@ -43,8 +71,18 @@ class CartController extends ChangeNotifier {
   double get tax => _tax;
   double get savings => _savings;
   double get total => _total;
+  int get rewardPoints => _rewardPoints;
   String get shippingTitle => _shippingTitle;
   String get shippingSubtitle => _shippingSubtitle;
+  String get shippingRecipientName => _shippingRecipientName;
+  String get shippingAddress => _shippingAddress;
+  String get shippingPhone => _shippingPhone;
+  String get gstNumber => _gstNumber;
+  String get billingAddress => _billingAddress;
+  String get billingGstNumber => _billingGstNumber;
+  List<CartAddress> get savedAddresses =>
+      List<CartAddress>.unmodifiable(_savedAddresses);
+  bool get hasDeliveryAddress => _shippingAddress.trim().isNotEmpty;
 
   Map<String, List<CartItem>> get itemsBySeller {
     final bySeller = <String, List<CartItem>>{};
@@ -118,8 +156,9 @@ class CartController extends ChangeNotifier {
       _tax = 0;
       _savings = 0;
       _total = 0;
+      _rewardPoints = 0;
       _errorMessage = userMessageFromError(
-        e is Object ? e : Exception(e.toString()),
+        e,
         fallbackMessage: 'Unable to load cart. Please try again.',
       );
     } finally {
@@ -172,7 +211,7 @@ class CartController extends ChangeNotifier {
       _applyServerData(data);
     } catch (e) {
       _actionErrorMessage = userMessageFromError(
-        e is Object ? e : Exception(e.toString()),
+        e,
         fallbackMessage: 'Unable to update cart item. Please try again.',
       );
     } finally {
@@ -205,7 +244,8 @@ class CartController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await RemoveCartItemCall.call(cartItemId: item.cartItemId);
+      final response =
+          await RemoveCartItemCall.call(cartItemId: item.cartItemId);
       if (!response.succeeded) {
         throw appExceptionFromApiResponse(
           response,
@@ -222,7 +262,7 @@ class CartController extends ChangeNotifier {
       _applyServerData(data);
     } catch (e) {
       _actionErrorMessage = userMessageFromError(
-        e is Object ? e : Exception(e.toString()),
+        e,
         fallbackMessage: 'Unable to delete cart item. Please try again.',
       );
     } finally {
@@ -263,8 +303,21 @@ class CartController extends ChangeNotifier {
       const ['total', 'cart_total'],
       fallback: _subtotal + _shipping + _tax - _savings,
     ).toDouble();
+    _rewardPoints = _readFirstInt(
+      data,
+      const [
+        'reward_points',
+        'rewardPoints',
+        'points_earned',
+        'pointsEarned',
+        'mobstar_points',
+        'mobstarPoints',
+      ],
+    );
     _rfqItemCount = _extractRfqItemCount(data['quote_cart']);
     _setShippingDetails(data['user_details']);
+    _setBillingDetails(data);
+    _setSavedAddresses(data);
   }
 
   List<Map<String, dynamic>> _extractCartItemMapsFromServerData(
@@ -293,7 +346,8 @@ class CartController extends ChangeNotifier {
     return _extractCartItemMaps(data);
   }
 
-  List<Map<String, dynamic>> _itemsFromSubcarts(List<Map<String, dynamic>> subcarts) {
+  List<Map<String, dynamic>> _itemsFromSubcarts(
+      List<Map<String, dynamic>> subcarts) {
     final result = <Map<String, dynamic>>[];
     for (final subcart in subcarts) {
       final vendor = subcart['vendor'] is Map
@@ -320,8 +374,10 @@ class CartController extends ChangeNotifier {
           'cart_item_id': item['cart_item_id'] ?? item['id'],
           'vendor_selling_price':
               item['vendor_selling_price'] ?? product['vendor_selling_price'],
-          'item_name_title': item['item_name_title'] ?? product['item_name_title'],
-          'image': item['image'] ?? product['image'] ?? product['product_image'],
+          'item_name_title':
+              item['item_name_title'] ?? product['item_name_title'],
+          'image':
+              item['image'] ?? product['image'] ?? product['product_image'],
         };
         result.add(merged);
       }
@@ -413,8 +469,10 @@ class CartController extends ChangeNotifier {
       'amount',
     ];
 
-    final hasTitle = titleKeys.any((k) => (map[k]?.toString().trim() ?? '').isNotEmpty);
-    final hasQty = qtyKeys.any((k) => num.tryParse(map[k]?.toString() ?? '') != null);
+    final hasTitle =
+        titleKeys.any((k) => (map[k]?.toString().trim() ?? '').isNotEmpty);
+    final hasQty =
+        qtyKeys.any((k) => num.tryParse(map[k]?.toString() ?? '') != null);
     final hasPrice =
         priceKeys.any((k) => num.tryParse(map[k]?.toString() ?? '') != null);
     return hasTitle || (hasQty && hasPrice);
@@ -459,6 +517,13 @@ class CartController extends ChangeNotifier {
     if (userDetailsRaw is! Map) {
       _shippingTitle = 'Shipping address';
       _shippingSubtitle = 'Add an address to continue';
+      _shippingRecipientName = '';
+      _shippingAddress = '';
+      _shippingPhone = '';
+      _gstNumber = '';
+      _billingAddress = '';
+      _billingGstNumber = '';
+      _savedAddresses = const <CartAddress>[];
       return;
     }
     final userDetails = Map<String, dynamic>.from(userDetailsRaw);
@@ -474,6 +539,7 @@ class CartController extends ChangeNotifier {
       userDetails,
       const ['name', 'full_name', 'username'],
     );
+    _shippingRecipientName = name;
     _shippingTitle = projectName.isNotEmpty
         ? 'Shipping to: $projectName'
         : (name.isNotEmpty ? 'Shipping to: $name' : 'Shipping address');
@@ -489,6 +555,26 @@ class CartController extends ChangeNotifier {
     final city = _readFirstString(userDetails, const ['city']);
     final state = _readFirstString(userDetails, const ['state']);
     final pincode = _readFirstString(userDetails, const ['pincode', 'zip']);
+    _shippingPhone = _readFirstString(
+      userDetails,
+      const [
+        'phone',
+        'phone_number',
+        'mobile',
+        'mobile_number',
+        'contact_number'
+      ],
+    );
+    _gstNumber = _readFirstString(
+      userDetails,
+      const [
+        'gst_number',
+        'gst_no',
+        'gstin',
+        'gst',
+        'tax_number',
+      ],
+    );
 
     final parts = <String>[
       line1,
@@ -497,8 +583,168 @@ class CartController extends ChangeNotifier {
       state,
       pincode,
     ].where((e) => e.isNotEmpty).toList();
+    _shippingAddress = parts.join(', ');
     _shippingSubtitle =
         parts.isNotEmpty ? parts.join(', ') : 'Address unavailable';
+  }
+
+  void _setBillingDetails(Map<String, dynamic> data) {
+    final billingRaw = data['billing_details'] ??
+        data['billing_address'] ??
+        data['billingAddress'] ??
+        data['billing'];
+    if (billingRaw is! Map) {
+      _billingAddress = _shippingAddress;
+      _billingGstNumber = _gstNumber;
+      return;
+    }
+
+    final billing = Map<String, dynamic>.from(billingRaw);
+    final line1 = _readFirstString(
+      billing,
+      const ['address_line_1', 'address1', 'address'],
+    );
+    final line2 = _readFirstString(
+      billing,
+      const ['address_line_2', 'address2'],
+    );
+    final city = _readFirstString(billing, const ['city']);
+    final state = _readFirstString(billing, const ['state']);
+    final pincode = _readFirstString(billing, const ['pincode', 'zip']);
+    final parts = <String>[
+      line1,
+      line2,
+      city,
+      state,
+      pincode,
+    ].where((e) => e.isNotEmpty).toList();
+
+    _billingAddress = parts.isNotEmpty ? parts.join(', ') : _shippingAddress;
+    _billingGstNumber = _readFirstString(
+      billing,
+      const [
+        'gst_number',
+        'gst_no',
+        'gstin',
+        'gst',
+        'tax_number',
+      ],
+      fallback: _gstNumber,
+    );
+  }
+
+  void _setSavedAddresses(Map<String, dynamic> data) {
+    final candidates = <dynamic>[
+      data['addresses'],
+      data['saved_addresses'],
+      data['savedAddresses'],
+      data['user_addresses'],
+      data['delivery_addresses'],
+      data['address_list'],
+    ];
+    final userDetails = data['user_details'];
+    if (userDetails is Map) {
+      candidates.addAll([
+        userDetails['addresses'],
+        userDetails['saved_addresses'],
+        userDetails['savedAddresses'],
+        userDetails['user_addresses'],
+        userDetails['delivery_addresses'],
+        userDetails['address_list'],
+      ]);
+    }
+
+    final addresses = <CartAddress>[];
+    for (final candidate in candidates) {
+      addresses.addAll(_addressListFrom(candidate));
+    }
+
+    if (addresses.isEmpty && _shippingAddress.trim().isNotEmpty) {
+      addresses.add(
+        CartAddress(
+          name: _shippingRecipientName,
+          address: _shippingAddress,
+          phone: _shippingPhone,
+          tag: 'Delivery',
+          project: _shippingTitle.replaceFirst('Shipping to: ', ''),
+          gstNumber: _gstNumber,
+        ),
+      );
+    }
+
+    final seen = <String>{};
+    _savedAddresses = addresses.where((address) {
+      final key = [
+        address.name,
+        address.address,
+        address.phone,
+      ].join('|').toLowerCase();
+      return address.hasAddress && seen.add(key);
+    }).toList();
+  }
+
+  List<CartAddress> _addressListFrom(dynamic value) {
+    if (value is! List) {
+      return const <CartAddress>[];
+    }
+    return value
+        .whereType<Map>()
+        .map((entry) => _addressFromMap(Map<String, dynamic>.from(entry)))
+        .where((address) => address.hasAddress)
+        .toList();
+  }
+
+  CartAddress _addressFromMap(Map<String, dynamic> map) {
+    final line1 = _readFirstString(
+      map,
+      const ['address_line_1', 'address1', 'address'],
+    );
+    final line2 = _readFirstString(
+      map,
+      const ['address_line_2', 'address2'],
+    );
+    final city = _readFirstString(map, const ['city']);
+    final state = _readFirstString(map, const ['state']);
+    final pincode = _readFirstString(map, const ['pincode', 'zip']);
+    final parts = <String>[
+      line1,
+      line2,
+      city,
+      state,
+      pincode,
+    ].where((e) => e.isNotEmpty).toList();
+
+    return CartAddress(
+      name: _readFirstString(
+        map,
+        const ['name', 'full_name', 'username', 'recipient_name'],
+        fallback: _shippingRecipientName,
+      ),
+      address: parts.join(', '),
+      phone: _readFirstString(
+        map,
+        const [
+          'phone',
+          'phone_number',
+          'mobile',
+          'mobile_number',
+          'contact_number',
+        ],
+      ),
+      tag: _readFirstString(
+        map,
+        const ['tag', 'type', 'address_type', 'label'],
+        fallback: 'Address',
+      ),
+      project: _readFirstString(
+        map,
+        const ['project_name', 'project', 'projectName'],
+      ),
+      gstNumber: _readFirstString(
+        map,
+        const ['gst_number', 'gst_no', 'gstin', 'gst', 'tax_number'],
+      ),
+    );
   }
 
   String _readFirstString(

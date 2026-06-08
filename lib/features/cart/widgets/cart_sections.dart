@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
+import 'package:m_o_b_demand_side/features/cart/controllers/cart_controller.dart';
 import 'package:m_o_b_demand_side/features/cart/models/cart_item.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
 
@@ -8,16 +10,47 @@ class CartTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
-      child: Text(
-        'My cart',
-        style: GoogleFonts.inter(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFF0A243F),
-          height: 22 / 15,
-        ),
+    return Container(
+      height: 50,
+      width: double.infinity,
+      color: Colors.white,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Text(
+            'Add address detail',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: const Color(0xFF0A243F),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              height: 22 / 15,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const SizedBox(
+                width: 48,
+                height: 50,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.arrow_back,
+                    color: Color(0xFF0A243F),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -28,67 +61,663 @@ class ShippingTile extends StatelessWidget {
     super.key,
     this.title = 'Shipping to: Iris Society',
     this.subtitle = 'Legros Mission Suite 804 Plains Apt 613..',
+    this.hasAddress = true,
+    this.onAddressAction,
   });
 
   final String title;
   final String subtitle;
+  final bool hasAddress;
+  final VoidCallback? onAddressAction;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    final recipient = title
+        .replaceFirst('Shipping to: ', '')
+        .replaceFirst('Shipping address', '')
+        .trim();
+    final displayRecipient = recipient.isNotEmpty ? recipient : 'Add address';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: ShapeDecoration(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                RichText(
-                  text: TextSpan(
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: const Color(0xFF0A243F),
-                    ),
+                Text.rich(
+                  TextSpan(
                     children: [
-                      TextSpan(
-                        text: 'Shipping to:  ',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF0A243F),
+                      const TextSpan(
+                        text: 'Deliver to:',
+                        style: TextStyle(
+                          color: Color(0xFF67696D),
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          height: 1.43,
                         ),
                       ),
                       TextSpan(
-                        text: title.replaceFirst('Shipping to: ', ''),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0A243F),
+                        text: ' $displayRecipient',
+                        style: const TextStyle(
+                          color: Color(0xFF0A243F),
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          height: 1.43,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(
+                  style: const TextStyle(
+                    color: Color(0xFF67696D),
                     fontSize: 12,
-                    color: const Color(0xFF6C7C8C),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                    height: 1.50,
                   ),
                 ),
               ],
             ),
           ),
-          Text(
-            'CHANGE',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF2973F0),
+          const SizedBox(width: 12),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onAddressAction,
+            child: SizedBox(
+              width: 45,
+              child: Text(
+                hasAddress ? 'Change' : 'Add',
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: Color(0xFF2973F0),
+                  fontSize: 12,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                  height: 1.50,
+                ),
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class SameAddressRow extends StatelessWidget {
+  const SameAddressRow({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onChanged(!value),
+      child: Row(
+        children: [
+          Container(
+            width: 18,
+            height: 18,
+            decoration: ShapeDecoration(
+              color: value ? const Color(0xFF0360E5) : Colors.white,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(
+                  color: value
+                      ? const Color(0xFF0360E5)
+                      : const Color(0xFF767C8F),
+                ),
+                borderRadius: const BorderRadius.all(Radius.circular(4)),
+              ),
+            ),
+            child: value
+                ? const Icon(
+                    Icons.check,
+                    size: 14,
+                    color: Colors.white,
+                  )
+                : null,
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Use same address for delivery and billing',
+            style: TextStyle(
+              color: Color(0xFF0A243F),
+              fontSize: 11,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w400,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class BillingAddressTile extends StatelessWidget {
+  const BillingAddressTile({
+    super.key,
+    required this.hasBillingAddress,
+    this.addressDetails = '',
+    this.onTap,
+  });
+
+  final bool hasBillingAddress;
+  final String addressDetails;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44),
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: ShapeDecoration(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Billing address',
+                    style: TextStyle(
+                      color: Color(0xFF0A243F),
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      height: 1.43,
+                    ),
+                  ),
+                  if (addressDetails.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      addressDetails.trim(),
+                      style: const TextStyle(
+                        color: Color(0xFF67696D),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w400,
+                        height: 1.50,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 45,
+              child: Text(
+                hasBillingAddress ? 'Change' : 'Add',
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: Color(0xFF2973F0),
+                  fontSize: 12,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                  height: 1.50,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CartAddressBottomSheet extends StatefulWidget {
+  const CartAddressBottomSheet({
+    super.key,
+    required this.addresses,
+    required this.onSelectAddress,
+    required this.onAddAddress,
+  });
+
+  final List<CartAddress> addresses;
+  final ValueChanged<CartAddress> onSelectAddress;
+  final VoidCallback onAddAddress;
+
+  @override
+  State<CartAddressBottomSheet> createState() => _CartAddressBottomSheetState();
+}
+
+class _CartAddressBottomSheetState extends State<CartAddressBottomSheet> {
+  late final TextEditingController _searchController;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<CartAddress> get _filteredAddresses {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) {
+      return widget.addresses;
+    }
+
+    return widget.addresses.where((address) {
+      final searchable = [
+        address.name,
+        address.address,
+        address.phone,
+        address.tag,
+        address.project,
+      ].join(' ').toLowerCase();
+      return searchable.contains(query);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredAddresses = _filteredAddresses;
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: FractionallySizedBox(
+        heightFactor: 656 / 812,
+        widthFactor: 1,
+        child: Material(
+          color: const Color(0xFFF7F7F7),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          clipBehavior: Clip.antiAlias,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 30,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Select delivery address',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF0A243F),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              height: 22 / 15,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => Navigator.of(context).pop(),
+                          child: const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: Icon(
+                              Icons.close,
+                              color: Color(0xFF0A243F),
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  _CartAddAddressTile(onTap: widget.onAddAddress),
+                  const SizedBox(height: 16),
+                  _CartAddressSearchField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _query = value),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Your saved address',
+                    style: GoogleFonts.inter(
+                      color: Colors.black,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      height: 20 / 13,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: widget.addresses.isEmpty
+                        ? _CartEmptyAddressState(
+                            message: 'No saved address',
+                            onAddAddress: widget.onAddAddress,
+                          )
+                        : filteredAddresses.isEmpty
+                            ? const _CartEmptyAddressState(
+                                message: 'No address found',
+                              )
+                            : ListView.separated(
+                                padding: EdgeInsets.zero,
+                                itemCount: filteredAddresses.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 16),
+                                itemBuilder: (context, index) {
+                                  return _CartSavedAddressCard(
+                                    address: filteredAddresses[index],
+                                    onTap: () => widget.onSelectAddress(
+                                      filteredAddresses[index],
+                                    ),
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CartAddAddressTile extends StatelessWidget {
+  const _CartAddAddressTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        height: 52,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.add,
+              color: Color(0xFF2973F0),
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Add new address',
+              style: GoogleFonts.inter(
+                color: const Color(0xFF2973F0),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                height: 20 / 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CartAddressSearchField extends StatelessWidget {
+  const _CartAddressSearchField({
+    required this.controller,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textInputAction: TextInputAction.search,
+        style: GoogleFonts.inter(
+          color: const Color(0xFF0A243F),
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
+          height: 20 / 13,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Search address',
+          hintStyle: GoogleFonts.inter(
+            color: const Color(0xFF767C8F),
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            height: 20 / 13,
+          ),
+          prefixIcon: const Icon(
+            Icons.search,
+            color: Color(0xFF767C8F),
+            size: 18,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+  }
+}
+
+class _CartSavedAddressCard extends StatelessWidget {
+  const _CartSavedAddressCard({
+    required this.address,
+    required this.onTap,
+  });
+
+  final CartAddress address;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = address.name.trim().isNotEmpty
+        ? address.name.trim()
+        : 'Saved address';
+    final addressText = address.address.trim();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 120),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 20 / 14,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    addressText,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF596378),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      height: 16 / 11,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      if (address.tag.trim().isNotEmpty)
+                        _CartAddressPill(
+                          text: address.tag.trim(),
+                          color: const Color(0xFFF7F7F7),
+                        ),
+                      if (address.project.trim().isNotEmpty)
+                        _CartAddressPill(
+                          text: address.project.trim().startsWith('Project:')
+                              ? address.project.trim()
+                              : 'Project: ${address.project.trim()}',
+                          color: const Color(0xFFFFD911),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFD9DEE8)),
+              ),
+              child: const Icon(
+                Icons.more_horiz,
+                color: Color(0xFF0A243F),
+                size: 18,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CartAddressPill extends StatelessWidget {
+  const _CartAddressPill({
+    required this.text,
+    required this.color,
+  });
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.inter(
+          color: const Color(0xFF0A243F),
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          height: 16 / 11,
+        ),
+      ),
+    );
+  }
+}
+
+class _CartEmptyAddressState extends StatelessWidget {
+  const _CartEmptyAddressState({
+    required this.message,
+    this.onAddAddress,
+  });
+
+  final String message;
+  final VoidCallback? onAddAddress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            message,
+            style: GoogleFonts.inter(
+              color: const Color(0xFF0A243F),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (onAddAddress != null) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: onAddAddress,
+              child: Text(
+                'Add a delivery address',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF2973F0),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -275,28 +904,30 @@ class ViewCouponsTile extends StatelessWidget {
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const Icon(
+          Icon(
             Icons.discount_outlined,
             size: 16,
             color: Color(0xFF0A243F),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Text(
             'View all coupons',
-            style: GoogleFonts.inter(
+            style: TextStyle(
+              color: Color(0xFF0A243F),
               fontSize: 13,
+              fontFamily: 'Inter',
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF0A243F),
+              height: 1.54,
             ),
           ),
-          const Spacer(),
-          const Icon(
+          Spacer(),
+          Icon(
             Icons.chevron_right,
             size: 20,
             color: Color(0xFF0A243F),
@@ -315,6 +946,7 @@ class OrderDetailsCard extends StatelessWidget {
     required this.tax,
     required this.savings,
     required this.total,
+    this.rewardPoints = 1150,
   });
 
   final double subtotal;
@@ -322,9 +954,12 @@ class OrderDetailsCard extends StatelessWidget {
   final double tax;
   final double savings;
   final double total;
+  final int rewardPoints;
 
   @override
   Widget build(BuildContext context) {
+    String money(double value) => '\u20B9 ${value.toStringAsFixed(2)}';
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -338,68 +973,78 @@ class OrderDetailsCard extends StatelessWidget {
               children: [
                 _kvRow('Order details', '', isHeading: true),
                 const SizedBox(height: 4),
-                _kvRow('Subtotal', '₹ ${subtotal.toStringAsFixed(2)}'),
-                _kvRow('Shipping', '₹ ${shipping.toStringAsFixed(2)}'),
+                _kvRow('Subtotal', money(subtotal)),
+                _kvRow('Shipping', money(shipping)),
                 _kvRow(
                   'Total tax',
-                  '₹ ${tax.toStringAsFixed(2)}',
+                  money(tax),
                   keyDecorated: true,
                 ),
                 _kvRow(
                   'Savings',
-                  '₹ ${savings.toStringAsFixed(2)}',
+                  money(savings),
                   keyDecorated: true,
                 ),
                 const Divider(height: 20),
                 _kvRow(
                   'Total to pay',
-                  '₹ ${total.toStringAsFixed(2)}',
+                  money(total),
                   isTotal: true,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Container(
-            height: 42,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFDFF8F9),
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(12),
+          ClipPath(
+            clipper: const _CartPointsStripClipper(),
+            child: Container(
+              height: 47,
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(12, 5, 12, 0),
+              decoration: const BoxDecoration(
+                color: Color(0xFFDFF8F9),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(12),
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'You will earn  ',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF0A243F),
+              child: Row(
+                children: [
+                  Text(
+                    'You will earn ',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      height: 18 / 12,
+                    ),
                   ),
-                ),
-                const Icon(
-                  Icons.star,
-                  size: 16,
-                  color: Color(0xFFFFAB00),
-                ),
-                Text(
-                  '  1150 points',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0A243F),
+                  SvgPicture.asset(
+                    'assets/images/points.svg',
+                    width: 16,
+                    height: 16,
                   ),
-                ),
-                Text(
-                  ' on this purchase',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF0A243F),
+                  Text(
+                    ' $rewardPoints points',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      height: 18 / 12,
+                    ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: Text(
+                      ' on this purchase',
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0A243F),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        height: 18 / 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -458,6 +1103,43 @@ class OrderDetailsCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CartPointsStripClipper extends CustomClipper<Path> {
+  const _CartPointsStripClipper();
+
+  @override
+  Path getClip(Size size) {
+    const waveWidth = 16.0;
+    const waveDepth = 5.0;
+    final path = Path()..moveTo(0, waveDepth);
+
+    var x = 0.0;
+    while (x < size.width) {
+      path.quadraticBezierTo(
+        x + waveWidth / 4,
+        0,
+        x + waveWidth / 2,
+        waveDepth,
+      );
+      path.quadraticBezierTo(
+        x + waveWidth * 3 / 4,
+        waveDepth * 2,
+        x + waveWidth,
+        waveDepth,
+      );
+      x += waveWidth;
+    }
+
+    path
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant _CartPointsStripClipper oldClipper) => false;
 }
 
 class CartActionRow extends StatelessWidget {
@@ -520,69 +1202,55 @@ class CartActionRow extends StatelessWidget {
 class BottomCheckoutBar extends StatelessWidget {
   const BottomCheckoutBar({
     super.key,
-    required this.total,
+    this.label = 'Save and continue',
     required this.onProceed,
   });
 
-  final double total;
+  final String label;
   final VoidCallback onProceed;
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return Positioned(
       left: 0,
       right: 0,
       bottom: 0,
-      child: SafeArea(
-        top: false,
-        child: Container(
-          height: 62,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(16),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
-                blurRadius: 16,
-                offset: const Offset(0, -3),
-              ),
-            ],
+      child: Container(
+        height: 68 + bottomInset,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(16),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-          child: ElevatedButton(
-            onPressed: onProceed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0360E5),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(32),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 16,
+              offset: const Offset(0, -3),
             ),
-            child: Row(
-              children: [
-                Text(
-                  '₹ ${total.toStringAsFixed(0)}',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    height: 36 / 14,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'Proceed to checkout',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+          ],
+        ),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 4),
+        child: ElevatedButton(
+          onPressed: onProceed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF0360E5),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              height: 21 / 14,
             ),
           ),
         ),

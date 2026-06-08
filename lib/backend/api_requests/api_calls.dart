@@ -110,6 +110,34 @@ class BrowseProductsCall {
   }
 }
 
+class BrowseProductFiltersCall {
+  /// Calls the browse product filters API for a given category or subcategory.
+  static Future<ApiCallResponse> call({
+    required String search,
+    bool isProfessional = true,
+  }) async {
+    final apiUrl = AppConfig.apiUri(
+      '/home/get_filters/',
+      queryParameters: {
+        'search': search,
+        'quick_ecommerce': true,
+        'is_professional': isProfessional,
+      },
+    ).toString();
+    return ApiManager.instance.makeApiCall(
+      callName: 'browseProductFilters',
+      apiUrl: apiUrl,
+      callType: ApiCallType.GET,
+      headers: _jsonHeaders,
+      params: {},
+      returnBody: true,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
 class ProductDetailsCall {
   /// Calls the product details API for a given product slug.
   static Future<ApiCallResponse> call({

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:m_o_b_demand_side/checkout/checkout_address_page.dart';
-import 'package:m_o_b_demand_side/conversational_ai/conversational_ai.dart';
+import 'package:m_o_b_demand_side/address_selection/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/checkout/checkout_order_review_page.dart';
 import 'package:m_o_b_demand_side/features/cart/controllers/cart_controller.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/widgets/error_state_view.dart';
@@ -20,6 +20,9 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   late final CartController _controller;
+  CartAddress? _selectedDeliveryAddress;
+  CartAddress? _selectedBillingAddress;
+  bool _useDeliveryForBilling = false;
 
   @override
   void initState() {
@@ -38,10 +41,11 @@ class _CartPageState extends State<CartPage> {
   Widget build(BuildContext context) {
     return MainScaffold(
       currentIndex: 2,
+      showTopSearchBar: false,
       showLocationheader: false,
       showBackButton: false,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F7F7),
+        backgroundColor: const Color(0xFFF0F0F0),
         body: SafeArea(
           child: AnimatedBuilder(
             animation: _controller,
@@ -87,10 +91,12 @@ class _CartPageState extends State<CartPage> {
               }
               return _controller.isEmpty
                   ? EmptyCartBody(
-                      topBar: CartTopBar(),
+                      topBar: const CartTopBar(),
                       shippingTile: ShippingTile(
-                        title: _controller.shippingTitle,
-                        subtitle: _controller.shippingSubtitle,
+                        title: _deliveryName,
+                        subtitle: _deliveryDetails,
+                        hasAddress: _controller.hasDeliveryAddress,
+                        onAddressAction: () => _showAddressBottomSheet(),
                       ),
                       micPill: const AiMicPill(),
                     )
@@ -103,107 +109,156 @@ class _CartPageState extends State<CartPage> {
   }
 
   Widget _buildCartWithItems(BuildContext context) {
-    final sellerSections = _controller.itemsBySeller.entries
-        .map(
-          (entry) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: SellerSection(
-              sellerCode: entry.key,
-              sellerItems: entry.value,
-              onQtyChanged: _controller.updateQuantity,
-              onQtyInputChanged: _controller.onQuantityInputChanged,
-              onRemove: _controller.removeItem,
-              isUpdatingCart: _controller.isUpdatingCart,
-              updatingItemKey: _controller.updatingItemKey,
-            ),
-          ),
-        )
-        .toList();
-
     return Stack(
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Non-scrollable header: title + full-width gray divider
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
-              child: CartTopBar(),
-            ),
-            Container(height: 12, color: const Color(0xFFF1F1F2)),
+            const CartTopBar(),
+            Container(height: 16, color: const Color(0xFFF0F0F0)),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 140),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 118),
                 children: [
                   ShippingTile(
-                    title: _controller.shippingTitle,
-                    subtitle: _controller.shippingSubtitle,
+                    title: _deliveryName,
+                    subtitle: _deliveryDetails,
+                    hasAddress: _controller.hasDeliveryAddress,
+                    onAddressAction: () => _showAddressBottomSheet(),
                   ),
-                  SavingsStrip(
-                    savings: _controller.savings,
-                  ),
-                  const SizedBox(height: 8),
-                  if (_controller.hasRfqItems)
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF4F0),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'Cart has ${_controller.rfqItemCount} RFQ item(s) without price. Proceed with checkout only for priced items.',
-                        style: const TextStyle(
-                          color: Color(0xFF8A3A00),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  ...sellerSections,
-                  const ViewCouponsTile(),
                   const SizedBox(height: 12),
+                  SameAddressRow(
+                    value: _useDeliveryForBilling,
+                    onChanged: (value) {
+                      setState(() {
+                        _useDeliveryForBilling = value;
+                        if (value) {
+                          _selectedBillingAddress = _currentDeliveryAddress;
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  BillingAddressTile(
+                    hasBillingAddress: _billingDetails.trim().isNotEmpty,
+                    addressDetails: _billingDetails,
+                    onTap: () => _showAddressBottomSheet(forBilling: true),
+                  ),
+                  const SizedBox(height: 20),
+                  const ViewCouponsTile(),
+                  const SizedBox(height: 20),
                   OrderDetailsCard(
                     subtotal: _controller.subtotal,
                     shipping: _controller.shipping,
                     tax: _controller.tax,
                     savings: _controller.savings,
                     total: _controller.total,
+                    rewardPoints: _controller.rewardPoints,
                   ),
-                  const SizedBox(height: 12),
-                  const CartActionRow(),
-                  const SizedBox(height: 12),
                 ],
               ),
             ),
           ],
         ),
         BottomCheckoutBar(
-          total: _controller.total,
           onProceed: () =>
-              GoRouter.of(context).go(CheckoutAddressPage.routePath),
-        ),
-        Positioned(
-          bottom: 80,
-          right: 20,
-          child: FloatingAiMic(onTap: () => _showAIBottomSheet(context)),
+              GoRouter.of(context).go(CheckoutOrderReviewPage.routePath),
         ),
       ],
     );
   }
 
-  void _showAIBottomSheet(BuildContext context) {
+  String get _deliveryName {
+    final selectedName = _selectedDeliveryAddress?.name.trim() ?? '';
+    if (selectedName.isNotEmpty) {
+      return selectedName;
+    }
+    final name = _controller.shippingRecipientName.trim();
+    if (name.isNotEmpty) {
+      return name;
+    }
+    return _controller.shippingTitle;
+  }
+
+  String get _deliveryDetails {
+    final selectedAddress = _selectedDeliveryAddress;
+    if (selectedAddress != null) {
+      return _addressDetails(selectedAddress);
+    }
+
+    final parts = <String>[
+      _controller.shippingAddress.trim(),
+      _controller.shippingPhone.trim(),
+    ].where((part) => part.isNotEmpty).toList();
+
+    if (parts.isNotEmpty) {
+      return parts.join('\n');
+    }
+    return _controller.shippingSubtitle;
+  }
+
+  String get _billingDetails {
+    if (_useDeliveryForBilling) {
+      return _deliveryDetails;
+    }
+
+    final selectedBilling = _selectedBillingAddress;
+    if (selectedBilling != null) {
+      return _addressDetails(selectedBilling);
+    }
+
+    return _controller.billingAddress.trim();
+  }
+
+  CartAddress get _currentDeliveryAddress {
+    final selectedDelivery = _selectedDeliveryAddress;
+    if (selectedDelivery != null) {
+      return selectedDelivery;
+    }
+
+    return CartAddress(
+      name: _deliveryName,
+      address: _controller.shippingAddress.trim(),
+      phone: _controller.shippingPhone.trim(),
+      tag: 'Delivery',
+    );
+  }
+
+  String _addressDetails(CartAddress address) {
+    return <String>[
+      address.address.trim(),
+      address.phone.trim(),
+    ].where((part) => part.isNotEmpty).join('\n');
+  }
+
+  void _showAddressBottomSheet({bool forBilling = false}) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const AzureConversationalAI(
-        azureKey: 'YOUR_AZURE_KEY',
-        azureRegion: 'YOUR_AZURE_REGION',
-        locale: 'en-US',
-      ),
+      builder: (context) {
+        return CartAddressBottomSheet(
+          addresses: _controller.savedAddresses,
+          onSelectAddress: (address) {
+            Navigator.of(context).pop();
+            setState(() {
+              if (forBilling && !_useDeliveryForBilling) {
+                _selectedBillingAddress = address;
+              } else {
+                _selectedDeliveryAddress = address;
+                if (_useDeliveryForBilling || forBilling) {
+                  _selectedBillingAddress = address;
+                }
+              }
+            });
+          },
+          onAddAddress: () {
+            Navigator.of(context).pop();
+            this.context.go(AddressSelectionWidget.routePath);
+          },
+        );
+      },
     );
   }
+
 }

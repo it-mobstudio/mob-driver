@@ -71,9 +71,22 @@ class _ProductRailSectionState extends State<ProductRailSection> {
 }
 
 class HomeProductCard extends StatefulWidget {
-  const HomeProductCard({super.key, required this.product});
+  const HomeProductCard({
+    super.key,
+    required this.product,
+    this.onTap,
+    this.cartQuantity,
+    this.isCartUpdating = false,
+    this.onCartQuantityChanged,
+    this.onNotifyTap,
+  });
 
   final ProductModel product;
+  final VoidCallback? onTap;
+  final int? cartQuantity;
+  final bool isCartUpdating;
+  final Future<void> Function(int quantity)? onCartQuantityChanged;
+  final Future<void> Function()? onNotifyTap;
 
   @override
   State<HomeProductCard> createState() => _HomeProductCardState();
@@ -82,14 +95,26 @@ class HomeProductCard extends StatefulWidget {
 class _HomeProductCardState extends State<HomeProductCard> {
   int _quantity = 0;
 
+  int get _effectiveQuantity => widget.cartQuantity ?? _quantity;
+
   void _increment() {
+    final callback = widget.onCartQuantityChanged;
+    if (callback != null) {
+      callback(_effectiveQuantity + 1);
+      return;
+    }
     setState(() {
       _quantity += 1;
     });
   }
 
   void _decrement() {
-    if (_quantity <= 0) {
+    if (_effectiveQuantity <= 0) {
+      return;
+    }
+    final callback = widget.onCartQuantityChanged;
+    if (callback != null) {
+      callback(_effectiveQuantity - 1);
       return;
     }
     setState(() {
@@ -115,8 +140,9 @@ class _HomeProductCardState extends State<HomeProductCard> {
               clipBehavior: Clip.none,
               children: [
                 GestureDetector(
-                  onTap: () => context
-                      .go('${ProductDetailPage.routePath}/${product.slug}'),
+                  onTap: widget.onTap ??
+                      () => context
+                          .go('${ProductDetailPage.routePath}/${product.slug}'),
                   child: Container(
                     width: 136,
                     height: 136,
@@ -148,10 +174,18 @@ class _HomeProductCardState extends State<HomeProductCard> {
                   right: 0,
                   bottom: 0,
                   child: _HomeRailCartButton(
-                    quantity: _quantity,
+                    quantity: _effectiveQuantity,
+                    isBusy: widget.isCartUpdating,
+                    hasVariants: product.hasVariants,
+                    variantCount: product.variants.values.fold<int>(
+                      0,
+                      (sum, options) => sum + options.length,
+                    ),
+                    shouldShowNotify: product.shouldShowNotify,
                     onAdd: _increment,
                     onIncrement: _increment,
                     onDecrement: _decrement,
+                    onNotify: widget.onNotifyTap,
                   ),
                 ),
               ],
@@ -241,22 +275,32 @@ class _HomeProductCardState extends State<HomeProductCard> {
 class _HomeRailCartButton extends StatelessWidget {
   const _HomeRailCartButton({
     required this.quantity,
+    required this.isBusy,
+    required this.hasVariants,
+    required this.variantCount,
+    required this.shouldShowNotify,
     required this.onAdd,
     required this.onIncrement,
     required this.onDecrement,
+    required this.onNotify,
   });
 
   final int quantity;
+  final bool isBusy;
+  final bool hasVariants;
+  final int variantCount;
+  final bool shouldShowNotify;
   final VoidCallback onAdd;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
+  final Future<void> Function()? onNotify;
 
   @override
   Widget build(BuildContext context) {
-    if (quantity <= 0) {
+    if (shouldShowNotify) {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onAdd,
+        onTap: isBusy ? null : onNotify,
         child: Container(
           width: 68,
           height: 40,
@@ -266,15 +310,82 @@ class _HomeRailCartButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFF0360E5)),
           ),
-          child: Text(
-            'ADD',
-            style: GoogleFonts.inter(
-              color: const Color(0xFF0360E5),
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 16 / 12,
-            ),
+          child: isBusy
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  'NOTIFY',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0360E5),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    height: 16 / 10,
+                  ),
+                ),
+        ),
+      );
+    }
+
+    if (quantity <= 0) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: isBusy ? null : onAdd,
+        child: Container(
+          width: 68,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF0360E5)),
           ),
+          child: isBusy
+              ? const Center(
+                  child: SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'ADD',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0360E5),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 16 / 12,
+                      ),
+                    ),
+                    if (hasVariants && variantCount > 0)
+                      Container(
+                        width: double.infinity,
+                        height: 12,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: Color(0x1A0360E5),
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          '$variantCount options',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF7E7E7E),
+                            fontSize: 8,
+                            fontWeight: FontWeight.w500,
+                            height: 12 / 8,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
         ),
       );
     }
@@ -286,29 +397,40 @@ class _HomeRailCartButton extends StatelessWidget {
         color: const Color(0xFF0360E5),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _QuantityControlTapTarget(
-            icon: Icons.remove,
-            onTap: onDecrement,
-          ),
-          Text(
-            '$quantity',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              height: 20 / 14,
+      child: isBusy
+          ? const Center(
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _QuantityControlTapTarget(
+                  icon: Icons.remove,
+                  onTap: onDecrement,
+                ),
+                Text(
+                  '$quantity',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    height: 20 / 14,
+                  ),
+                ),
+                _QuantityControlTapTarget(
+                  icon: Icons.add,
+                  onTap: onIncrement,
+                ),
+              ],
             ),
-          ),
-          _QuantityControlTapTarget(
-            icon: Icons.add,
-            onTap: onIncrement,
-          ),
-        ],
-      ),
     );
   }
 }

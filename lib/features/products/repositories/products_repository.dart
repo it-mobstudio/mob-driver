@@ -44,6 +44,32 @@ class ProductsRepository {
     );
   }
 
+  Future<List<BrowseFilterSection>> browseProductFilters({
+    required String search,
+  }) async {
+    final response = await BrowseProductFiltersCall.call(
+      search: search,
+    );
+    if (!response.succeeded) {
+      throw appExceptionFromApiResponse(
+        response,
+        fallbackMessage: 'Unable to load product filters right now.',
+      );
+    }
+    if (response.jsonBody is! Map) {
+      return const <BrowseFilterSection>[];
+    }
+    final body = Map<String, dynamic>.from(response.jsonBody as Map);
+    final data = body['data'] is List
+        ? List<dynamic>.from(body['data'] as List)
+        : <dynamic>[];
+    return data
+        .whereType<Map>()
+        .map((e) => BrowseFilterSection.fromMap(Map<String, dynamic>.from(e)))
+        .where((section) => section.key.isNotEmpty)
+        .toList();
+  }
+
   Future<ProductDetailsResult> getProductDetails({
     required String slug,
     String? mobSku,

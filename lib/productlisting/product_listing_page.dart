@@ -1,29 +1,32 @@
-﻿import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/backend/api_requests/api_calls.dart';
-import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/network/app_error.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/products/repositories/products_repository.dart';
+import 'package:m_o_b_demand_side/homepage/homepage_widget.dart';
 import 'package:m_o_b_demand_side/loginpage/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/productdetails/product_detail_page.dart';
+import 'package:m_o_b_demand_side/productlisting/filter_bottom_sheet.dart';
+import 'package:m_o_b_demand_side/productlisting/sort_bottom_sheet.dart';
+import 'package:m_o_b_demand_side/productlisting/widgets/browse_products_components.dart';
 import 'package:m_o_b_demand_side/rfq/rfq_form_page.dart';
 import 'package:m_o_b_demand_side/widgets/error_state_view.dart';
 import 'package:m_o_b_demand_side/widgets/skeleton_loader.dart';
-import '../widgets/main_scaffold.dart';
-import 'filter_bottom_sheet.dart';
-import 'package:go_router/go_router.dart';
-import '../components/product_card.dart';
 
 class ProductListingPage extends StatefulWidget {
+  const ProductListingPage({
+    super.key,
+    required this.category,
+    required this.slug,
+  });
+
   final String category;
   final String slug;
+
   static const String routeName = '/ProductListingPage';
   static const String routePath = '/productlisting';
-
-  const ProductListingPage(
-      {super.key, required this.category, required this.slug});
 
   @override
   State<ProductListingPage> createState() => _ProductListingPageState();
@@ -33,19 +36,31 @@ class _ProductListingPageState extends State<ProductListingPage> {
   final ProductsRepository _productsRepository = const ProductsRepository();
   final ScrollController _scrollController = ScrollController();
   final List<ProductModel> _products = [];
+  final List<ProductModel> _loadedProducts = [];
+  final List<ProductModel> _baseCategoryProducts = [];
+  final Map<String, int> _cartQtyByProductId = <String, int>{};
+  final Map<String, Set<String>> _selectedFilterValuesByKey =
+      <String, Set<String>>{};
+
   List<SubCategoryModel> _subCategories = [];
+  List<BrowseFilterSection> _filterSections = [];
   int _currentPage = 1;
+  int _selectedSubCategoryIndex = 0;
+  String? _selectedCategorySlug;
+  String? _selectedCategoryName;
   bool _isLoading = false;
   bool _hasMore = true;
   bool _loadMoreFailed = false;
+  bool _isLoadingFilters = false;
   String? _error;
-  final Map<String, int> _cartQtyByProductId = <String, int>{};
   String? _cartUpdatingProductId;
+  ProductSortOption _selectedSortOption = ProductSortOption.priceLowToHigh;
 
   @override
   void initState() {
     super.initState();
     _fetchProducts();
+    _fetchProductFilters(widget.category);
     _fetchCartSnapshot();
     _scrollController.addListener(_onScroll);
   }
@@ -67,24 +82,38 @@ class _ProductListingPageState extends State<ProductListingPage> {
   }
 
   Future<void> _fetchProducts() async {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
+
     try {
       final response = await _productsRepository.browseProducts(
-        categorySlug: widget.slug,
+        categorySlug: _selectedCategorySlug ?? widget.slug,
         page: _currentPage,
       );
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       setState(() {
-        _products.addAll(response.products);
-        _subCategories = response.subCategories;
+        if (_currentPage == 1) {
+          _products.clear();
+          _loadedProducts.clear();
+          if (_selectedCategorySlug == null) {
+            _baseCategoryProducts.clear();
+          }
+        }
+        _loadedProducts.addAll(response.products);
+        if (_selectedCategorySlug == null) {
+          _baseCategoryProducts.addAll(response.products);
+        }
+        _rebuildVisibleProducts();
+
+        if (response.subCategories.isNotEmpty && _selectedCategorySlug == null) {
+          _subCategories = response.subCategories;
+        }
+
         _hasMore = response.pagination.isNextPage;
         if (_hasMore) {
           _currentPage = response.pagination.nextPage > 0
@@ -95,9 +124,26 @@ class _ProductListingPageState extends State<ProductListingPage> {
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) {
+      if (!mounted) return;
+
+      if (_selectedCategorySlug != null && _baseCategoryProducts.isNotEmpty) {
+        final fallbackProducts = _filterProductsForSubCategory(
+          _baseCategoryProducts,
+          _selectedCategoryName ?? _selectedCategorySlug ?? '',
+        );
+        setState(() {
+          _loadedProducts
+            ..clear()
+            ..addAll(fallbackProducts);
+          _rebuildVisibleProducts();
+          _hasMore = false;
+          _loadMoreFailed = false;
+          _isLoading = false;
+          _error = null;
+        });
         return;
       }
+
       if (_products.isEmpty) {
         setState(() {
           _error = userMessageFromError(
@@ -115,12 +161,107 @@ class _ProductListingPageState extends State<ProductListingPage> {
     }
   }
 
-  Future<void> _retryInitialLoad() async {
-    if (!mounted) {
-      return;
+  Future<void> _fetchProductFilters(String search) async {
+    if (!mounted || _isLoadingFilters) return;
+    setState(() {
+      _isLoadingFilters = true;
+    });
+    try {
+      final filters = await _productsRepository.browseProductFilters(
+        search: search,
+      );
+      if (!mounted) return;
+      setState(() {
+        _filterSections = filters;
+        _isLoadingFilters = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _filterSections = const <BrowseFilterSection>[];
+        _isLoadingFilters = false;
+      });
     }
+  }
+
+  List<ProductModel> _filterProductsForSubCategory(
+    List<ProductModel> products,
+    String subCategory,
+  ) {
+    final key = subCategory.toLowerCase();
+    final matched = products.where((product) {
+      final haystack = [
+        product.title,
+        product.slug,
+        product.brandSegmentName,
+        product.quickCommerceCategoryName,
+      ].join(' ').toLowerCase();
+
+      if (key.contains('cement')) {
+        return haystack.contains('cement') ||
+            haystack.contains('ppc') ||
+            haystack.contains('opc');
+      }
+      if (key.contains('waterproof')) {
+        return haystack.contains('waterproof') ||
+            haystack.contains('damp') ||
+            haystack.contains('crack') ||
+            haystack.contains('roof');
+      }
+      if (key.contains('concrete') || key.contains('admixture')) {
+        return haystack.contains('concrete') ||
+            haystack.contains('admixture') ||
+            haystack.contains('chemical');
+      }
+      if (key.contains('paint')) {
+        return haystack.contains('paint') ||
+            haystack.contains('putty') ||
+            haystack.contains('primer');
+      }
+
+      return haystack.contains(key);
+    }).toList();
+
+    return matched.isEmpty ? products : matched;
+  }
+
+  Future<void> _selectSubCategory(
+    int index,
+    SubCategoryModel subCategory,
+  ) async {
+    final nextSlug = subCategory.browseSlug;
+    final isSameSelection =
+        _selectedSubCategoryIndex == index && _selectedCategorySlug == nextSlug;
+    if (nextSlug.isEmpty || isSameSelection) return;
+    if (!mounted) return;
+
+    setState(() {
+      _selectedSubCategoryIndex = index;
+      _selectedCategorySlug = nextSlug;
+      _selectedCategoryName = subCategory.name;
+      _products.clear();
+      _loadedProducts.clear();
+      _currentPage = 1;
+      _hasMore = true;
+      _loadMoreFailed = false;
+      _error = null;
+    });
+
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+    await Future.wait([
+      _fetchProducts(),
+      _fetchProductFilters(subCategory.name),
+    ]);
+  }
+
+  Future<void> _retryInitialLoad() async {
+    if (!mounted) return;
+
     setState(() {
       _products.clear();
+      _loadedProducts.clear();
       _currentPage = 1;
       _hasMore = true;
       _loadMoreFailed = false;
@@ -132,24 +273,21 @@ class _ProductListingPageState extends State<ProductListingPage> {
 
   Future<void> _fetchCartSnapshot() async {
     if (!AuthSession.instance.isAuthenticated) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _cartQtyByProductId.clear();
       });
       return;
     }
+
     try {
       final response = await GetCartCall.call(userDetails: true);
-      if (!response.succeeded) {
-        return;
-      }
+      if (!response.succeeded) return;
+
       final data = _extractDataMap(response.jsonBody);
       final qtyMap = _extractQtyMap(data);
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       setState(() {
         _cartQtyByProductId
           ..clear()
@@ -160,28 +298,28 @@ class _ProductListingPageState extends State<ProductListingPage> {
     }
   }
 
-  Future<void> _changeProductQuantity(ProductModel product, int quantity) async {
+  Future<void> _changeProductQuantity(
+    ProductModel product,
+    int quantity,
+  ) async {
     if (product.hasVariants) {
-      final slug = product.slug;
       if (mounted) {
-        GoRouter.of(context).go('${ProductDetailPage.routePath}/$slug');
+        context.go('${ProductDetailPage.routePath}/${product.slug}');
       }
       return;
     }
-    if (quantity < 0) {
-      return;
-    }
+    if (quantity < 0) return;
+
     if (!AuthSession.instance.isAuthenticated) {
       if (mounted) {
-        GoRouter.of(context).go(LoginpageWidget.routePath);
+        context.go(LoginpageWidget.routePath);
       }
       return;
     }
 
     final productId = product.addToCartProductId;
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
+
     setState(() {
       _cartUpdatingProductId = productId;
     });
@@ -189,7 +327,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
     try {
       final response = await AddToCartCall.call(
         items: [
-          {'product': productId, 'quantity': quantity}
+          {'product': productId, 'quantity': quantity},
         ],
       );
 
@@ -202,18 +340,22 @@ class _ProductListingPageState extends State<ProductListingPage> {
 
       final data = _extractDataMap(response.jsonBody);
       final qtyMap = _extractQtyMap(data);
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       setState(() {
-        _cartQtyByProductId
-          ..clear()
-          ..addAll(qtyMap);
+        if (qtyMap.isNotEmpty) {
+          _cartQtyByProductId
+            ..clear()
+            ..addAll(qtyMap);
+        } else if (quantity > 0) {
+          _cartQtyByProductId[productId] = quantity;
+        } else {
+          _cartQtyByProductId.remove(productId);
+        }
       });
     } catch (e) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -227,9 +369,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
         ),
       );
     } finally {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _cartUpdatingProductId = null;
       });
@@ -239,13 +379,12 @@ class _ProductListingPageState extends State<ProductListingPage> {
   Future<void> _handleNotifyTap(ProductModel product) async {
     if (!AuthSession.instance.isAuthenticated) {
       if (mounted) {
-        GoRouter.of(context).go(LoginpageWidget.routePath);
+        context.go(LoginpageWidget.routePath);
       }
       return;
     }
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Notify feature will be enabled soon.'),
@@ -267,9 +406,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
     final result = <String, int>{};
 
     void addItem(dynamic item) {
-      if (item is! Map) {
-        return;
-      }
+      if (item is! Map) return;
+
       final map = Map<String, dynamic>.from(item);
       final productMap = map['product'] is Map
           ? Map<String, dynamic>.from(map['product'] as Map)
@@ -283,20 +421,17 @@ class _ProductListingPageState extends State<ProductListingPage> {
             (map['quantity'] ?? map['qty'] ?? map['count'] ?? 0).toString(),
           ) ??
           0;
-      if (productId == null || productId.isEmpty || qty <= 0) {
-        return;
-      }
+      if (productId == null || productId.isEmpty || qty <= 0) return;
+
       result[productId] = qty;
     }
 
     void addFromSubcart(dynamic subcart) {
-      if (subcart is! Map) {
-        return;
-      }
+      if (subcart is! Map) return;
+
       final items = subcart['items'];
-      if (items is! List) {
-        return;
-      }
+      if (items is! List) return;
+
       for (final item in items) {
         addItem(item);
       }
@@ -346,335 +481,462 @@ class _ProductListingPageState extends State<ProductListingPage> {
   @override
   Widget build(BuildContext context) {
     if (widget.category.isEmpty) {
-      return const MainScaffold(
-        currentIndex: 0,
-        child: Center(child: Text('No category selected.')),
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Center(child: Text('No category selected.')),
+        ),
       );
     }
 
-    // Use sub_categories from API
-    return MainScaffold(
-      currentIndex: 0,
-      showLocationheader: false,
-      showBackButton: true,
-      headerBackgroundColor: const Color(0xFFE8F2EF),
-      searchHintText: 'Search for product, category, brand..',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _subCategoryList(_subCategories),
-          _filterRow(context),
-          Expanded(
-            child: _error != null
-                ? ErrorStateView(
-                    message: _error!,
-                    onRetry: _retryInitialLoad,
-                  )
-                : _products.isEmpty && _isLoading
-                    ? const ProductGridSkeleton()
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: (_products.length / 2).ceil() +
-                            (_hasMore
-                                ? 2
-                                : 1), // +1 for bottom card, +1 for loader if hasMore
-                        itemBuilder: (context, index) {
-                          if (_hasMore &&
-                              index == (_products.length / 2).ceil()) {
-                            if (_isLoading) {
-                              return const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
-                            }
-                            if (_loadMoreFailed) {
-                              return Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: OutlinedButton.icon(
-                                    onPressed: _fetchProducts,
-                                    icon: const Icon(Icons.refresh),
-                                    label: const Text('Retry loading more'),
-                                  ),
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          }
-                          if (index ==
-                              (_products.length / 2).ceil() +
-                                  (_hasMore ? 1 : 0)) {
-                            return _bottomCard(context);
-                          }
-                          int i = index * 2;
-                          return Row(
-                            children: <Widget>[
-                              Expanded(
-                                child: ProductCard(
-                                  product: _products[i],
-                                  onTap: () {
-                                    final slug = _products[i].slug;
-                                    GoRouter.of(context).go(
-                                        '${ProductDetailPage.routePath}/$slug');
-                                  },
-                                  cartQuantity:
-                                      _cartQtyByProductId[_products[i].addToCartProductId] ??
-                                          0,
-                                  isCartUpdating:
-                                      _cartUpdatingProductId == _products[i].addToCartProductId,
-                                  onCartQuantityChanged: (quantity) =>
-                                      _changeProductQuantity(_products[i], quantity),
-                                  onNotifyTap: () => _handleNotifyTap(_products[i]),
-                                ),
-                              ),
-                              const SizedBox(width: 15),
-                              if (i + 1 < _products.length)
-                                Expanded(
-                                  child: ProductCard(
-                                    product: _products[i + 1],
-                                    onTap: () {
-                                      final slug = _products[i + 1].slug;
-                                      GoRouter.of(context).go(
-                                          '${ProductDetailPage.routePath}/$slug');
-                                    },
-                                    cartQuantity: _cartQtyByProductId[
-                                            _products[i + 1].addToCartProductId] ??
-                                        0,
-                                    isCartUpdating: _cartUpdatingProductId ==
-                                        _products[i + 1].addToCartProductId,
-                                    onCartQuantityChanged: (quantity) =>
-                                        _changeProductQuantity(
-                                            _products[i + 1], quantity),
-                                    onNotifyTap: () =>
-                                        _handleNotifyTap(_products[i + 1]),
-                                  ),
-                                )
-                              else
-                                const Expanded(child: SizedBox()),
-                            ],
-                          );
-                        },
-                      ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _subCategoryList(List<SubCategoryModel> subs) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Text(
-            widget.category,
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.w700,
-              fontSize: 17,
-              color: const Color(0xFF0A243F),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 116,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: subs.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              final sub = subs[index];
-              final name = sub.name;
-              final image = sub.image;
-
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 73,
-                    height: 73,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F1F2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: (image.isNotEmpty)
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: CachedNetworkImage(
-                              imageUrl: image,
-                              fit: BoxFit.cover,
-                              memCacheWidth: 146,
-                              placeholder: (context, url) => const Center(
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.chair_outlined, size: 28),
-                            ),
-                          )
-                        : const Icon(Icons.chair_outlined, size: 28),
-                  ),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    width: 73,
-                    child: Text(
-                      name,
-                      style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF0A243F)),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          color: const Color(0xFFF1F1F2),
-          height: 12,
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  Widget _filterRow(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          _filterChip('Filter', icon: Icons.tune_rounded, onTap: () {
-            showModalBottomSheet<void>(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.white,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              builder: (_) => const FilterBottomSheet(),
-            );
-          }),
-          const SizedBox(width: 8),
-          _filterChip('Sort by', icon: Icons.keyboard_arrow_down_rounded),
-          const SizedBox(width: 8),
-          _filterChip('Same day delivery'),
-        ],
-      ),
-    );
-  }
-
-  Widget _filterChip(String label, {IconData? icon, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFDEDEDE)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
           children: [
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF0A243F),
-              ),
+            Column(
+              children: [
+                BrowseProductsHeader(
+                  category: widget.category,
+                  onBack: _goBack,
+                  onSearch: () => context.push('/search'),
+                ),
+                BrowseFilterRow(
+                  onFilterTap: () => _showFilters(),
+                  onSortTap: () => _showSortOptions(),
+                  onBrandTap: () => _showBrandFilters(),
+                  onPriceTap: () => _showPriceFilters(),
+                  selectedFilterCount: _selectedFilterCount,
+                  onClearFilters: _clearSelectedFilters,
+                ),
+                Expanded(child: _buildBody()),
+              ],
             ),
-            if (icon != null) ...[
-              const SizedBox(width: 4),
-              Icon(icon, size: 14, color: const Color(0xFF0A243F)),
-            ],
+            if (_cartQtyByProductId.isNotEmpty)
+              FloatingCartSummary(
+                products: _products,
+                cartQtyByProductId: _cartQtyByProductId,
+                onTap: () => context.go('/cart'),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _bottomCard(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      height: 138,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8E6B6),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Can't find what you're looking for?",
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: const Color(0xFF0A243F),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "Suggest the item you want and we will try to add it.",
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF0A243F).withOpacity(0.7),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: () {
-                    GoRouter.of(context).go(RfqFormPage.routePath);
-                  },
-                  child: Container(
-                    height: 32,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: const Color(0xFF0A243F)),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Send a request',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF0A243F),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildBody() {
+    if (_subCategories.isEmpty && _error != null) {
+      return ErrorStateView(
+        message: _error!,
+        onRetry: _retryInitialLoad,
+      );
+    }
+
+    if (_subCategories.isEmpty && _products.isEmpty && _isLoading) {
+      return const ProductGridSkeleton();
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SideSubCategoryRail(
+          category: widget.category,
+          categorySlug: widget.slug,
+          subCategories: _subCategories,
+          selectedIndex: _selectedSubCategoryIndex,
+          onSelected: _selectSubCategory,
+        ),
+        Expanded(
+          child: _buildProductPane(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductPane() {
+    if (_error != null) {
+      return ErrorStateView(
+        message: _error!,
+        onRetry: _retryInitialLoad,
+      );
+    }
+
+    return BrowseProductFeed(
+      scrollController: _scrollController,
+      products: _products,
+      subCategories: _subCategories,
+      brandOptions: _filterOptionLabels('brand'),
+      productTypeOptions: _filterOptionLabels('brand_segment'),
+      category: _selectedCategoryName ?? widget.category,
+      categorySlug: _selectedCategorySlug ?? widget.slug,
+      hasMore: _hasMore,
+      isLoading: _isLoading,
+      loadMoreFailed: _loadMoreFailed,
+      cartQtyByProductId: _cartQtyByProductId,
+      cartUpdatingProductId: _cartUpdatingProductId,
+      onRetryLoadMore: _fetchProducts,
+      onProductTap: (product) {
+        context.go('${ProductDetailPage.routePath}/${product.slug}');
+      },
+      onCartQuantityChanged: _changeProductQuantity,
+      onNotifyTap: _handleNotifyTap,
+      onRequestTap: () => context.go(RfqFormPage.routePath),
+    );
+  }
+
+  List<String> _filterOptionLabels(String key) {
+    for (final section in _filterSections) {
+      if (section.key == key) {
+        return section.options.map((option) => option.label).toList();
+      }
+    }
+    return const <String>[];
+  }
+
+  void _updateSelectedFilters(Map<String, Set<String>> selectedValuesByKey) {
+    setState(() {
+      _selectedFilterValuesByKey
+        ..clear()
+        ..addAll(
+          selectedValuesByKey.map(
+            (key, value) => MapEntry(key, Set<String>.from(value)),
           ),
-        ],
+        );
+      _rebuildVisibleProducts();
+    });
+  }
+
+  void _clearSelectedFilters() {
+    setState(() {
+      _selectedFilterValuesByKey.clear();
+      _rebuildVisibleProducts();
+    });
+  }
+
+  int get _selectedFilterCount {
+    return _selectedFilterValuesByKey.values.fold<int>(
+      0,
+      (count, values) => count + values.length,
+    );
+  }
+
+  void _rebuildVisibleProducts() {
+    _products
+      ..clear()
+      ..addAll(_filteredProducts(_loadedProducts));
+    _applySelectedSort();
+  }
+
+  List<ProductModel> _filteredProducts(List<ProductModel> products) {
+    final activeFilters = _selectedFilterValuesByKey.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .toList();
+    if (activeFilters.isEmpty) return List<ProductModel>.from(products);
+
+    return products.where((product) {
+      for (final entry in activeFilters) {
+        if (!_productMatchesFilter(product, entry.key, entry.value)) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+  }
+
+  bool _productMatchesFilter(
+    ProductModel product,
+    String key,
+    Set<String> selectedValues,
+  ) {
+    if (key == 'brand') {
+      return _matchesSelectedTokens(
+        product.brandName,
+        key,
+        selectedValues,
+      );
+    }
+
+    if (key == 'brand_segment') {
+      return _matchesSelectedTokens(
+        product.brandSegmentName,
+        key,
+        selectedValues,
+      );
+    }
+
+    if (_isPriceFilterKey(key)) {
+      return _matchesSelectedPrice(product, key, selectedValues);
+    }
+
+    final haystack = [
+      product.title,
+      product.slug,
+      product.brandName,
+      product.brandSegmentName,
+      product.quickCommerceCategoryName,
+      product.badgeOption,
+      product.features.values.join(' '),
+    ].join(' ');
+
+    return _matchesSelectedTokens(haystack, key, selectedValues);
+  }
+
+  bool _matchesSelectedTokens(
+    String value,
+    String key,
+    Set<String> selectedValues,
+  ) {
+    final normalizedValue = value.toLowerCase();
+    final tokens = _selectedFilterTokens(key, selectedValues);
+    return tokens.any(
+      (token) => token.isNotEmpty && normalizedValue.contains(token),
+    );
+  }
+
+  bool _matchesSelectedPrice(
+    ProductModel product,
+    String key,
+    Set<String> selectedValues,
+  ) {
+    final price = product.vendorPricing.vendorSellingPrice;
+    final section = _filterSectionForKey(key);
+
+    for (final selectedValue in selectedValues) {
+      final option = section == null
+          ? null
+          : _filterOptionForValue(section, selectedValue);
+      final range = _priceRangeFromText(
+        [
+          selectedValue,
+          if (option != null) option.label,
+        ].join(' '),
+      );
+      if (range == null) continue;
+
+      final min = range.min;
+      final max = range.max;
+      if ((min == null || price >= min) && (max == null || price <= max)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Set<String> _selectedFilterTokens(String key, Set<String> selectedValues) {
+    final section = _filterSectionForKey(key);
+    final tokens = <String>{};
+
+    for (final selectedValue in selectedValues) {
+      tokens.add(selectedValue.toLowerCase());
+      final option = section == null
+          ? null
+          : _filterOptionForValue(section, selectedValue);
+      if (option != null) {
+        tokens.add(option.label.toLowerCase());
+      }
+    }
+
+    return tokens;
+  }
+
+  BrowseFilterSection? _filterSectionForKey(String key) {
+    for (final section in _filterSections) {
+      if (section.key == key) return section;
+    }
+    return null;
+  }
+
+  bool _isPriceFilterKey(String key) {
+    final normalizedKey = key.toLowerCase();
+    if (normalizedKey == 'price' || normalizedKey.contains('price')) {
+      return true;
+    }
+    final section = _filterSectionForKey(key);
+    final label = section?.label.toLowerCase() ?? '';
+    return label == 'price' || label.contains('price');
+  }
+
+  BrowseFilterOption? _filterOptionForValue(
+    BrowseFilterSection section,
+    String value,
+  ) {
+    for (final option in section.options) {
+      if (option.value == value) return option;
+    }
+    return null;
+  }
+
+  _PriceRange? _priceRangeFromText(String value) {
+    final numbers = RegExp(r'\d+(?:\.\d+)?')
+        .allMatches(value.replaceAll(',', ''))
+        .map((match) => num.tryParse(match.group(0) ?? ''))
+        .whereType<num>()
+        .toList();
+    if (numbers.isEmpty) return null;
+
+    final lowerValue = value.toLowerCase();
+    if (numbers.length == 1) {
+      if (lowerValue.contains('above') ||
+          lowerValue.contains('over') ||
+          lowerValue.contains('+')) {
+        return _PriceRange(min: numbers.first);
+      }
+      if (lowerValue.contains('below') ||
+          lowerValue.contains('under') ||
+          lowerValue.contains('less')) {
+        return _PriceRange(max: numbers.first);
+      }
+      return _PriceRange(min: numbers.first, max: numbers.first);
+    }
+
+    numbers.sort();
+    return _PriceRange(min: numbers.first, max: numbers.last);
+  }
+
+  void _applySelectedSort() {
+    switch (_selectedSortOption) {
+      case ProductSortOption.popularity:
+        _products.sort((a, b) => b.reviewCount.compareTo(a.reviewCount));
+        break;
+      case ProductSortOption.priceLowToHigh:
+        _products.sort(
+          (a, b) => a.vendorPricing.vendorSellingPrice.compareTo(
+            b.vendorPricing.vendorSellingPrice,
+          ),
+        );
+        break;
+      case ProductSortOption.priceHighToLow:
+        _products.sort(
+          (a, b) => b.vendorPricing.vendorSellingPrice.compareTo(
+            a.vendorPricing.vendorSellingPrice,
+          ),
+        );
+        break;
+      case ProductSortOption.ratings:
+        _products.sort((a, b) => b.rating.compareTo(a.rating));
+        break;
+    }
+  }
+
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(HomepageWidget.routePath);
+    }
+  }
+
+  Future<void> _showFilters({String? initialSectionKey}) async {
+    if (_filterSections.isEmpty) {
+      await _fetchProductFilters(_selectedCategoryName ?? widget.category);
+    }
+    if (!mounted) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => FilterBottomSheet(
+        sections: _filterSections,
+        initialSectionKey: initialSectionKey,
+        selectedValuesByKey: _selectedFilterValuesByKey,
+        onSelectionChanged: _updateSelectedFilters,
       ),
     );
   }
+
+  Future<void> _showBrandFilters() async {
+    await _showSingleFilterSheet(
+      sectionKey: 'brand',
+      title: 'Brands',
+    );
+  }
+
+  Future<void> _showPriceFilters() async {
+    if (_filterSections.isEmpty) {
+      await _fetchProductFilters(_selectedCategoryName ?? widget.category);
+    }
+    if (!mounted) return;
+
+    await _showSingleFilterSheet(
+      sectionKey: _priceFilterKey(),
+      title: 'Price',
+    );
+  }
+
+  Future<void> _showSingleFilterSheet({
+    required String sectionKey,
+    required String title,
+  }) async {
+    if (_filterSections.isEmpty) {
+      await _fetchProductFilters(_selectedCategoryName ?? widget.category);
+    }
+    if (!mounted) return;
+
+    final sections = _filterSections
+        .where((section) => section.key == sectionKey)
+        .toList(growable: false);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => FilterBottomSheet(
+        sections: sections,
+        title: title,
+        showSidebar: false,
+        selectedValuesByKey: _selectedFilterValuesByKey,
+        onSelectionChanged: _updateSelectedFilters,
+      ),
+    );
+  }
+
+  String _priceFilterKey() {
+    for (final section in _filterSections) {
+      final key = section.key.toLowerCase();
+      final label = section.label.toLowerCase();
+      if (key == 'price' ||
+          key.contains('price') ||
+          label == 'price' ||
+          label.contains('price')) {
+        return section.key;
+      }
+    }
+    return 'price';
+  }
+
+  Future<void> _showSortOptions() async {
+    if (!mounted) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.6),
+      backgroundColor: Colors.transparent,
+      builder: (_) => SortBottomSheet(
+        selectedOption: _selectedSortOption,
+        onOptionSelected: (option) {
+          if (!mounted) return;
+          setState(() {
+            _selectedSortOption = option;
+            _applySelectedSort();
+          });
+        },
+      ),
+    );
+  }
+}
+
+class _PriceRange {
+  const _PriceRange({this.min, this.max});
+
+  final num? min;
+  final num? max;
 }

@@ -81,6 +81,10 @@ class ProductModel {
     required this.images,
     required this.features,
     required this.variants,
+    required this.brandName,
+    required this.brandLogoUrl,
+    required this.brandSegmentName,
+    required this.quickCommerceCategoryName,
     required this.badgeOption,
     required this.stock,
     required this.stockDetailsStock,
@@ -101,6 +105,10 @@ class ProductModel {
   final List<ProductImageRef> images;
   final Map<String, String> features;
   final Map<String, List<ProductVariantOption>> variants;
+  final String brandName;
+  final String brandLogoUrl;
+  final String brandSegmentName;
+  final String quickCommerceCategoryName;
   final String badgeOption;
   final num stock;
   final num stockDetailsStock;
@@ -136,6 +144,17 @@ class ProductModel {
         : <String, dynamic>{};
     final variantsMap = map['variants'] is Map
         ? Map<String, dynamic>.from(map['variants'] as Map)
+        : <String, dynamic>{};
+    final brandSegment = map['brand_segment'] is Map
+        ? Map<String, dynamic>.from(map['brand_segment'] as Map)
+        : <String, dynamic>{};
+    final brandMap = map['brand'] is Map
+        ? Map<String, dynamic>.from(map['brand'] as Map)
+        : (map['brand_details'] is Map
+            ? Map<String, dynamic>.from(map['brand_details'] as Map)
+            : <String, dynamic>{});
+    final quickCommerceCategory = map['quick_commerce_category'] is Map
+        ? Map<String, dynamic>.from(map['quick_commerce_category'] as Map)
         : <String, dynamic>{};
     final stockDetails = map['stock_details'] is Map
         ? Map<String, dynamic>.from(map['stock_details'] as Map)
@@ -174,6 +193,23 @@ class ProductModel {
               .toList(),
         );
       }),
+      brandName: (map['brand_name'] ??
+              brandMap['name'] ??
+              brandMap['brand_name'] ??
+              map['brand_title'] ??
+              (map['brand'] is String ? map['brand'] : null) ??
+              '')
+          .toString(),
+      brandLogoUrl: (map['brand_logo'] ??
+              map['brand_logo_url'] ??
+              brandMap['logo'] ??
+              brandMap['image'] ??
+              brandMap['logo_url'] ??
+              '')
+          .toString(),
+      brandSegmentName: brandSegment['name']?.toString() ?? '',
+      quickCommerceCategoryName:
+          quickCommerceCategory['display_name']?.toString() ?? '',
       badgeOption: map['badge_option']?.toString() ?? '',
       stock: num.tryParse(map['stock']?.toString() ?? '0') ?? 0,
       stockDetailsStock:
@@ -196,17 +232,35 @@ class SubCategoryModel {
   const SubCategoryModel({
     required this.name,
     required this.image,
+    required this.slug,
   });
 
   final String name;
   final String image;
+  final String slug;
+
+  String get browseSlug => slug.isNotEmpty ? slug : _slugFromName(name);
 
   factory SubCategoryModel.fromMap(Map<String, dynamic> map) {
     return SubCategoryModel(
       name: map['sub_category_name']?.toString() ?? '',
       image: map['image']?.toString() ?? '',
+      slug: (map['sub_category_slug'] ??
+              map['slug'] ??
+              map['category_slug'] ??
+              map['sub_category'] ??
+              '')
+          .toString(),
     );
   }
+}
+
+String _slugFromName(String value) {
+  return value
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
 }
 
 class PaginationModel {
@@ -236,6 +290,81 @@ class BrowseProductsResult {
   final List<ProductModel> products;
   final List<SubCategoryModel> subCategories;
   final PaginationModel pagination;
+}
+
+class BrowseFilterOption {
+  const BrowseFilterOption({
+    required this.value,
+    required this.label,
+    required this.count,
+  });
+
+  final String value;
+  final String label;
+  final int count;
+
+  factory BrowseFilterOption.fromMap(Map<String, dynamic> map) {
+    return BrowseFilterOption(
+      value: map['value']?.toString() ?? '',
+      label: map['label']?.toString() ?? map['value']?.toString() ?? '',
+      count: int.tryParse(map['count']?.toString() ?? '0') ?? 0,
+    );
+  }
+}
+
+class BrowseFilterSection {
+  const BrowseFilterSection({
+    required this.key,
+    required this.label,
+    required this.searchable,
+    required this.options,
+    required this.meta,
+  });
+
+  final String key;
+  final String label;
+  final bool searchable;
+  final List<BrowseFilterOption> options;
+  final Map<String, dynamic> meta;
+
+  factory BrowseFilterSection.fromMap(Map<String, dynamic> map) {
+    final optionsRaw =
+        map['options'] is List ? List<dynamic>.from(map['options'] as List) : <dynamic>[];
+    final metaMap = map['meta'] is Map
+        ? Map<String, dynamic>.from(map['meta'] as Map)
+        : <String, dynamic>{};
+    final bucketsRaw = metaMap['buckets'] is List
+        ? List<dynamic>.from(metaMap['buckets'] as List)
+        : <dynamic>[];
+    final options = optionsRaw
+        .whereType<Map>()
+        .map((e) => BrowseFilterOption.fromMap(Map<String, dynamic>.from(e)))
+        .where((option) => option.label.isNotEmpty)
+        .toList();
+    if (options.isEmpty && bucketsRaw.isNotEmpty) {
+      options.addAll(
+        bucketsRaw.whereType<Map>().map((bucket) {
+          final from = bucket['from']?.toString() ?? '';
+          final to = bucket['to']?.toString() ?? '';
+          final label = from.isNotEmpty && to.isNotEmpty
+              ? '\u20B9$from - \u20B9$to'
+              : [from, to].where((value) => value.isNotEmpty).join(' - ');
+          return BrowseFilterOption(
+            value: [from, to].where((value) => value.isNotEmpty).join(','),
+            label: label,
+            count: 0,
+          );
+        }).where((option) => option.label.isNotEmpty),
+      );
+    }
+    return BrowseFilterSection(
+      key: map['key']?.toString() ?? '',
+      label: map['label']?.toString() ?? '',
+      searchable: map['searchable'] == true,
+      options: options,
+      meta: metaMap,
+    );
+  }
 }
 
 class ProductDetailsResult {
