@@ -1,4 +1,4 @@
-Run application
+fRun application
 >>flutter run  
 
 Clean APP

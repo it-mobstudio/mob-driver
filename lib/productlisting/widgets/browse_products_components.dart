@@ -1,8 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:m_o_b_demand_side/components/item_card.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
-import 'package:m_o_b_demand_side/homepage/widgets/product_rail_section.dart';
 
 class BrowseProductsHeader extends StatelessWidget {
   const BrowseProductsHeader({
@@ -525,14 +525,13 @@ class _ProductGridRow extends StatelessWidget {
 
   Widget _cardForProduct(ProductModel product) {
     return Center(
-      child: HomeProductCard(
+      child: ItemCard(
         product: product,
         onTap: () => onProductTap(product),
-        cartQuantity: cartQtyByProductId[product.addToCartProductId] ?? 0,
-        isCartUpdating: cartUpdatingProductId == product.addToCartProductId,
-        onCartQuantityChanged: (quantity) =>
-            onCartQuantityChanged(product, quantity),
-        onNotifyTap: () => onNotifyTap(product),
+        quantityResolver: (productId) => cartQtyByProductId[productId] ?? 0,
+        isUpdatingResolver: (productId) => cartUpdatingProductId == productId,
+        onCartQuantityChanged: onCartQuantityChanged,
+        onNotifyTap: onNotifyTap,
       ),
     );
   }

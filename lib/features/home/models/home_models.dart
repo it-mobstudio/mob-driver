@@ -1,3 +1,5 @@
+import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
+
 class HomeCategoryModel {
   const HomeCategoryModel({
     required this.name,
@@ -21,12 +23,42 @@ class HomeCategoryModel {
   }
 }
 
+class HomeProductSectionModel {
+  const HomeProductSectionModel({
+    required this.id,
+    required this.title,
+    required this.products,
+  });
+
+  final String id;
+  final String title;
+  final List<ProductModel> products;
+
+  factory HomeProductSectionModel.fromMap(Map<String, dynamic> map) {
+    final productsRaw =
+        map['products'] is List ? List<dynamic>.from(map['products'] as List) : <dynamic>[];
+    return HomeProductSectionModel(
+      id: map['id']?.toString() ?? '',
+      title: map['title']?.toString() ?? '',
+      products: productsRaw
+          .whereType<Map>()
+          .map((e) => ProductModel.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
+    );
+  }
+}
+
 class HomeDataModel {
   const HomeDataModel({
     required this.categories,
+    required this.productSections,
   });
 
   final List<HomeCategoryModel> categories;
+  final List<HomeProductSectionModel> productSections;
 
-  static const empty = HomeDataModel(categories: <HomeCategoryModel>[]);
+  static const empty = HomeDataModel(
+    categories: <HomeCategoryModel>[],
+    productSections: <HomeProductSectionModel>[],
+  );
 }

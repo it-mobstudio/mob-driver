@@ -453,6 +453,7 @@ import 'package:m_o_b_demand_side/orders/order_detail_page.dart';
 import 'package:m_o_b_demand_side/orders/orders_page.dart';
 import 'package:m_o_b_demand_side/productdetails/product_detail_page.dart';
 import 'package:m_o_b_demand_side/productlisting/product_listing_page.dart';
+import 'package:m_o_b_demand_side/productsearch/brand_product_search_page.dart';
 import 'package:m_o_b_demand_side/rfq/rfq.dart';
 import 'package:m_o_b_demand_side/rfq/rfq_details_page.dart';
 import 'package:m_o_b_demand_side/rfq/rfq_form_page.dart';
@@ -602,6 +603,23 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => ProductDetailPage(
             slug: params.getParam<String>('slug', ParamType.string) ?? '',
           ),
+        ),
+        FFRoute(
+          name: BrandProductSearchPage.routeName,
+          path: '${BrandProductSearchPage.routePath}/:slug',
+          builder: (context, params) {
+            final extra = params.state.extra is Map
+                ? Map<String, dynamic>.from(params.state.extra as Map)
+                : <String, dynamic>{};
+            final slug = params.getParam<String>('slug', ParamType.string) ?? '';
+            final brandName = extra['brandName']?.toString() ??
+                params.state.uri.queryParameters['brand'] ??
+                _labelFromSlug(slug);
+            return BrandProductSearchPage(
+              searchTerm: brandName,
+              brandName: brandName,
+            );
+          },
         ),
         FFRoute(
           name: SearchPage.routeName,
@@ -856,4 +874,12 @@ extension GoRouterLocationExtension on GoRouter {
         : routerDelegate.currentConfiguration;
     return matchList.uri.toString();
   }
+}
+
+String _labelFromSlug(String slug) {
+  return slug
+      .split('-')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }

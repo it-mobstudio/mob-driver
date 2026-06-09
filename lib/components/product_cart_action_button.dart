@@ -4,6 +4,12 @@ import 'package:m_o_b_demand_side/backend/api_requests/api_calls.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:m_o_b_demand_side/features/products/models/product_models.dart';
 
+enum ProductCartActionButtonStyle {
+  defaultStyle,
+  compact,
+  rail,
+}
+
 class ProductCartActionButton extends StatefulWidget {
   const ProductCartActionButton({
     super.key,
@@ -15,6 +21,7 @@ class ProductCartActionButton extends StatefulWidget {
     this.isSoldOut = false,
     this.availableStock,
     this.compact = false,
+    this.style = ProductCartActionButtonStyle.defaultStyle,
     this.showAddText = false,
     this.onAdd,
     this.onAddForQuote,
@@ -31,6 +38,7 @@ class ProductCartActionButton extends StatefulWidget {
   final bool isSoldOut;
   final int? availableStock;
   final bool compact;
+  final ProductCartActionButtonStyle style;
   final bool showAddText;
   final Future<void> Function(int quantity)? onAdd;
   final Future<void> Function(int quantity)? onAddForQuote;
@@ -46,6 +54,12 @@ class ProductCartActionButton extends StatefulWidget {
 class _ProductCartActionButtonState extends State<ProductCartActionButton> {
   late int _quantity;
   bool _isSubmitting = false;
+
+  bool get _isCompactStyle =>
+      widget.style == ProductCartActionButtonStyle.compact || widget.compact;
+
+  bool get _isRailStyle =>
+      widget.style == ProductCartActionButtonStyle.rail;
 
   bool get _isBusy =>
       widget.isFetching || widget.isFetchingCart || _isSubmitting;
@@ -159,17 +173,15 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
   @override
   Widget build(BuildContext context) {
     final hasVariants = widget.product.hasVariants;
-    final variantCount = widget.product.variants.values.fold<int>(
-      0,
-      (sum, options) => sum + options.length,
-    );
+    final variantCount = widget.product.variantOptionCount;
     final hasSellingPrice = widget.product.vendorPricing.vendorSellingPrice > 0;
     final shouldShowNotify =
         widget.isSoldOut || widget.product.shouldShowNotify;
     final shouldShowAdd = hasVariants || hasSellingPrice;
 
     if (widget.showCounter && !shouldShowNotify) {
-      return widget.compact ? _buildCompactCounter() : _buildCounter();
+      if (_isRailStyle) return _buildRailCounter();
+      return _isCompactStyle ? _buildCompactCounter() : _buildCounter();
     }
 
     if (shouldShowNotify) {
@@ -188,7 +200,76 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
     required bool hasVariants,
     required int variantCount,
   }) {
-    if (widget.compact) {
+    if (_isRailStyle) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _isBusy
+            ? null
+            : () {
+                if (hasVariants && widget.onVariantsTap != null) {
+                  widget.onVariantsTap!.call();
+                  return;
+                }
+                _handleAdd();
+              },
+        child: Container(
+          width: 68,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF0360E5)),
+          ),
+          child: _isSubmitting
+              ? const Center(
+                  child: SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'ADD',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0360E5),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 16 / 12,
+                      ),
+                    ),
+                    if (hasVariants && variantCount > 0)
+                      Container(
+                        width: double.infinity,
+                        height: 12,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: Color(0x1A0360E5),
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          '$variantCount options',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF7E7E7E),
+                            fontSize: 8,
+                            fontWeight: FontWeight.w500,
+                            height: 12 / 8,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+        ),
+      );
+    }
+
+    if (_isCompactStyle) {
       return GestureDetector(
         onTap: _isBusy
             ? null
@@ -276,7 +357,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
   }
 
   Widget _buildQuoteButton() {
-    if (widget.compact) {
+    if (_isCompactStyle) {
       return GestureDetector(
         onTap: _isBusy ? null : _handleQuote,
         child: _compactCircle(
@@ -327,7 +408,39 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
   }
 
   Widget _buildNotifyButton() {
-    if (widget.compact) {
+    if (_isRailStyle) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _isBusy ? null : _handleNotify,
+        child: Container(
+          width: 68,
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF0360E5)),
+          ),
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  'NOTIFY',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0360E5),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    height: 16 / 10,
+                  ),
+                ),
+        ),
+      );
+    }
+
+    if (_isCompactStyle) {
       return GestureDetector(
         onTap: _isBusy ? null : _handleNotify,
         child: _compactCircle(
@@ -412,6 +525,60 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRailCounter() {
+    final stock = _resolvedAvailableStock;
+    final hasStockLimit =
+        widget.product.isQuickEcommerceEnabled && stock != null && stock > 0;
+    final maxAllowedQuantity = hasStockLimit ? stock : null;
+    final canIncrease =
+        maxAllowedQuantity == null || _quantity < maxAllowedQuantity;
+
+    return Container(
+      width: 91,
+      height: 40,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0360E5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: _isSubmitting
+          ? const Center(
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _RailQuantityControlTapTarget(
+                  icon: Icons.remove,
+                  onTap: _isBusy ? null : () => _updateQuantity(_quantity - 1),
+                ),
+                Text(
+                  '$_quantity',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    height: 20 / 14,
+                  ),
+                ),
+                _RailQuantityControlTapTarget(
+                  icon: Icons.add,
+                  onTap: _isBusy || !canIncrease
+                      ? null
+                      : () => _updateQuantity(_quantity + 1),
+                ),
+              ],
+            ),
     );
   }
 
@@ -500,6 +667,33 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
       ),
       alignment: Alignment.center,
       child: child,
+    );
+  }
+}
+
+class _RailQuantityControlTapTarget extends StatelessWidget {
+  const _RailQuantityControlTapTarget({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        width: 32,
+        height: 40,
+        child: Icon(
+          icon,
+          size: 16,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 }

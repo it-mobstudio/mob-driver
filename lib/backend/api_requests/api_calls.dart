@@ -54,6 +54,23 @@ class HomeDataCall {
   }
 }
 
+class HomeProductSectionsCall {
+  /// Calls the homepage product sections API.
+  static Future<ApiCallResponse> call() async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'homeProductSections',
+      apiUrl: AppConfig.apiUri('/home/product-sections/').toString(),
+      callType: ApiCallType.GET,
+      headers: _jsonHeaders,
+      params: const {},
+      returnBody: true,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
 class CheckOTPCall {
   /// Calls the check OTP API with the given phone and otp.
   static Future<ApiCallResponse> call({

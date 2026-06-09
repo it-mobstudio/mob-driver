@@ -302,7 +302,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
     ProductModel product,
     int quantity,
   ) async {
-    if (product.hasVariants) {
+    if (product.hasVariants && product.mobSku.isEmpty) {
       if (mounted) {
         context.go('${ProductDetailPage.routePath}/${product.slug}');
       }

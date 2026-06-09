@@ -54,14 +54,142 @@ class ProductVariantOption {
   }
 }
 
+class ProductChildVariantInfo {
+  const ProductChildVariantInfo({required this.value});
+
+  final String value;
+
+  factory ProductChildVariantInfo.fromMap(Map<String, dynamic> map) {
+    return ProductChildVariantInfo(
+      value: map['value']?.toString() ?? '',
+    );
+  }
+}
+
 class ProductChildRef {
-  const ProductChildRef({required this.stock});
+  const ProductChildRef({
+    required this.stock,
+    required this.id,
+    required this.slug,
+    required this.title,
+    required this.imageUrl,
+    required this.mobSku,
+    required this.vendorProductId,
+    required this.productPrice,
+    required this.maximumRetailPrice,
+    required this.discount,
+    required this.quickEcommerceEnabled,
+    required this.variantInfo,
+  });
 
   final num stock;
+  final String id;
+  final String slug;
+  final String title;
+  final String imageUrl;
+  final String mobSku;
+  final String vendorProductId;
+  final num productPrice;
+  final num maximumRetailPrice;
+  final num discount;
+  final bool quickEcommerceEnabled;
+  final List<ProductChildVariantInfo> variantInfo;
+
+  String get label {
+    final values = variantInfo
+        .map((item) => item.value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList();
+    if (values.isNotEmpty) {
+      return values.join(' - ');
+    }
+    return title;
+  }
 
   factory ProductChildRef.fromMap(Map<String, dynamic> map) {
+    final vendorPricingMap = map['vendorPricings'] is Map
+        ? Map<String, dynamic>.from(map['vendorPricings'] as Map)
+        : <String, dynamic>{};
+    final variantInfoRaw = map['variant_info'] is List
+        ? List<dynamic>.from(map['variant_info'] as List)
+        : <dynamic>[];
     return ProductChildRef(
       stock: num.tryParse(map['stock']?.toString() ?? '0') ?? 0,
+      id: (map['product_id'] ?? map['id'] ?? '').toString(),
+      slug: map['slug']?.toString() ?? '',
+      title: (map['item_name_title'] ?? map['product_name'] ?? '').toString(),
+      imageUrl: (map['image'] ?? map['primary_image'] ?? '').toString(),
+      mobSku: map['mob_sku']?.toString() ?? '',
+      vendorProductId:
+          (map['vendor_product_id'] ?? vendorPricingMap['vendor_product_id'] ?? '')
+              .toString(),
+      productPrice: num.tryParse(
+            (vendorPricingMap['vendor_selling_price'] ?? map['product_price'] ?? '0')
+                .toString(),
+          ) ??
+          0,
+      maximumRetailPrice: num.tryParse(
+            (vendorPricingMap['maximum_retail_price'] ?? map['mrp'] ?? '0')
+                .toString(),
+          ) ??
+          0,
+      discount: num.tryParse(
+            (map['discount'] ?? vendorPricingMap['discount'] ?? '0').toString(),
+          ) ??
+          0,
+      quickEcommerceEnabled: _parseBool(
+        map['quick_ecommerce_enabled'] ?? vendorPricingMap['quick_ecommerce_enabled'],
+      ),
+      variantInfo: variantInfoRaw
+          .whereType<Map>()
+          .map(
+            (e) => ProductChildVariantInfo.fromMap(
+              Map<String, dynamic>.from(e),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  ProductModel toProductModel(ProductModel parent) {
+    return ProductModel(
+      id: id.isNotEmpty ? id : parent.id,
+      slug: slug.isNotEmpty ? slug : parent.slug,
+      title: title.isNotEmpty ? title : parent.title,
+      mobSku: mobSku,
+      maximumRetailPrice:
+          maximumRetailPrice > 0 ? maximumRetailPrice : parent.maximumRetailPrice,
+      rating: parent.rating,
+      reviewCount: parent.reviewCount,
+      productDescription: parent.productDescription,
+      productBulletPoints: parent.productBulletPoints,
+      vendorPricing: VendorPricing(
+        vendorSellingPrice:
+            productPrice > 0 ? productPrice : parent.vendorPricing.vendorSellingPrice,
+        discount: discount,
+        fullfillmentLatency: parent.vendorPricing.fullfillmentLatency,
+        vendorProductId: vendorProductId.isNotEmpty
+            ? vendorProductId
+            : parent.vendorPricing.vendorProductId,
+        bmpId: parent.vendorPricing.bmpId,
+        quickEcommerceEnabled:
+            quickEcommerceEnabled || parent.vendorPricing.quickEcommerceEnabled,
+      ),
+      images: imageUrl.isNotEmpty
+          ? <ProductImageRef>[ProductImageRef(url: imageUrl)]
+          : parent.images,
+      features: parent.features,
+      variants: const <String, List<ProductVariantOption>>{},
+      brandName: parent.brandName,
+      brandLogoUrl: parent.brandLogoUrl,
+      brandSegmentName: parent.brandSegmentName,
+      quickCommerceCategoryName: parent.quickCommerceCategoryName,
+      badgeOption: parent.badgeOption,
+      stock: stock,
+      stockDetailsStock: stock,
+      quickEcommerceEnabled:
+          quickEcommerceEnabled || parent.quickEcommerceEnabled,
+      childProducts: const <ProductChildRef>[],
     );
   }
 }
@@ -116,7 +244,18 @@ class ProductModel {
   final List<ProductChildRef> childProducts;
 
   String get primaryImageUrl => images.isNotEmpty ? images.first.url : '';
-  bool get hasVariants => variants.values.any((v) => v.isNotEmpty);
+  bool get hasVariants =>
+      variants.values.any((v) => v.isNotEmpty) || childProducts.isNotEmpty;
+  int get variantOptionCount {
+    final variantsCount = variants.values.fold<int>(
+      0,
+      (sum, options) => sum + options.length,
+    );
+    if (variantsCount > 0) {
+      return variantsCount;
+    }
+    return childProducts.length;
+  }
   String get addToCartProductId =>
       vendorPricing.vendorProductId.isNotEmpty ? vendorPricing.vendorProductId : id;
   bool get isQuickEcommerceEnabled =>

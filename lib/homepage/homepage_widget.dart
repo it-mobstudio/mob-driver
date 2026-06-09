@@ -70,23 +70,20 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                 const SectionTitle(title: 'Top brands for you'),
                 const HomeBrandGrid(),
                 const HomeSavingsCard(),
-                const ProductRailSection(
-                  title: 'Deal of the day',
-                  categorySlug: 'building-materials',
-                ),
-                const HomeWhyChooseCard(),
-                const ProductRailSection(
-                  title: 'Quality electricals at lowest price',
-                  categorySlug: 'electrical',
-                ),
-                const ProductRailSection(
-                  title: 'Paint more, pay less',
-                  categorySlug: 'paints-putty-and-coatings',
-                ),
-                const ProductRailSection(
-                  title: 'Genuine hardware deals',
-                  categorySlug: 'bathroom',
-                ),
+                ...homeData.productSections.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final section = entry.value;
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ProductRailSection(
+                        title: section.title,
+                        products: section.products,
+                      ),
+                      if (index == 0) const HomeWhyChooseCard(),
+                    ],
+                  );
+                }),
                 const HomeRewardCard(),
                 const SizedBox(height: 24),
               ],
