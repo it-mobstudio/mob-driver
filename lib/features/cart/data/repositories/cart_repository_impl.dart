@@ -74,6 +74,8 @@ class CartRepositoryImpl implements CartRepository {
     final billingGst = _parseBillingGst(data, shippingInfo.gst);
     final savedAddresses = _parseSavedAddresses(data, shippingInfo);
 
+    final rfqCount = _rfqCount(data['quote_cart']);
+
     return CartSummaryEntity(
       items: items,
       subtotal: subtotal.toDouble(),
@@ -90,7 +92,9 @@ class CartRepositoryImpl implements CartRepository {
         'mobstar_points',
         'mobstarPoints',
       ]),
-      rfqItemCount: _rfqCount(data['quote_cart']),
+      rfqItemCount: rfqCount,
+      itemCount: _int(data, const ['item_count', 'itemCount', 'total_items'],
+          fallback: items.length + rfqCount),
       shippingTitle: shippingInfo.title,
       shippingSubtitle: shippingInfo.subtitle,
       shippingRecipientName: shippingInfo.name,

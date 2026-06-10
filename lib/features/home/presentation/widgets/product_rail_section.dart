@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
+import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/shared/item_card.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
@@ -64,9 +67,7 @@ class _ProductRailSectionState extends State<ProductRailSection> {
               SectionTitle(title: widget.title),
               const SizedBox(
                 height: 276,
-                child: Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
               ),
             ],
           );
@@ -77,9 +78,8 @@ class _ProductRailSectionState extends State<ProductRailSection> {
   }
 
   Widget _buildSection({required List<ProductModel> products}) {
-    if (products.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (products.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -91,8 +91,45 @@ class _ProductRailSectionState extends State<ProductRailSection> {
             scrollDirection: Axis.horizontal,
             itemCount: products.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              return ItemCard(product: products[index]);
+            itemBuilder: (ctx, index) {
+              final product = products[index];
+              // BlocBuilder here so each card subscribes to CartBloc directly.
+              // ListView.separated caches its children and does NOT propagate
+              // parent widget updates to already-built items — so watching at
+              // the ProductRailSection level never reaches the cards after first
+              // render. Each BlocBuilder is an independent subscriber.
+              return BlocBuilder<CartBloc, CartState>(
+                builder: (context, cartState) {
+                  final cart =
+                      cartState is CartLoaded ? cartState : null;
+                  return ItemCard(
+                    product: product,
+                    quantityResolver: cart != null
+                        ? (id) => cart.quantityFor(id)
+                        : null,
+                    isUpdatingResolver: cart != null
+                        ? (id) => cart.isUpdatingFor(id)
+                        : null,
+                    onCartQuantityChanged: (p, qty) async {
+                      context.read<CartBloc>().add(
+                            CartQuantityUpdateRequested(
+                              item: CartItem(
+                                title: p.title,
+                                imageAsset: p.primaryImageUrl,
+                                qty: qty,
+                                unitPrice: p.vendorPricing.vendorSellingPrice
+                                    .toDouble(),
+                                sellerCode: 'STORE',
+                                vendorProductId: p.addToCartProductId,
+                              ),
+                              newQty: qty,
+                            ),
+                          );
+                    },
+                    onNotifyTap: (_) async {},
+                  );
+                },
+              );
             },
           ),
         ),

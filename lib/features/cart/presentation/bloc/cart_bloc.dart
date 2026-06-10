@@ -35,25 +35,49 @@ final class CartLoaded extends CartState {
     required this.summary,
     this.actionError,
     this.updatingItemKey,
+    this.successMessage,
   });
   final CartSummaryEntity summary;
   final String? actionError;
   final String? updatingItemKey;
 
+  /// Transient — shown once via BlocListener then gone on next state.
+  final String? successMessage;
+
   bool get isUpdating => updatingItemKey != null;
+
+  /// Comes directly from API `item_count` field — no calculation.
+  int get totalItemCount => summary.itemCount;
+
+  /// vendorProductId → quantity map (computed once per state instance).
+  Map<String, int> get quantityMap => {
+        for (final item in summary.items)
+          if (item.vendorProductId.isNotEmpty) item.vendorProductId: item.qty,
+      };
+
+  int quantityFor(String vendorProductId) =>
+      quantityMap[vendorProductId] ?? 0;
+
+  bool isUpdatingFor(String vendorProductId) =>
+      updatingItemKey != null && updatingItemKey == vendorProductId;
 
   CartLoaded copyWith({
     CartSummaryEntity? summary,
     String? actionError,
     String? updatingItemKey,
+    String? successMessage,
     bool clearActionError = false,
     bool clearUpdatingKey = false,
+    bool clearSuccessMessage = false,
   }) {
     return CartLoaded(
       summary: summary ?? this.summary,
       actionError: clearActionError ? null : (actionError ?? this.actionError),
       updatingItemKey:
           clearUpdatingKey ? null : (updatingItemKey ?? this.updatingItemKey),
+      successMessage: clearSuccessMessage
+          ? null
+          : (successMessage ?? this.successMessage),
     );
   }
 }
@@ -102,17 +126,31 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     final current = state;
     if (current is! CartLoaded || current.isUpdating) return;
 
-    final itemKey = event.item.itemKey.isNotEmpty ? event.item.itemKey : event.item.title;
+    final itemKey =
+        event.item.itemKey.isNotEmpty ? event.item.itemKey : event.item.title;
     emit(current.copyWith(updatingItemKey: itemKey, clearActionError: true));
 
-    final (summary, failure) = event.newQty <= 0
-        ? await _repository.removeFromCart(
-            cartItemId: event.item.cartItemId,
-            vendorProductId: event.item.vendorProductId,
-          )
-        : await _repository.addToCart(
+    final isAdding = event.newQty > 0;
+
+    // When removing, the CartItem from the UI may not carry a cart_item_id
+    // (it is built from ProductModel, not from cart state). Resolve it from
+    // the current cart summary so the API always receives the real integer id.
+    String resolvedCartItemId = event.item.cartItemId;
+    if (!isAdding && resolvedCartItemId.isEmpty) {
+      final match = current.summary.items.where(
+        (ci) => ci.vendorProductId == event.item.vendorProductId,
+      );
+      if (match.isNotEmpty) resolvedCartItemId = match.first.cartItemId;
+    }
+
+    final (_, failure) = isAdding
+        ? await _repository.addToCart(
             vendorProductId: event.item.vendorProductId,
             quantity: event.newQty,
+          )
+        : await _repository.removeFromCart(
+            cartItemId: resolvedCartItemId,
+            vendorProductId: event.item.vendorProductId,
           );
 
     if (failure != null) {
@@ -120,8 +158,18 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         clearUpdatingKey: true,
         actionError: failure.message,
       ));
+      return;
+    }
+
+    // Add/remove endpoints don't return the full cart — fetch fresh state.
+    final (freshSummary, freshFailure) = await _repository.getCart();
+    if (freshFailure != null) {
+      emit(current.copyWith(clearUpdatingKey: true));
     } else {
-      emit(CartLoaded(summary: summary!));
+      emit(CartLoaded(
+        summary: freshSummary!,
+        successMessage: isAdding ? 'Added to cart' : null,
+      ));
     }
   }
 
@@ -136,18 +184,26 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     final current = state;
     if (current is! CartLoaded || current.isUpdating) return;
 
-    final itemKey = event.item.itemKey.isNotEmpty ? event.item.itemKey : event.item.title;
+    final itemKey =
+        event.item.itemKey.isNotEmpty ? event.item.itemKey : event.item.title;
     emit(current.copyWith(updatingItemKey: itemKey, clearActionError: true));
 
-    final (summary, failure) = await _repository.removeFromCart(
+    final (_, failure) = await _repository.removeFromCart(
       cartItemId: event.item.cartItemId,
       vendorProductId: event.item.vendorProductId,
     );
 
     if (failure != null) {
-      emit(current.copyWith(clearUpdatingKey: true, actionError: failure.message));
+      emit(current.copyWith(
+          clearUpdatingKey: true, actionError: failure.message));
+      return;
+    }
+
+    final (freshSummary, freshFailure) = await _repository.getCart();
+    if (freshFailure != null) {
+      emit(current.copyWith(clearUpdatingKey: true));
     } else {
-      emit(CartLoaded(summary: summary!));
+      emit(CartLoaded(summary: freshSummary!));
     }
   }
 

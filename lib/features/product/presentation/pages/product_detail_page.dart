@@ -538,8 +538,7 @@ class ProductDetailBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final price = product.vendorPricing.vendorSellingPrice;
-    final mrp = product.maximumRetailPrice;
+    final inCart = !product.shouldShowNotify && quantity > 0;
 
     return SafeArea(
       top: false,
@@ -558,59 +557,78 @@ class ProductDetailBottomBar extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: inCart ? _buildInCartRow(context) : _buildAddRow(context),
+      ),
+    );
+  }
+
+  Widget _buildInCartRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () => context.go('/cart'),
+            child: Container(
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0360E5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const Icon(Icons.shopping_cart_outlined,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
                   Text(
-                    '₹ ${price.round()}',
+                    'View cart',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF0A243F),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      height: 24 / 18,
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      height: 22 / 15,
                     ),
                   ),
-                  if (mrp > 0)
-                    Text(
-                      'MRP ₹ ${mrp.round()}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF7E868A),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        height: 14 / 11,
-                        decoration: TextDecoration.lineThrough,
-                      ),
-                    ),
                 ],
               ),
             ),
-            SizedBox(
-              height: 40,
-              child: ProductCartActionButton(
-                product: product,
-                showCounter: !product.shouldShowNotify && quantity > 0,
-                quantity: quantity > 0 ? quantity : 1,
-                isFetchingCart: isUpdating,
-                showAddText: true,
-                onAdd: (nextQuantity) =>
-                    onCartQuantityChanged(product, nextQuantity),
-                onAddForQuote: (nextQuantity) =>
-                    onCartQuantityChanged(product, nextQuantity),
-                onQuantityChanged: (nextQuantity) =>
-                    onCartQuantityChanged(product, nextQuantity),
-                onNotify: () => onNotifyTap(product),
-                onVariantsTap: onVariantsTap,
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(width: 12),
+        ProductCartActionButton(
+          product: product,
+          showCounter: true,
+          quantity: quantity,
+          isFetchingCart: isUpdating,
+          onQuantityChanged: (nextQuantity) =>
+              onCartQuantityChanged(product, nextQuantity),
+          onNotify: () => onNotifyTap(product),
+          onVariantsTap: onVariantsTap,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: ProductCartActionButton(
+            product: product,
+            showCounter: false,
+            quantity: 1,
+            isFetchingCart: isUpdating,
+            showAddText: true,
+            onAdd: (nextQuantity) =>
+                onCartQuantityChanged(product, nextQuantity),
+            onAddForQuote: (nextQuantity) =>
+                onCartQuantityChanged(product, nextQuantity),
+            onNotify: () => onNotifyTap(product),
+            onVariantsTap: onVariantsTap,
+          ),
+        ),
+      ],
     );
   }
 }

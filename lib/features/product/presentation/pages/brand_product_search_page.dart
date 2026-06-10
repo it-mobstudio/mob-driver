@@ -103,12 +103,6 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
   Widget build(BuildContext context) {
     final title = (widget.brandName ?? widget.searchTerm).trim();
 
-    final cartState = context.watch<CartBloc>().state;
-    final cartQtyByProductId = cartState is CartLoaded
-        ? {for (final item in cartState.summary.items) item.vendorProductId: item.qty}
-        : const <String, int>{};
-    final cartUpdatingKey =
-        cartState is CartLoaded ? cartState.updatingItemKey : null;
 
     return BlocProvider<ProductBloc>.value(
       value: _productBloc,
@@ -166,18 +160,27 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
                           ),
                           itemBuilder: (context, index) {
                             final product = products[index];
-                            return Center(
-                              child: ItemCard(
-                                product: product,
-                                onTap: () => context.go(
-                                    '${ProductDetailPage.routePath}/${product.slug}'),
-                                quantityResolver: (productId) =>
-                                    cartQtyByProductId[productId] ?? 0,
-                                isUpdatingResolver: (productId) =>
-                                    cartUpdatingKey == productId,
-                                onCartQuantityChanged: _changeProductQuantity,
-                                onNotifyTap: _handleNotifyTap,
-                              ),
+                            return BlocBuilder<CartBloc, CartState>(
+                              builder: (context, cartState) {
+                                final cart = cartState is CartLoaded
+                                    ? cartState
+                                    : null;
+                                return Center(
+                                  child: ItemCard(
+                                    product: product,
+                                    onTap: () => context.go(
+                                        '${ProductDetailPage.routePath}/${product.slug}'),
+                                    quantityResolver: cart != null
+                                        ? (id) => cart.quantityFor(id)
+                                        : null,
+                                    isUpdatingResolver: cart != null
+                                        ? (id) => cart.isUpdatingFor(id)
+                                        : null,
+                                    onCartQuantityChanged: _changeProductQuantity,
+                                    onNotifyTap: _handleNotifyTap,
+                                  ),
+                                );
+                              },
                             );
                           },
                         ),

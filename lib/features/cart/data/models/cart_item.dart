@@ -122,10 +122,11 @@ class CartItem {
     String fallback = '',
   }) {
     for (final key in keys) {
-      final value = map[key];
-      if (value is String && value.trim().isNotEmpty) {
-        return value.trim();
-      }
+      final raw = map[key];
+      if (raw == null) continue;
+      // API may return IDs as integers — coerce to string.
+      final value = raw is String ? raw.trim() : raw.toString().trim();
+      if (value.isNotEmpty) return value;
     }
     return fallback;
   }

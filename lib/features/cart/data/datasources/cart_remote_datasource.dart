@@ -50,8 +50,8 @@ class CartRemoteDatasourceImpl implements CartRemoteDatasource {
     final response = await _dio.post<dynamic>(
       '/orders/cart/remove_cart_item/',
       data: {
-        'cart_item_id': cartItemId,
-        'cart_item_ids': [cartItemId],
+        'cart_item_id': int.tryParse(cartItemId) ?? cartItemId,
+        'quantity': 0,
       },
     );
     return _extractData(response.data);

@@ -302,7 +302,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
     }
 
     return SizedBox(
-      height: 36,
+      height: 48,
       child: ElevatedButton(
         onPressed: _isBusy
             ? null
@@ -314,17 +314,21 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                 _handleAdd();
               },
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0A243F),
+          backgroundColor: const Color(0xFF0360E5),
           foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 48),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
         ),
         child: _isSubmitting
             ? const SizedBox(
                 height: 14,
                 width: 14,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : Row(
                 mainAxisSize: MainAxisSize.min,
@@ -333,7 +337,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                     'ADD',
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w700,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
                   if (hasVariants && variantCount > 0) ...[
@@ -342,7 +346,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                       '$variantCount options',
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.w500,
-                        fontSize: 10,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -376,14 +380,14 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
     }
 
     return SizedBox(
-      height: 36,
+      height: 40,
       child: OutlinedButton(
         onPressed: _isBusy ? null : _handleQuote,
         style: OutlinedButton.styleFrom(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          side: const BorderSide(color: Color(0xFF0A243F)),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          side: const BorderSide(color: Color(0xFF0360E5)),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
         ),
         child: _isSubmitting
             ? const SizedBox(
@@ -396,7 +400,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w700,
                   fontSize: widget.showAddText ? 14 : 12,
-                  color: const Color(0xFF0A243F),
+                  color: const Color(0xFF0360E5),
                 ),
               ),
       ),
@@ -595,7 +599,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
@@ -655,7 +659,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),

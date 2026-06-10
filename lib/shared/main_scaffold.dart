@@ -1,8 +1,10 @@
 // lib/widgets/main_scaffold.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_page.dart';
@@ -56,7 +58,20 @@ class MainScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<CartBloc, CartState>(
+      listenWhen: (_, s) => s is CartLoaded && s.successMessage != null,
+      listener: (context, state) {
+        final msg = (state as CartLoaded).successMessage!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF0360E5),
+          ),
+        );
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
@@ -89,163 +104,83 @@ class MainScaffold extends StatelessWidget {
       ),
 
 // Inside your MainScaffold
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: currentIndex,
-        onTap: (index) => _onTabSelected(context, index),
-        showUnselectedLabels: true,
-        items: [
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/home.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF6C7C8C),
-                BlendMode.srcIn,
-              ),
-              height: 24,
-            ),
-            activeIcon: SvgPicture.asset(
-              'assets/icons/home.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF0A243F),
-                BlendMode.srcIn,
-              ),
-              height: 24,
-            ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/projects.svg',
-              // colorFilter: const ColorFilter.mode(
-              //   Color(0xFF6C7C8C),
-              //   BlendMode.srcIn,
-              // ),
-              height: 24,
-            ),
-            activeIcon: SvgPicture.asset(
-              'assets/icons/projects.svg',
-              // colorFilter: const ColorFilter.mode(
-              //   Color(0xFF6C7C8C),
-              //   BlendMode.srcIn,
-              // ),
-              height: 24,
-            ),
-            label: 'Projects',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/mobstar.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF6C7C8C),
-                BlendMode.srcIn,
-              ),
-              height: 24,
-            ),
-            activeIcon: SvgPicture.asset(
-              'assets/icons/mobstar.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF0A243F),
-                BlendMode.srcIn,
-              ),
-              height: 24,
-            ),
-            label: 'Mobstar',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/profile.svg',
-              // colorFilter: const ColorFilter.mode(
-              //   Color(0xFF6C7C8C),
-              //   BlendMode.srcIn,
-              // ),
-              height: 24,
-            ),
-            activeIcon: SvgPicture.asset(
-              'assets/icons/profile.svg',
-              // colorFilter: const ColorFilter.mode(
-              //   Color(0xFF0A243F),
-              //   BlendMode.srcIn,
-              // ),
-              height: 24,
-            ),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
-            icon: Stack(
-              children: [
-                SvgPicture.asset(
-                  'assets/icons/cart.svg',
+      bottomNavigationBar: BlocSelector<CartBloc, CartState, int>(
+        selector: (state) =>
+            state is CartLoaded ? state.totalItemCount : 0,
+        builder: (context, cartCount) {
+          return BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            currentIndex: currentIndex,
+            onTap: (index) => _onTabSelected(context, index),
+            showUnselectedLabels: true,
+            items: [
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset(
+                  'assets/icons/home.svg',
                   colorFilter: const ColorFilter.mode(
                     Color(0xFF6C7C8C),
                     BlendMode.srcIn,
                   ),
                   height: 24,
                 ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints:
-                        const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text(
-                      '0',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            activeIcon: Stack(
-              children: [
-                SvgPicture.asset(
-                  'assets/icons/cart.svg',
+                activeIcon: SvgPicture.asset(
+                  'assets/icons/home.svg',
                   colorFilter: const ColorFilter.mode(
                     Color(0xFF0A243F),
                     BlendMode.srcIn,
                   ),
                   height: 24,
                 ),
-                Positioned(
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints:
-                        const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text(
-                      '0',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset('assets/icons/projects.svg', height: 24),
+                activeIcon:
+                    SvgPicture.asset('assets/icons/projects.svg', height: 24),
+                label: 'Projects',
+              ),
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset(
+                  'assets/icons/mobstar.svg',
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF6C7C8C),
+                    BlendMode.srcIn,
                   ),
+                  height: 24,
                 ),
-              ],
-            ),
-            label: 'Cart',
-          ),
-        ],
+                activeIcon: SvgPicture.asset(
+                  'assets/icons/mobstar.svg',
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF0A243F),
+                    BlendMode.srcIn,
+                  ),
+                  height: 24,
+                ),
+                label: 'Mobstar',
+              ),
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset('assets/icons/profile.svg', height: 24),
+                activeIcon:
+                    SvgPicture.asset('assets/icons/profile.svg', height: 24),
+                label: 'Profile',
+              ),
+              BottomNavigationBarItem(
+                icon: _CartIcon(count: cartCount, active: false),
+                activeIcon: _CartIcon(count: cartCount, active: true),
+                label: 'Cart',
+              ),
+            ],
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
+}
 
+// ── MainScaffold body helpers ────────────────────────────────────────────────
+
+extension on MainScaffold {
   Widget _locationHeader() {
     return Padding(
       padding: const EdgeInsets.only(top: 12, left: 16, right: 16, bottom: 10),
@@ -352,6 +287,52 @@ class MainScaffold extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CartIcon extends StatelessWidget {
+  const _CartIcon({required this.count, required this.active});
+
+  final int count;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        SvgPicture.asset(
+          'assets/icons/cart.svg',
+          colorFilter: ColorFilter.mode(
+            active ? const Color(0xFF0A243F) : const Color(0xFF6C7C8C),
+            BlendMode.srcIn,
+          ),
+          height: 24,
+        ),
+        if (count > 0)
+          Positioned(
+            right: -4,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                count > 99 ? '99+' : '$count',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

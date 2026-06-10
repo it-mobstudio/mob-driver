@@ -31,6 +31,7 @@ class CartSummaryEntity {
     required this.total,
     required this.rewardPoints,
     required this.rfqItemCount,
+    required this.itemCount,
     required this.shippingTitle,
     required this.shippingSubtitle,
     required this.shippingRecipientName,
@@ -50,6 +51,10 @@ class CartSummaryEntity {
   final double total;
   final int rewardPoints;
   final int rfqItemCount;
+
+  /// Raw `item_count` from the API — use this for the cart badge.
+  final int itemCount;
+
   final String shippingTitle;
   final String shippingSubtitle;
   final String shippingRecipientName;
@@ -60,7 +65,7 @@ class CartSummaryEntity {
   final String billingGstNumber;
   final List<CartAddressEntity> savedAddresses;
 
-  bool get isEmpty => items.isEmpty;
+  bool get isEmpty => itemCount == 0 && items.isEmpty;
   bool get hasRfqItems => rfqItemCount > 0;
   bool get hasDeliveryAddress => shippingAddress.trim().isNotEmpty;
 
@@ -81,6 +86,7 @@ class CartSummaryEntity {
     total: 0,
     rewardPoints: 0,
     rfqItemCount: 0,
+    itemCount: 0,
     shippingTitle: 'Shipping address',
     shippingSubtitle: 'Add an address to continue',
     shippingRecipientName: '',
