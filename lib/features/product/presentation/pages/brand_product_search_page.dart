@@ -61,7 +61,7 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
 
   Future<void> _changeProductQuantity(ProductModel product, int quantity) async {
     if (product.hasVariants && product.mobSku.isEmpty) {
-      if (mounted) context.go('${ProductDetailPage.routePath}/${product.slug}');
+      if (mounted) context.push('${ProductDetailPage.routePath}/${product.slug}');
       return;
     }
     if (quantity < 0) return;

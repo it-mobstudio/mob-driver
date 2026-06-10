@@ -1,11 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
-import 'package:m_o_b_demand_side/shared/product_cart_action_button.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
-import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 
 class ProductDetailTopHeader extends StatelessWidget {
   const ProductDetailTopHeader({
@@ -350,13 +347,9 @@ class ProductInfoBlock extends StatelessWidget {
   const ProductInfoBlock({
     super.key,
     required this.product,
-    this.selectedVariants = const <String, String?>{},
-    this.onVariantSelect,
   });
 
   final ProductModel product;
-  final Map<String, String?> selectedVariants;
-  final void Function(String key, ProductVariantOption option)? onVariantSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -434,7 +427,7 @@ class ProductInfoBlock extends StatelessWidget {
                     const SizedBox(width: 12),
                     Flexible(
                       child: Text(
-                        'Inclusive of 18% tax / unit',
+                        'Inclusive of 18% tax/ unit',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -453,141 +446,7 @@ class ProductInfoBlock extends StatelessWidget {
             ),
           ),
         ),
-        if (product.hasVariants)
-          _DetailCard(
-            padding: EdgeInsets.zero,
-            child: _ProductInfoVariants(
-              variants: product.variants,
-              selectedVariants: selectedVariants,
-              onSelect: onVariantSelect,
-            ),
-          ),
       ],
-    );
-  }
-}
-
-class _ProductInfoVariants extends StatelessWidget {
-  const _ProductInfoVariants({
-    required this.variants,
-    required this.selectedVariants,
-    required this.onSelect,
-  });
-
-  final Map<String, List<ProductVariantOption>> variants;
-  final Map<String, String?> selectedVariants;
-  final void Function(String key, ProductVariantOption option)? onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = variants.entries
-        .where((entry) => entry.value.any((option) => option.value.trim().isNotEmpty))
-        .toList();
-
-    if (entries.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final entry in entries)
-            _ProductInfoVariantGroup(
-              entry: entry,
-              selectedVariants: selectedVariants,
-              onSelect: onSelect,
-              addBottomGap: entry != entries.last,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProductInfoVariantGroup extends StatelessWidget {
-  const _ProductInfoVariantGroup({
-    required this.entry,
-    required this.selectedVariants,
-    required this.onSelect,
-    required this.addBottomGap,
-  });
-
-  final MapEntry<String, List<ProductVariantOption>> entry;
-  final Map<String, String?> selectedVariants;
-  final void Function(String key, ProductVariantOption option)? onSelect;
-  final bool addBottomGap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isColorGroup = entry.key.toLowerCase().contains('colo');
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: addBottomGap ? 14 : 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _beautifyVariantKey(entry.key),
-            style: GoogleFonts.inter(
-              color: const Color(0xFF0A243F),
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              height: 20 / 13,
-            ),
-          ),
-          const SizedBox(height: 10),
-          if (isColorGroup)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: entry.value.asMap().entries.map((optionEntry) {
-                  return _productInfoVariantChip(
-                    optionEntry: optionEntry,
-                    isColorGroup: true,
-                  );
-                }).toList(),
-              ),
-            )
-          else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: entry.value.asMap().entries.map((optionEntry) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: _productInfoVariantChip(
-                      optionEntry: optionEntry,
-                      isColorGroup: false,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _productInfoVariantChip({
-    required MapEntry<int, ProductVariantOption> optionEntry,
-    required bool isColorGroup,
-  }) {
-    final option = optionEntry.value;
-    final selected = selectedVariants[entry.key] == option.value ||
-        (selectedVariants[entry.key] == null && optionEntry.key == 0);
-
-    return _VariantChip(
-      label: option.value,
-      isSelected: selected,
-      isColorChip: isColorGroup,
-      height: 40,
-      horizontalPadding: 16,
-      fontSize: 13,
-      onTap: () => onSelect?.call(entry.key, option),
     );
   }
 }
@@ -629,13 +488,37 @@ class _DetailCard extends StatelessWidget {
   }
 }
 
-class DeliveryInfoCard extends StatelessWidget {
-  const DeliveryInfoCard({super.key, required this.product});
+class ProductDeliverySection extends StatelessWidget {
+  const ProductDeliverySection({
+    super.key,
+    required this.product,
+    this.onViewOtherSellers,
+  });
 
   final ProductModel product;
+  final VoidCallback? onViewOtherSellers;
 
   @override
   Widget build(BuildContext context) {
+    final latency = product.vendorPricing.fullfillmentLatency.trim();
+    final details = <_DeliveryInfoItem>[
+      if (latency.isNotEmpty)
+        _DeliveryInfoItem(
+          title: 'Delivery',
+          value: latency,
+          emphasized: true,
+        ),
+      if (product.vendorPricing.bmpId.trim().isNotEmpty)
+        _DeliveryInfoItem(
+          title: 'Fulfilled by',
+          value: product.vendorPricing.bmpId.trim(),
+        ),
+    ];
+
+    if (details.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return _DetailCard(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       child: Column(
@@ -643,22 +526,135 @@ class DeliveryInfoCard extends StatelessWidget {
         children: [
           _SectionTitle(title: 'Delivery details'),
           const SizedBox(height: 10),
-          _DeliveryDetailRow(
-            icon: Icons.local_shipping_outlined,
-            text: 'Delivery in 1-4 hrs',
-            isHighlighted: true,
-            showQwikAssets: true,
-          ),
-          const SizedBox(height: 8),
-          const _DeliveryDetailRow(
-            icon: Icons.inventory_2_outlined,
-            text: 'Fulfilled by BENG 21',
-            leadingAsset: 'assets/images/home.svg',
-          ),
+          if (details.isNotEmpty) _DynamicDetailRow(item: details.first),
+          if (details.length > 1) ...[
+            const SizedBox(height: 8),
+            _DynamicDetailRow(
+              item: details[1],
+              trailingAction: onViewOtherSellers == null
+                  ? null
+                  : _DynamicDetailRowAction(
+                      label: 'View other sellers',
+                      onTap: onViewOtherSellers!,
+                    ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+class _DeliveryInfoItem {
+  const _DeliveryInfoItem({
+    required this.title,
+    required this.value,
+    this.emphasized = false,
+  });
+
+  final String title;
+  final String value;
+  final bool emphasized;
+}
+
+class _DynamicDetailRow extends StatelessWidget {
+  const _DynamicDetailRow({
+    required this.item,
+    this.trailingAction,
+  });
+
+  final _DeliveryInfoItem item;
+  final _DynamicDetailRowAction? trailingAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: item.emphasized ? 40 : 42,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: item.emphasized
+            ? const Color(0xFFFFEFCE)
+            : const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.vertical(
+          top: item.emphasized ? const Radius.circular(12) : Radius.zero,
+          bottom: item.emphasized ? Radius.zero : const Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (item.emphasized) ...[
+            SvgPicture.asset(
+              'assets/images/car.svg',
+              width: 16,
+              height: 16,
+            ),
+            const SizedBox(width: 12),
+            SvgPicture.asset(
+              'assets/images/qwik.svg',
+              height: 14,
+            ),
+          ] else ...[
+            SvgPicture.asset(
+              'assets/images/home.svg',
+              width: 16,
+              height: 16,
+            ),
+          ],
+          const SizedBox(width: 8),
+          Text(
+            item.title,
+            style: GoogleFonts.inter(
+              color: const Color(0xFF57627A),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              height: 16 / 11,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              item.value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: item.emphasized ? 12 : 11,
+                fontWeight: FontWeight.w600,
+                height: item.emphasized ? 18 / 12 : 16 / 11,
+              ),
+            ),
+          ),
+          if (trailingAction != null) ...[
+            const SizedBox(width: 12),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: trailingAction!.onTap,
+              child: Text(
+                trailingAction!.label,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0360E5),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  height: 18 / 12,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DynamicDetailRowAction {
+  const _DynamicDetailRowAction({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
 }
 
 class MobCreditBannerSection extends StatelessWidget {
@@ -1036,61 +1032,87 @@ class ProductLongDetailsSection extends StatelessWidget {
   }
 }
 
-class SimilarProductsSection extends StatelessWidget {
-  const SimilarProductsSection({
+class ProductVariantSummarySection extends StatelessWidget {
+  const ProductVariantSummarySection({
     super.key,
-    required this.products,
+    required this.product,
+    required this.onTap,
   });
 
-  final List<ProductModel> products;
+  final ProductModel product;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    if (products.isEmpty) {
+    if (!product.hasVariants || product.variantOptionCount <= 1) {
       return const SizedBox.shrink();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
-          child: Text(
-            'View similar items',
-            style: GoogleFonts.inter(
-              color: const Color(0xFF0A243F),
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              height: 24 / 17,
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 282,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              final product = products[index];
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: SizedBox(
-                  width: 136,
-                  child: _SimilarProductCard(
-                    product: product,
-                    onTap: () {
-                      GoRouter.of(context).go(
-                        '${ProductDetailPage.routePath}/${product.slug}',
-                      );
-                    },
+    final previewValues = <String>[
+      ...product.variants.values
+          .expand((options) => options)
+          .map((option) => option.value.trim())
+          .where((value) => value.isNotEmpty)
+          .take(3),
+      ...product.childProducts
+          .take(3)
+          .map((child) => child.label.trim())
+          .where((value) => value.isNotEmpty),
+    ].where((value) => value.isNotEmpty).toSet().take(3).toList();
+
+    return _DetailCard(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: _SectionTitle(title: 'Available options'),
+              ),
+              TextButton(
+                onPressed: onTap,
+                child: Text(
+                  'More options',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0360E5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    height: 18 / 12,
                   ),
                 ),
-              );
-            },
+              ),
+            ],
           ),
-        ),
-      ],
+          if (previewValues.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: previewValues
+                  .map(
+                    (label) => _VariantChip(
+                      label: label,
+                      isSelected: false,
+                      isColorChip: false,
+                      onTap: onTap,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Text(
+            '${product.variantOptionCount} options available for this product',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF57627A),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 18 / 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1098,30 +1120,35 @@ class SimilarProductsSection extends StatelessWidget {
 class VariantOptionsSection extends StatelessWidget {
   const VariantOptionsSection({
     super.key,
+    required this.product,
     required this.variants,
     required this.selectedVariants,
     required this.onSelect,
+    this.onMoreOptions,
   });
 
+  final ProductModel product;
   final Map<String, List<ProductVariantOption>> variants;
   final Map<String, String?> selectedVariants;
   final void Function(String key, ProductVariantOption option) onSelect;
+  final VoidCallback? onMoreOptions;
 
   @override
   Widget build(BuildContext context) {
-    if (variants.isEmpty) {
+    final groupedVariants = _groupedVariants();
+    if (groupedVariants.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final keys = variants.keys.toList();
+    final keys = groupedVariants.keys.toList();
 
     return _DetailCard(
-      padding: const EdgeInsets.fromLTRB(12, 12, 0, 2),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final key in keys)
-            if ((variants[key] ?? const <ProductVariantOption>[])
+            if ((groupedVariants[key] ?? const <ProductVariantOption>[])
                 .isNotEmpty) ...[
               Text(
                 _beautifyVariantKey(key),
@@ -1133,32 +1160,150 @@ class VariantOptionsSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: (variants[key] ?? const <ProductVariantOption>[])
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  ...(groupedVariants[key] ?? const <ProductVariantOption>[])
                       .asMap()
                       .entries
+                      .take(8)
                       .map((entry) {
                     final option = entry.value;
-                    final selected = selectedVariants[key] == option.value ||
-                        (selectedVariants[key] == null && entry.key == 0);
+                    final activeValue =
+                        selectedVariants[key] ?? product.activeVariantSelections[key];
+                    final selected = activeValue == option.value ||
+                        (activeValue == null && entry.key == 0);
                     return _VariantChip(
                       label: option.value,
                       isSelected: selected,
                       isColorChip: false,
                       onTap: () => onSelect(key, option),
                     );
-                  }).toList(),
-                ),
+                  }),
+                  if ((groupedVariants[key] ?? const <ProductVariantOption>[]).length > 8 &&
+                      onMoreOptions != null)
+                    GestureDetector(
+                      onTap: onMoreOptions,
+                      child: Container(
+                        height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 13),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: const Color(0xFFDFE4EC)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'More options',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF0360E5),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            height: 16 / 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 14),
             ],
         ],
       ),
     );
+  }
+
+  Map<String, List<ProductVariantOption>> _groupedVariants() {
+    final fromVariantCombinations = _groupFromVariantCombinations();
+    if (fromVariantCombinations.isNotEmpty) {
+      return fromVariantCombinations;
+    }
+
+    if (variants.isNotEmpty) {
+      return variants;
+    }
+    if (product.childProducts.isEmpty) {
+      return const <String, List<ProductVariantOption>>{};
+    }
+
+    final grouped = <String, List<ProductVariantOption>>{};
+    for (final child in product.childProducts) {
+      for (var index = 0; index < child.variantInfo.length; index++) {
+        final info = child.variantInfo[index];
+        final key = info.name.trim().isNotEmpty
+            ? info.name.trim()
+            : 'Option ${index + 1}';
+        final value = info.value.trim();
+        if (value.isEmpty) continue;
+
+        final options = grouped.putIfAbsent(
+          key,
+          () => <ProductVariantOption>[],
+        );
+        final alreadyExists = options.any((option) => option.value == value);
+        if (!alreadyExists) {
+          options.add(
+            ProductVariantOption(
+              value: value,
+              mobSku: child.mobSku,
+            ),
+          );
+        }
+      }
+    }
+    return grouped;
+  }
+
+  Map<String, List<ProductVariantOption>> _groupFromVariantCombinations() {
+    if (product.variantCombinations.isEmpty) {
+      return const <String, List<ProductVariantOption>>{};
+    }
+
+    final orderedKeys = product.variantAttributes.isNotEmpty
+        ? product.variantAttributes
+        : product.variantCombinations.first.attributes.keys.toList();
+
+    final grouped = <String, List<ProductVariantOption>>{};
+    for (final key in orderedKeys) {
+      final configuredValues = product.availableOptions[key] ?? const <String>[];
+      final values = configuredValues.isNotEmpty
+          ? configuredValues
+          : product.variantCombinations
+              .map((item) => item.attributes[key]?.trim() ?? '')
+              .where((value) => value.isNotEmpty)
+              .toSet()
+              .toList();
+
+      final options = <ProductVariantOption>[];
+      for (final value in values) {
+        final matchingCombination = product.variantCombinations.firstWhere(
+          (item) => (item.attributes[key]?.trim() ?? '') == value,
+          orElse: () => ProductVariantCombination(
+            attributes: const <String, String>{},
+            mobSku: '',
+            slug: '',
+            productId: '',
+            stock: 0,
+            isAvailable: true,
+            inStock: true,
+            stockStatus: '',
+          ),
+        );
+        options.add(
+          ProductVariantOption(
+            value: value,
+            mobSku: matchingCombination.mobSku,
+          ),
+        );
+      }
+
+      if (options.isNotEmpty) {
+        grouped[key] = options;
+      }
+    }
+
+    return grouped;
   }
 
   String _beautifyVariantKey(String key) {
@@ -1829,149 +1974,6 @@ class _FeatureRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SimilarProductCard extends StatelessWidget {
-  const _SimilarProductCard({
-    required this.product,
-    required this.onTap,
-  });
-
-  final ProductModel product;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final price = product.vendorPricing.vendorSellingPrice;
-    final oldPrice = product.maximumRetailPrice;
-    final discount = product.vendorPricing.discount;
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(
-        width: 136,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 156,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    bottom: 20,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 8,
-                    right: 8,
-                    top: 8,
-                    height: 120,
-                    child: product.primaryImageUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: product.primaryImageUrl,
-                            fit: BoxFit.contain,
-                            memCacheWidth: 240,
-                            placeholder: (context, url) => const Center(
-                              child: SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                            errorWidget: (context, url, error) => Image.asset(
-                              'assets/images/Image-coming-soon.png',
-                              fit: BoxFit.contain,
-                            ),
-                          )
-                        : Image.asset(
-                            'assets/images/Image-coming-soon.png',
-                            fit: BoxFit.contain,
-                          ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: ProductCartActionButton(
-                      product: product,
-                      compact: true,
-                      showCounter: false,
-                      onVariantsTap: onTap,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              product.title,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 16 / 12,
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (discount > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFE600),
-                  borderRadius: BorderRadius.circular(4),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black, offset: Offset(-1, 1)),
-                  ],
-                ),
-                child: Text(
-                  '${discount.round()}% OFF',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    height: 14 / 10,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text(
-                  '\u20B9 ${price.round()}',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    height: 24 / 16,
-                  ),
-                ),
-                if (oldPrice > 0) ...[
-                  const SizedBox(width: 10),
-                  Text(
-                    '\u20B9 ${oldPrice.round()}',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFFB5B5B5),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      height: 16 / 12,
-                      decoration: TextDecoration.lineThrough,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

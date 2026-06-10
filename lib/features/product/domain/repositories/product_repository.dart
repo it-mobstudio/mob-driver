@@ -3,14 +3,17 @@ import 'package:m_o_b_demand_side/features/product/domain/entities/product_entit
 
 abstract interface class ProductRepository {
   Future<(BrowseResultEntity?, AppFailure?)> browseProducts({
-    required String categoryName,
+    required String categorySlug,
+    String? subCategory,
     int page = 1,
     bool isProfessional = true,
+    String? sortBy,
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
   });
 
   Future<(List<FilterSectionEntity>?, AppFailure?)> getFilters({
-    required String search,
-    bool isProfessional = true,
+    required String category,
+    String? subCategory,
   });
 
   Future<(ProductDetailsEntity?, AppFailure?)> getProductDetail({

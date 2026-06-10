@@ -11,15 +11,21 @@ class ProductRepositoryImpl implements ProductRepository {
 
   @override
   Future<(BrowseResultEntity?, AppFailure?)> browseProducts({
-    required String categoryName,
+    required String categorySlug,
+    String? subCategory,
     int page = 1,
     bool isProfessional = true,
+    String? sortBy,
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
   }) async {
     try {
       final body = await _datasource.browseProducts(
-        categoryName: categoryName,
+        categorySlug: categorySlug,
+        subCategory: subCategory,
         page: page,
         isProfessional: isProfessional,
+        sortBy: sortBy,
+        queryParameters: queryParameters,
       );
       final data = _data(body);
       final productsRaw = _list(data['results'] ?? data['products'] ?? data['data']);
@@ -54,17 +60,15 @@ class ProductRepositoryImpl implements ProductRepository {
 
   @override
   Future<(List<FilterSectionEntity>?, AppFailure?)> getFilters({
-    required String search,
-    bool isProfessional = true,
+    required String category,
+    String? subCategory,
   }) async {
     try {
       final raw = await _datasource.getFilters(
-        search: search,
-        isProfessional: isProfessional,
+        category: category,
+        subCategory: subCategory,
       );
-      final list = raw is List
-          ? raw
-          : (raw is Map ? (_list((raw as Map)['data'] ?? (raw)['results'])) : <dynamic>[]);
+      final list = _extractFilterList(raw);
       final filters = list
           .whereType<Map>()
           .map((e) => BrowseFilterSection.fromMap(Map<String, dynamic>.from(e)))
@@ -136,4 +140,46 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   List<dynamic> _list(dynamic v) => v is List ? v : const [];
+
+  List<dynamic> _extractFilterList(dynamic raw) {
+    if (raw is List) {
+      return List<dynamic>.from(raw);
+    }
+    if (raw is! Map) {
+      return const <dynamic>[];
+    }
+
+    final body = Map<String, dynamic>.from(raw);
+
+    final directFilters = _list(body['filters']);
+    if (directFilters.isNotEmpty) {
+      return directFilters;
+    }
+
+    final directData = _list(body['data']);
+    if (directData.isNotEmpty) {
+      return directData;
+    }
+
+    final directResults = _list(body['results']);
+    if (directResults.isNotEmpty) {
+      return directResults;
+    }
+
+    final dataMap = body['data'] is Map
+        ? Map<String, dynamic>.from(body['data'] as Map)
+        : <String, dynamic>{};
+
+    final nestedFilters = _list(dataMap['filters']);
+    if (nestedFilters.isNotEmpty) {
+      return nestedFilters;
+    }
+
+    final nestedResults = _list(dataMap['results']);
+    if (nestedResults.isNotEmpty) {
+      return nestedResults;
+    }
+
+    return const <dynamic>[];
+  }
 }

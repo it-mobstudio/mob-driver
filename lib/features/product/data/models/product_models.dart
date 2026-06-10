@@ -28,6 +28,47 @@ class VendorPricing {
   }
 }
 
+class ProductSellerOffer {
+  const ProductSellerOffer({
+    required this.vendorSellingPrice,
+    required this.discount,
+    required this.fullfillmentLatency,
+    required this.vendorProductId,
+    required this.bmpId,
+    required this.quickEcommerceEnabled,
+    required this.stock,
+  });
+
+  final num vendorSellingPrice;
+  final num discount;
+  final String fullfillmentLatency;
+  final String vendorProductId;
+  final String bmpId;
+  final bool quickEcommerceEnabled;
+  final num stock;
+
+  factory ProductSellerOffer.fromMap(Map<String, dynamic> map) {
+    return ProductSellerOffer(
+      vendorSellingPrice:
+          num.tryParse(map['vendor_selling_price']?.toString() ?? '0') ?? 0,
+      discount: num.tryParse(map['discount']?.toString() ?? '0') ?? 0,
+      fullfillmentLatency: map['fullfillment_latency']?.toString() ?? '',
+      vendorProductId: map['vendor_product_id']?.toString() ?? '',
+      bmpId: (map['bmp_id'] ?? map['routing_id'] ?? '').toString(),
+      quickEcommerceEnabled: _parseBool(map['quick_ecommerce_enabled']),
+      stock: num.tryParse(
+            (map['stock'] ??
+                    (map['stock_details'] is Map
+                        ? (map['stock_details'] as Map)['stock']
+                        : null) ??
+                    '0')
+                .toString(),
+          ) ??
+          0,
+    );
+  }
+}
+
 class ProductImageRef {
   const ProductImageRef({required this.url});
 
@@ -54,14 +95,65 @@ class ProductVariantOption {
   }
 }
 
+class ProductVariantCombination {
+  const ProductVariantCombination({
+    required this.attributes,
+    required this.mobSku,
+    required this.slug,
+    required this.productId,
+    required this.stock,
+    required this.isAvailable,
+    required this.inStock,
+    required this.stockStatus,
+  });
+
+  final Map<String, String> attributes;
+  final String mobSku;
+  final String slug;
+  final String productId;
+  final num stock;
+  final bool isAvailable;
+  final bool inStock;
+  final String stockStatus;
+
+  factory ProductVariantCombination.fromMap(Map<String, dynamic> map) {
+    final attributesMap = map['attributes'] is Map
+        ? Map<String, dynamic>.from(map['attributes'] as Map)
+        : <String, dynamic>{};
+    return ProductVariantCombination(
+      attributes: attributesMap.map(
+        (key, value) => MapEntry(key.toString(), value?.toString() ?? ''),
+      ),
+      mobSku: (map['mob_sku'] ?? map['sku'] ?? '').toString(),
+      slug: map['slug']?.toString() ?? '',
+      productId: (map['product_id'] ?? map['id'] ?? '').toString(),
+      stock: num.tryParse(map['stock']?.toString() ?? '0') ?? 0,
+      isAvailable: map['is_available'] == null || _parseBool(map['is_available']),
+      inStock: map['in_stock'] == null || _parseBool(map['in_stock']),
+      stockStatus: map['stock_status']?.toString() ?? '',
+    );
+  }
+}
+
 class ProductChildVariantInfo {
-  const ProductChildVariantInfo({required this.value});
+  const ProductChildVariantInfo({
+    required this.value,
+    this.name = '',
+  });
 
   final String value;
+  final String name;
 
   factory ProductChildVariantInfo.fromMap(Map<String, dynamic> map) {
     return ProductChildVariantInfo(
       value: map['value']?.toString() ?? '',
+      name: (map['name'] ??
+              map['key'] ??
+              map['label'] ??
+              map['variant_name'] ??
+              map['attribute_name'] ??
+              '')
+          .toString(),
     );
   }
 }
@@ -180,6 +272,11 @@ class ProductChildRef {
           : parent.images,
       features: parent.features,
       variants: const <String, List<ProductVariantOption>>{},
+      variantAttributes: const <String>[],
+      availableOptions: const <String, List<String>>{},
+      activeVariantSelections: const <String, String>{},
+      variantCombinations: const <ProductVariantCombination>[],
+      sellers: const <ProductSellerOffer>[],
       brandName: parent.brandName,
       brandLogoUrl: parent.brandLogoUrl,
       brandSegmentName: parent.brandSegmentName,
@@ -209,6 +306,11 @@ class ProductModel {
     required this.images,
     required this.features,
     required this.variants,
+    required this.variantAttributes,
+    required this.availableOptions,
+    required this.activeVariantSelections,
+    required this.variantCombinations,
+    required this.sellers,
     required this.brandName,
     required this.brandLogoUrl,
     required this.brandSegmentName,
@@ -233,6 +335,11 @@ class ProductModel {
   final List<ProductImageRef> images;
   final Map<String, String> features;
   final Map<String, List<ProductVariantOption>> variants;
+  final List<String> variantAttributes;
+  final Map<String, List<String>> availableOptions;
+  final Map<String, String> activeVariantSelections;
+  final List<ProductVariantCombination> variantCombinations;
+  final List<ProductSellerOffer> sellers;
   final String brandName;
   final String brandLogoUrl;
   final String brandSegmentName;
@@ -284,6 +391,23 @@ class ProductModel {
     final variantsMap = map['variants'] is Map
         ? Map<String, dynamic>.from(map['variants'] as Map)
         : <String, dynamic>{};
+    final variantCombinationsRaw = map['variants'] is List
+        ? List<dynamic>.from(map['variants'] as List)
+        : (map['variant_combinations'] is List
+            ? List<dynamic>.from(map['variant_combinations'] as List)
+            : <dynamic>[]);
+    final variantAttributesList = map['variant_attributes'] is List
+        ? List<dynamic>.from(map['variant_attributes'] as List)
+        : <dynamic>[];
+    final availableOptionsMap = map['available_options'] is Map
+        ? Map<String, dynamic>.from(map['available_options'] as Map)
+        : <String, dynamic>{};
+    final activeVariantMap = map['active_variant'] is Map
+        ? Map<String, dynamic>.from(map['active_variant'] as Map)
+        : <String, dynamic>{};
+    final activeSelectedOptionsMap = activeVariantMap['selected_options'] is Map
+        ? Map<String, dynamic>.from(activeVariantMap['selected_options'] as Map)
+        : <String, dynamic>{};
     final brandSegment = map['brand_segment'] is Map
         ? Map<String, dynamic>.from(map['brand_segment'] as Map)
         : <String, dynamic>{};
@@ -300,6 +424,9 @@ class ProductModel {
         : <String, dynamic>{};
     final childProductsList = map['child_products'] is List
         ? List<dynamic>.from(map['child_products'] as List)
+        : <dynamic>[];
+    final sellersRaw = map['vendors'] is List
+        ? List<dynamic>.from(map['vendors'] as List)
         : <dynamic>[];
 
     return ProductModel(
@@ -332,6 +459,33 @@ class ProductModel {
               .toList(),
         );
       }),
+      variantAttributes: variantAttributesList
+          .map((item) => item?.toString().trim() ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(),
+      availableOptions: availableOptionsMap.map((key, value) {
+        final list = value is List ? value : <dynamic>[];
+        return MapEntry(
+          key.toString(),
+          list
+              .map((item) => item?.toString().trim() ?? '')
+              .where((item) => item.isNotEmpty)
+              .toList(),
+        );
+      }),
+      activeVariantSelections: activeSelectedOptionsMap.map(
+        (key, value) => MapEntry(key.toString(), value?.toString() ?? ''),
+      ),
+      variantCombinations: variantCombinationsRaw
+          .whereType<Map>()
+          .map((e) => ProductVariantCombination.fromMap(
+                Map<String, dynamic>.from(e),
+              ))
+          .toList(),
+      sellers: sellersRaw
+          .whereType<Map>()
+          .map((e) => ProductSellerOffer.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
       brandName: (map['brand_name'] ??
               brandMap['name'] ??
               brandMap['brand_name'] ??

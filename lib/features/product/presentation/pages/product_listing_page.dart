@@ -43,16 +43,19 @@ class _ProductListingPageState extends State<ProductListingPage> {
   List<SubCategoryModel> _subCategories = const [];
   List<BrowseFilterSection> _filterSections = const [];
   int _selectedSubCategoryIndex = 0;
-  String? _selectedCategorySlug;
-  String? _selectedCategoryName;
-  String? _filterSearchTerm;
+  String? _selectedSubCategorySlug;
+  String? _selectedSubCategoryName;
   ProductSortOption _selectedSortOption = ProductSortOption.priceLowToHigh;
+  bool _hasExplicitSortSelection = false;
 
   @override
   void initState() {
     super.initState();
-    _productBloc = sl<ProductBloc>()
-      ..add(ProductListRequested(categoryName: widget.slug));
+    _productBloc = sl<ProductBloc>()..add(
+      ProductListRequested(
+        categorySlug: widget.slug,
+      ),
+    );
     _scrollController.addListener(_onScroll);
   }
 
@@ -75,36 +78,31 @@ class _ProductListingPageState extends State<ProductListingPage> {
   }
 
   void _selectSubCategory(int index, SubCategoryModel subCategory) {
-    final nextSlug = subCategory.browseSlug;
+    final isAllSelection = index == 0;
+    final nextSlug = isAllSelection ? null : subCategory.browseSlug;
     final isSameSelection =
-        _selectedSubCategoryIndex == index && _selectedCategorySlug == nextSlug;
-    if (nextSlug.isEmpty || isSameSelection) return;
+        _selectedSubCategoryIndex == index &&
+        _selectedSubCategorySlug == nextSlug;
+    if (isSameSelection) return;
 
     setState(() {
       _selectedSubCategoryIndex = index;
-      _selectedCategorySlug = nextSlug;
-      _selectedCategoryName = subCategory.name;
-      _filterSearchTerm = subCategory.name;
-      _filterSections = const [];
+      _selectedSubCategorySlug = nextSlug;
+      _selectedSubCategoryName = isAllSelection ? null : subCategory.name;
       _selectedFilterValuesByKey.clear();
     });
 
     if (_scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }
-    _productBloc.add(ProductListRequested(categoryName: nextSlug));
+    _requestProducts();
   }
 
   void _retryInitialLoad() {
     setState(() {
-      _filterSections = const [];
       _selectedFilterValuesByKey.clear();
     });
-    _productBloc.add(
-      ProductListRequested(
-        categoryName: _selectedCategorySlug ?? widget.slug,
-      ),
-    );
+    _requestProducts();
   }
 
   Future<void> _changeProductQuantity(
@@ -113,7 +111,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
   ) async {
     if (product.hasVariants && product.mobSku.isEmpty) {
       if (mounted) {
-        context.go('${ProductDetailPage.routePath}/${product.slug}');
+        context.push('${ProductDetailPage.routePath}/${product.slug}');
       }
       return;
     }
@@ -154,139 +152,11 @@ class _ProductListingPageState extends State<ProductListingPage> {
 
   // ── Filter / sort helpers ──────────────────────────────────────────────────
 
-  List<ProductModel> _computeVisibleProducts(List<ProductModel> raw) {
-    return _sorted(_filteredProducts(raw));
-  }
-
-  List<ProductModel> _sorted(List<ProductModel> products) {
-    final list = List<ProductModel>.from(products);
-    switch (_selectedSortOption) {
-      case ProductSortOption.popularity:
-        list.sort((a, b) => b.reviewCount.compareTo(a.reviewCount));
-      case ProductSortOption.priceLowToHigh:
-        list.sort((a, b) => a.vendorPricing.vendorSellingPrice
-            .compareTo(b.vendorPricing.vendorSellingPrice));
-      case ProductSortOption.priceHighToLow:
-        list.sort((a, b) => b.vendorPricing.vendorSellingPrice
-            .compareTo(a.vendorPricing.vendorSellingPrice));
-      case ProductSortOption.ratings:
-        list.sort((a, b) => b.rating.compareTo(a.rating));
-    }
-    return list;
-  }
-
-  List<ProductModel> _filteredProducts(List<ProductModel> products) {
-    final activeFilters = _selectedFilterValuesByKey.entries
-        .where((entry) => entry.value.isNotEmpty)
-        .toList();
-    if (activeFilters.isEmpty) return List<ProductModel>.from(products);
-
-    return products.where((product) {
-      for (final entry in activeFilters) {
-        if (!_productMatchesFilter(product, entry.key, entry.value)) {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
-  }
-
-  bool _productMatchesFilter(
-    ProductModel product,
-    String key,
-    Set<String> selectedValues,
-  ) {
-    if (key == 'brand') {
-      return _matchesSelectedTokens(product.brandName, key, selectedValues);
-    }
-    if (key == 'brand_segment') {
-      return _matchesSelectedTokens(
-          product.brandSegmentName, key, selectedValues);
-    }
-    if (_isPriceFilterKey(key)) {
-      return _matchesSelectedPrice(product, key, selectedValues);
-    }
-
-    final haystack = [
-      product.title,
-      product.slug,
-      product.brandName,
-      product.brandSegmentName,
-      product.quickCommerceCategoryName,
-      product.badgeOption,
-      product.features.values.join(' '),
-    ].join(' ');
-
-    return _matchesSelectedTokens(haystack, key, selectedValues);
-  }
-
-  bool _matchesSelectedTokens(
-    String value,
-    String key,
-    Set<String> selectedValues,
-  ) {
-    final normalizedValue = value.toLowerCase();
-    final tokens = _selectedFilterTokens(key, selectedValues);
-    return tokens.any(
-      (token) => token.isNotEmpty && normalizedValue.contains(token),
-    );
-  }
-
-  bool _matchesSelectedPrice(
-    ProductModel product,
-    String key,
-    Set<String> selectedValues,
-  ) {
-    final price = product.vendorPricing.vendorSellingPrice;
-    final section = _filterSectionForKey(key);
-
-    for (final selectedValue in selectedValues) {
-      final option =
-          section == null ? null : _filterOptionForValue(section, selectedValue);
-      final range = _priceRangeFromText(
-        [selectedValue, if (option != null) option.label].join(' '),
-      );
-      if (range == null) continue;
-
-      final min = range.min;
-      final max = range.max;
-      if ((min == null || price >= min) && (max == null || price <= max)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  Set<String> _selectedFilterTokens(String key, Set<String> selectedValues) {
-    final section = _filterSectionForKey(key);
-    final tokens = <String>{};
-
-    for (final selectedValue in selectedValues) {
-      tokens.add(selectedValue.toLowerCase());
-      final option =
-          section == null ? null : _filterOptionForValue(section, selectedValue);
-      if (option != null) {
-        tokens.add(option.label.toLowerCase());
-      }
-    }
-    return tokens;
-  }
-
   BrowseFilterSection? _filterSectionForKey(String key) {
     for (final section in _filterSections) {
       if (section.key == key) return section;
     }
     return null;
-  }
-
-  bool _isPriceFilterKey(String key) {
-    final normalizedKey = key.toLowerCase();
-    if (normalizedKey == 'price' || normalizedKey.contains('price')) {
-      return true;
-    }
-    final section = _filterSectionForKey(key);
-    final label = section?.label.toLowerCase() ?? '';
-    return label == 'price' || label.contains('price');
   }
 
   BrowseFilterOption? _filterOptionForValue(
@@ -299,30 +169,65 @@ class _ProductListingPageState extends State<ProductListingPage> {
     return null;
   }
 
-  _PriceRange? _priceRangeFromText(String value) {
-    final numbers = RegExp(r'\d+(?:\.\d+)?')
-        .allMatches(value.replaceAll(',', ''))
-        .map((match) => num.tryParse(match.group(0) ?? ''))
-        .whereType<num>()
-        .toList();
-    if (numbers.isEmpty) return null;
-
-    final lowerValue = value.toLowerCase();
-    if (numbers.length == 1) {
-      if (lowerValue.contains('above') ||
-          lowerValue.contains('over') ||
-          lowerValue.contains('+')) {
-        return _PriceRange(min: numbers.first);
-      }
-      if (lowerValue.contains('below') ||
-          lowerValue.contains('under') ||
-          lowerValue.contains('less')) {
-        return _PriceRange(max: numbers.first);
-      }
-      return _PriceRange(min: numbers.first, max: numbers.first);
+  String? _sortByQueryValue(ProductSortOption option) {
+    switch (option) {
+      case ProductSortOption.popularity:
+        return 'popularity';
+      case ProductSortOption.priceLowToHigh:
+        return 'low_price';
+      case ProductSortOption.priceHighToLow:
+        return 'high_price';
+      case ProductSortOption.ratings:
+        return 'ratings';
     }
-    numbers.sort();
-    return _PriceRange(min: numbers.first, max: numbers.last);
+  }
+
+  List<String> _queryKeysForSection(BrowseFilterSection section) {
+    final raw = section.meta['query_keys'];
+    if (raw is List) {
+      final keys = raw
+          .map((item) => item?.toString().trim() ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList();
+      if (keys.isNotEmpty) return keys;
+    }
+    return <String>[section.key];
+  }
+
+  Map<String, dynamic> _activeBrowseQueryParameters() {
+    final params = <String, dynamic>{};
+
+    _selectedFilterValuesByKey.forEach((sectionKey, selectedValues) {
+      if (selectedValues.isEmpty) return;
+      final section = _filterSectionForKey(sectionKey);
+      if (section == null) return;
+
+      final normalizedValues = selectedValues
+          .map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .toList();
+      if (normalizedValues.isEmpty) return;
+
+      final queryValue = normalizedValues.join(',');
+      for (final queryKey in _queryKeysForSection(section)) {
+        params[queryKey] = queryValue;
+      }
+    });
+
+    return params;
+  }
+
+  void _requestProducts() {
+    _productBloc.add(
+      ProductListRequested(
+        categorySlug: widget.slug,
+        subCategory: _selectedSubCategorySlug,
+        sortBy: _hasExplicitSortSelection
+            ? _sortByQueryValue(_selectedSortOption)
+            : null,
+        queryParameters: _activeBrowseQueryParameters(),
+      ),
+    );
   }
 
   List<String> _filterOptionLabels(String key) {
@@ -332,6 +237,116 @@ class _ProductListingPageState extends State<ProductListingPage> {
       }
     }
     return const <String>[];
+  }
+
+  List<String> _filterOptionLabelsForKeys(List<String> keys) {
+    final normalizedKeys = keys.map((key) => key.toLowerCase()).toSet();
+    final labels = <String>[];
+
+    for (final section in _filterSections) {
+      final sectionKey = section.key.toLowerCase();
+      final sectionLabel = section.label.toLowerCase();
+      final matchesKnownKey = normalizedKeys.contains(sectionKey);
+      final matchesSemanticLabel =
+          normalizedKeys.contains('brand_segment') &&
+              (sectionLabel == 'product type' ||
+                  sectionLabel.contains('product type'));
+
+      if (matchesKnownKey || matchesSemanticLabel) {
+        labels.addAll(
+          section.options
+              .map((option) => option.label.trim())
+              .where((label) => label.isNotEmpty),
+        );
+      }
+    }
+
+    return labels.toSet().take(12).toList();
+  }
+
+  Set<String> _selectedValuesForKeys(List<String> keys) {
+    final normalizedKeys = keys.map((key) => key.toLowerCase()).toSet();
+    final values = <String>{};
+
+    _selectedFilterValuesByKey.forEach((key, selectedValues) {
+      if (normalizedKeys.contains(key.toLowerCase())) {
+        values.addAll(selectedValues);
+      }
+    });
+
+    return values;
+  }
+
+  void _toggleInlineFilterValue({
+    required String label,
+    required List<String> candidateKeys,
+  }) {
+    final normalizedLabel = label.trim();
+    if (normalizedLabel.isEmpty) return;
+
+    final targetSection = _filterSections.firstWhere(
+      (section) {
+        final key = section.key.toLowerCase();
+        final title = section.label.toLowerCase();
+        final matchesKey =
+            candidateKeys.any((candidate) => key == candidate.toLowerCase());
+        final matchesTypeLabel = candidateKeys.contains('brand_segment') &&
+            (title == 'product type' || title.contains('product type'));
+        final matchesSubTypeLabel = candidateKeys.contains('brand_sub_segment') &&
+            (title == 'product sub type' ||
+                title.contains('product sub type') ||
+                title.contains('sub type'));
+        return matchesKey || matchesTypeLabel || matchesSubTypeLabel;
+      },
+      orElse: () => const BrowseFilterSection(
+        key: '',
+        label: '',
+        searchable: false,
+        options: <BrowseFilterOption>[],
+        meta: <String, dynamic>{},
+      ),
+    );
+
+    if (targetSection.key.isEmpty) {
+      return;
+    }
+
+    final matchingOption = targetSection.options.firstWhere(
+      (option) => option.label.trim().toLowerCase() == normalizedLabel.toLowerCase(),
+      orElse: () => BrowseFilterOption(
+        value: normalizedLabel,
+        label: normalizedLabel,
+        count: 0,
+      ),
+    );
+
+    final selectedValues =
+        Set<String>.from(_selectedFilterValuesByKey[targetSection.key] ?? <String>{});
+    final optionValue = matchingOption.value.trim().isNotEmpty
+        ? matchingOption.value.trim()
+        : matchingOption.label.trim();
+
+    setState(() {
+      if (selectedValues.contains(optionValue)) {
+        selectedValues.remove(optionValue);
+      } else {
+        selectedValues.add(optionValue);
+      }
+
+      if (selectedValues.isEmpty) {
+        _selectedFilterValuesByKey.remove(targetSection.key);
+      } else {
+        _selectedFilterValuesByKey[targetSection.key] = selectedValues;
+      }
+    });
+    _requestProducts();
+  }
+
+  void _toggleInlineProductType(String label) {
+    _toggleInlineFilterValue(
+      label: label,
+      candidateKeys: const ['brand_segment'],
+    );
   }
 
   void _updateSelectedFilters(Map<String, Set<String>> selectedValuesByKey) {
@@ -344,10 +359,12 @@ class _ProductListingPageState extends State<ProductListingPage> {
           ),
         );
     });
+    _requestProducts();
   }
 
   void _clearSelectedFilters() {
     setState(() => _selectedFilterValuesByKey.clear());
+    _requestProducts();
   }
 
   int get _selectedFilterCount {
@@ -421,6 +438,26 @@ class _ProductListingPageState extends State<ProductListingPage> {
     );
   }
 
+  Future<void> _showFilterSection(BrowseFilterSection section) async {
+    if (!mounted) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => FilterBottomSheet(
+        sections: <BrowseFilterSection>[section],
+        initialSectionKey: section.key,
+        title: section.label.isNotEmpty ? section.label : section.key,
+        showSidebar: false,
+        selectedValuesByKey: _selectedFilterValuesByKey,
+        onSelectionChanged: _updateSelectedFilters,
+      ),
+    );
+  }
+
   String _priceFilterKey() {
     for (final section in _filterSections) {
       final key = section.key.toLowerCase();
@@ -445,7 +482,11 @@ class _ProductListingPageState extends State<ProductListingPage> {
         selectedOption: _selectedSortOption,
         onOptionSelected: (option) {
           if (!mounted) return;
-          setState(() => _selectedSortOption = option);
+          setState(() {
+            _selectedSortOption = option;
+            _hasExplicitSortSelection = true;
+          });
+          _requestProducts();
         },
       ),
     );
@@ -502,18 +543,23 @@ class _ProductListingPageState extends State<ProductListingPage> {
                   _filterSections = state.filters;
                 }
               });
-              if (state.filters.isEmpty) {
+              if (state.filters.isEmpty && _filterSections.isEmpty) {
                 _productBloc.add(ProductFiltersRequested(
-                  search: _filterSearchTerm ?? widget.category,
+                  category: widget.slug,
                 ));
               }
             },
             builder: (context, productState) {
+              if (productState is ProductLoading) {
+                return _ProductListingPageSkeleton(
+                  showFloatingCart: cartQtyByProductId.isNotEmpty,
+                );
+              }
+
               final rawProducts = productState is ProductListLoaded
                   ? productState.products
                   : <ProductModel>[];
-              final visibleProducts = _computeVisibleProducts(rawProducts);
-              final isInitialLoading = productState is ProductLoading;
+              final visibleProducts = rawProducts;
               final isLoadingMore = productState is ProductListLoaded &&
                   productState.isLoadingMore;
               final hasMore = productState is ProductListLoaded &&
@@ -533,18 +579,9 @@ class _ProductListingPageState extends State<ProductListingPage> {
                         onBack: _goBack,
                         onSearch: () => context.push('/search'),
                       ),
-                      BrowseFilterRow(
-                        onFilterTap: _showFilters,
-                        onSortTap: _showSortOptions,
-                        onBrandTap: _showBrandFilters,
-                        onPriceTap: _showPriceFilters,
-                        selectedFilterCount: _selectedFilterCount,
-                        onClearFilters: _clearSelectedFilters,
-                      ),
                       Expanded(
                         child: _buildBody(
                           visibleProducts: visibleProducts,
-                          isInitialLoading: isInitialLoading,
                           isLoadingMore: isLoadingMore,
                           hasMore: hasMore,
                           hasError: hasError,
@@ -572,7 +609,6 @@ class _ProductListingPageState extends State<ProductListingPage> {
 
   Widget _buildBody({
     required List<ProductModel> visibleProducts,
-    required bool isInitialLoading,
     required bool isLoadingMore,
     required bool hasMore,
     required bool hasError,
@@ -587,10 +623,6 @@ class _ProductListingPageState extends State<ProductListingPage> {
       );
     }
 
-    if (_subCategories.isEmpty && visibleProducts.isEmpty && isInitialLoading) {
-      return const ProductGridSkeleton();
-    }
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -601,15 +633,32 @@ class _ProductListingPageState extends State<ProductListingPage> {
           selectedIndex: _selectedSubCategoryIndex,
           onSelected: _selectSubCategory,
         ),
-        Expanded(child: _buildProductPane(
-          visibleProducts: visibleProducts,
-          isLoadingMore: isLoadingMore,
-          hasMore: hasMore,
-          hasError: hasError,
-          errorMessage: errorMessage,
-          cartQtyByProductId: cartQtyByProductId,
-          cartUpdatingKey: cartUpdatingKey,
-        )),
+        Expanded(
+          child: Column(
+            children: [
+              BrowseFilterRow(
+                onFilterTap: _showFilters,
+                onSortTap: _showSortOptions,
+                filterSections: _filterSections,
+                selectedValuesByKey: _selectedFilterValuesByKey,
+                onSectionTap: _showFilterSection,
+                selectedFilterCount: _selectedFilterCount,
+                onClearFilters: _clearSelectedFilters,
+              ),
+              Expanded(
+                child: _buildProductPane(
+                  visibleProducts: visibleProducts,
+                  isLoadingMore: isLoadingMore,
+                  hasMore: hasMore,
+                  hasError: hasError,
+                  errorMessage: errorMessage,
+                  cartQtyByProductId: cartQtyByProductId,
+                  cartUpdatingKey: cartUpdatingKey,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -635,9 +684,13 @@ class _ProductListingPageState extends State<ProductListingPage> {
       products: visibleProducts,
       subCategories: _subCategories,
       brandOptions: _filterOptionLabels('brand'),
-      productTypeOptions: _filterOptionLabels('brand_segment'),
-      category: _selectedCategoryName ?? widget.category,
-      categorySlug: _selectedCategorySlug ?? widget.slug,
+      productTypeOptions:
+          _filterOptionLabelsForKeys(const ['brand_segment']),
+      selectedProductTypeOptions: _selectedValuesForKeys(
+        const ['brand_segment'],
+      ),
+      category: _selectedSubCategoryName ?? widget.category,
+      categorySlug: widget.slug,
       hasMore: hasMore,
       isLoading: isLoadingMore,
       loadMoreFailed: false,
@@ -645,18 +698,232 @@ class _ProductListingPageState extends State<ProductListingPage> {
       cartUpdatingProductId: cartUpdatingKey,
       onRetryLoadMore: () => _productBloc.add(ProductListNextPageRequested()),
       onProductTap: (product) {
-        context.go('${ProductDetailPage.routePath}/${product.slug}');
+        context.push('${ProductDetailPage.routePath}/${product.slug}');
       },
       onCartQuantityChanged: _changeProductQuantity,
       onNotifyTap: _handleNotifyTap,
+      onProductTypeTap: _toggleInlineProductType,
       onRequestTap: () => context.go(RfqFormPage.routePath),
     );
   }
 }
 
-class _PriceRange {
-  const _PriceRange({this.min, this.max});
+class _ProductListingPageSkeleton extends StatelessWidget {
+  const _ProductListingPageSkeleton({required this.showFloatingCart});
 
-  final num? min;
-  final num? max;
+  final bool showFloatingCart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Column(
+          children: [
+            const _ProductListingHeaderSkeleton(),
+            const Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ProductListingSideRailSkeleton(),
+                  Expanded(child: _ProductListingRightPaneSkeleton()),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (showFloatingCart)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 18,
+            child: Center(
+              child: Container(
+                width: 240,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const SkeletonBox(height: 56, borderRadius: 16),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ProductListingHeaderSkeleton extends StatelessWidget {
+  const _ProductListingHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      color: Colors.white,
+      child: const Row(
+        children: [
+          SkeletonBox(width: 24, height: 24, borderRadius: 12),
+          SizedBox(width: 12),
+          Expanded(child: SkeletonBox(height: 18, borderRadius: 8)),
+          SizedBox(width: 12),
+          SkeletonBox(width: 20, height: 20, borderRadius: 10),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductListingSideRailSkeleton extends StatelessWidget {
+  const _ProductListingSideRailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 80,
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(8, 16, 8, 24),
+      child: Column(
+        children: List<Widget>.generate(
+          4,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 28),
+            child: Column(
+              children: [
+                SkeletonBox(width: 64, height: 64, borderRadius: 12),
+                SizedBox(height: 8),
+                SkeletonBox(width: 56, height: 10, borderRadius: 6),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductListingRightPaneSkeleton extends StatelessWidget {
+  const _ProductListingRightPaneSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        _ProductListingFilterRowSkeleton(),
+        Expanded(child: _ProductListingFeedSkeleton()),
+      ],
+    );
+  }
+}
+
+class _ProductListingFilterRowSkeleton extends StatelessWidget {
+  const _ProductListingFilterRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 56,
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(10, 10, 16, 10),
+      child: const Row(
+        children: [
+          SkeletonBox(width: 86, height: 36, borderRadius: 8),
+          SizedBox(width: 8),
+          SkeletonBox(width: 92, height: 36, borderRadius: 8),
+          SizedBox(width: 8),
+          SkeletonBox(width: 78, height: 36, borderRadius: 8),
+          SizedBox(width: 8),
+          Expanded(child: SkeletonBox(height: 36, borderRadius: 8)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductListingFeedSkeleton extends StatelessWidget {
+  const _ProductListingFeedSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(10, 14, 10, 96),
+      children: const [
+        _ProductListingGridSkeletonRow(),
+        SizedBox(height: 24),
+        _ProductListingGridSkeletonRow(),
+        SizedBox(height: 24),
+        _ProductListingInlineRailSkeleton(),
+        SizedBox(height: 24),
+        _ProductListingGridSkeletonRow(),
+      ],
+    );
+  }
+}
+
+class _ProductListingGridSkeletonRow extends StatelessWidget {
+  const _ProductListingGridSkeletonRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: _ProductListingCardSkeleton()),
+        SizedBox(width: 10),
+        Expanded(child: _ProductListingCardSkeleton()),
+      ],
+    );
+  }
+}
+
+class _ProductListingCardSkeleton extends StatelessWidget {
+  const _ProductListingCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SkeletonBox(height: 132, borderRadius: 16),
+        SizedBox(height: 12),
+        SkeletonBox(height: 12, borderRadius: 6),
+        SizedBox(height: 8),
+        SkeletonBox(width: 120, height: 12, borderRadius: 6),
+        SizedBox(height: 12),
+        SkeletonBox(width: 62, height: 18, borderRadius: 9),
+        SizedBox(height: 10),
+        SkeletonBox(width: 82, height: 16, borderRadius: 8),
+      ],
+    );
+  }
+}
+
+class _ProductListingInlineRailSkeleton extends StatelessWidget {
+  const _ProductListingInlineRailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 14, 10, 18),
+      color: const Color(0xFFE8F2EF),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonBox(width: 110, height: 16, borderRadius: 8),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, __) =>
+                  const SkeletonBox(width: 88, height: 40, borderRadius: 12),
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemCount: 4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -118,7 +118,7 @@ class _ItemCardState extends State<ItemCard> {
                 GestureDetector(
                   onTap: widget.onTap ??
                       () => context
-                          .go('${ProductDetailPage.routePath}/${product.slug}'),
+                          .push('${ProductDetailPage.routePath}/${product.slug}'),
                   child: Container(
                     width: 136,
                     height: 136,

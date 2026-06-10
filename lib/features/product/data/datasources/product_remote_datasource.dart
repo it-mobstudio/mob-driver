@@ -2,14 +2,17 @@ import 'package:dio/dio.dart';
 
 abstract interface class ProductRemoteDatasource {
   Future<Map<String, dynamic>> browseProducts({
-    required String categoryName,
+    required String categorySlug,
+    String? subCategory,
     int page = 1,
     bool isProfessional = true,
+    String? sortBy,
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
   });
 
   Future<dynamic> getFilters({
-    required String search,
-    bool isProfessional = true,
+    required String category,
+    String? subCategory,
   });
 
   Future<Map<String, dynamic>> getProductDetail({
@@ -27,28 +30,38 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
 
   @override
   Future<Map<String, dynamic>> browseProducts({
-    required String categoryName,
+    required String categorySlug,
+    String? subCategory,
     int page = 1,
     bool isProfessional = true,
+    String? sortBy,
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
   }) async {
     final response = await _dio.get<dynamic>(
-      '/home/$categoryName/browse_products/',
-      queryParameters: {'page': page, 'is_professional': isProfessional},
+      '/home/$categorySlug/browse_products/',
+      queryParameters: <String, dynamic>{
+        ...queryParameters,
+        'page': page,
+        'is_professional': isProfessional,
+        if (sortBy != null && sortBy.trim().isNotEmpty) 'sort_by': sortBy.trim(),
+        if (subCategory != null && subCategory.trim().isNotEmpty)
+          'sub_category': subCategory.trim(),
+      },
     );
     return _toMap(response.data);
   }
 
   @override
   Future<dynamic> getFilters({
-    required String search,
-    bool isProfessional = true,
+    required String category,
+    String? subCategory,
   }) async {
     final response = await _dio.get<dynamic>(
       '/home/get_filters/',
-      queryParameters: {
-        'search': search,
-        'quick_ecommerce': true,
-        'is_professional': isProfessional,
+      queryParameters: <String, dynamic>{
+        'category': category,
+        if (subCategory != null && subCategory.trim().isNotEmpty)
+          'sub_category': subCategory.trim(),
       },
     );
     return response.data;

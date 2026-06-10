@@ -37,7 +37,7 @@ class _ProductRailSectionState extends State<ProductRailSection> {
 
   Future<List<ProductModel>> _fetchProducts() async {
     final (result, _) = await sl<ProductRepository>().browseProducts(
-      categoryName: widget.categorySlug!,
+      categorySlug: widget.categorySlug!,
       page: 1,
     );
     return result?.products ?? const [];

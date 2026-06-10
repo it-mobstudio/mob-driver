@@ -14,21 +14,30 @@ final class ProductDetailRequested extends ProductEvent {
 
 final class ProductListRequested extends ProductEvent {
   ProductListRequested({
-    required this.categoryName,
+    required this.categorySlug,
+    this.subCategory,
     this.page = 1,
     this.isProfessional = true,
+    this.sortBy,
+    this.queryParameters = const <String, dynamic>{},
   });
-  final String categoryName;
+  final String categorySlug;
+  final String? subCategory;
   final int page;
   final bool isProfessional;
+  final String? sortBy;
+  final Map<String, dynamic> queryParameters;
 }
 
 final class ProductListNextPageRequested extends ProductEvent {}
 
 final class ProductFiltersRequested extends ProductEvent {
-  ProductFiltersRequested({required this.search, this.isProfessional = true});
-  final String search;
-  final bool isProfessional;
+  ProductFiltersRequested({
+    required this.category,
+    this.subCategory,
+  });
+  final String category;
+  final String? subCategory;
 }
 
 final class ProductSearchRequested extends ProductEvent {
@@ -59,18 +68,24 @@ final class ProductListLoaded extends ProductState {
     required this.products,
     required this.subCategories,
     required this.pagination,
-    required this.categoryName,
+    required this.categorySlug,
     required this.currentPage,
+    this.subCategory,
     this.filters = const [],
     this.isLoadingMore = false,
+    this.sortBy,
+    this.queryParameters = const <String, dynamic>{},
   });
   final List<ProductEntity> products;
   final List<SubCategoryModel> subCategories;
   final PaginationModel pagination;
-  final String categoryName;
+  final String categorySlug;
+  final String? subCategory;
   final int currentPage;
   final List<FilterSectionEntity> filters;
   final bool isLoadingMore;
+  final String? sortBy;
+  final Map<String, dynamic> queryParameters;
 
   ProductListLoaded copyWith({
     List<ProductEntity>? products,
@@ -78,15 +93,20 @@ final class ProductListLoaded extends ProductState {
     int? currentPage,
     List<FilterSectionEntity>? filters,
     bool? isLoadingMore,
+    String? sortBy,
+    Map<String, dynamic>? queryParameters,
   }) {
     return ProductListLoaded(
       products: products ?? this.products,
       subCategories: subCategories,
       pagination: pagination ?? this.pagination,
-      categoryName: categoryName,
+      categorySlug: categorySlug,
+      subCategory: subCategory,
       currentPage: currentPage ?? this.currentPage,
       filters: filters ?? this.filters,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      sortBy: sortBy ?? this.sortBy,
+      queryParameters: queryParameters ?? this.queryParameters,
     );
   }
 }
@@ -140,9 +160,12 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
   ) async {
     emit(ProductLoading());
     final (result, failure) = await _repository.browseProducts(
-      categoryName: event.categoryName,
+      categorySlug: event.categorySlug,
+      subCategory: event.subCategory,
       page: event.page,
       isProfessional: event.isProfessional,
+      sortBy: event.sortBy,
+      queryParameters: event.queryParameters,
     );
     if (failure != null) {
       emit(ProductError(failure.message));
@@ -151,8 +174,11 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         products: result!.products,
         subCategories: result.subCategories,
         pagination: result.pagination,
-        categoryName: event.categoryName,
+        categorySlug: event.categorySlug,
+        subCategory: event.subCategory,
         currentPage: event.page,
+        sortBy: event.sortBy,
+        queryParameters: event.queryParameters,
       ));
     }
   }
@@ -168,8 +194,11 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     emit(current.copyWith(isLoadingMore: true));
     final nextPage = current.currentPage + 1;
     final (result, failure) = await _repository.browseProducts(
-      categoryName: current.categoryName,
+      categorySlug: current.categorySlug,
+      subCategory: current.subCategory,
       page: nextPage,
+      sortBy: current.sortBy,
+      queryParameters: current.queryParameters,
     );
     if (failure != null) {
       emit(current.copyWith(isLoadingMore: false));
@@ -188,8 +217,8 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     final (filters, failure) = await _repository.getFilters(
-      search: event.search,
-      isProfessional: event.isProfessional,
+      category: event.category,
+      subCategory: event.subCategory,
     );
     if (failure != null) return;
     final current = state;

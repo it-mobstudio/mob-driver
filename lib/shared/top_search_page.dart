@@ -310,7 +310,7 @@ class _SearchPageState extends State<SearchPage> {
                 return;
               }
               if (r.slug.isNotEmpty) {
-                context.go('${ProductDetailPage.routePath}/${r.slug}');
+                context.push('${ProductDetailPage.routePath}/${r.slug}');
               }
             },
             leading: Container(

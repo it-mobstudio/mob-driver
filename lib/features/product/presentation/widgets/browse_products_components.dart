@@ -70,16 +70,18 @@ class BrowseFilterRow extends StatelessWidget {
     super.key,
     required this.onFilterTap,
     required this.onSortTap,
-    required this.onBrandTap,
-    required this.onPriceTap,
+    required this.filterSections,
+    required this.selectedValuesByKey,
+    required this.onSectionTap,
     required this.selectedFilterCount,
     required this.onClearFilters,
   });
 
   final VoidCallback onFilterTap;
   final VoidCallback onSortTap;
-  final VoidCallback onBrandTap;
-  final VoidCallback onPriceTap;
+  final List<BrowseFilterSection> filterSections;
+  final Map<String, Set<String>> selectedValuesByKey;
+  final void Function(BrowseFilterSection section) onSectionTap;
   final int selectedFilterCount;
   final VoidCallback onClearFilters;
 
@@ -91,7 +93,7 @@ class BrowseFilterRow extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(83, 10, 16, 10),
+        padding: const EdgeInsets.fromLTRB(10, 10, 16, 10),
         children: [
           _FilterChip(
             label: 'Filters',
@@ -106,18 +108,19 @@ class BrowseFilterRow extends StatelessWidget {
             trailingIcon: Icons.keyboard_arrow_down_rounded,
             onTap: onSortTap,
           ),
-          const SizedBox(width: 8),
-          _FilterChip(
-            label: 'Brands',
-            trailingIcon: Icons.keyboard_arrow_down_rounded,
-            onTap: onBrandTap,
-          ),
-          const SizedBox(width: 8),
-          _FilterChip(
-            label: 'Price',
-            trailingIcon: Icons.keyboard_arrow_down_rounded,
-            onTap: onPriceTap,
-          ),
+          ...filterSections.expand((section) {
+            final selectedCount =
+                selectedValuesByKey[section.key]?.length ?? 0;
+            return <Widget>[
+              const SizedBox(width: 8),
+              _FilterChip(
+                label: section.label.isNotEmpty ? section.label : section.key,
+                trailingIcon: Icons.keyboard_arrow_down_rounded,
+                onTap: () => onSectionTap(section),
+                selectedCount: selectedCount,
+              ),
+            ];
+          }),
         ],
       ),
     );
@@ -142,29 +145,28 @@ class SideSubCategoryRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visibleSubs = subCategories.isEmpty
-        ? <SubCategoryModel>[
-            SubCategoryModel(
-              name: category,
-              image: '',
-              slug: categorySlug,
-            ),
-          ]
-        : subCategories;
+    final visibleSubs = <SubCategoryModel>[
+      SubCategoryModel(
+        name: 'All $category',
+        image: '',
+        slug: '',
+      ),
+      ...subCategories,
+    ];
 
     return Container(
       width: 80,
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.14),
-            blurRadius: 4,
+        border: const Border(
+          right: BorderSide(
+            color: Color(0xFFE7EAF0),
+            width: 1,
           ),
-        ],
+        ),
       ),
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(4, 16, 4, 24),
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 24),
         itemCount: visibleSubs.length,
         separatorBuilder: (_, __) => const SizedBox(height: 34),
         itemBuilder: (context, index) {
@@ -187,6 +189,7 @@ class BrowseProductFeed extends StatelessWidget {
     required this.subCategories,
     required this.brandOptions,
     required this.productTypeOptions,
+    required this.selectedProductTypeOptions,
     required this.category,
     required this.categorySlug,
     required this.hasMore,
@@ -198,6 +201,7 @@ class BrowseProductFeed extends StatelessWidget {
     required this.onProductTap,
     required this.onCartQuantityChanged,
     required this.onNotifyTap,
+    required this.onProductTypeTap,
     required this.onRequestTap,
   });
 
@@ -206,6 +210,7 @@ class BrowseProductFeed extends StatelessWidget {
   final List<SubCategoryModel> subCategories;
   final List<String> brandOptions;
   final List<String> productTypeOptions;
+  final Set<String> selectedProductTypeOptions;
   final String category;
   final String categorySlug;
   final bool hasMore;
@@ -218,40 +223,50 @@ class BrowseProductFeed extends StatelessWidget {
   final Future<void> Function(ProductModel product, int quantity)
       onCartQuantityChanged;
   final Future<void> Function(ProductModel product) onNotifyTap;
+  final ValueChanged<String> onProductTypeTap;
   final VoidCallback onRequestTap;
 
   @override
   Widget build(BuildContext context) {
     final rowCount = (products.length / 2).ceil();
+    final productTypeLabels = _productTypeLabels();
     final brands = brandOptions
         .where((option) => option.trim().isNotEmpty)
         .map((option) => _BrowseBrandItem(name: option.trim()))
         .toList();
-    final showProductType = products.length >= 4;
-    final showBrands = products.length >= 8 && brands.isNotEmpty;
+    final showProductType = productTypeLabels.isNotEmpty;
+    final showBrands = brands.isNotEmpty;
     final extraSections = (showProductType ? 1 : 0) + (showBrands ? 1 : 0);
     final itemCount = rowCount + extraSections + (hasMore ? 1 : 0) + 1;
+    final productTypeSectionIndex = showProductType ? (rowCount >= 2 ? 2 : rowCount) : -1;
+    final brandSectionIndex = showBrands ? rowCount + (showProductType ? 1 : 0) : -1;
+    final loadMoreIndex = rowCount + extraSections;
+    final requestCardIndex = loadMoreIndex + (hasMore ? 1 : 0);
 
     return ListView.builder(
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(10, 14, 10, 96),
       itemCount: itemCount,
       itemBuilder: (context, index) {
-        var productRowIndex = index;
-
-        if (showProductType) {
-          if (index == 2) {
-            return _ProductTypeRail(filters: _productTypeLabels());
-          }
-          if (index > 2) productRowIndex -= 1;
+        if (showProductType && index == productTypeSectionIndex) {
+          return _ProductTypeRail(
+            title: 'Product type',
+            filters: productTypeLabels,
+            selectedValues: selectedProductTypeOptions,
+            onTap: onProductTypeTap,
+          );
         }
 
-        if (showBrands) {
-          final brandSectionIndex = showProductType ? 5 : 4;
-          if (index == brandSectionIndex) {
-            return _BrandRail(brands: brands);
-          }
-          if (index > brandSectionIndex) productRowIndex -= 1;
+        if (showBrands && index == brandSectionIndex) {
+          return _BrandRail(brands: brands);
+        }
+
+        var productRowIndex = index;
+        if (showProductType && index > productTypeSectionIndex) {
+          productRowIndex -= 1;
+        }
+        if (showBrands && index > brandSectionIndex) {
+          productRowIndex -= 1;
         }
 
         if (productRowIndex < rowCount) {
@@ -266,7 +281,7 @@ class BrowseProductFeed extends StatelessWidget {
           );
         }
 
-        if (hasMore && productRowIndex == rowCount) {
+        if (hasMore && index == loadMoreIndex) {
           if (isLoading) {
             return const Center(
               child: Padding(
@@ -290,21 +305,17 @@ class BrowseProductFeed extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return BrowseRequestCard(onTap: onRequestTap);
+        if (index == requestCardIndex) {
+          return BrowseRequestCard(onTap: onRequestTap);
+        }
+
+        return const SizedBox.shrink();
       },
     );
   }
 
   List<String> _productTypeLabels() {
-    if (productTypeOptions.isNotEmpty) {
-      return productTypeOptions.take(8).toList();
-    }
-    return subCategories
-        .map((sub) => sub.name.trim())
-        .where((name) => name.isNotEmpty)
-        .toSet()
-        .take(8)
-        .toList();
+    return productTypeOptions.take(8).toList();
   }
 }
 
@@ -538,14 +549,22 @@ class _ProductGridRow extends StatelessWidget {
 }
 
 class _ProductTypeRail extends StatelessWidget {
-  const _ProductTypeRail({required this.filters});
+  const _ProductTypeRail({
+    required this.title,
+    required this.filters,
+    required this.selectedValues,
+    required this.onTap,
+  });
 
+  final String title;
   final List<String> filters;
+  final Set<String> selectedValues;
+  final ValueChanged<String> onTap;
 
   @override
   Widget build(BuildContext context) {
     return _BrowseRailSection(
-      title: 'Product type',
+      title: title,
       child: SizedBox(
         height: 40,
         child: ListView.separated(
@@ -553,25 +572,38 @@ class _ProductTypeRail extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           itemCount: filters.length,
           separatorBuilder: (_, __) => const SizedBox(width: 10),
-          itemBuilder: (context, index) => Container(
-            height: 40,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFDFE4EC)),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              filters[index],
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 18 / 12,
+          itemBuilder: (context, index) {
+            final label = filters[index];
+            final isSelected = selectedValues.contains(label);
+            return GestureDetector(
+              onTap: () => onTap(label),
+              child: Container(
+                height: 40,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF0A243F).withOpacity(0.08)
+                      : Colors.white,
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF0A243F)
+                        : const Color(0xFFDFE4EC),
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0A243F),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 18 / 12,
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -740,9 +772,9 @@ class _SubCategoryTile extends StatelessWidget {
                           fit: BoxFit.cover,
                           memCacheWidth: 106,
                           errorWidget: (_, __, ___) =>
-                              const Icon(Icons.category_outlined, size: 24),
+                              _SubCategoryPlaceholder(isSelected: isSelected),
                         )
-                      : const Icon(Icons.category_outlined, size: 24),
+                      : _SubCategoryPlaceholder(isSelected: isSelected),
                 ),
               ),
             ),
@@ -769,6 +801,41 @@ class _SubCategoryTile extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubCategoryPlaceholder extends StatelessWidget {
+  const _SubCategoryPlaceholder({required this.isSelected});
+
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final dotColor = isSelected
+        ? const Color(0xFF0360E5)
+        : const Color(0xFFB8C2D1);
+
+    return Center(
+      child: SizedBox(
+        width: 22,
+        height: 22,
+        child: Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: List<Widget>.generate(
+            4,
+            (_) => Container(
+              width: 9,
+              height: 9,
+              decoration: BoxDecoration(
+                color: dotColor,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
         ),
       ),
     );
