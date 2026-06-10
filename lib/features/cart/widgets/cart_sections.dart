@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
-import 'package:m_o_b_demand_side/features/cart/controllers/cart_controller.dart';
-import 'package:m_o_b_demand_side/features/cart/models/cart_item.dart';
+import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
 
 class CartTopBar extends StatelessWidget {
@@ -310,8 +309,8 @@ class CartAddressBottomSheet extends StatefulWidget {
     required this.onAddAddress,
   });
 
-  final List<CartAddress> addresses;
-  final ValueChanged<CartAddress> onSelectAddress;
+  final List<CartAddressEntity> addresses;
+  final ValueChanged<CartAddressEntity> onSelectAddress;
   final VoidCallback onAddAddress;
 
   @override
@@ -334,7 +333,7 @@ class _CartAddressBottomSheetState extends State<CartAddressBottomSheet> {
     super.dispose();
   }
 
-  List<CartAddress> get _filteredAddresses {
+  List<CartAddressEntity> get _filteredAddresses {
     final query = _query.trim().toLowerCase();
     if (query.isEmpty) {
       return widget.addresses;
@@ -552,7 +551,7 @@ class _CartSavedAddressCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final CartAddress address;
+  final CartAddressEntity address;
   final VoidCallback onTap;
 
   @override

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
-import 'package:m_o_b_demand_side/features/cart/models/cart_item.dart';
-import 'package:m_o_b_demand_side/widgets/quantity_stepper.dart';
+import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
+import 'package:m_o_b_demand_side/shared/quantity_stepper.dart';
 
 class CartProductDetails extends StatelessWidget {
   const CartProductDetails({

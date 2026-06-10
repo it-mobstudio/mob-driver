@@ -4,14 +4,20 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'backend/analytics/analytics_service.dart';
 import 'backend/firebase/firebase_config.dart';
 import 'core/auth/auth_session.dart';
-import 'loginpage/splash_screen.dart';
-import '/core/app_runtime/flutter_flow_theme.dart';
-import 'core/app_runtime/flutter_flow_util.dart';
+import 'core/di/injection.dart';
+import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/cart/presentation/bloc/cart_bloc.dart';
+import 'features/home/presentation/bloc/home_bloc.dart';
+import 'features/auth/presentation/pages/splash_screen.dart';
+import 'core/app_runtime/nav/nav.dart';
+import 'core/styles/app_theme.dart';
+import 'environment_values.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,17 +68,12 @@ class _AppBootstrapState extends State<AppBootstrap> {
     await environmentValues.initialize();
 
     await initFirebase();
-    try {
-      await AnalyticsService.instance.enableCollection();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Analytics init warning: $e');
-      }
-    }
 
+    // Fire-and-forget — these don't need to block app startup
+    AnalyticsService.instance.enableCollection().catchError((_) {});
     if (!kIsWeb) {
       final crashlytics = FirebaseCrashlytics.instance;
-      await crashlytics.setCrashlyticsCollectionEnabled(true);
+      crashlytics.setCrashlyticsCollectionEnabled(true).catchError((_) {});
       FlutterError.onError = crashlytics.recordFlutterFatalError;
       PlatformDispatcher.instance.onError = (error, stack) {
         crashlytics.recordError(error, stack, fatal: true);
@@ -80,20 +81,11 @@ class _AppBootstrapState extends State<AppBootstrap> {
       };
     }
 
-    try {
-      await AuthSession.instance.initialize();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Auth session init warning: $e');
-      }
-    }
-    try {
-      await FlutterFlowTheme.initialize();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Theme init warning: $e');
-      }
-    }
+    await Future.wait([
+      AuthSession.instance.initialize().catchError((_) {}),
+      setupDependencies().catchError((_) {}),
+      AppTheme.initialize().catchError((_) {}),
+    ]);
 
     await splashDelay;
   }
@@ -126,7 +118,7 @@ class MyApp extends StatefulWidget {
 }
 
 class MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = FlutterFlowTheme.themeMode;
+  ThemeMode _themeMode = AppTheme.themeMode;
 
   late AppStateNotifier _appStateNotifier;
   late GoRouter _router;
@@ -153,15 +145,31 @@ class MyAppState extends State<MyApp> {
     _router = createRouter(_appStateNotifier);
   }
 
-  void setThemeMode(ThemeMode mode) => safeSetState(() {
+  void setThemeMode(ThemeMode mode) {
+    if (mounted) {
+      setState(() {
         _themeMode = mode;
-        FlutterFlowTheme.saveThemeMode(mode);
+        AppTheme.saveThemeMode(mode);
       });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = FlutterFlowTheme.of(context);
-    return MaterialApp.router(
+    final theme = AppTheme.of(context);
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<CartBloc>(
+          create: (_) => sl<CartBloc>()..add(CartLoadRequested()),
+        ),
+        BlocProvider<HomeBloc>(
+          create: (_) => sl<HomeBloc>()..add(HomeLoadRequested()),
+        ),
+        BlocProvider<AuthBloc>(
+          create: (_) => sl<AuthBloc>(),
+        ),
+      ],
+      child: MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'MOB Demand Side',
       localizationsDelegates: const [
@@ -172,28 +180,27 @@ class MyAppState extends State<MyApp> {
       supportedLocales: const [Locale('en', '')],
       theme: ThemeData(
         brightness: Brightness.light,
+        fontFamily: 'Inter',
         useMaterial3: false,
         scaffoldBackgroundColor: theme.primaryBackground,
         textTheme: TextTheme(
           bodyMedium: theme.typography.bodyMedium,
-          // ...add other text styles as needed
         ),
         primaryColor: theme.primary,
-        // ...add other color properties as needed
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
+        fontFamily: 'Inter',
         useMaterial3: false,
         scaffoldBackgroundColor: theme.primaryBackground,
         textTheme: TextTheme(
           bodyMedium: theme.typography.bodyMedium,
-          // ...add other text styles as needed
         ),
         primaryColor: theme.primary,
-        // ...add other color properties as needed
       ),
       themeMode: _themeMode,
       routerConfig: _router,
+      ),
     );
   }
 }

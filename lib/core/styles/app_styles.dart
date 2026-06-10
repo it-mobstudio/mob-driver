@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
+import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 
 abstract final class AppColors {
   static const Color surface = Colors.white;
