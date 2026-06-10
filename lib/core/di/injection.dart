@@ -50,6 +50,12 @@ import 'package:m_o_b_demand_side/features/rfq/data/repositories/rfq_repository_
 import 'package:m_o_b_demand_side/features/rfq/domain/repositories/rfq_repository.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
 
+// Address
+import 'package:m_o_b_demand_side/features/address/data/datasources/address_remote_datasource.dart';
+import 'package:m_o_b_demand_side/features/address/data/repositories/address_repository_impl.dart';
+import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
+
 final GetIt sl = GetIt.instance;
 
 Future<void> setupDependencies() async {
@@ -82,6 +88,9 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton<RfqRemoteDatasource>(
     () => RfqRemoteDatasourceImpl(dio),
   );
+  sl.registerLazySingleton<AddressRemoteDatasource>(
+    () => AddressRemoteDatasourceImpl(dio),
+  );
 
   // ── 3. Repositories ──────────────────────────────────────────────────────
   sl.registerLazySingleton<AuthRepository>(
@@ -108,6 +117,9 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton<RfqRepository>(
     () => RfqRepositoryImpl(sl()),
   );
+  sl.registerLazySingleton<AddressRepository>(
+    () => AddressRepositoryImpl(sl()),
+  );
 
   // ── 4. BLoCs ─────────────────────────────────────────────────────────────
 
@@ -122,4 +134,5 @@ Future<void> setupDependencies() async {
   sl.registerFactory<CheckoutBloc>(() => CheckoutBloc(sl()));
   sl.registerFactory<ProfileBloc>(() => ProfileBloc(sl()));
   sl.registerFactory<RfqBloc>(() => RfqBloc(sl()));
+  sl.registerFactory<AddressBloc>(() => AddressBloc(sl()));
 }

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/map_location_widget.dart';
+import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/address_details_page.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/splash_screen.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
@@ -203,7 +205,21 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: MapLocationWidget.routeName,
           path: MapLocationWidget.routePath,
-          builder: (context, state) => const MapLocationWidget(),
+          builder: (context, state) => MapLocationWidget(
+            initialPlace:
+                state.extra is PlaceDetails ? state.extra as PlaceDetails : null,
+          ),
+        ),
+        GoRoute(
+          name: AddressDetailsPage.routeName,
+          path: AddressDetailsPage.routePath,
+          builder: (context, state) {
+            final place =
+                state.extra is PlaceDetails ? state.extra as PlaceDetails : null;
+            return place == null
+                ? const AddressSelectionWidget()
+                : AddressDetailsPage(place: place);
+          },
         ),
         GoRoute(
           name: RfqFormPage.routeName,

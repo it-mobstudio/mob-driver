@@ -1,21 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/google_fonts_compat.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:m_o_b_demand_side/core/di/injection.dart';
-import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
-import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
-import 'package:m_o_b_demand_side/features/address/presentation/pages/address_details_page.dart';
-import 'package:m_o_b_demand_side/features/address/presentation/pages/location_search_sheet.dart';
 
 class MapLocationWidget extends StatefulWidget {
-  const MapLocationWidget({super.key, this.initialPlace});
+  const MapLocationWidget({super.key});
 
   static const String routeName = 'MapLocation';
   static const String routePath = '/map_location';
-  final PlaceDetails? initialPlace;
 
   @override
   State<MapLocationWidget> createState() => _MapLocationWidgetState();
@@ -26,47 +20,15 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
   LatLng? _currentLatLng;
   LatLng? _pickedLatLng;
   String? _address;
-  PlaceDetails? _placeDetails;
   bool _loadingAddr = false;
-  late final AddressBloc _addressBloc;
 
-  CameraPosition get _defaultCamera => CameraPosition(
-        target: widget.initialPlace == null
-            ? const LatLng(12.9716, 77.5946)
-            : LatLng(
-                widget.initialPlace!.latitude,
-                widget.initialPlace!.longitude,
-              ),
-        zoom: 14.5,
-      );
+  final CameraPosition _defaultCamera =
+      const CameraPosition(target: LatLng(12.9716, 77.5946), zoom: 14.5);
 
   @override
   void initState() {
     super.initState();
-    _addressBloc = sl<AddressBloc>();
-    final initial = widget.initialPlace;
-    if (initial != null) {
-      _applyPlace(initial, animate: false);
-    } else {
-      _initLocation();
-    }
-  }
-
-  @override
-  void dispose() {
-    _addressBloc.close();
-    _map?.dispose();
-    super.dispose();
-  }
-
-  void _applyPlace(PlaceDetails place, {bool animate = true}) {
-    _placeDetails = place;
-    _address = place.formattedAddress;
-    _pickedLatLng = LatLng(place.latitude, place.longitude);
-    if (animate && _map != null) {
-      _map!.animateCamera(CameraUpdate.newLatLngZoom(_pickedLatLng!, 16));
-    }
-    if (mounted) setState(() {});
+    _initLocation();
   }
 
   Future<void> _initLocation() async {
@@ -125,19 +87,7 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
           p.postalCode,
           p.country
         ].where((e) => (e ?? '').trim().isNotEmpty).join(', ');
-        setState(() {
-          _address = line;
-          _placeDetails = PlaceDetails(
-            latitude: latLng.latitude,
-            longitude: latLng.longitude,
-            formattedAddress: line,
-            city: p.locality ?? p.subAdministrativeArea ?? '',
-            state: p.administrativeArea ?? '',
-            pincode: p.postalCode ?? '',
-            sublocality: p.subLocality ?? '',
-            locationName: p.name ?? '',
-          );
-        });
+        setState(() => _address = line);
       }
     } catch (_) {
       // swallow, keep old address
@@ -269,11 +219,8 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: TextField(
         readOnly: true,
-        onTap: () async {
-          final place = await showLocationSearchSheet(context, _addressBloc);
-          if (place != null && mounted) {
-            _applyPlace(place);
-          }
+        onTap: () {
+          // TODO: hook to Places Autocomplete and animate camera to result
         },
         decoration: InputDecoration(
           hintText: 'Search for area, street name..',
@@ -396,14 +343,12 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
                   onPressed: (_pickedLatLng == null || _address == null)
                       ? null
                       : () {
-                          final place = _placeDetails;
-                          if (place != null) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => AddressDetailsPage(place: place),
-                              ),
-                            );
-                          }
+                          // Return selection or navigate
+                          Navigator.pop(context, {
+                            'latLng': _pickedLatLng,
+                            'address': _address,
+                          });
+                          // Or: GoRouter.of(context).go(CheckoutAddressPage.routePath);
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
