@@ -16,6 +16,7 @@ import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_prod
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_listing_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
+import 'package:m_o_b_demand_side/features/rfq/presentation/pages/magic_ai_quote_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq_details_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq_form_page.dart';
@@ -204,6 +205,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: MapLocationWidget.routeName,
           path: MapLocationWidget.routePath,
           builder: (context, state) => const MapLocationWidget(),
+        ),
+        GoRoute(
+          name: MagicAiQuotePage.routeName,
+          path: MagicAiQuotePage.routePath,
+          builder: (context, state) => const MagicAiQuotePage(),
         ),
         GoRoute(
           name: RfqFormPage.routeName,
