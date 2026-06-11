@@ -5,14 +5,18 @@ class CartAddressEntity {
   const CartAddressEntity({
     required this.name,
     required this.address,
+    this.addressId = '',
     this.phone = '',
+    this.pincode = '',
     this.tag = '',
     this.project = '',
     this.gstNumber = '',
   });
 
+  final String addressId;
   final String name;
   final String address;
+  final String pincode;
   final String phone;
   final String tag;
   final String project;
@@ -30,15 +34,20 @@ class CartSummaryEntity {
     required this.savings,
     required this.total,
     required this.rewardPoints,
+    required this.walletBalance,
     required this.rfqItemCount,
     required this.itemCount,
+    required this.cartId,
     required this.shippingTitle,
     required this.shippingSubtitle,
     required this.shippingRecipientName,
     required this.shippingAddress,
     required this.shippingPhone,
+    required this.shippingAddressId,
+    required this.shippingPincode,
     required this.gstNumber,
     required this.billingAddress,
+    required this.billingAddressId,
     required this.billingGstNumber,
     required this.savedAddresses,
   });
@@ -50,18 +59,37 @@ class CartSummaryEntity {
   final double savings;
   final double total;
   final int rewardPoints;
+
+  /// Mobwallet balance available for redemption.
+  final double walletBalance;
+
+  /// Rupee value of mobstar points (1 point = ₹0.25).
+  double get mobstarAmount => (rewardPoints / 4.0);
+
   final int rfqItemCount;
 
   /// Raw `item_count` from the API — use this for the cart badge.
   final int itemCount;
+
+  /// Cart ID from API — used for address-to-order linking.
+  final String cartId;
 
   final String shippingTitle;
   final String shippingSubtitle;
   final String shippingRecipientName;
   final String shippingAddress;
   final String shippingPhone;
+
+  /// Address ID of the currently set delivery address.
+  final String shippingAddressId;
+  final String shippingPincode;
+
   final String gstNumber;
   final String billingAddress;
+
+  /// Address ID of the currently set billing address.
+  final String billingAddressId;
+
   final String billingGstNumber;
   final List<CartAddressEntity> savedAddresses;
 
@@ -85,15 +113,20 @@ class CartSummaryEntity {
     savings: 0,
     total: 0,
     rewardPoints: 0,
+    walletBalance: 0,
     rfqItemCount: 0,
     itemCount: 0,
+    cartId: '',
     shippingTitle: 'Shipping address',
     shippingSubtitle: 'Add an address to continue',
     shippingRecipientName: '',
     shippingAddress: '',
     shippingPhone: '',
+    shippingAddressId: '',
+    shippingPincode: '',
     gstNumber: '',
     billingAddress: '',
+    billingAddressId: '',
     billingGstNumber: '',
     savedAddresses: <CartAddressEntity>[],
   );

@@ -109,7 +109,7 @@ class _ShipmentItemTile extends StatelessWidget {
                       imageUrl: item.imageUrl,
                       fit: BoxFit.cover,
                       memCacheWidth: 88,
-                      placeholder: (_, __) => const SizedBox.shrink(),
+                      placeholder: (_, __) => const ImageShimmer(),
                       errorWidget: (_, __, ___) => Image.asset(
                         'assets/images/Image-coming-soon.png',
                         fit: BoxFit.cover,

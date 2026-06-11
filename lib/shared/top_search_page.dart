@@ -9,6 +9,7 @@ import 'package:m_o_b_demand_side/features/product/data/models/product_models.da
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SearchPage extends StatefulWidget {
@@ -327,8 +328,7 @@ class _SearchPageState extends State<SearchPage> {
                         imageUrl: r.primaryImageUrl,
                         fit: BoxFit.cover,
                         memCacheWidth: 80,
-                        placeholder: (context, url) =>
-                            const SizedBox.shrink(),
+                        placeholder: (_, __) => const ImageShimmer(),
                         errorWidget: (context, url, error) =>
                             const Icon(Icons.image, color: Colors.grey),
                       ),

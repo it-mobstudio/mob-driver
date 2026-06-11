@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 
 part 'order_detail_bill_section.dart';
 part 'order_detail_footer_section.dart';

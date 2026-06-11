@@ -1,6 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/quantity_stepper.dart';
 
 class CartProductDetails extends StatelessWidget {
@@ -55,10 +57,12 @@ class CartProductDetails extends StatelessWidget {
               border: Border.all(color: const Color(0xFFE8EEF5)),
             ),
             child: item.isNetworkImage
-                ? Image.network(
-                    item.imageAsset,
+                ? CachedNetworkImage(
+                    imageUrl: item.imageAsset,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Image.asset(
+                    memCacheWidth: 108,
+                    placeholder: (_, __) => const ImageShimmer(),
+                    errorWidget: (_, __, ___) => Image.asset(
                       'assets/images/Image-coming-soon.png',
                       fit: BoxFit.contain,
                     ),

@@ -50,6 +50,40 @@ class CheckoutSummaryEntity {
   }
 }
 
+class RazorpayOrderEntity {
+  const RazorpayOrderEntity({
+    required this.razorpayOrderId,
+    required this.key,
+    required this.amount,
+    required this.currency,
+    this.name = 'MOB',
+  });
+
+  final String razorpayOrderId;
+  final String key;
+  final int amount;
+  final String currency;
+  final String name;
+
+  factory RazorpayOrderEntity.fromMap(Map<String, dynamic> map) {
+    final amountRaw =
+        (map['amount'] ?? map['amount_in_paise'] ?? 0);
+    final amountDouble =
+        amountRaw is num ? amountRaw.toDouble() : double.tryParse(amountRaw.toString()) ?? 0.0;
+    // API returns rupees; Razorpay SDK expects paise (integer)
+    final amountPaise = (amountDouble * 100).round();
+
+    return RazorpayOrderEntity(
+      razorpayOrderId:
+          (map['razorpay_id'] ?? map['razorpay_order_id'] ?? map['id'] ?? '').toString(),
+      key: (map['key'] ?? map['key_id'] ?? '').toString(),
+      amount: amountPaise,
+      currency: (map['currency'] ?? 'INR').toString(),
+      name: (map['name'] ?? 'MOB').toString(),
+    );
+  }
+}
+
 class PlacedOrderEntity {
   const PlacedOrderEntity({
     required this.orderId,

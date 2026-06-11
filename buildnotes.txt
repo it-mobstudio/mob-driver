@@ -23,3 +23,8 @@ Clean Logs
 
 Build Release location
 >>D:\Praveen\MOB\Projects\mob-mobileapp\build\app\outputs\bundle\release
+
+
+web render
+>>flutter run -d chrome --web-port 58869
+>>flutter build web --release

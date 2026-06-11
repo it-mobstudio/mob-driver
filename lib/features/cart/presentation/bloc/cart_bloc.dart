@@ -7,7 +7,10 @@ import 'package:m_o_b_demand_side/features/cart/domain/repositories/cart_reposit
 
 sealed class CartEvent {}
 
-final class CartLoadRequested extends CartEvent {}
+final class CartLoadRequested extends CartEvent {
+  CartLoadRequested({this.outOfStock = false});
+  final bool outOfStock;
+}
 
 final class CartQuantityUpdateRequested extends CartEvent {
   CartQuantityUpdateRequested({required this.item, required this.newQty});
@@ -107,7 +110,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       return;
     }
     emit(CartLoading());
-    final (summary, failure) = await _repository.getCart();
+    final (summary, failure) = await _repository.getCart(outOfStock: event.outOfStock);
     if (failure != null) {
       emit(CartError(failure.message));
     } else {

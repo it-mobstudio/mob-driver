@@ -188,7 +188,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: CheckoutOrderReviewPage.routeName,
           path: CheckoutOrderReviewPage.routePath,
-          builder: (context, state) => const CheckoutOrderReviewPage(),
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return CheckoutOrderReviewPage(
+              cartId: extra['cart_id'] as int? ?? 0,
+              deliveryAddressId: extra['delivery_address_id'] as int? ?? 0,
+              billingAddressId: extra['billing_address_id'] as int? ?? 0,
+            );
+          },
         ),
         GoRoute(
           name: CheckoutPaymentPage.routeName,
@@ -198,7 +205,8 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: OrderPlacedPage.routeName,
           path: OrderPlacedPage.routePath,
-          builder: (context, state) => const OrderPlacedPage(),
+          builder: (context, state) =>
+              OrderPlacedPage(orderId: state.extra as String? ?? ''),
         ),
         GoRoute(
           name: MapLocationWidget.routeName,

@@ -10,9 +10,9 @@ class CartRepositoryImpl implements CartRepository {
   final CartRemoteDatasource _datasource;
 
   @override
-  Future<(CartSummaryEntity?, AppFailure?)> getCart() async {
+  Future<(CartSummaryEntity?, AppFailure?)> getCart({bool outOfStock = false}) async {
     try {
-      final data = await _datasource.getCart();
+      final data = await _datasource.getCart(outOfStock: outOfStock);
       return (_buildSummary(data), null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
@@ -72,6 +72,7 @@ class CartRepositoryImpl implements CartRepository {
     final shippingInfo = _parseShipping(data['user_details']);
     final billingAddr = _parseBillingAddress(data, shippingInfo.address, shippingInfo.gst);
     final billingGst = _parseBillingGst(data, shippingInfo.gst);
+    final billingId = _parseBillingAddressId(data, shippingInfo.id);
     final savedAddresses = _parseSavedAddresses(data, shippingInfo);
 
     final rfqCount = _rfqCount(data['quote_cart']);
@@ -92,16 +93,27 @@ class CartRepositoryImpl implements CartRepository {
         'mobstar_points',
         'mobstarPoints',
       ]),
+      walletBalance: _num(data, const [
+        'wallet',
+        'mob_wallet',
+        'wallet_balance',
+        'mobwallet',
+        'mobwallet_balance',
+      ]).toDouble(),
       rfqItemCount: rfqCount,
       itemCount: _int(data, const ['item_count', 'itemCount', 'total_items'],
           fallback: items.length + rfqCount),
+      cartId: _str(data, const ['id', 'cart_id', 'pk']),
       shippingTitle: shippingInfo.title,
       shippingSubtitle: shippingInfo.subtitle,
       shippingRecipientName: shippingInfo.name,
       shippingAddress: shippingInfo.address,
       shippingPhone: shippingInfo.phone,
+      shippingAddressId: shippingInfo.id,
+      shippingPincode: shippingInfo.pincode,
       gstNumber: shippingInfo.gst,
       billingAddress: billingAddr,
+      billingAddressId: billingId,
       billingGstNumber: billingGst,
       savedAddresses: savedAddresses,
     );
@@ -212,6 +224,8 @@ class CartRepositoryImpl implements CartRepository {
         address: '',
         phone: '',
         gst: '',
+        id: '',
+        pincode: '',
       );
     }
     final ud = Map<String, dynamic>.from(raw);
@@ -236,7 +250,16 @@ class CartRepositoryImpl implements CartRepository {
       address: addr,
       phone: _str(ud, const ['phone', 'phone_number', 'mobile', 'contact_number']),
       gst: _str(ud, const ['gst_number', 'gst_no', 'gstin', 'gst', 'tax_number']),
+      id: _str(ud, const ['id', 'address_id', 'pk']),
+      pincode: _str(ud, const ['pincode', 'zip', 'zip_code']),
     );
+  }
+
+  String _parseBillingAddressId(Map<String, dynamic> data, String fallback) {
+    final raw = data['billing_details'] ?? data['billing_address'] ?? data['billing'];
+    if (raw is! Map) return fallback;
+    final billing = Map<String, dynamic>.from(raw);
+    return _str(billing, const ['id', 'address_id', 'pk'], fallback: fallback);
   }
 
   String _parseBillingAddress(
@@ -291,9 +314,11 @@ class CartRepositoryImpl implements CartRepository {
         ].where((v) => v.isNotEmpty).toList();
         if (parts.isEmpty) continue;
         addresses.add(CartAddressEntity(
+          addressId: _str(m, const ['id', 'address_id', 'pk']),
           name: _str(m, const ['name', 'full_name', 'recipient_name'],
               fallback: shipping.name),
           address: parts.join(', '),
+          pincode: _str(m, const ['pincode', 'zip_code', 'zip']),
           phone: _str(m, const ['phone', 'phone_number', 'mobile']),
           tag: _str(m, const ['tag', 'type', 'address_type', 'label'], fallback: 'Address'),
           project: _str(m, const ['project_name', 'project']),
@@ -304,8 +329,10 @@ class CartRepositoryImpl implements CartRepository {
 
     if (addresses.isEmpty && shipping.address.isNotEmpty) {
       addresses.add(CartAddressEntity(
+        addressId: shipping.id,
         name: shipping.name,
         address: shipping.address,
+        pincode: shipping.pincode,
         phone: shipping.phone,
         tag: 'Delivery',
         gstNumber: shipping.gst,
@@ -331,7 +358,9 @@ class CartRepositoryImpl implements CartRepository {
   String _str(Map<String, dynamic> map, List<String> keys, {String fallback = ''}) {
     for (final k in keys) {
       final v = map[k];
-      if (v is String && v.trim().isNotEmpty) return v.trim();
+      if (v == null) continue;
+      final s = v.toString().trim();
+      if (s.isNotEmpty && s != 'null') return s;
     }
     return fallback;
   }
@@ -367,6 +396,8 @@ class _ShippingInfo {
     required this.address,
     required this.phone,
     required this.gst,
+    required this.id,
+    required this.pincode,
   });
 
   final String title;
@@ -375,4 +406,6 @@ class _ShippingInfo {
   final String address;
   final String phone;
   final String gst;
+  final String id;
+  final String pincode;
 }

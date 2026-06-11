@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/core/network/dio_client.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_order_review_page.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
@@ -9,11 +12,42 @@ import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 
-class CheckoutAddressPage extends StatelessWidget {
+class CheckoutAddressPage extends StatefulWidget {
   static const routeName = 'CheckoutAddressPage';
   static const routePath = '/checkout/address';
 
   const CheckoutAddressPage({super.key});
+
+  @override
+  State<CheckoutAddressPage> createState() => _CheckoutAddressPageState();
+}
+
+class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
+  late final AddressBloc _addressBloc;
+  bool _sameAddress = false;
+  CartAddressEntity? _selectedDelivery;
+  CartAddressEntity? _selectedBilling;
+
+  // null = not checked yet, true = serviceable, false = not serviceable
+  bool? _pincodeValid;
+  bool _checkingPincode = false;
+  String _lastCheckedPincode = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _addressBloc = sl<AddressBloc>()..add(AddressLoadRequested());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<CartBloc>().add(CartLoadRequested(outOfStock: true));
+    });
+  }
+
+  @override
+  void dispose() {
+    _addressBloc.close();
+    super.dispose();
+  }
 
   void _goBack(BuildContext context) {
     if (context.canPop()) {
@@ -23,18 +57,92 @@ class CheckoutAddressPage extends StatelessWidget {
     }
   }
 
-  void _showAddressDrawer(
-      BuildContext context, List<CartAddressEntity> addresses) {
+  Future<void> _checkPincode(String pincode) async {
+    if (pincode.isEmpty || pincode == _lastCheckedPincode) return;
+    _lastCheckedPincode = pincode;
+    setState(() => _checkingPincode = true);
+    try {
+      final response = await DioClient.instance.dio.get<dynamic>(
+        '/utility/serviceble/',
+        queryParameters: {'pincode': pincode},
+      );
+      final data = response.data;
+      final isServiceable = data is Map
+          ? (data['status'] == true || data['serviceable'] == true)
+          : false;
+      if (mounted) {
+        setState(() {
+          _pincodeValid = isServiceable;
+          _checkingPincode = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _pincodeValid = null;
+          _checkingPincode = false;
+        });
+      }
+    }
+  }
+
+  List<CartAddressEntity> _addressList() {
+    final state = _addressBloc.state;
+    if (state is AddressLoaded) {
+      return state.addresses
+          .map((a) => CartAddressEntity(
+                addressId: a.id,
+                name: a.name,
+                address: a.address,
+                pincode: a.pincode,
+                phone: a.phone,
+                tag: a.tag,
+                project: a.project,
+                gstNumber: a.gstNumber,
+              ))
+          .toList();
+    }
+    return const [];
+  }
+
+  bool _canContinue(CartSummaryEntity summary) {
+    final hasDelivery = _selectedDelivery != null || summary.hasDeliveryAddress;
+    final hasBilling = _sameAddress ||
+        _selectedBilling != null ||
+        summary.billingAddress.trim().isNotEmpty;
+    // Block if pincode is confirmed invalid; allow if null (not checked) or true
+    final pincodeOk = _pincodeValid != false;
+    return hasDelivery && hasBilling && pincodeOk && !_checkingPincode;
+  }
+
+  void _showAddressDrawer(BuildContext context, {bool forBilling = false}) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return _AddressSelectionDrawer(
-          addresses: addresses,
+          addresses: _addressList(),
           onAddAddress: () {
             Navigator.of(sheetContext).pop();
             context.go(AddressSelectionWidget.routePath);
+          },
+          onSelectAddress: (CartAddressEntity address) {
+            Navigator.of(sheetContext).pop();
+            setState(() {
+              if (forBilling && !_sameAddress) {
+                _selectedBilling = address;
+              } else {
+                _selectedDelivery = address;
+                if (_sameAddress) _selectedBilling = address;
+                // Reset pincode validity and re-check for new delivery address
+                _pincodeValid = null;
+                _lastCheckedPincode = '';
+              }
+            });
+            if (!forBilling || _sameAddress) {
+              _checkPincode(address.pincode);
+            }
           },
         );
       },
@@ -43,85 +151,144 @@ class CheckoutAddressPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _CheckoutHeader(onBack: () => _goBack(context)),
-            Expanded(
-              child: Container(
-                color: const Color(0xFFF0F0F0),
-                child: BlocBuilder<CartBloc, CartState>(
-                  builder: (context, state) {
-                    return switch (state) {
-                      CartInitial() || CartLoading() => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                      CartError(:final message) => ErrorStateView(
-                          title: 'Unable to load checkout',
-                          message: message,
-                          onRetry: () =>
-                              context.read<CartBloc>().add(CartLoadRequested()),
-                        ),
-                      CartRequiresLogin() => const Center(
-                          child: Text('Please login to continue.'),
-                        ),
-                      CartLoaded(:final summary) => Stack(
-                          children: [
-                            ListView(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 16, 16, 118),
-                              children: [
-                                _DeliveryAddressCard(
-                                  name: summary.shippingRecipientName,
-                                  address: summary.shippingAddress,
-                                  phone: summary.shippingPhone,
-                                  actionLabel: summary.hasDeliveryAddress
-                                      ? 'Change'
-                                      : 'Add',
-                                  onAction: () => _showAddressDrawer(
-                                      context, summary.savedAddresses),
-                                ),
-                                const SizedBox(height: 12),
-                                const _SameAddressRow(),
-                                const SizedBox(height: 20),
-                                _BillingAddressCard(
-                                  address: summary.billingAddress,
-                                  gstNumber: summary.billingGstNumber,
-                                  actionLabel:
-                                      summary.billingAddress.trim().isNotEmpty
-                                          ? 'Change'
-                                          : 'Add',
-                                  onAction: () => _showAddressDrawer(
-                                      context, summary.savedAddresses),
-                                ),
-                                const SizedBox(height: 20),
-                                const _CouponsCard(),
-                                const SizedBox(height: 20),
-                                OrderDetailsCard(
-                                  subtotal: summary.subtotal,
-                                  shipping: summary.shipping,
-                                  tax: summary.tax,
-                                  savings: summary.savings,
-                                  total: summary.total,
-                                  rewardPoints: summary.rewardPoints,
-                                ),
-                              ],
-                            ),
-                            _BottomActionBar(
-                              onPressed: () => context
-                                  .go(CheckoutOrderReviewPage.routePath),
-                            ),
-                          ],
-                        ),
-                    };
-                  },
+    return BlocProvider<AddressBloc>.value(
+      value: _addressBloc,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _CheckoutHeader(onBack: () => _goBack(context)),
+              Expanded(
+                child: Container(
+                  color: const Color(0xFFF0F0F0),
+                  child: BlocBuilder<CartBloc, CartState>(
+                    builder: (context, state) {
+                      return switch (state) {
+                        CartInitial() || CartLoading() => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        CartError(:final message) => ErrorStateView(
+                            title: 'Unable to load checkout',
+                            message: message,
+                            onRetry: () => context
+                                .read<CartBloc>()
+                                .add(CartLoadRequested(outOfStock: true)),
+                          ),
+                        CartRequiresLogin() => const Center(
+                            child: Text('Please login to continue.'),
+                          ),
+                        CartLoaded(:final summary) => Builder(
+                            builder: (_) {
+                              // Trigger pincode check on first load
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                final pincode = _selectedDelivery?.pincode.isNotEmpty == true
+                                    ? _selectedDelivery!.pincode
+                                    : summary.shippingPincode;
+                                _checkPincode(pincode);
+                              });
+                              return Stack(
+                            children: [
+                              ListView(
+                                padding: const EdgeInsets.fromLTRB(
+                                    16, 16, 16, 118),
+                                children: [
+                                  if (_pincodeValid == false)
+                                    _PincodeErrorBanner(),
+                                  if (_pincodeValid == false)
+                                    const SizedBox(height: 12),
+                                  _DeliveryAddressCard(
+                                    name: _selectedDelivery?.name ??
+                                        summary.shippingRecipientName,
+                                    address: _selectedDelivery?.address ??
+                                        summary.shippingAddress,
+                                    phone: _selectedDelivery?.phone ??
+                                        summary.shippingPhone,
+                                    actionLabel:
+                                        (_selectedDelivery != null ||
+                                                summary.hasDeliveryAddress)
+                                            ? 'Change'
+                                            : 'Add',
+                                    onAction: () =>
+                                        _showAddressDrawer(context),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _SameAddressRow(
+                                    checked: _sameAddress,
+                                    onChanged: (v) =>
+                                        setState(() => _sameAddress = v),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _BillingAddressCard(
+                                    address: _sameAddress
+                                        ? (_selectedDelivery?.address ??
+                                            summary.shippingAddress)
+                                        : (_selectedBilling?.address ??
+                                            summary.billingAddress),
+                                    gstNumber: summary.billingGstNumber,
+                                    actionLabel: _sameAddress
+                                        ? 'Change'
+                                        : ((_selectedBilling != null ||
+                                                summary.billingAddress
+                                                    .trim()
+                                                    .isNotEmpty)
+                                            ? 'Change'
+                                            : 'Add'),
+                                    onAction: _sameAddress
+                                        ? null
+                                        : () => _showAddressDrawer(
+                                            context,
+                                            forBilling: true),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  OrderDetailsCard(
+                                    subtotal: summary.subtotal,
+                                    shipping: summary.shipping,
+                                    tax: summary.tax,
+                                    savings: summary.savings,
+                                    total: summary.total,
+                                    rewardPoints: summary.rewardPoints,
+                                  ),
+                                ],
+                              ),
+                              BottomCheckoutBar(
+                                label: 'Continue',
+                                isDisabled: !_canContinue(summary),
+                                onProceed: () {
+                                  final deliveryId = int.tryParse(
+                                        _selectedDelivery?.addressId ??
+                                            summary.shippingAddressId,
+                                      ) ??
+                                      0;
+                                  final billingId = _sameAddress
+                                      ? deliveryId
+                                      : int.tryParse(
+                                            _selectedBilling?.addressId ??
+                                                summary.billingAddressId,
+                                          ) ??
+                                          deliveryId;
+                                  context.go(
+                                    CheckoutOrderReviewPage.routePath,
+                                    extra: {
+                                      'cart_id': int.tryParse(summary.cartId) ?? 0,
+                                      'delivery_address_id': deliveryId,
+                                      'billing_address_id': billingId,
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          );
+                            },
+                          ),
+                      };
+                    },
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -205,63 +372,53 @@ class _DeliveryAddressCard extends StatelessWidget {
       height: 106,
       padding: const EdgeInsets.all(12),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 262,
+          Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 262,
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        const TextSpan(
-                          text: 'Deliver to:',
-                          style: TextStyle(
-                            color: Color(0xFF67696D),
-                            fontSize: 14,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                            height: 1.43,
-                          ),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: 'Deliver to:',
+                        style: TextStyle(
+                          color: Color(0xFF67696D),
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          height: 1.43,
                         ),
-                        TextSpan(
-                          text: ' $displayName',
-                          style: const TextStyle(
-                            color: Color(0xFF0A243F),
-                            fontSize: 14,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                            height: 1.43,
-                          ),
+                      ),
+                      TextSpan(
+                        text: ' $displayName',
+                        style: const TextStyle(
+                          color: Color(0xFF0A243F),
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          height: 1.43,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
-                SizedBox(
-                  width: 262,
-                  child: Text(
-                    [
-                      displayAddress,
-                      if (displayPhone.isNotEmpty) displayPhone,
-                    ].join('\n'),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF67696D),
-                      fontSize: 12,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                      height: 1.50,
-                    ),
+                Text(
+                  [
+                    displayAddress,
+                    if (displayPhone.isNotEmpty) displayPhone,
+                  ].join('\n'),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF67696D),
+                    fontSize: 12,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                    height: 1.50,
                   ),
                 ),
               ],
@@ -290,37 +447,51 @@ class _DeliveryAddressCard extends StatelessWidget {
 }
 
 class _SameAddressRow extends StatelessWidget {
-  const _SameAddressRow();
+  const _SameAddressRow({required this.checked, required this.onChanged});
+
+  final bool checked;
+  final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 18,
-          height: 18,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: const Color(0xFF767C8F)),
-            borderRadius: BorderRadius.circular(2),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onChanged(!checked),
+      child: Row(
+        children: [
+          Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color: checked ? const Color(0xFF2973F0) : Colors.white,
+              border: Border.all(
+                color: checked
+                    ? const Color(0xFF2973F0)
+                    : const Color(0xFF767C8F),
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: checked
+                ? const Icon(Icons.check, size: 12, color: Colors.white)
+                : null,
           ),
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Text(
-            'Use same address for delivery and billing',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFF0A243F),
-              fontSize: 11,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
-              height: 1.45,
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              'Use same address for delivery and billing',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF0A243F),
+                fontSize: 11,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+                height: 1.45,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -336,7 +507,7 @@ class _BillingAddressCard extends StatelessWidget {
   final String address;
   final String gstNumber;
   final String actionLabel;
-  final VoidCallback onAction;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -429,53 +600,16 @@ class _BillingAddressCard extends StatelessWidget {
   }
 }
 
-class _CouponsCard extends StatelessWidget {
-  const _CouponsCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return _CheckoutCard(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.discount_outlined,
-            color: Color(0xFF0A243F),
-            size: 16,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'View all coupons',
-              style: const TextStyle(
-                color: Color(0xFF0A243F),
-                fontSize: 13,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-                height: 1.54,
-              ),
-            ),
-          ),
-          const Icon(
-            Icons.chevron_right,
-            color: Color(0xFF767C8F),
-            size: 24,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _AddressSelectionDrawer extends StatelessWidget {
   const _AddressSelectionDrawer({
     required this.addresses,
     required this.onAddAddress,
+    required this.onSelectAddress,
   });
 
   final List<CartAddressEntity> addresses;
   final VoidCallback onAddAddress;
+  final void Function(CartAddressEntity) onSelectAddress;
 
   @override
   Widget build(BuildContext context) {
@@ -550,7 +684,7 @@ class _AddressSelectionDrawer extends StatelessWidget {
                             itemBuilder: (context, index) {
                               return _SavedAddressCard(
                                 address: addresses[index],
-                                onTap: () => Navigator.of(context).pop(),
+                                onTap: () => onSelectAddress(addresses[index]),
                               );
                             },
                           ),
@@ -752,63 +886,6 @@ class _EmptyAddressState extends StatelessWidget {
   }
 }
 
-class _BottomActionBar extends StatelessWidget {
-  const _BottomActionBar({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(16),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
-                blurRadius: 18,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                backgroundColor: const Color(0xFF0360E5),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: Text(
-                'Save and continue',
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  height: 22 / 15,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _CheckoutCard extends StatelessWidget {
   const _CheckoutCard({
     required this.child,
@@ -831,6 +908,41 @@ class _CheckoutCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: child,
+    );
+  }
+}
+
+class _PincodeErrorBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF0F0),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFFCDD2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded,
+              color: Color(0xFFE53935), size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Delivery unavailable for this pincode at the moment. '
+              'Please enter a different pincode.',
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                height: 18 / 12,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

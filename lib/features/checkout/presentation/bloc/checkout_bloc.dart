@@ -8,9 +8,35 @@ sealed class CheckoutEvent {}
 
 final class CheckoutLoadRequested extends CheckoutEvent {}
 
+final class CheckoutAddressUpdateRequested extends CheckoutEvent {
+  CheckoutAddressUpdateRequested({required this.payload});
+  final Map<String, dynamic> payload;
+}
+
 final class CheckoutOrderPlaceRequested extends CheckoutEvent {
   CheckoutOrderPlaceRequested({required this.payload});
   final Map<String, dynamic> payload;
+}
+
+final class CheckoutRazorpayOrderRequested extends CheckoutEvent {
+  CheckoutRazorpayOrderRequested({required this.cartId});
+  final int cartId;
+}
+
+final class CheckoutRazorpayPaymentFailed extends CheckoutEvent {
+  CheckoutRazorpayPaymentFailed(this.message);
+  final String message;
+}
+
+final class CheckoutRazorpayVerifyRequested extends CheckoutEvent {
+  CheckoutRazorpayVerifyRequested({
+    required this.paymentId,
+    required this.orderId,
+    required this.signature,
+  });
+  final String paymentId;
+  final String orderId;
+  final String signature;
 }
 
 // ── States ───────────────────────────────────────────────────────────────────
@@ -24,6 +50,13 @@ final class CheckoutLoading extends CheckoutState {}
 final class CheckoutSummaryLoaded extends CheckoutState {
   CheckoutSummaryLoaded(this.summary);
   final CheckoutSummaryEntity summary;
+}
+
+final class CheckoutAddressUpdated extends CheckoutState {}
+
+final class CheckoutRazorpayOrderCreated extends CheckoutState {
+  CheckoutRazorpayOrderCreated(this.entity);
+  final RazorpayOrderEntity entity;
 }
 
 final class CheckoutOrderPlaced extends CheckoutState {
@@ -41,10 +74,27 @@ final class CheckoutError extends CheckoutState {
 class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
   CheckoutBloc(this._repository) : super(CheckoutInitial()) {
     on<CheckoutLoadRequested>(_onLoad);
+    on<CheckoutAddressUpdateRequested>(_onUpdateAddress);
     on<CheckoutOrderPlaceRequested>(_onPlaceOrder);
+    on<CheckoutRazorpayOrderRequested>(_onCreateRazorpayOrder);
+    on<CheckoutRazorpayPaymentFailed>(_onRazorpayPaymentFailed);
+    on<CheckoutRazorpayVerifyRequested>(_onVerifyRazorpayPayment);
   }
 
   final CheckoutRepository _repository;
+
+  Future<void> _onUpdateAddress(
+    CheckoutAddressUpdateRequested event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    emit(CheckoutLoading());
+    final failure = await _repository.updateAddressToOrder(event.payload);
+    if (failure != null) {
+      emit(CheckoutError(failure.message));
+    } else {
+      emit(CheckoutAddressUpdated());
+    }
+  }
 
   Future<void> _onLoad(CheckoutLoadRequested event, Emitter<CheckoutState> emit) async {
     emit(CheckoutLoading());
@@ -62,6 +112,43 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
   ) async {
     emit(CheckoutLoading());
     final (order, failure) = await _repository.placeOrder(event.payload);
+    if (failure != null) {
+      emit(CheckoutError(failure.message));
+    } else {
+      emit(CheckoutOrderPlaced(order!));
+    }
+  }
+
+  Future<void> _onCreateRazorpayOrder(
+    CheckoutRazorpayOrderRequested event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    emit(CheckoutLoading());
+    final (entity, failure) = await _repository.createRazorpayOrder(event.cartId);
+    if (failure != null) {
+      emit(CheckoutError(failure.message));
+    } else {
+      emit(CheckoutRazorpayOrderCreated(entity!));
+    }
+  }
+
+  Future<void> _onRazorpayPaymentFailed(
+    CheckoutRazorpayPaymentFailed event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    emit(CheckoutError(event.message));
+  }
+
+  Future<void> _onVerifyRazorpayPayment(
+    CheckoutRazorpayVerifyRequested event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    emit(CheckoutLoading());
+    final (order, failure) = await _repository.verifyRazorpayPayment(
+      paymentId: event.paymentId,
+      orderId: event.orderId,
+      signature: event.signature,
+    );
     if (failure != null) {
       emit(CheckoutError(failure.message));
     } else {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
-import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_order_review_page.dart';
+import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
@@ -184,7 +184,7 @@ class _CartPageState extends State<CartPage> {
         ),
         BottomCheckoutBar(
           onProceed: () =>
-              GoRouter.of(context).go(CheckoutOrderReviewPage.routePath),
+              GoRouter.of(context).go(CheckoutAddressPage.routePath),
         ),
       ],
     );

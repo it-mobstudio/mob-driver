@@ -224,42 +224,16 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'ADD',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0360E5),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        height: 16 / 12,
-                      ),
+              : Center(
+                  child: Text(
+                    'ADD',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0360E5),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      height: 16 / 12,
                     ),
-                    if (hasVariants && variantCount > 0)
-                      Container(
-                        width: double.infinity,
-                        height: 12,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: Color(0x1A0360E5),
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(12),
-                            bottomRight: Radius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          '$variantCount options',
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF7E7E7E),
-                            fontSize: 8,
-                            fontWeight: FontWeight.w500,
-                            height: 12 / 8,
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
         ),
       );
@@ -330,27 +304,12 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                   color: Colors.white,
                 ),
               )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'ADD',
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  if (hasVariants && variantCount > 0) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      '$variantCount options',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ],
+            : Text(
+                'ADD',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
               ),
       ),
     );

@@ -1,13 +1,16 @@
 // lib/checkout/order_placed_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 
 class OrderPlacedPage extends StatefulWidget {
   static const routeName = 'OrderPlacedPage';
   static const routePath = '/checkout/success';
 
-  const OrderPlacedPage({super.key});
+  const OrderPlacedPage({super.key, required this.orderId});
+
+  final String orderId;
 
   @override
   State<OrderPlacedPage> createState() => _OrderPlacedPageState();
@@ -83,7 +86,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
           ),
           const SizedBox(width: 12),
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () => context.go('/'),
             child: Container(
               width: 32,
               height: 32,
@@ -197,7 +200,9 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Order ID: MOB3567RUYFVYGC',
+            widget.orderId.isNotEmpty
+                ? 'Order ID: ${widget.orderId}'
+                : 'Order confirmed',
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -207,7 +212,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Arriving between 31 Jan - 6 Feb',
+            'Estimated delivery in 1–4 working days',
             style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -217,7 +222,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '8 Items from 3 stores',
+            'Your items are on the way',
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w500,

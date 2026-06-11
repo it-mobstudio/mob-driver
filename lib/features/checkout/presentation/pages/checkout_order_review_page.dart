@@ -1,20 +1,53 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/features/checkout/presentation/bloc/checkout_bloc.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_payment_page.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/quantity_stepper.dart';
 
-class CheckoutOrderReviewPage extends StatelessWidget {
+class CheckoutOrderReviewPage extends StatefulWidget {
   static const routeName = 'CheckoutOrderReviewPage';
   static const routePath = '/checkout/review';
 
-  const CheckoutOrderReviewPage({super.key});
+  const CheckoutOrderReviewPage({
+    super.key,
+    required this.cartId,
+    required this.deliveryAddressId,
+    required this.billingAddressId,
+  });
+
+  final int cartId;
+  final int deliveryAddressId;
+  final int billingAddressId;
+
+  @override
+  State<CheckoutOrderReviewPage> createState() =>
+      _CheckoutOrderReviewPageState();
+}
+
+class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
+  late final CheckoutBloc _checkoutBloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkoutBloc = sl<CheckoutBloc>();
+  }
+
+  @override
+  void dispose() {
+    _checkoutBloc.close();
+    super.dispose();
+  }
 
   void _goBack(BuildContext context) {
     if (context.canPop()) {
@@ -24,6 +57,18 @@ class CheckoutOrderReviewPage extends StatelessWidget {
     }
   }
 
+  void _submitAddress(BuildContext context) {
+    _checkoutBloc.add(
+      CheckoutAddressUpdateRequested(
+        payload: {
+          'cart_id': widget.cartId,
+          'order_delivery_address': widget.deliveryAddressId,
+          'order_billing_address': widget.billingAddressId,
+        },
+      ),
+    );
+  }
+
   List<Widget> _buildSellerSections(
     BuildContext context,
     CartSummaryEntity summary,
@@ -31,6 +76,9 @@ class CheckoutOrderReviewPage extends StatelessWidget {
   ) {
     final sections = <Widget>[];
     final entries = summary.itemsBySeller.entries.toList();
+    final sellerCount = entries.length;
+    final perSellerShipping =
+        sellerCount > 0 ? summary.shipping / sellerCount : summary.shipping;
 
     for (var i = 0; i < entries.length; i++) {
       final entry = entries[i];
@@ -38,6 +86,7 @@ class CheckoutOrderReviewPage extends StatelessWidget {
         _ReviewSellerCard(
           sellerCode: entry.key,
           items: entry.value,
+          shipping: perSellerShipping,
           itemStartIndex:
               entries.take(i).fold<int>(0, (sum, e) => sum + e.value.length),
           onQtyChanged: (item, qty) => context.read<CartBloc>().add(
@@ -66,71 +115,92 @@ class CheckoutOrderReviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: BlocBuilder<CartBloc, CartState>(
-          builder: (context, state) {
-            return switch (state) {
-              CartInitial() || CartLoading() => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              CartError(:final message) => ErrorStateView(
-                  title: 'Unable to load order review',
-                  message: message,
-                  onRetry: () =>
-                      context.read<CartBloc>().add(CartLoadRequested()),
-                ),
-              CartRequiresLogin() => const Center(
-                  child: Text('Please login to continue.'),
-                ),
-              CartLoaded(:final summary, :final updatingItemKey) => Column(
-                  children: [
-                    _ReviewHeader(onBack: () => _goBack(context)),
-                    Expanded(
-                      child: Container(
-                        color: const Color(0xFFF0F0F0),
-                        child: Stack(
-                          children: [
-                            ListView(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 16, 16, 118),
-                              children: [
-                                _CartSummaryCard(
-                                  itemCount: summary.items.length,
-                                  storeCount:
-                                      summary.itemsBySeller.keys.length,
-                                ),
-                                const SizedBox(height: 20),
-                                ..._buildSellerSections(
-                                    context, summary, updatingItemKey),
-                                const ViewCouponsTile(),
-                                const SizedBox(height: 20),
-                                OrderDetailsCard(
-                                  subtotal: summary.subtotal,
-                                  shipping: summary.shipping,
-                                  tax: summary.tax,
-                                  savings: summary.savings,
-                                  total: summary.total,
-                                  rewardPoints: summary.rewardPoints,
-                                ),
-                              ],
-                            ),
-                            BottomCheckoutBar(
-                              label: 'Continue',
-                              onProceed: () => GoRouter.of(context)
-                                  .go(CheckoutPaymentPage.routePath),
-                            ),
-                          ],
-                        ),
+    return BlocProvider<CheckoutBloc>.value(
+      value: _checkoutBloc,
+      child: BlocConsumer<CheckoutBloc, CheckoutState>(
+        listener: (context, checkoutState) {
+          if (checkoutState is CheckoutAddressUpdated) {
+            GoRouter.of(context).go(CheckoutPaymentPage.routePath);
+          } else if (checkoutState is CheckoutError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(checkoutState.message),
+                backgroundColor: Colors.red.shade700,
+              ),
+            );
+          }
+        },
+        builder: (context, checkoutState) {
+          final isSubmitting = checkoutState is CheckoutLoading;
+          return Scaffold(
+            backgroundColor: Colors.white,
+            body: SafeArea(
+              bottom: false,
+              child: BlocBuilder<CartBloc, CartState>(
+                builder: (context, state) {
+                  return switch (state) {
+                    CartInitial() || CartLoading() => const Center(
+                        child: CircularProgressIndicator(),
                       ),
-                    ),
-                  ],
-                ),
-            };
-          },
-        ),
+                    CartError(:final message) => ErrorStateView(
+                        title: 'Unable to load order review',
+                        message: message,
+                        onRetry: () =>
+                            context.read<CartBloc>().add(CartLoadRequested()),
+                      ),
+                    CartRequiresLogin() => const Center(
+                        child: Text('Please login to continue.'),
+                      ),
+                    CartLoaded(:final summary, :final updatingItemKey) => Column(
+                        children: [
+                          _ReviewHeader(onBack: () => _goBack(context)),
+                          Expanded(
+                            child: Container(
+                              color: const Color(0xFFF0F0F0),
+                              child: Stack(
+                                children: [
+                                  ListView(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 16, 16, 118),
+                                    children: [
+                                      _CartSummaryCard(
+                                        itemCount: summary.items.length,
+                                        storeCount:
+                                            summary.itemsBySeller.keys.length,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      ..._buildSellerSections(
+                                          context, summary, updatingItemKey),
+                                      const ViewCouponsTile(),
+                                      const SizedBox(height: 20),
+                                      OrderDetailsCard(
+                                        subtotal: summary.subtotal,
+                                        shipping: summary.shipping,
+                                        tax: summary.tax,
+                                        savings: summary.savings,
+                                        total: summary.total,
+                                        rewardPoints: summary.rewardPoints,
+                                      ),
+                                    ],
+                                  ),
+                                  BottomCheckoutBar(
+                                    label: 'Continue',
+                                    isLoading: isSubmitting,
+                                    onProceed: () =>
+                                        _submitAddress(context),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  };
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -240,6 +310,7 @@ class _ReviewSellerCard extends StatelessWidget {
   const _ReviewSellerCard({
     required this.sellerCode,
     required this.items,
+    required this.shipping,
     required this.itemStartIndex,
     required this.onQtyChanged,
     required this.onQtyInputChanged,
@@ -250,6 +321,7 @@ class _ReviewSellerCard extends StatelessWidget {
 
   final String sellerCode;
   final List<CartItem> items;
+  final double shipping;
   final int itemStartIndex;
   final void Function(CartItem item, int quantity) onQtyChanged;
   final void Function(CartItem item, String quantityText) onQtyInputChanged;
@@ -279,31 +351,21 @@ class _ReviewSellerCard extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  'Store delivery',
+                  items.first.storeDelivery ? 'Store delivery' : 'Direct delivery',
                   style: GoogleFonts.inter(
                     color: const Color(0xFF0A243F),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     height: 18 / 12,
-                    decoration: TextDecoration.underline,
                   ),
                 ),
                 const Spacer(),
                 Text(
-                  '₹ 400',
+                  shipping <= 0 ? 'FREE' : '₹ ${shipping.toStringAsFixed(0)}',
                   style: GoogleFonts.inter(
-                    color: const Color(0xFF767C8F),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    height: 18 / 12,
-                    decoration: TextDecoration.lineThrough,
-                  ),
-                ),
-                const SizedBox(width: 18),
-                Text(
-                  'FREE',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
+                    color: shipping <= 0
+                        ? const Color(0xFF0A7D83)
+                        : const Color(0xFF0A243F),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     height: 18 / 12,
@@ -329,18 +391,15 @@ class _ReviewSellerCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    SvgPicture.asset(
-                      'assets/images/qwik.svg',
-                      width: 54,
-                      height: 14,
-                    ),
+                    const Icon(Icons.local_shipping_outlined,
+                        size: 16, color: Color(0xFF0A7D83)),
                     const SizedBox(width: 6),
                     Text(
-                      '1-4 hrs delivery',
+                      '${items.length} ${items.length == 1 ? 'item' : 'items'} · Standard delivery',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF0A243F),
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         height: 20 / 13,
                       ),
                     ),
@@ -431,10 +490,12 @@ class _ReviewItemTile extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: item.isNetworkImage
-                      ? Image.network(
-                          item.imageAsset,
+                      ? CachedNetworkImage(
+                          imageUrl: item.imageAsset,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Image.asset(
+                          memCacheWidth: 128,
+                          placeholder: (_, __) => const ImageShimmer(),
+                          errorWidget: (_, __, ___) => Image.asset(
                             'assets/images/Image-coming-soon.png',
                             fit: BoxFit.contain,
                           ),

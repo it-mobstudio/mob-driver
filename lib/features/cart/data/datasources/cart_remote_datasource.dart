@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
 abstract interface class CartRemoteDatasource {
-  Future<Map<String, dynamic>> getCart();
+  Future<Map<String, dynamic>> getCart({bool outOfStock = false});
   Future<Map<String, dynamic>> addToCart({
     required String vendorProductId,
     required int quantity,
@@ -18,10 +18,13 @@ class CartRemoteDatasourceImpl implements CartRemoteDatasource {
   final Dio _dio;
 
   @override
-  Future<Map<String, dynamic>> getCart() async {
+  Future<Map<String, dynamic>> getCart({bool outOfStock = false}) async {
     final response = await _dio.get<dynamic>(
       '/orders/cart/get_cart/',
-      queryParameters: {'userDetails': true},
+      queryParameters: {
+        'userDetails': true,
+        if (outOfStock) 'out_of_stock': true,
+      },
     );
     return _extractData(response.data);
   }

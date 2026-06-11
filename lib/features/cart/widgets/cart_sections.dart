@@ -1203,14 +1203,19 @@ class BottomCheckoutBar extends StatelessWidget {
     super.key,
     this.label = 'Save and continue',
     required this.onProceed,
+    this.isDisabled = false,
+    this.isLoading = false,
   });
 
   final String label;
   final VoidCallback onProceed;
+  final bool isDisabled;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final active = !isDisabled && !isLoading;
 
     return Positioned(
       left: 0,
@@ -1233,25 +1238,37 @@ class BottomCheckoutBar extends StatelessWidget {
         ),
         padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 4),
         child: ElevatedButton(
-          onPressed: onProceed,
+          onPressed: active ? onProceed : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF0360E5),
+            backgroundColor:
+                active ? const Color(0xFF0360E5) : const Color(0xFFB0C4DE),
             foregroundColor: Colors.white,
+            disabledBackgroundColor: const Color(0xFFB0C4DE),
+            disabledForegroundColor: Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 20),
           ),
-          child: Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              height: 21 / 14,
-            ),
-          ),
+          child: isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    height: 21 / 14,
+                  ),
+                ),
         ),
       ),
     );

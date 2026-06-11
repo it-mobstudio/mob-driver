@@ -25,6 +25,22 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   }
 
   @override
+  Future<AppFailure?> updateAddressToOrder(Map<String, dynamic> payload) async {
+    try {
+      final body = await _datasource.updateAddressToOrder(payload);
+      if (body['status'] == false) {
+        final msg = body['message']?.toString() ?? 'Failed to update address.';
+        return BusinessFailure(msg);
+      }
+      return null;
+    } on DioException catch (e) {
+      return e.toAppFailure();
+    } catch (e) {
+      return UnknownFailure(e.toString());
+    }
+  }
+
+  @override
   Future<(PlacedOrderEntity?, AppFailure?)> placeOrder(
       Map<String, dynamic> payload) async {
     try {
@@ -37,6 +53,52 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
           ? Map<String, dynamic>.from(body['data'] as Map)
           : body;
       return (PlacedOrderEntity.fromMap(data), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(PlacedOrderEntity?, AppFailure?)> verifyRazorpayPayment({
+    required String paymentId,
+    required String orderId,
+    required String signature,
+  }) async {
+    try {
+      final body = await _datasource.verifyRazorpayPayment(
+        paymentId: paymentId,
+        orderId: orderId,
+        signature: signature,
+      );
+      if (body['status'] == false) {
+        final msg = body['message']?.toString() ?? 'Payment verification failed.';
+        return (null, BusinessFailure(msg));
+      }
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      return (PlacedOrderEntity.fromMap(data), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(RazorpayOrderEntity?, AppFailure?)> createRazorpayOrder(int cartId) async {
+    try {
+      final body = await _datasource.createRazorpayOrder(cartId);
+      if (body['status'] == false) {
+        final msg = body['message']?.toString() ?? 'Failed to create Razorpay order.';
+        return (null, BusinessFailure(msg));
+      }
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      return (RazorpayOrderEntity.fromMap(data), null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {

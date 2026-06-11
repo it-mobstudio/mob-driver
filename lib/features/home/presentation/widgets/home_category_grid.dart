@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/home/data/models/home_models.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_listing_page.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 
 class HomeCategoryGrid extends StatelessWidget {
   const HomeCategoryGrid({
@@ -82,75 +84,62 @@ class HomeCategoryTile extends StatelessWidget {
           extra: {'category': category.name, 'slug': category.slug},
         );
       },
-      child: SizedBox(
-        width: 76,
-        height: 114,
-        child: Stack(
-          children: [
-            Positioned(
-              left: 0,
-              top: 0,
-              child: Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment(0.07, 0.07),
-                    end: Alignment(0.91, 1),
-                    colors: [
-                      Color(0xFFFFF2EE),
-                      Color(0xFFFFE4B0),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment(0.07, 0.07),
+                  end: Alignment(0.91, 1),
+                  colors: [
+                    Color(0xFFFFF2EE),
+                    Color(0xFFFFE4B0),
+                  ],
                 ),
+                borderRadius: BorderRadius.circular(12),
               ),
-            ),
-            Positioned(
-              left: 8,
-              top: 8,
-              child: SizedBox(
-                width: 60,
-                height: 60,
-                child: category.imageUrl.isEmpty
-                    ? const Icon(
+              padding: const EdgeInsets.all(8),
+              child: category.imageUrl.isEmpty
+                  ? const Icon(
+                      Icons.category,
+                      color: Color(0xFF0A243F),
+                      size: 32,
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: category.imageUrl,
+                      fit: BoxFit.contain,
+                      memCacheWidth: 120,
+                      placeholder: (_, __) => const ImageShimmer(),
+                      errorWidget: (_, __, ___) => const Icon(
                         Icons.category,
                         color: Color(0xFF0A243F),
                         size: 32,
-                      )
-                    : CachedNetworkImage(
-                        imageUrl: category.imageUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 120,
-                        errorWidget: (context, url, error) => const Icon(
-                          Icons.category,
-                          color: Color(0xFF0A243F),
-                          size: 32,
-                        ),
                       ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Fixed height so image box is identical across all tiles
+          SizedBox(
+            height: 30,
+            child: AutoSizeText(
+              category.name,
+              maxLines: 2,
+              minFontSize: 8,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
               ),
             ),
-            Positioned(
-              left: 0,
-              top: 84,
-              child: SizedBox(
-                width: 76,
-                child: Text(
-                  category.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    height: 1.25,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

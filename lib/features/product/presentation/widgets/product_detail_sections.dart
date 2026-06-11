@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 
 class ProductDetailTopHeader extends StatelessWidget {
   const ProductDetailTopHeader({
@@ -119,9 +120,7 @@ class _ProductImagesCarouselState extends State<ProductImagesCarousel> {
                             imageUrl: imageUrl,
                             fit: BoxFit.contain,
                             memCacheWidth: 900,
-                            placeholder: (context, url) => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
+                            placeholder: (_, __) => const ImageShimmer(),
                             errorWidget: (context, url, error) => Image.asset(
                               'assets/images/Image-coming-soon.png',
                               fit: BoxFit.contain,
@@ -1160,53 +1159,58 @@ class VariantOptionsSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  ...(groupedVariants[key] ?? const <ProductVariantOption>[])
-                      .asMap()
-                      .entries
-                      .take(8)
-                      .map((entry) {
-                    final option = entry.value;
-                    final activeValue =
-                        selectedVariants[key] ?? product.activeVariantSelections[key];
-                    final selected = activeValue == option.value ||
-                        (activeValue == null && entry.key == 0);
-                    return _VariantChip(
-                      label: option.value,
-                      isSelected: selected,
-                      isColorChip: false,
-                      onTap: () => onSelect(key, option),
-                    );
-                  }),
-                  if ((groupedVariants[key] ?? const <ProductVariantOption>[]).length > 8 &&
-                      onMoreOptions != null)
-                    GestureDetector(
-                      onTap: onMoreOptions,
-                      child: Container(
-                        height: 34,
-                        padding: const EdgeInsets.symmetric(horizontal: 13),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: const Color(0xFFDFE4EC)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'More options',
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF0360E5),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            height: 16 / 11,
-                          ),
-                        ),
+              Builder(builder: (context) {
+                final options = groupedVariants[key] ?? const <ProductVariantOption>[];
+                final activeValue =
+                    selectedVariants[key] ?? product.activeVariantSelections[key];
+                // Split into 2 rows: even indices → top, odd indices → bottom
+                final topRow = <({ProductVariantOption option, int index})>[];
+                final bottomRow = <({ProductVariantOption option, int index})>[];
+                for (var i = 0; i < options.length; i++) {
+                  final record = (option: options[i], index: i);
+                  if (i.isEven) { topRow.add(record); } else { bottomRow.add(record); }
+                }
+                Widget chip(ProductVariantOption opt, int idx) {
+                  final selected = activeValue == opt.value ||
+                      (activeValue == null && idx == 0);
+                  return _VariantChip(
+                    label: opt.value,
+                    isSelected: selected,
+                    isColorChip: false,
+                    onTap: () => onSelect(key, opt),
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (var i = 0; i < topRow.length; i++) ...[
+                            chip(topRow[i].option, topRow[i].index),
+                            if (i < topRow.length - 1) const SizedBox(width: 10),
+                          ],
+                        ],
                       ),
                     ),
-                ],
-              ),
+                    if (bottomRow.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (var i = 0; i < bottomRow.length; i++) ...[
+                              chip(bottomRow[i].option, bottomRow[i].index),
+                              if (i < bottomRow.length - 1) const SizedBox(width: 10),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              }),
               const SizedBox(height: 14),
             ],
         ],
@@ -1266,21 +1270,27 @@ class VariantOptionsSection extends StatelessWidget {
 
     final grouped = <String, List<ProductVariantOption>>{};
     for (final key in orderedKeys) {
-      final configuredValues = product.availableOptions[key] ?? const <String>[];
-      final values = configuredValues.isNotEmpty
-          ? configuredValues
-          : product.variantCombinations
-              .map((item) => item.attributes[key]?.trim() ?? '')
-              .where((value) => value.isNotEmpty)
-              .toSet()
-              .toList();
+      // All unique values for this attribute across every combination
+      final allValues = product.variantCombinations
+          .map((item) => item.attributes[key]?.trim() ?? '')
+          .where((value) => value.isNotEmpty)
+          .toSet()
+          .toList();
+      // available_options gives a preferred order; append any extras not listed
+      final orderedValues = product.availableOptions[key] ?? const <String>[];
+      final values = orderedValues.isNotEmpty
+          ? [
+              ...orderedValues,
+              ...allValues.where((v) => !orderedValues.contains(v)),
+            ]
+          : allValues;
 
       final options = <ProductVariantOption>[];
       for (final value in values) {
         final matchingCombination = product.variantCombinations.firstWhere(
           (item) => (item.attributes[key]?.trim() ?? '') == value,
-          orElse: () => ProductVariantCombination(
-            attributes: const <String, String>{},
+          orElse: () => const ProductVariantCombination(
+            attributes: <String, String>{},
             mobSku: '',
             slug: '',
             productId: '',
@@ -1344,27 +1354,6 @@ class _BrandNameRow extends StatelessWidget {
           color: Color(0xFF01A685),
         ),
       ],
-    );
-  }
-}
-
-class _MetaText extends StatelessWidget {
-  const _MetaText(this.value);
-
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      value,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: GoogleFonts.inter(
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        height: 16 / 11,
-        color: const Color(0xFF7E868A),
-      ),
     );
   }
 }
@@ -1473,18 +1462,12 @@ class _VariantChip extends StatelessWidget {
     required this.isSelected,
     required this.isColorChip,
     required this.onTap,
-    this.height = 34,
-    this.horizontalPadding = 13,
-    this.fontSize = 11,
   });
 
   final String label;
   final bool isSelected;
   final bool isColorChip;
   final VoidCallback onTap;
-  final double height;
-  final double horizontalPadding;
-  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1492,11 +1475,11 @@ class _VariantChip extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        height: height,
+        height: 34,
         padding: EdgeInsets.fromLTRB(
-          isColorChip ? 10 : horizontalPadding,
+          isColorChip ? 10 : 13,
           0,
-          horizontalPadding,
+          13,
           0,
         ),
         decoration: BoxDecoration(
@@ -1525,9 +1508,9 @@ class _VariantChip extends StatelessWidget {
               label,
               style: GoogleFonts.inter(
                 color: isSelected ? Colors.white : const Color(0xFF0A243F),
-                fontSize: fontSize,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
-                height: 16 / fontSize,
+                height: 16 / 11,
               ),
             ),
           ],
@@ -1547,138 +1530,6 @@ class _VariantChip extends StatelessWidget {
     if (lower.contains('yellow')) return const Color(0xFFFFD84D);
     if (lower.contains('brown')) return const Color(0xFF8A5A32);
     return const Color(0xFFECEFF4);
-  }
-}
-
-class _DeliveryDetailRow extends StatelessWidget {
-  const _DeliveryDetailRow({
-    required this.icon,
-    required this.text,
-    this.isHighlighted = false,
-    this.showQwikAssets = false,
-    this.leadingAsset,
-  });
-
-  final IconData icon;
-  final String text;
-  final bool isHighlighted;
-  final bool showQwikAssets;
-  final String? leadingAsset;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: isHighlighted ? 40 : 42,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: isHighlighted ? const Color(0xFFFFEFCE) : const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.vertical(
-          top: isHighlighted ? const Radius.circular(12) : Radius.zero,
-          bottom: isHighlighted ? Radius.zero : const Radius.circular(12),
-        ),
-        border: isHighlighted
-            ? Border.all(color: const Color(0xFFFFEFCE))
-            : Border.all(color: const Color(0xFFF8F8F8)),
-      ),
-      child: Row(
-        children: [
-          if (showQwikAssets) ...[
-            SvgPicture.asset(
-              'assets/images/car.svg',
-              width: 16,
-              height: 16,
-            ),
-            const SizedBox(width: 12),
-            SvgPicture.asset(
-              'assets/images/qwik.svg',
-              height: 14,
-            ),
-          ] else if (leadingAsset != null)
-            SvgPicture.asset(
-              leadingAsset!,
-              width: 16,
-              height: 16,
-            )
-          else
-            Icon(icon, size: 16, color: const Color(0xFF0A243F)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: isHighlighted ? 12 : 11,
-                fontWeight: FontWeight.w600,
-                height: isHighlighted ? 18 / 12 : 16 / 11,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ContractorBanner extends StatelessWidget {
-  const _ContractorBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF005B4F),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ACCIDENTAL MOB DAMAGE PLAN',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    height: 12 / 10,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Protect your product with our plan',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w500,
-                    height: 12 / 9,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Apply now',
-            style: GoogleFonts.inter(
-              color: const Color(0xFF9BFF9C),
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              height: 14 / 10,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -1989,16 +1840,6 @@ TextStyle _detailBodyStyle() {
 }
 
 String _beautifyFeatureLabel(String key) {
-  return key
-      .replaceAll('_', ' ')
-      .replaceAll('-', ' ')
-      .split(' ')
-      .where((word) => word.isNotEmpty)
-      .map((word) => word[0].toUpperCase() + word.substring(1))
-      .join(' ');
-}
-
-String _beautifyVariantKey(String key) {
   return key
       .replaceAll('_', ' ')
       .replaceAll('-', ' ')

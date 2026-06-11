@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/product_cart_action_button.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
@@ -138,6 +139,7 @@ class _ItemCardState extends State<ItemCard> {
                               imageUrl: product.primaryImageUrl,
                               fit: BoxFit.contain,
                               memCacheWidth: 240,
+                              placeholder: (_, __) => const ImageShimmer(),
                               errorWidget: (context, url, error) => Image.asset(
                                 'assets/images/Image-coming-soon.png',
                                 fit: BoxFit.contain,

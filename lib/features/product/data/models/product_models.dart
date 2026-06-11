@@ -352,14 +352,27 @@ class ProductModel {
 
   String get primaryImageUrl => images.isNotEmpty ? images.first.url : '';
   bool get hasVariants =>
-      variants.values.any((v) => v.isNotEmpty) || childProducts.isNotEmpty;
+      variants.values.any((v) => v.isNotEmpty) ||
+      variantCombinations.isNotEmpty ||
+      childProducts.isNotEmpty;
   int get variantOptionCount {
     final variantsCount = variants.values.fold<int>(
       0,
       (sum, options) => sum + options.length,
     );
-    if (variantsCount > 0) {
-      return variantsCount;
+    if (variantsCount > 0) return variantsCount;
+    if (variantCombinations.isNotEmpty) {
+      final keys = variantAttributes.isNotEmpty
+          ? variantAttributes
+          : variantCombinations.first.attributes.keys.toList();
+      return keys.fold<int>(0, (sum, key) {
+        return sum +
+            variantCombinations
+                .map((c) => c.attributes[key]?.trim() ?? '')
+                .where((v) => v.isNotEmpty)
+                .toSet()
+                .length;
+      });
     }
     return childProducts.length;
   }
@@ -367,7 +380,9 @@ class ProductModel {
       vendorPricing.vendorProductId.isNotEmpty ? vendorPricing.vendorProductId : id;
   bool get isQuickEcommerceEnabled =>
       quickEcommerceEnabled || vendorPricing.quickEcommerceEnabled;
-  bool get hasVariantLevelStock => childProducts.any((child) => child.stock > 0);
+  bool get hasVariantLevelStock =>
+      childProducts.any((child) => child.stock > 0) ||
+      variantCombinations.any((combo) => combo.inStock);
   int get availableStock {
     final parsed = stockDetailsStock > 0 ? stockDetailsStock : stock;
     return parsed > 0 ? parsed.toInt() : 0;

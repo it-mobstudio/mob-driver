@@ -169,7 +169,7 @@ class _ProductThumb extends StatelessWidget {
           imageUrl: imageUrl,
           fit: BoxFit.contain,
           memCacheWidth: 120,
-          placeholder: (_, __) => const SizedBox.shrink(),
+          placeholder: (_, __) => const ImageShimmer(),
           errorWidget: (_, __, ___) => Image.asset(
             'assets/images/Image-coming-soon.png',
             fit: BoxFit.contain,

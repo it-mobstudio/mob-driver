@@ -1,9 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
+import 'package:m_o_b_demand_side/features/checkout/presentation/bloc/checkout_bloc.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/order_placed_page.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
@@ -21,92 +27,238 @@ class CheckoutPaymentPage extends StatefulWidget {
 class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   bool _useMobstar = false;
   bool _useMobwallet = false;
-  int _paymentOption = 0;
+  // -1 = none selected, 0 = mobCredit, 1 = Razorpay
+  int _paymentOption = -1;
+  RazorpayOrderEntity? _razorpayEntity; // populated when radio is selected
+
+  late final CheckoutBloc _checkoutBloc;
+  late final Razorpay _razorpay;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkoutBloc = sl<CheckoutBloc>();
+    _razorpay = Razorpay();
+    if (!kIsWeb) {
+      _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+      _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+      _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (!kIsWeb) _razorpay.clear();
+    _checkoutBloc.close();
+    super.dispose();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    _checkoutBloc.add(
+      CheckoutRazorpayVerifyRequested(
+        paymentId: response.paymentId ?? '',
+        orderId: response.orderId ?? '',
+        signature: response.signature ?? '',
+      ),
+    );
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    _checkoutBloc.add(
+      CheckoutRazorpayPaymentFailed(
+        response.message ?? 'Payment failed. Please try again.',
+      ),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {}
+
+  // Replace with your Razorpay key (rzp_test_xxx or rzp_live_xxx)
+  static const _razorpayKey = 'rzp_test_fjQ8CCi7188hME';
+
+  // Called when Razorpay radio is tapped — triggers order creation immediately
+  void _onRazorpaySelected(String cartId) {
+    setState(() {
+      _paymentOption = 1;
+      _razorpayEntity = null; // clear stale entity while new one loads
+    });
+    _checkoutBloc.add(
+      CheckoutRazorpayOrderRequested(cartId: int.tryParse(cartId) ?? 0),
+    );
+  }
+
+  void _openRazorpayGateway(RazorpayOrderEntity entity) {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Razorpay is only available on the mobile app.')),
+      );
+      return;
+    }
+    final options = <String, dynamic>{
+      'key': _razorpayKey,
+      'amount': entity.amount,
+      'currency': entity.currency,
+      'name': entity.name.isNotEmpty ? entity.name : 'MOB',
+      'order_id': entity.razorpayOrderId,
+      'description': 'Order payment',
+    };
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      _checkoutBloc.add(CheckoutRazorpayPaymentFailed(
+          'Could not open payment gateway. Please try again.'));
+    }
+  }
+
+  void _onProceed(BuildContext context, String cartId, double total, CartSummaryEntity summary) {
+    if (_paymentOption == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a payment method to continue.')),
+      );
+      return;
+    }
+    if (_paymentOption == 1) {
+      final entity = _razorpayEntity;
+      if (entity != null) {
+        _openRazorpayGateway(entity);
+      }
+    } else {
+      _checkoutBloc.add(
+        CheckoutOrderPlaceRequested(
+          payload: {
+            'payment_method': 'mob_credit',
+            'use_mob_star': _useMobstar,
+            'use_mob_wallet': _useMobwallet,
+            if (_useMobstar && summary.rewardPoints > 0) 'points': summary.rewardPoints,
+            if (_useMobwallet && summary.walletBalance > 0) 'wallet_amount': summary.walletBalance,
+            'total': total,
+          },
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: BlocBuilder<CartBloc, CartState>(
-          builder: (context, state) {
-            return switch (state) {
-              CartInitial() || CartLoading() => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              CartError(:final message) => ErrorStateView(
-                  title: 'Unable to load payment details',
-                  message: message,
-                  onRetry: () =>
-                      context.read<CartBloc>().add(CartLoadRequested()),
-                ),
-              CartRequiresLogin() => const Center(
-                  child: Text('Please login to continue.'),
-                ),
-              CartLoaded(:final summary) => Column(
-                  children: [
-                    _PaymentHeader(onBack: () => _goBack(context)),
-                    Expanded(
-                      child: Container(
-                        color: const Color(0xFFF0F0F0),
-                        child: Stack(
-                          children: [
-                            ListView(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 20, 16, 118),
-                              children: [
-                                const _SectionTitle('Select redeem option'),
-                                const SizedBox(height: 16),
-                                _RedeemOptionsCard(
-                                  useMobstar: _useMobstar,
-                                  useMobwallet: _useMobwallet,
-                                  onMobstarChanged: () => setState(
-                                      () => _useMobstar = !_useMobstar),
-                                  onMobwalletChanged: () => setState(
-                                      () => _useMobwallet = !_useMobwallet),
-                                ),
-                                const SizedBox(height: 20),
-                                const _SectionTitle(
-                                    'Please select payment option'),
-                                const SizedBox(height: 12),
-                                _MobCreditPaymentCard(
-                                  selected: _paymentOption == 0,
-                                  onTap: () =>
-                                      setState(() => _paymentOption = 0),
-                                ),
-                                const SizedBox(height: 20),
-                                _RazorpayTile(
-                                  selected: _paymentOption == 1,
-                                  onTap: () =>
-                                      setState(() => _paymentOption = 1),
-                                ),
-                                const SizedBox(height: 20),
-                                const ViewCouponsTile(),
-                                const SizedBox(height: 20),
-                                OrderDetailsCard(
-                                  subtotal: summary.subtotal,
-                                  shipping: summary.shipping,
-                                  tax: summary.tax,
-                                  savings: summary.savings,
-                                  total: summary.total,
-                                  rewardPoints: summary.rewardPoints,
-                                ),
-                              ],
+    return BlocProvider.value(
+      value: _checkoutBloc,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          bottom: false,
+          child: BlocBuilder<CartBloc, CartState>(
+            builder: (context, cartState) {
+              return switch (cartState) {
+                CartInitial() || CartLoading() => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                CartError(:final message) => ErrorStateView(
+                    title: 'Unable to load payment details',
+                    message: message,
+                    onRetry: () =>
+                        context.read<CartBloc>().add(CartLoadRequested()),
+                  ),
+                CartRequiresLogin() => const Center(
+                    child: Text('Please login to continue.'),
+                  ),
+                CartLoaded(:final summary) =>
+                  BlocConsumer<CheckoutBloc, CheckoutState>(
+                    listener: (context, checkoutState) {
+                      if (checkoutState is CheckoutRazorpayOrderCreated) {
+                        // Store the entity — gateway opens when user taps "Place order"
+                        setState(() => _razorpayEntity = checkoutState.entity);
+                      } else if (checkoutState is CheckoutOrderPlaced) {
+                        GoRouter.of(context).go(
+                          OrderPlacedPage.routePath,
+                          extra: checkoutState.order.orderId,
+                        );
+                      } else if (checkoutState is CheckoutError) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(checkoutState.message),
+                            backgroundColor: Colors.red.shade700,
+                          ),
+                        );
+                      }
+                    },
+                    builder: (context, checkoutState) {
+                      final isLoading = checkoutState is CheckoutLoading;
+                      return Column(
+                        children: [
+                          _PaymentHeader(onBack: () => _goBack(context)),
+                          Expanded(
+                            child: Container(
+                              color: const Color(0xFFF0F0F0),
+                              child: Stack(
+                                children: [
+                                  ListView(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 20, 16, 118),
+                                    children: [
+                                      const _SectionTitle(
+                                          'Select redeem option'),
+                                      const SizedBox(height: 16),
+                                      _RedeemOptionsCard(
+                                        useMobstar: _useMobstar,
+                                        useMobwallet: _useMobwallet,
+                                        mobstarPoints: summary.rewardPoints,
+                                        mobstarAmount: summary.mobstarAmount,
+                                        walletBalance: summary.walletBalance,
+                                        onMobstarChanged: summary.rewardPoints > 0
+                                            ? () => setState(() => _useMobstar = !_useMobstar)
+                                            : null,
+                                        onMobwalletChanged: summary.walletBalance > 0
+                                            ? () => setState(() => _useMobwallet = !_useMobwallet)
+                                            : null,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      const _SectionTitle(
+                                          'Please select payment option'),
+                                      const SizedBox(height: 12),
+                                      _MobCreditPaymentCard(
+                                        selected: _paymentOption == 0,
+                                        total: summary.total,
+                                        onTap: () => setState(() {
+                                          _paymentOption = 0;
+                                          _razorpayEntity = null;
+                                        }),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _RazorpayTile(
+                                        selected: _paymentOption == 1,
+                                        onTap: () => _onRazorpaySelected(
+                                            summary.cartId),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      const ViewCouponsTile(),
+                                      const SizedBox(height: 20),
+                                      OrderDetailsCard(
+                                        subtotal: summary.subtotal,
+                                        shipping: summary.shipping,
+                                        tax: summary.tax,
+                                        savings: summary.savings,
+                                        total: summary.total,
+                                        rewardPoints: summary.rewardPoints,
+                                      ),
+                                    ],
+                                  ),
+                                  BottomCheckoutBar(
+                                    label: 'Place your order and pay',
+                                    isLoading: isLoading,
+                                    onProceed: () => _onProceed(
+                                        context, summary.cartId, summary.total, summary),
+                                  ),
+                                ],
+                              ),
                             ),
-                            BottomCheckoutBar(
-                              label: 'Place your order and pay',
-                              onProceed: () => GoRouter.of(context)
-                                  .go(OrderPlacedPage.routePath),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-            };
-          },
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+              };
+            },
+          ),
         ),
       ),
     );
@@ -188,17 +340,32 @@ class _RedeemOptionsCard extends StatelessWidget {
   const _RedeemOptionsCard({
     required this.useMobstar,
     required this.useMobwallet,
+    required this.mobstarPoints,
+    required this.mobstarAmount,
+    required this.walletBalance,
     required this.onMobstarChanged,
     required this.onMobwalletChanged,
   });
 
   final bool useMobstar;
   final bool useMobwallet;
-  final VoidCallback onMobstarChanged;
-  final VoidCallback onMobwalletChanged;
+  final int mobstarPoints;
+  final double mobstarAmount;
+  final double walletBalance;
+  final VoidCallback? onMobstarChanged;
+  final VoidCallback? onMobwalletChanged;
 
   @override
   Widget build(BuildContext context) {
+    final hasMobstar = mobstarPoints > 0;
+    final hasWallet = walletBalance > 0;
+    final mobstarLabel = hasMobstar
+        ? '$mobstarPoints (₹${mobstarAmount.toStringAsFixed(2)}) mobstar points'
+        : 'No mobstar points available';
+    final walletLabel = hasWallet
+        ? '₹${walletBalance.toStringAsFixed(2)} mobwallet balance'
+        : 'No mobwallet balance';
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -208,25 +375,27 @@ class _RedeemOptionsCard extends StatelessWidget {
         children: [
           _RedeemRow(
             checked: useMobstar,
-            amount: '₹1125',
+            enabled: hasMobstar,
+            amount: '₹${mobstarAmount.toStringAsFixed(2)}',
             icon: SvgPicture.asset(
               'assets/images/points.svg',
               width: 16,
               height: 16,
             ),
-            label: '4500 mobstar points',
+            label: mobstarLabel,
             onTap: onMobstarChanged,
           ),
           const Divider(height: 1, color: Color(0xFFE5E8EE)),
           _RedeemRow(
             checked: useMobwallet,
-            amount: '₹100',
+            enabled: hasWallet,
+            amount: '₹${walletBalance.toStringAsFixed(2)}',
             icon: const Icon(
               Icons.account_balance_wallet,
               color: Color(0xFFC9825E),
               size: 16,
             ),
-            label: 'mobwallet balance',
+            label: walletLabel,
             onTap: onMobwalletChanged,
           ),
         ],
@@ -238,6 +407,7 @@ class _RedeemOptionsCard extends StatelessWidget {
 class _RedeemRow extends StatelessWidget {
   const _RedeemRow({
     required this.checked,
+    required this.enabled,
     required this.amount,
     required this.icon,
     required this.label,
@@ -245,27 +415,28 @@ class _RedeemRow extends StatelessWidget {
   });
 
   final bool checked;
+  final bool enabled;
   final String amount;
   final Widget icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: SizedBox(
         height: 44,
         child: Row(
           children: [
             const SizedBox(width: 12),
-            _CheckboxMark(checked: checked),
+            _CheckboxMark(checked: checked, enabled: enabled),
             const SizedBox(width: 12),
             Text(
               amount,
               style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
+                color: enabled ? const Color(0xFF0A243F) : const Color(0xFFB0B4BB),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 height: 20 / 13,
@@ -274,7 +445,7 @@ class _RedeemRow extends StatelessWidget {
             const SizedBox(width: 12),
             Container(width: 1, height: 18, color: const Color(0xFFD9D9D9)),
             const SizedBox(width: 12),
-            icon,
+            Opacity(opacity: enabled ? 1.0 : 0.4, child: icon),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -282,7 +453,7 @@ class _RedeemRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
-                  color: const Color(0xFF0A243F),
+                  color: enabled ? const Color(0xFF0A243F) : const Color(0xFFB0B4BB),
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
                   height: 20 / 13,
@@ -300,10 +471,12 @@ class _RedeemRow extends StatelessWidget {
 class _MobCreditPaymentCard extends StatelessWidget {
   const _MobCreditPaymentCard({
     required this.selected,
+    required this.total,
     required this.onTap,
   });
 
   final bool selected;
+  final double total;
   final VoidCallback onTap;
 
   @override
@@ -329,19 +502,14 @@ class _MobCreditPaymentCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text.rich(
-                    const TextSpan(
+                    TextSpan(
                       children: [
-                        TextSpan(text: 'Pay '),
+                        const TextSpan(text: 'Pay '),
                         TextSpan(
-                          text: '₹26092.00',
-                          style: TextStyle(fontWeight: FontWeight.w700),
+                          text: '₹${total.toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
-                        TextSpan(text: ' out of '),
-                        TextSpan(
-                          text: '₹90000.00',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        TextSpan(text: ' mobCREDIT available'),
+                        const TextSpan(text: ' using mobCREDIT'),
                       ],
                     ),
                     style: GoogleFonts.inter(
@@ -497,21 +665,21 @@ class _RazorpayTile extends StatelessWidget {
 }
 
 class _CheckboxMark extends StatelessWidget {
-  const _CheckboxMark({required this.checked});
+  const _CheckboxMark({required this.checked, this.enabled = true});
 
   final bool checked;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = enabled ? const Color(0xFF0360E5) : const Color(0xFFB0B4BB);
+    final borderColor = checked ? activeColor : const Color(0xFF767C8F);
     return Container(
       width: 18,
       height: 18,
       decoration: BoxDecoration(
-        color: checked ? const Color(0xFF0360E5) : Colors.white,
-        border: Border.all(
-          color:
-              checked ? const Color(0xFF0360E5) : const Color(0xFF767C8F),
-        ),
+        color: checked ? activeColor : Colors.white,
+        border: Border.all(color: borderColor),
         borderRadius: BorderRadius.circular(4),
       ),
       child: checked
