@@ -7,6 +7,11 @@ class AppConfig {
     defaultValue: 'https://uat.madoverbuilding.com/api',
   );
 
+  static const String googleMapsApiKey = String.fromEnvironment(
+    'GOOGLE_MAPS_API_KEY',
+    defaultValue: 'AIzaSyC_dvw8b7g1e1RB9dQj4rAnFyxGD1S2s7Y',
+  );
+
   static Uri apiUri(String path, {Map<String, dynamic>? queryParameters}) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     return Uri.parse('$apiBaseUrl$normalizedPath')

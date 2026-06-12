@@ -3,3 +3,5 @@
 /.dart_tool
 /build
 *.log
+/secrets.json
+/ios/Flutter/Secrets.xcconfig

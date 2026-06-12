@@ -34,11 +34,19 @@ class CheckoutAddressPage extends StatelessWidget {
           addresses: addresses,
           onAddAddress: () {
             Navigator.of(sheetContext).pop();
-            context.go(AddressSelectionWidget.routePath);
+            _openAddressFlow(context);
           },
         );
       },
     );
+  }
+
+  Future<void> _openAddressFlow(BuildContext context) async {
+    final savedAddress = await context.push(
+      AddressSelectionWidget.routePath,
+    );
+    if (!context.mounted || savedAddress == null) return;
+    context.read<CartBloc>().add(CartLoadRequested());
   }
 
   @override
@@ -111,8 +119,8 @@ class CheckoutAddressPage extends StatelessWidget {
                               ],
                             ),
                             _BottomActionBar(
-                              onPressed: () => context
-                                  .go(CheckoutOrderReviewPage.routePath),
+                              onPressed: () =>
+                                  context.go(CheckoutOrderReviewPage.routePath),
                             ),
                           ],
                         ),
