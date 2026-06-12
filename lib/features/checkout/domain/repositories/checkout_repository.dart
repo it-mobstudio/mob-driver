@@ -11,4 +11,10 @@ abstract interface class CheckoutRepository {
     required String orderId,
     required String signature,
   });
+  Future<(PlacedOrderEntity?, AppFailure?)> getSuborderDetails({
+    required String platformOrderId,
+    required String merchantPaymentRefId,
+    required String paymentId,
+    required String transactionId,
+  });
 }

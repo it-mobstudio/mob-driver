@@ -11,6 +11,14 @@ abstract interface class CheckoutRemoteDatasource {
     required String signature,
     String paymentFor,
   });
+  Future<Map<String, dynamic>> getSuborderDetails({
+    required String platformOrderId,
+    required String merchantPaymentRefId,
+    required String paymentId,
+    required String transactionId,
+    String currency,
+    String paymentFor,
+  });
 }
 
 class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
@@ -63,6 +71,30 @@ class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
         'razorpay_signature': signature,
         'payment_Gateway': 'RAZORPAY',
         'payment_for': paymentFor,
+      },
+    );
+    return _toMap(response.data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getSuborderDetails({
+    required String platformOrderId,
+    required String merchantPaymentRefId,
+    required String paymentId,
+    required String transactionId,
+    String currency = 'INR',
+    String paymentFor = 'CART',
+  }) async {
+    final response = await _dio.get<dynamic>(
+      '/orders/customer-orders/$platformOrderId/get_suborder_details/',
+      queryParameters: {
+        'payment_Gateway': 'RAZORPAY',
+        'merchantPaymentRefId': merchantPaymentRefId,
+        'paymentId': paymentId,
+        'transactionId': transactionId,
+        'currency': currency,
+        'paymentFor': paymentFor,
+        'userDetails': 'true',
       },
     );
     return _toMap(response.data);

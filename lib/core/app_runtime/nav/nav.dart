@@ -10,6 +10,7 @@ import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_order_review_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_payment_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/order_placed_page.dart';
+import 'package:m_o_b_demand_side/features/checkout/presentation/pages/payment_failed_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
@@ -207,6 +208,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: OrderPlacedPage.routePath,
           builder: (context, state) =>
               OrderPlacedPage(orderId: state.extra as String? ?? ''),
+        ),
+        GoRoute(
+          name: PaymentFailedPage.routeName,
+          path: PaymentFailedPage.routePath,
+          builder: (context, state) =>
+              PaymentFailedPage(message: state.extra as String? ?? ''),
         ),
         GoRoute(
           name: MapLocationWidget.routeName,

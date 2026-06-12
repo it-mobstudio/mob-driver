@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/bloc/checkout_bloc.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/order_placed_page.dart';
+import 'package:m_o_b_demand_side/features/checkout/presentation/pages/payment_failed_page.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
@@ -55,10 +56,11 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
     _checkoutBloc.add(
-      CheckoutRazorpayVerifyRequested(
+      CheckoutRazorpayStatusCheckRequested(
+        platformOrderId: _razorpayEntity?.platformOrderId ?? '',
+        merchantPaymentRefId: response.orderId ?? '',
         paymentId: response.paymentId ?? '',
-        orderId: response.orderId ?? '',
-        signature: response.signature ?? '',
+        transactionId: response.signature ?? '',
       ),
     );
   }
@@ -171,6 +173,11 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                         GoRouter.of(context).go(
                           OrderPlacedPage.routePath,
                           extra: checkoutState.order.orderId,
+                        );
+                      } else if (checkoutState is CheckoutPaymentFailed) {
+                        GoRouter.of(context).go(
+                          PaymentFailedPage.routePath,
+                          extra: checkoutState.message,
                         );
                       } else if (checkoutState is CheckoutError) {
                         ScaffoldMessenger.of(context).showSnackBar(

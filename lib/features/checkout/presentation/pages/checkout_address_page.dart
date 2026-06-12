@@ -195,7 +195,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                     16, 16, 16, 118),
                                 children: [
                                   if (_pincodeValid == false)
-                                    _PincodeErrorBanner(),
+                                    const _PincodeErrorBanner(),
                                   if (_pincodeValid == false)
                                     const SizedBox(height: 12),
                                   _DeliveryAddressCard(
@@ -913,6 +913,8 @@ class _CheckoutCard extends StatelessWidget {
 }
 
 class _PincodeErrorBanner extends StatelessWidget {
+  const _PincodeErrorBanner();
+
   @override
   Widget build(BuildContext context) {
     return Container(

@@ -39,6 +39,19 @@ final class CheckoutRazorpayVerifyRequested extends CheckoutEvent {
   final String signature;
 }
 
+final class CheckoutRazorpayStatusCheckRequested extends CheckoutEvent {
+  CheckoutRazorpayStatusCheckRequested({
+    required this.platformOrderId,
+    required this.merchantPaymentRefId,
+    required this.paymentId,
+    required this.transactionId,
+  });
+  final String platformOrderId;
+  final String merchantPaymentRefId;
+  final String paymentId;
+  final String transactionId;
+}
+
 // ── States ───────────────────────────────────────────────────────────────────
 
 sealed class CheckoutState {}
@@ -69,6 +82,11 @@ final class CheckoutError extends CheckoutState {
   final String message;
 }
 
+final class CheckoutPaymentFailed extends CheckoutState {
+  CheckoutPaymentFailed(this.message);
+  final String message;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
@@ -79,6 +97,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     on<CheckoutRazorpayOrderRequested>(_onCreateRazorpayOrder);
     on<CheckoutRazorpayPaymentFailed>(_onRazorpayPaymentFailed);
     on<CheckoutRazorpayVerifyRequested>(_onVerifyRazorpayPayment);
+    on<CheckoutRazorpayStatusCheckRequested>(_onRazorpayStatusCheck);
   }
 
   final CheckoutRepository _repository;
@@ -151,6 +170,24 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     );
     if (failure != null) {
       emit(CheckoutError(failure.message));
+    } else {
+      emit(CheckoutOrderPlaced(order!));
+    }
+  }
+
+  Future<void> _onRazorpayStatusCheck(
+    CheckoutRazorpayStatusCheckRequested event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    emit(CheckoutLoading());
+    final (order, failure) = await _repository.getSuborderDetails(
+      platformOrderId: event.platformOrderId,
+      merchantPaymentRefId: event.merchantPaymentRefId,
+      paymentId: event.paymentId,
+      transactionId: event.transactionId,
+    );
+    if (failure != null) {
+      emit(CheckoutPaymentFailed(failure.message));
     } else {
       emit(CheckoutOrderPlaced(order!));
     }

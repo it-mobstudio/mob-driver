@@ -88,6 +88,35 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   }
 
   @override
+  Future<(PlacedOrderEntity?, AppFailure?)> getSuborderDetails({
+    required String platformOrderId,
+    required String merchantPaymentRefId,
+    required String paymentId,
+    required String transactionId,
+  }) async {
+    try {
+      final body = await _datasource.getSuborderDetails(
+        platformOrderId: platformOrderId,
+        merchantPaymentRefId: merchantPaymentRefId,
+        paymentId: paymentId,
+        transactionId: transactionId,
+      );
+      if (body['status'] == false) {
+        final msg = body['message']?.toString() ?? 'Payment verification failed.';
+        return (null, BusinessFailure(msg));
+      }
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      return (PlacedOrderEntity.fromMap(data), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<(RazorpayOrderEntity?, AppFailure?)> createRazorpayOrder(int cartId) async {
     try {
       final body = await _datasource.createRazorpayOrder(cartId);

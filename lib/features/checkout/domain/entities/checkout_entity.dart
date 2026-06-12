@@ -53,6 +53,7 @@ class CheckoutSummaryEntity {
 class RazorpayOrderEntity {
   const RazorpayOrderEntity({
     required this.razorpayOrderId,
+    required this.platformOrderId,
     required this.key,
     required this.amount,
     required this.currency,
@@ -60,6 +61,7 @@ class RazorpayOrderEntity {
   });
 
   final String razorpayOrderId;
+  final String platformOrderId;
   final String key;
   final int amount;
   final String currency;
@@ -76,6 +78,8 @@ class RazorpayOrderEntity {
     return RazorpayOrderEntity(
       razorpayOrderId:
           (map['razorpay_id'] ?? map['razorpay_order_id'] ?? map['id'] ?? '').toString(),
+      platformOrderId:
+          (map['order_id'] ?? map['mob_order_id'] ?? map['platform_order_id'] ?? '').toString(),
       key: (map['key'] ?? map['key_id'] ?? '').toString(),
       amount: amountPaise,
       currency: (map['currency'] ?? 'INR').toString(),
