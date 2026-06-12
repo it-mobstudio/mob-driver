@@ -209,8 +209,9 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                 _handleAdd();
               },
         child: Container(
-          width: 68,
-          height: 40,
+          width: hasVariants && variantCount > 0 ? 96 : 68,
+          height: hasVariants && variantCount > 0 ? 48 : 40,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -224,16 +225,39 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 )
-              : Center(
-                  child: Text(
-                    'ADD',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF0360E5),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      height: 16 / 12,
+              : Column(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'ADD',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF0360E5),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            height: 16 / 12,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (hasVariants && variantCount > 0)
+                      Container(
+                        width: double.infinity,
+                        height: 14,
+                        color: const Color(0x1A0360E5),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$variantCount options',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF7E7E7E),
+                            fontSize: 8,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
         ),
       );
@@ -304,12 +328,27 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                   color: Colors.white,
                 ),
               )
-            : Text(
-                'ADD',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'ADD',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (hasVariants && variantCount > 0) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '$variantCount options',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ],
               ),
       ),
     );

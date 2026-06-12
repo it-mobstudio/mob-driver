@@ -96,9 +96,19 @@ class _AppBootstrapState extends State<AppBootstrap> {
       future: _bootstrapFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const MaterialApp(
+          return MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: SplashScreen(),
+            home: const SplashScreen(),
+            builder: kIsWeb
+                ? (context, child) => Container(
+                      color: const Color(0xFF1A1A2E),
+                      alignment: Alignment.topCenter,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 430),
+                        child: ClipRect(child: child!),
+                      ),
+                    )
+                : null,
           );
         }
         return const MyApp();
@@ -200,6 +210,16 @@ class MyAppState extends State<MyApp> {
       ),
       themeMode: _themeMode,
       routerConfig: _router,
+      builder: kIsWeb
+          ? (context, child) => Container(
+                color: const Color(0xFF1A1A2E),
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 430),
+                  child: ClipRect(child: child!),
+                ),
+              )
+          : null,
       ),
     );
   }

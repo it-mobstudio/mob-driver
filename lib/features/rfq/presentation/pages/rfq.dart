@@ -44,7 +44,7 @@ class _RfqPageState extends State<RfqPage> {
         showLocationheader: false,
         showBackButton: true,
         headerBackgroundColor: Color(0xFFE8F2EF),
-        searchHintText: 'Search for product, category, brand..',
+        searchHints: ['Search for product, category, brand..'],
         child: _RfqBody(),
       ),
     );

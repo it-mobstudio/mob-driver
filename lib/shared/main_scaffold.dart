@@ -1,4 +1,5 @@
 // lib/widgets/main_scaffold.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
@@ -17,7 +18,16 @@ class MainScaffold extends StatelessWidget {
   final bool showLocationheader;
 
   final Color? headerBackgroundColor;
-  final String searchHintText;
+  final List<String> searchHints;
+
+  static const _defaultHints = [
+    'Search "Fevicol"',
+    'Search "UltraTech Cement"',
+    'Search "Asian Paints"',
+    'Search "Pipes & Fittings"',
+    'Search "Electrical Wires"',
+    'Search "Berger Paints"',
+  ];
 
   const MainScaffold({
     super.key,
@@ -27,7 +37,7 @@ class MainScaffold extends StatelessWidget {
     this.showBackButton = false,
     this.showLocationheader = true,
     this.headerBackgroundColor,
-    this.searchHintText = 'Search "Fevicol"',
+    this.searchHints = _defaultHints,
   });
 
   void _onTabSelected(BuildContext context, int index) {
@@ -245,47 +255,102 @@ extension on MainScaffold {
               ),
             ),
           Expanded(
-            child: SizedBox(
-              height: 48,
-              child: TextField(
-                onTap: () {
-                  context.push('/search');
-                },
-                decoration: InputDecoration(
-                  hintText: searchHintText,
-                  hintStyle: GoogleFonts.inter(
-                    color: const Color(0xFF767C8F),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  prefixIcon: const Icon(Icons.search,
-                      color: Color(0xFF767C8F), size: 20),
-                  suffixIcon:
-                      const Icon(Icons.mic, color: Color(0xFF767C8F), size: 20),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Color(0xFFD0D4DC), width: 0.5),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Color(0xFFD0D4DC), width: 0.5),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Color(0xFFD0D4DC), width: 0.5),
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                ),
-              ),
+            child: _AnimatedSearchBar(
+              hints: searchHints,
+              onTap: () => context.push('/search'),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AnimatedSearchBar extends StatefulWidget {
+  const _AnimatedSearchBar({required this.hints, required this.onTap});
+
+  final List<String> hints;
+  final VoidCallback onTap;
+
+  @override
+  State<_AnimatedSearchBar> createState() => _AnimatedSearchBarState();
+}
+
+class _AnimatedSearchBarState extends State<_AnimatedSearchBar> {
+  int _index = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.hints.length > 1) {
+      _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (mounted) {
+          setState(() => _index = (_index + 1) % widget.hints.length);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFD0D4DC), width: 0.5),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 12),
+            const Icon(Icons.search, color: Color(0xFF767C8F), size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.4),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOut,
+                    )),
+                    child: child,
+                  ),
+                ),
+                child: Align(
+                  key: ValueKey(_index),
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    widget.hints[_index],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF767C8F),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.mic, color: Color(0xFF767C8F), size: 20),
+            const SizedBox(width: 12),
+          ],
+        ),
       ),
     );
   }
