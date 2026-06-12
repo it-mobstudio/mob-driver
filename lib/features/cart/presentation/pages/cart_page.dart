@@ -22,8 +22,6 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   CartAddressEntity? _selectedDeliveryAddress;
-  CartAddressEntity? _selectedBillingAddress;
-  bool _useDeliveryForBilling = false;
 
   @override
   Widget build(BuildContext context) {
@@ -105,10 +103,11 @@ class _CartPageState extends State<CartPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const CartTopBar(),
-            Container(height: 16, color: const Color(0xFFF0F0F0)),
+            if (summary.savings > 0)
+              SavingsStrip(savings: summary.savings),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 118),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
                 children: [
                   ShippingTile(
                     title: _deliveryName(summary),
@@ -117,27 +116,6 @@ class _CartPageState extends State<CartPage> {
                     onAddressAction: () => _showAddressBottomSheet(summary),
                   ),
                   const SizedBox(height: 12),
-                  SameAddressRow(
-                    value: _useDeliveryForBilling,
-                    onChanged: (value) {
-                      setState(() {
-                        _useDeliveryForBilling = value;
-                        if (value) {
-                          _selectedBillingAddress =
-                              _currentDeliveryAddress(summary);
-                        }
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  BillingAddressTile(
-                    hasBillingAddress:
-                        _billingDetails(summary).trim().isNotEmpty,
-                    addressDetails: _billingDetails(summary),
-                    onTap: () =>
-                        _showAddressBottomSheet(summary, forBilling: true),
-                  ),
-                  const SizedBox(height: 20),
                   ...summary.itemsBySeller.entries.map(
                     (entry) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -166,9 +144,8 @@ class _CartPageState extends State<CartPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
                   const ViewCouponsTile(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   OrderDetailsCard(
                     subtotal: summary.subtotal,
                     shipping: summary.shipping,
@@ -177,12 +154,17 @@ class _CartPageState extends State<CartPage> {
                     total: summary.total,
                     rewardPoints: summary.rewardPoints,
                   ),
+                  const SizedBox(height: 12),
+                  const CartActionRow(),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
           ],
         ),
         BottomCheckoutBar(
+          label: 'Place order',
+          total: summary.total,
           onProceed: () =>
               GoRouter.of(context).go(CheckoutAddressPage.routePath),
         ),
@@ -200,7 +182,12 @@ class _CartPageState extends State<CartPage> {
 
   String _deliveryDetails(CartSummaryEntity summary) {
     final selected = _selectedDeliveryAddress;
-    if (selected != null) return _addressDetails(selected);
+    if (selected != null) {
+      return <String>[
+        selected.address.trim(),
+        selected.phone.trim(),
+      ].where((p) => p.isNotEmpty).join('\n');
+    }
     final parts = <String>[
       summary.shippingAddress.trim(),
       summary.shippingPhone.trim(),
@@ -209,34 +196,7 @@ class _CartPageState extends State<CartPage> {
     return summary.shippingSubtitle;
   }
 
-  String _billingDetails(CartSummaryEntity summary) {
-    if (_useDeliveryForBilling) return _deliveryDetails(summary);
-    final selected = _selectedBillingAddress;
-    if (selected != null) return _addressDetails(selected);
-    return summary.billingAddress.trim();
-  }
-
-  CartAddressEntity _currentDeliveryAddress(CartSummaryEntity summary) {
-    return _selectedDeliveryAddress ??
-        CartAddressEntity(
-          name: _deliveryName(summary),
-          address: summary.shippingAddress.trim(),
-          phone: summary.shippingPhone.trim(),
-          tag: 'Delivery',
-        );
-  }
-
-  String _addressDetails(CartAddressEntity address) {
-    return <String>[
-      address.address.trim(),
-      address.phone.trim(),
-    ].where((p) => p.isNotEmpty).join('\n');
-  }
-
-  void _showAddressBottomSheet(
-    CartSummaryEntity summary, {
-    bool forBilling = false,
-  }) {
+  void _showAddressBottomSheet(CartSummaryEntity summary) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -246,16 +206,7 @@ class _CartPageState extends State<CartPage> {
           addresses: summary.savedAddresses,
           onSelectAddress: (CartAddressEntity address) {
             Navigator.of(sheetContext).pop();
-            setState(() {
-              if (forBilling && !_useDeliveryForBilling) {
-                _selectedBillingAddress = address;
-              } else {
-                _selectedDeliveryAddress = address;
-                if (_useDeliveryForBilling || forBilling) {
-                  _selectedBillingAddress = address;
-                }
-              }
-            });
+            setState(() => _selectedDeliveryAddress = address);
           },
           onAddAddress: () {
             Navigator.of(sheetContext).pop();

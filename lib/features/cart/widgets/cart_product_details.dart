@@ -29,9 +29,6 @@ class CartProductDetails extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-      ),
       child: Row(
         children: [
           Container(
@@ -104,7 +101,7 @@ class CartProductDetails extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Delete',
+                          'Remove',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: isBusy

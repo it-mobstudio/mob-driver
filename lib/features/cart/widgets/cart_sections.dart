@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
@@ -17,7 +18,7 @@ class CartTopBar extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Text(
-            'Add address detail',
+            'Cart',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               color: const Color(0xFF0A243F),
@@ -42,6 +43,25 @@ class CartTopBar extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Icon(
                     Icons.arrow_back,
+                    color: Color(0xFF0A243F),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => GoRouter.of(context).push('/search'),
+              child: const SizedBox(
+                width: 48,
+                height: 50,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.search,
                     color: Color(0xFF0A243F),
                     size: 24,
                   ),
@@ -823,13 +843,11 @@ class SellerSection extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0A243F),
-                    decoration: TextDecoration.underline,
-                    decorationStyle: TextDecorationStyle.solid,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '₹ 400',
+                  '₹400',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: const Color(0xFF767C8F),
@@ -838,11 +856,11 @@ class SellerSection extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '₹ 250',
+                  'FREE',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
+                    color: const Color(0xFF0360E5),
                   ),
                 ),
               ],
@@ -853,39 +871,52 @@ class SellerSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Sold by $sellerCode',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF67696D),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Arrives by tomorrow evening',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Sold by $sellerCode',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF67696D),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A243F),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'QWIK  1-4 hrs',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                ...sellerItems
-                    .map(
-                      (item) => CartProductDetails(
-                        item: item,
-                        onQtyChanged: (qty) => onQtyChanged(item, qty),
-                        onQtyInputChanged: (value) =>
-                            onQtyInputChanged(item, value),
-                        onDelete: () => onRemove(item),
-                        isBusy:
-                            isUpdatingCart && updatingItemKey == item.itemKey,
-                      ),
-                    )
-                    .expand((widget) => [widget, const SizedBox(height: 12)])
-                    .toList()
-                  ..removeLast(),
+                for (var i = 0; i < sellerItems.length; i++) ...[
+                  CartProductDetails(
+                    item: sellerItems[i],
+                    onQtyChanged: (qty) => onQtyChanged(sellerItems[i], qty),
+                    onQtyInputChanged: (value) =>
+                        onQtyInputChanged(sellerItems[i], value),
+                    onDelete: () => onRemove(sellerItems[i]),
+                    isBusy: isUpdatingCart &&
+                        updatingItemKey == sellerItems[i].itemKey,
+                  ),
+                  if (i < sellerItems.length - 1) ...[
+                    const SizedBox(height: 8),
+                    const _DashedDivider(),
+                    const SizedBox(height: 8),
+                  ],
+                ],
               ],
             ),
           ),
@@ -1141,6 +1172,38 @@ class _CartPointsStripClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant _CartPointsStripClipper oldClipper) => false;
 }
 
+class _DashedDivider extends StatelessWidget {
+  const _DashedDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 1,
+      width: double.infinity,
+      child: CustomPaint(painter: _DashedLinePainter()),
+    );
+  }
+}
+
+class _DashedLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFD0D4DC)
+      ..strokeWidth = 1;
+    const dashWidth = 6.0;
+    const dashSpace = 4.0;
+    var x = 0.0;
+    while (x < size.width) {
+      canvas.drawLine(Offset(x, 0), Offset(x + dashWidth, 0), paint);
+      x += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedLinePainter oldDelegate) => false;
+}
+
 class CartActionRow extends StatelessWidget {
   const CartActionRow({super.key});
 
@@ -1205,17 +1268,93 @@ class BottomCheckoutBar extends StatelessWidget {
     required this.onProceed,
     this.isDisabled = false,
     this.isLoading = false,
+    this.total,
   });
 
   final String label;
   final VoidCallback onProceed;
   final bool isDisabled;
   final bool isLoading;
+  final double? total;
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final active = !isDisabled && !isLoading;
+
+    if (total != null) {
+      return Positioned(
+        left: 0,
+        right: 0,
+        bottom: 0,
+        child: Container(
+          height: 64 + bottomInset,
+          color: const Color(0xFF0360E5),
+          padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset),
+          child: Row(
+            children: [
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'TOTAL',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.75),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '₹ ${total!.toStringAsFixed(2)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: active ? onProceed : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isLoading)
+                      const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    else
+                      Text(
+                        label,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.arrow_forward,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Positioned(
       left: 0,
