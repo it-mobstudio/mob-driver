@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
-import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 
 class HomeHeader extends StatefulWidget {
@@ -125,7 +125,7 @@ class _HomeHeaderState extends State<HomeHeader> {
               ),
               const SizedBox(width: 8),
               InkWell(
-                onTap: () => context.push(PersonalInfoPage.routePath),
+                onTap: () => context.push(MyAccountWidget.routePath),
                 borderRadius: BorderRadius.circular(18),
                 child: Container(
                   width: 36,
