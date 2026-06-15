@@ -88,17 +88,16 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
 
   List<CartAddressEntity> _addressList() {
     final state = _addressBloc.state;
-    if (state is AddressLoaded) {
+    if (state is AddressListLoaded) {
       return state.addresses
           .map((a) => CartAddressEntity(
                 addressId: a.id,
                 name: a.name,
-                address: a.address,
+                address: a.displayAddress,
                 pincode: a.pincode,
-                phone: a.phone,
-                tag: a.tag,
-                project: a.project,
-                gstNumber: a.gstNumber,
+                phone: a.phoneNumber,
+                tag: a.addressTag,
+                project: a.projectName,
               ))
           .toList();
     }
@@ -187,107 +186,121 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                         CartRequiresLogin() => const Center(
                             child: Text('Please login to continue.'),
                           ),
-                        CartLoaded(:final summary) => Builder(
-                            builder: (_) {
+                        CartLoaded(:final summary) =>
+                          BlocBuilder<AddressBloc, AddressState>(
+                            bloc: _addressBloc,
+                            builder: (context, addressState) {
+                              final addresses = _addressList();
+                              // Mirror web hasSavedAddress:
+                              // show CHANGE if cart already has an address OR
+                              // user has any saved addresses in their account
+                              final hasAnyAddress = _selectedDelivery != null ||
+                                  summary.shippingAddressId.isNotEmpty ||
+                                  addresses.isNotEmpty;
+
                               // Trigger pincode check on first load
                               WidgetsBinding.instance.addPostFrameCallback((_) {
-                                final pincode = _selectedDelivery?.pincode.isNotEmpty == true
-                                    ? _selectedDelivery!.pincode
-                                    : summary.shippingPincode;
+                                final pincode =
+                                    _selectedDelivery?.pincode.isNotEmpty ==
+                                            true
+                                        ? _selectedDelivery!.pincode
+                                        : summary.shippingPincode;
                                 _checkPincode(pincode);
                               });
+
                               return Stack(
-                            children: [
-                              ListView(
-                                padding: const EdgeInsets.fromLTRB(
-                                    16, 16, 16, 118),
                                 children: [
-                                  if (_pincodeValid == false)
-                                    const _PincodeErrorBanner(),
-                                  if (_pincodeValid == false)
-                                    const SizedBox(height: 12),
-                                  _DeliveryAddressCard(
-                                    name: _selectedDelivery?.name ??
-                                        summary.shippingRecipientName,
-                                    address: _selectedDelivery?.address ??
-                                        summary.shippingAddress,
-                                    phone: _selectedDelivery?.phone ??
-                                        summary.shippingPhone,
-                                    actionLabel:
-                                        (_selectedDelivery != null ||
-                                                summary.hasDeliveryAddress)
+                                  ListView(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 16, 16, 118),
+                                    children: [
+                                      if (_pincodeValid == false)
+                                        const _PincodeErrorBanner(),
+                                      if (_pincodeValid == false)
+                                        const SizedBox(height: 12),
+                                      _DeliveryAddressCard(
+                                        name: _selectedDelivery?.name ??
+                                            summary.shippingRecipientName,
+                                        address: _selectedDelivery?.address ??
+                                            summary.shippingAddress,
+                                        phone: _selectedDelivery?.phone ??
+                                            summary.shippingPhone,
+                                        tag: _selectedDelivery?.tag ?? '',
+                                        project:
+                                            _selectedDelivery?.project ?? '',
+                                        actionLabel:
+                                            hasAnyAddress ? 'Change' : 'Add',
+                                        onAction: () =>
+                                            _showAddressDrawer(context),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _SameAddressRow(
+                                        checked: _sameAddress,
+                                        onChanged: (v) =>
+                                            setState(() => _sameAddress = v),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _BillingAddressCard(
+                                        address: _sameAddress
+                                            ? (_selectedDelivery?.address ??
+                                                summary.shippingAddress)
+                                            : (_selectedBilling?.address ??
+                                                summary.billingAddress),
+                                        gstNumber: summary.billingGstNumber,
+                                        actionLabel: _sameAddress
                                             ? 'Change'
-                                            : 'Add',
-                                    onAction: () =>
-                                        _showAddressDrawer(context),
+                                            : ((_selectedBilling != null ||
+                                                    summary.billingAddress
+                                                        .trim()
+                                                        .isNotEmpty ||
+                                                    hasAnyAddress)
+                                                ? 'Change'
+                                                : 'Add'),
+                                        onAction: _sameAddress
+                                            ? null
+                                            : () => _showAddressDrawer(context,
+                                                forBilling: true),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      OrderDetailsCard(
+                                        subtotal: summary.subtotal,
+                                        shipping: summary.shipping,
+                                        tax: summary.tax,
+                                        savings: summary.savings,
+                                        total: summary.total,
+                                        earningPoints: summary.earningPoints,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 12),
-                                  _SameAddressRow(
-                                    checked: _sameAddress,
-                                    onChanged: (v) =>
-                                        setState(() => _sameAddress = v),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _BillingAddressCard(
-                                    address: _sameAddress
-                                        ? (_selectedDelivery?.address ??
-                                            summary.shippingAddress)
-                                        : (_selectedBilling?.address ??
-                                            summary.billingAddress),
-                                    gstNumber: summary.billingGstNumber,
-                                    actionLabel: _sameAddress
-                                        ? 'Change'
-                                        : ((_selectedBilling != null ||
-                                                summary.billingAddress
-                                                    .trim()
-                                                    .isNotEmpty)
-                                            ? 'Change'
-                                            : 'Add'),
-                                    onAction: _sameAddress
-                                        ? null
-                                        : () => _showAddressDrawer(
-                                            context,
-                                            forBilling: true),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  OrderDetailsCard(
-                                    subtotal: summary.subtotal,
-                                    shipping: summary.shipping,
-                                    tax: summary.tax,
-                                    savings: summary.savings,
-                                    total: summary.total,
-                                    rewardPoints: summary.rewardPoints,
+                                  BottomCheckoutBar(
+                                    label: 'Continue',
+                                    isDisabled: !_canContinue(summary),
+                                    onProceed: () {
+                                      final deliveryId = int.tryParse(
+                                            _selectedDelivery?.addressId ??
+                                                summary.shippingAddressId,
+                                          ) ??
+                                          0;
+                                      final billingId = _sameAddress
+                                          ? deliveryId
+                                          : int.tryParse(
+                                                _selectedBilling?.addressId ??
+                                                    summary.billingAddressId,
+                                              ) ??
+                                              deliveryId;
+                                      context.push(
+                                        CheckoutOrderReviewPage.routePath,
+                                        extra: {
+                                          'cart_id':
+                                              int.tryParse(summary.cartId) ?? 0,
+                                          'delivery_address_id': deliveryId,
+                                          'billing_address_id': billingId,
+                                        },
+                                      );
+                                    },
                                   ),
                                 ],
-                              ),
-                              BottomCheckoutBar(
-                                label: 'Continue',
-                                isDisabled: !_canContinue(summary),
-                                onProceed: () {
-                                  final deliveryId = int.tryParse(
-                                        _selectedDelivery?.addressId ??
-                                            summary.shippingAddressId,
-                                      ) ??
-                                      0;
-                                  final billingId = _sameAddress
-                                      ? deliveryId
-                                      : int.tryParse(
-                                            _selectedBilling?.addressId ??
-                                                summary.billingAddressId,
-                                          ) ??
-                                          deliveryId;
-                                  context.go(
-                                    CheckoutOrderReviewPage.routePath,
-                                    extra: {
-                                      'cart_id': int.tryParse(summary.cartId) ?? 0,
-                                      'delivery_address_id': deliveryId,
-                                      'billing_address_id': billingId,
-                                    },
-                                  );
-                                },
-                              ),
-                            ],
-                          );
+                              );
                             },
                           ),
                       };
@@ -360,6 +373,8 @@ class _DeliveryAddressCard extends StatelessWidget {
     required this.phone,
     required this.actionLabel,
     required this.onAction,
+    this.tag = '',
+    this.project = '',
   });
 
   final String name;
@@ -367,6 +382,8 @@ class _DeliveryAddressCard extends StatelessWidget {
   final String phone;
   final String actionLabel;
   final VoidCallback onAction;
+  final String tag;
+  final String project;
 
   @override
   Widget build(BuildContext context) {
@@ -375,9 +392,11 @@ class _DeliveryAddressCard extends StatelessWidget {
         ? address.trim()
         : 'Select a delivery address to continue';
     final displayPhone = phone.trim();
+    final displayTag = tag.trim();
+    final displayProject = project.trim();
+    final hasPills = displayTag.isNotEmpty || displayProject.isNotEmpty;
 
     return _CheckoutCard(
-      height: 106,
       padding: const EdgeInsets.all(12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,6 +448,29 @@ class _DeliveryAddressCard extends StatelessWidget {
                     height: 1.50,
                   ),
                 ),
+                if (hasPills) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (displayTag.isNotEmpty)
+                        _AddressPill(
+                          text: displayTag,
+                          color: const Color(0xFFE6EEF9),
+                        ),
+                      if (displayTag.isNotEmpty && displayProject.isNotEmpty)
+                        const SizedBox(width: 8),
+                      if (displayProject.isNotEmpty)
+                        Flexible(
+                          child: _AddressPill(
+                            text: displayProject.startsWith('Project:')
+                                ? displayProject
+                                : 'Project: $displayProject',
+                            color: const Color(0xFFFFEFCE),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -473,9 +515,8 @@ class _SameAddressRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: checked ? const Color(0xFF2973F0) : Colors.white,
               border: Border.all(
-                color: checked
-                    ? const Color(0xFF2973F0)
-                    : const Color(0xFF767C8F),
+                color:
+                    checked ? const Color(0xFF2973F0) : const Color(0xFF767C8F),
               ),
               borderRadius: BorderRadius.circular(2),
             ),

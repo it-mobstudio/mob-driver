@@ -103,8 +103,7 @@ class _CartPageState extends State<CartPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const CartTopBar(),
-            if (summary.savings > 0)
-              SavingsStrip(savings: summary.savings),
+            if (summary.savings > 0) SavingsStrip(savings: summary.savings),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
@@ -144,7 +143,7 @@ class _CartPageState extends State<CartPage> {
                       ),
                     ),
                   ),
-                  const ViewCouponsTile(),
+                  // const ViewCouponsTile(),
                   const SizedBox(height: 12),
                   OrderDetailsCard(
                     subtotal: summary.subtotal,
@@ -152,7 +151,7 @@ class _CartPageState extends State<CartPage> {
                     tax: summary.tax,
                     savings: summary.savings,
                     total: summary.total,
-                    rewardPoints: summary.rewardPoints,
+                    earningPoints: summary.earningPoints,
                   ),
                   const SizedBox(height: 12),
                   const CartActionRow(),

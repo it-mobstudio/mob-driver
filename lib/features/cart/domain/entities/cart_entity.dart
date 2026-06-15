@@ -34,7 +34,12 @@ class CartSummaryEntity {
     required this.savings,
     required this.total,
     required this.rewardPoints,
+    required this.mobstarAmount,
+    required this.earningPoints,
     required this.walletBalance,
+    required this.applicableWalletAmount,
+    required this.useWallet,
+    required this.usePoints,
     required this.rfqItemCount,
     required this.itemCount,
     required this.cartId,
@@ -58,13 +63,26 @@ class CartSummaryEntity {
   final double tax;
   final double savings;
   final double total;
+  /// Redeemable mobstar points the user currently holds.
   final int rewardPoints;
+
+  /// Rupee value of redeemable mobstar points (from API actual_money).
+  final double mobstarAmount;
+
+  /// Points the user will earn on this purchase (from API earning_points).
+  final int earningPoints;
 
   /// Mobwallet balance available for redemption.
   final double walletBalance;
 
-  /// Rupee value of mobstar points (1 point = ₹0.25).
-  double get mobstarAmount => (rewardPoints / 4.0);
+  /// Amount from wallet that will actually be applied to this order.
+  final double applicableWalletAmount;
+
+  /// Whether the cart currently has wallet redemption active (from API use_wallet).
+  final bool useWallet;
+
+  /// Whether the cart currently has mobstar points redemption active (from API use_points).
+  final bool usePoints;
 
   final int rfqItemCount;
 
@@ -113,7 +131,12 @@ class CartSummaryEntity {
     savings: 0,
     total: 0,
     rewardPoints: 0,
+    mobstarAmount: 0,
+    earningPoints: 0,
     walletBalance: 0,
+    applicableWalletAmount: 0,
+    useWallet: false,
+    usePoints: false,
     rfqItemCount: 0,
     itemCount: 0,
     cartId: '',

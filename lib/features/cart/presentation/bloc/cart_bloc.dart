@@ -25,6 +25,21 @@ final class CartItemRemoveRequested extends CartEvent {
 
 final class CartActionErrorCleared extends CartEvent {}
 
+final class CartRedeemUpdateRequested extends CartEvent {
+  CartRedeemUpdateRequested({
+    required this.cartId,
+    required this.useWallet,
+    required this.walletAmount,
+    required this.usePoints,
+    required this.points,
+  });
+  final String cartId;
+  final bool useWallet;
+  final double walletAmount;
+  final bool usePoints;
+  final int points;
+}
+
 // ── States ───────────────────────────────────────────────────────────────────
 
 sealed class CartState {}
@@ -39,6 +54,7 @@ final class CartLoaded extends CartState {
     this.actionError,
     this.updatingItemKey,
     this.successMessage,
+    this.isRedeemUpdating = false,
   });
   final CartSummaryEntity summary;
   final String? actionError;
@@ -46,6 +62,8 @@ final class CartLoaded extends CartState {
 
   /// Transient — shown once via BlocListener then gone on next state.
   final String? successMessage;
+
+  final bool isRedeemUpdating;
 
   bool get isUpdating => updatingItemKey != null;
 
@@ -69,6 +87,7 @@ final class CartLoaded extends CartState {
     String? actionError,
     String? updatingItemKey,
     String? successMessage,
+    bool? isRedeemUpdating,
     bool clearActionError = false,
     bool clearUpdatingKey = false,
     bool clearSuccessMessage = false,
@@ -81,6 +100,7 @@ final class CartLoaded extends CartState {
       successMessage: clearSuccessMessage
           ? null
           : (successMessage ?? this.successMessage),
+      isRedeemUpdating: isRedeemUpdating ?? this.isRedeemUpdating,
     );
   }
 }
@@ -100,6 +120,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<CartQuantityUpdateRequested>(_onQuantityUpdate);
     on<CartItemRemoveRequested>(_onRemove);
     on<CartActionErrorCleared>(_onClearError);
+    on<CartRedeemUpdateRequested>(_onRedeemUpdate);
   }
 
   final CartRepository _repository;
@@ -214,6 +235,33 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     final current = state;
     if (current is CartLoaded) {
       emit(current.copyWith(clearActionError: true));
+    }
+  }
+
+  Future<void> _onRedeemUpdate(
+    CartRedeemUpdateRequested event,
+    Emitter<CartState> emit,
+  ) async {
+    final current = state;
+    if (current is! CartLoaded) return;
+
+    emit(current.copyWith(isRedeemUpdating: true, clearActionError: true));
+
+    final (summary, failure) = await _repository.updateCartRedeem(
+      cartId: event.cartId,
+      useWallet: event.useWallet,
+      walletAmount: event.walletAmount,
+      usePoints: event.usePoints,
+      points: event.points,
+    );
+
+    if (failure != null) {
+      emit(current.copyWith(
+        isRedeemUpdating: false,
+        actionError: failure.message,
+      ));
+    } else {
+      emit(CartLoaded(summary: summary!));
     }
   }
 }

@@ -57,6 +57,30 @@ class CartRepositoryImpl implements CartRepository {
     }
   }
 
+  @override
+  Future<(CartSummaryEntity?, AppFailure?)> updateCartRedeem({
+    required String cartId,
+    required bool useWallet,
+    required double walletAmount,
+    required bool usePoints,
+    required int points,
+  }) async {
+    try {
+      final data = await _datasource.updateCartRedeem({
+        'cart_id': int.tryParse(cartId) ?? 0,
+        'use_wallet': useWallet,
+        'wallet_amount': walletAmount,
+        'use_points': usePoints,
+        'points': points,
+      });
+      return (_buildSummary(data), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
   // ── Entity builder ───────────────────────────────────────────────────────
 
   CartSummaryEntity _buildSummary(Map<String, dynamic> data) {
@@ -77,6 +101,23 @@ class CartRepositoryImpl implements CartRepository {
 
     final rfqCount = _rfqCount(data['quote_cart']);
 
+    final ud = data['user_details'];
+    final udMap = ud is Map ? Map<String, dynamic>.from(ud) : <String, dynamic>{};
+
+    // Mob star tier nested inside user_details (e.g. mob_star, loyalty, tier)
+    final mobStarTier = _findNestedMap(udMap, const [
+      'mob_star', 'mob_star_tier', 'loyalty', 'loyalty_tier', 'tier', 'reward_tier',
+    ]);
+
+    // Wallet nested object (e.g. mob_wallet, wallet, wallet_info)
+    final walletObj = _findNestedMap(data, const [
+      'mob_wallet', 'wallet', 'wallet_info', 'wallet_details',
+    ]);
+
+    final walletBalance = _num(walletObj, const ['wallet_balance']).toDouble() != 0
+        ? _num(walletObj, const ['wallet_balance']).toDouble()
+        : _num(data, const ['wallet_balance', 'mob_wallet_balance']).toDouble();
+
     return CartSummaryEntity(
       items: items,
       subtotal: subtotal.toDouble(),
@@ -86,20 +127,15 @@ class CartRepositoryImpl implements CartRepository {
       total: _num(data, const ['total', 'cart_total'],
               fallback: subtotal + ship - sav)
           .toDouble(),
-      rewardPoints: _int(data, const [
-        'reward_points',
-        'rewardPoints',
-        'points_earned',
-        'mobstar_points',
-        'mobstarPoints',
-      ]),
-      walletBalance: _num(data, const [
-        'wallet',
-        'mob_wallet',
-        'wallet_balance',
-        'mobwallet',
-        'mobwallet_balance',
-      ]).toDouble(),
+      rewardPoints: _int(mobStarTier, const ['points']),
+      mobstarAmount: _num(mobStarTier, const ['actual_money']).toDouble(),
+      earningPoints: _int(data, const ['earning_points', 'earn_points', 'points_to_earn']),
+      walletBalance: walletBalance,
+      applicableWalletAmount: _num(walletObj, const ['applicable_wallet_amount']).toDouble() != 0
+          ? _num(walletObj, const ['applicable_wallet_amount']).toDouble()
+          : walletBalance,
+      useWallet: data['use_wallet'] == true,
+      usePoints: data['use_points'] == true,
       rfqItemCount: rfqCount,
       itemCount: _int(data, const ['item_count', 'itemCount', 'total_items'],
           fallback: items.length + rfqCount),
@@ -347,6 +383,14 @@ class CartRepositoryImpl implements CartRepository {
   }
 
   // ── Primitive helpers ────────────────────────────────────────────────────
+
+  Map<String, dynamic> _findNestedMap(Map<String, dynamic> map, List<String> keys) {
+    for (final k in keys) {
+      final v = map[k];
+      if (v is Map) return Map<String, dynamic>.from(v);
+    }
+    return {};
+  }
 
   List<Map<String, dynamic>> _mapList(dynamic v) {
     if (v is! List) return const [];

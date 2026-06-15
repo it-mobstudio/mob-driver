@@ -206,9 +206,8 @@ class SameAddressRow extends StatelessWidget {
               color: value ? const Color(0xFF0360E5) : Colors.white,
               shape: RoundedRectangleBorder(
                 side: BorderSide(
-                  color: value
-                      ? const Color(0xFF0360E5)
-                      : const Color(0xFF767C8F),
+                  color:
+                      value ? const Color(0xFF0360E5) : const Color(0xFF767C8F),
                 ),
                 borderRadius: const BorderRadius.all(Radius.circular(4)),
               ),
@@ -576,9 +575,8 @@ class _CartSavedAddressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = address.name.trim().isNotEmpty
-        ? address.name.trim()
-        : 'Saved address';
+    final name =
+        address.name.trim().isNotEmpty ? address.name.trim() : 'Saved address';
     final addressText = address.address.trim();
 
     return GestureDetector(
@@ -976,7 +974,9 @@ class OrderDetailsCard extends StatelessWidget {
     required this.tax,
     required this.savings,
     required this.total,
-    this.rewardPoints = 1150,
+    this.earningPoints = 0,
+    this.mobstarApplied,
+    this.walletApplied,
   });
 
   final double subtotal;
@@ -984,7 +984,9 @@ class OrderDetailsCard extends StatelessWidget {
   final double tax;
   final double savings;
   final double total;
-  final int rewardPoints;
+  final int earningPoints;
+  final double? mobstarApplied;
+  final double? walletApplied;
 
   @override
   Widget build(BuildContext context) {
@@ -1015,6 +1017,30 @@ class OrderDetailsCard extends StatelessWidget {
                   money(savings),
                   keyDecorated: true,
                 ),
+                if ((mobstarApplied ?? 0) > 0) ...[
+                  const Divider(height: 20),
+                  _redeemRow(
+                    label: 'mobSTAR points',
+                    icon: SvgPicture.asset(
+                      'assets/images/points.svg',
+                      width: 16,
+                      height: 16,
+                    ),
+                    amount: '- ₹ ${mobstarApplied!.toStringAsFixed(2)}',
+                  ),
+                ],
+                if ((walletApplied ?? 0) > 0) ...[
+                  const Divider(height: 20),
+                  _redeemRow(
+                    label: 'mobWALLET',
+                    icon: const Icon(
+                      Icons.account_balance_wallet,
+                      color: Color(0xFFC9825E),
+                      size: 16,
+                    ),
+                    amount: '- ₹ ${walletApplied!.toStringAsFixed(2)}',
+                  ),
+                ],
                 const Divider(height: 20),
                 _kvRow(
                   'Total to pay',
@@ -1053,7 +1079,7 @@ class OrderDetailsCard extends StatelessWidget {
                     height: 16,
                   ),
                   Text(
-                    ' $rewardPoints points',
+                    ' $earningPoints points',
                     style: GoogleFonts.inter(
                       color: const Color(0xFF0A243F),
                       fontSize: 12,
@@ -1075,6 +1101,39 @@ class OrderDetailsCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _redeemRow({
+    required String label,
+    required Widget icon,
+    required String amount,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          icon,
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF0A243F),
+            ),
+          ),
+          const Spacer(),
+          Text(
+            amount,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF0A7D83),
             ),
           ),
         ],

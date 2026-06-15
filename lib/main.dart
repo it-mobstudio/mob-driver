@@ -197,6 +197,12 @@ class MyAppState extends State<MyApp> {
           bodyMedium: theme.typography.bodyMedium,
         ),
         primaryColor: theme.primary,
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          },
+        ),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
@@ -207,6 +213,12 @@ class MyAppState extends State<MyApp> {
           bodyMedium: theme.typography.bodyMedium,
         ),
         primaryColor: theme.primary,
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          },
+        ),
       ),
       themeMode: _themeMode,
       routerConfig: _router,

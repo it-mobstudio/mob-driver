@@ -28,6 +28,7 @@ class CheckoutPaymentPage extends StatefulWidget {
 class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   bool _useMobstar = false;
   bool _useMobwallet = false;
+  bool _redeemInitialized = false;
   // -1 = none selected, 0 = mobCredit, 1 = Razorpay
   int _paymentOption = -1;
   RazorpayOrderEntity? _razorpayEntity; // populated when radio is selected
@@ -50,6 +51,18 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   @override
   void dispose() {
     if (!kIsWeb) _razorpay.clear();
+    // Reset redeem state on navigate away (mirrors web handleGetCartData reset)
+    final cartBloc = context.read<CartBloc>();
+    final cartState = cartBloc.state;
+    if (cartState is CartLoaded) {
+      cartBloc.add(CartRedeemUpdateRequested(
+        cartId: cartState.summary.cartId,
+        useWallet: false,
+        walletAmount: 0,
+        usePoints: false,
+        points: 0,
+      ));
+    }
     _checkoutBloc.close();
     super.dispose();
   }
@@ -163,8 +176,21 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                 CartRequiresLogin() => const Center(
                     child: Text('Please login to continue.'),
                   ),
-                CartLoaded(:final summary) =>
-                  BlocConsumer<CheckoutBloc, CheckoutState>(
+                CartLoaded(:final summary, :final isRedeemUpdating) =>
+                  Builder(builder: (_) {
+                    // Seed checkboxes from API flags on first load
+                    if (!_redeemInitialized) {
+                      _redeemInitialized = true;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            _useMobwallet = summary.useWallet;
+                            _useMobstar = summary.usePoints;
+                          });
+                        }
+                      });
+                    }
+                    return BlocConsumer<CheckoutBloc, CheckoutState>(
                     listener: (context, checkoutState) {
                       if (checkoutState is CheckoutRazorpayOrderCreated) {
                         // Store the entity — gateway opens when user taps "Place order"
@@ -211,11 +237,37 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                         mobstarPoints: summary.rewardPoints,
                                         mobstarAmount: summary.mobstarAmount,
                                         walletBalance: summary.walletBalance,
+                                        applicableWalletAmount: summary.applicableWalletAmount,
+                                        isUpdating: isRedeemUpdating,
                                         onMobstarChanged: summary.rewardPoints > 0
-                                            ? () => setState(() => _useMobstar = !_useMobstar)
+                                            ? () {
+                                                final next = !_useMobstar;
+                                                setState(() => _useMobstar = next);
+                                                context.read<CartBloc>().add(
+                                                  CartRedeemUpdateRequested(
+                                                    cartId: summary.cartId,
+                                                    useWallet: _useMobwallet,
+                                                    walletAmount: summary.applicableWalletAmount,
+                                                    usePoints: next,
+                                                    points: next ? summary.rewardPoints : 0,
+                                                  ),
+                                                );
+                                              }
                                             : null,
                                         onMobwalletChanged: summary.walletBalance > 0
-                                            ? () => setState(() => _useMobwallet = !_useMobwallet)
+                                            ? () {
+                                                final next = !_useMobwallet;
+                                                setState(() => _useMobwallet = next);
+                                                context.read<CartBloc>().add(
+                                                  CartRedeemUpdateRequested(
+                                                    cartId: summary.cartId,
+                                                    useWallet: next,
+                                                    walletAmount: next ? summary.applicableWalletAmount : 0,
+                                                    usePoints: _useMobstar,
+                                                    points: _useMobstar ? summary.rewardPoints : 0,
+                                                  ),
+                                                );
+                                              }
                                             : null,
                                       ),
                                       const SizedBox(height: 20),
@@ -237,15 +289,15 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                             summary.cartId),
                                       ),
                                       const SizedBox(height: 20),
-                                      const ViewCouponsTile(),
-                                      const SizedBox(height: 20),
                                       OrderDetailsCard(
                                         subtotal: summary.subtotal,
                                         shipping: summary.shipping,
                                         tax: summary.tax,
                                         savings: summary.savings,
                                         total: summary.total,
-                                        rewardPoints: summary.rewardPoints,
+                                        earningPoints: summary.earningPoints,
+                                        mobstarApplied: _useMobstar ? summary.mobstarAmount : null,
+                                        walletApplied: _useMobwallet ? summary.applicableWalletAmount : null,
                                       ),
                                     ],
                                   ),
@@ -262,7 +314,8 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                         ],
                       );
                     },
-                  ),
+                  );
+                  }),
               };
             },
           ),
@@ -350,8 +403,10 @@ class _RedeemOptionsCard extends StatelessWidget {
     required this.mobstarPoints,
     required this.mobstarAmount,
     required this.walletBalance,
+    required this.applicableWalletAmount,
     required this.onMobstarChanged,
     required this.onMobwalletChanged,
+    this.isUpdating = false,
   });
 
   final bool useMobstar;
@@ -359,6 +414,8 @@ class _RedeemOptionsCard extends StatelessWidget {
   final int mobstarPoints;
   final double mobstarAmount;
   final double walletBalance;
+  final double applicableWalletAmount;
+  final bool isUpdating;
   final VoidCallback? onMobstarChanged;
   final VoidCallback? onMobwalletChanged;
 
@@ -373,40 +430,60 @@ class _RedeemOptionsCard extends StatelessWidget {
         ? '₹${walletBalance.toStringAsFixed(2)} mobwallet balance'
         : 'No mobwallet balance';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          _RedeemRow(
-            checked: useMobstar,
-            enabled: hasMobstar,
-            amount: '₹${mobstarAmount.toStringAsFixed(2)}',
-            icon: SvgPicture.asset(
-              'assets/images/points.svg',
-              width: 16,
-              height: 16,
-            ),
-            label: mobstarLabel,
-            onTap: onMobstarChanged,
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
           ),
-          const Divider(height: 1, color: Color(0xFFE5E8EE)),
-          _RedeemRow(
-            checked: useMobwallet,
-            enabled: hasWallet,
-            amount: '₹${walletBalance.toStringAsFixed(2)}',
-            icon: const Icon(
-              Icons.account_balance_wallet,
-              color: Color(0xFFC9825E),
-              size: 16,
-            ),
-            label: walletLabel,
-            onTap: onMobwalletChanged,
+          child: Column(
+            children: [
+              _RedeemRow(
+                checked: useMobstar,
+                enabled: hasMobstar && !isUpdating,
+                amount: '₹${mobstarAmount.toStringAsFixed(2)}',
+                icon: SvgPicture.asset(
+                  'assets/images/points.svg',
+                  width: 16,
+                  height: 16,
+                ),
+                label: mobstarLabel,
+                onTap: isUpdating ? null : onMobstarChanged,
+              ),
+              const Divider(height: 1, color: Color(0xFFE5E8EE)),
+              _RedeemRow(
+                checked: useMobwallet,
+                enabled: hasWallet && !isUpdating,
+                amount: '₹${applicableWalletAmount.toStringAsFixed(2)}',
+                icon: const Icon(
+                  Icons.account_balance_wallet,
+                  color: Color(0xFFC9825E),
+                  size: 16,
+                ),
+                label: walletLabel,
+                onTap: isUpdating ? null : onMobwalletChanged,
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        if (isUpdating)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -1,5 +1,6 @@
 class AddressEntity {
   const AddressEntity({
+    this.id = '',
     required this.latitude,
     required this.longitude,
     required this.formattedAddress,
@@ -21,6 +22,7 @@ class AddressEntity {
     this.projectName = '',
   });
 
+  final String id;
   final double latitude;
   final double longitude;
   final String googleMapLink;
@@ -49,6 +51,7 @@ class AddressEntity {
 
   factory AddressEntity.fromMap(Map<String, dynamic> map) {
     return AddressEntity(
+      id: _stringValue(map, const ['id', 'pk', 'address_id']),
       latitude: _toDouble(
         _firstValue(map, const ['latitude', 'lat', 'map_latitude']),
       ),

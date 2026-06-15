@@ -10,6 +10,7 @@ abstract interface class CartRemoteDatasource {
     required String cartItemId,
     String? vendorProductId,
   });
+  Future<Map<String, dynamic>> updateCartRedeem(Map<String, dynamic> payload);
 }
 
 class CartRemoteDatasourceImpl implements CartRemoteDatasource {
@@ -56,6 +57,16 @@ class CartRemoteDatasourceImpl implements CartRemoteDatasource {
         'cart_item_id': int.tryParse(cartItemId) ?? cartItemId,
         'quantity': 0,
       },
+    );
+    return _extractData(response.data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateCartRedeem(Map<String, dynamic> payload) async {
+    final response = await _dio.put<dynamic>(
+      '/orders/cart/update_cart/',
+      data: payload,
+      queryParameters: {'userDetails': true},
     );
     return _extractData(response.data);
   }

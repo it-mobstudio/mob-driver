@@ -13,4 +13,12 @@ abstract interface class CartRepository {
     required String cartItemId,
     String? vendorProductId,
   });
+
+  Future<(CartSummaryEntity?, AppFailure?)> updateCartRedeem({
+    required String cartId,
+    required bool useWallet,
+    required double walletAmount,
+    required bool usePoints,
+    required int points,
+  });
 }

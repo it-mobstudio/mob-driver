@@ -120,7 +120,7 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
       child: BlocConsumer<CheckoutBloc, CheckoutState>(
         listener: (context, checkoutState) {
           if (checkoutState is CheckoutAddressUpdated) {
-            GoRouter.of(context).go(CheckoutPaymentPage.routePath);
+            GoRouter.of(context).push(CheckoutPaymentPage.routePath);
           } else if (checkoutState is CheckoutError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -171,15 +171,13 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
                                       const SizedBox(height: 20),
                                       ..._buildSellerSections(
                                           context, summary, updatingItemKey),
-                                      const ViewCouponsTile(),
-                                      const SizedBox(height: 20),
                                       OrderDetailsCard(
                                         subtotal: summary.subtotal,
                                         shipping: summary.shipping,
                                         tax: summary.tax,
                                         savings: summary.savings,
                                         total: summary.total,
-                                        rewardPoints: summary.rewardPoints,
+                                        earningPoints: summary.earningPoints,
                                       ),
                                     ],
                                   ),
