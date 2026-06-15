@@ -238,44 +238,59 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   }
 
   Widget _savedAddressCard(AddressEntity address) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDFE4EC)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.location_on, color: Color(0xFF00B878), size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  address.name.isNotEmpty ? address.name : address.locationName,
+        child: InkWell(
+          onTap: () => context.pop(address),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFDFE4EC)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      color: Color(0xFF00B878),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        address.name.isNotEmpty
+                            ? address.name
+                            : address.locationName,
+                        style: GoogleFonts.inter(
+                          color: _navy,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (address.addressTag.isNotEmpty) _tag(address.addressTag),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  address.displayAddress,
                   style: GoogleFonts.inter(
-                    color: _navy,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF596378),
+                    fontSize: 12,
+                    height: 1.4,
                   ),
                 ),
-              ),
-              if (address.addressTag.isNotEmpty) _tag(address.addressTag),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            address.displayAddress,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF596378),
-              fontSize: 12,
-              height: 1.4,
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
