@@ -82,7 +82,7 @@
 <string>We use your location to deliver to the right address.</string>
 <key>io.flutter.embedded_views_preview</key><true/>
 <key>GMSApiKey</key>
-<string>YOUR_IOS_GOOGLE_MAPS_API_KEY</string>
+<string>$(GOOGLE_MAPS_API_KEY)</string>
 
 <key>NSMicrophoneUsageDescription</key>
 <string>This app needs the microphone for speech recognition.</string>

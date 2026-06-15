@@ -2,6 +2,11 @@ import 'package:get_it/get_it.dart';
 import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/network/dio_client.dart';
 
+import 'package:m_o_b_demand_side/features/address/data/datasources/address_remote_datasource.dart';
+import 'package:m_o_b_demand_side/features/address/data/repositories/address_repository_impl.dart';
+import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
+
 // Auth
 import 'package:m_o_b_demand_side/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:m_o_b_demand_side/features/auth/data/repositories/auth_repository_impl.dart';
@@ -130,6 +135,7 @@ Future<void> setupDependencies() async {
   // Factories — fresh state per screen visit
   sl.registerFactory<AddressBloc>(() => AddressBloc(sl()));
   sl.registerFactory<AuthBloc>(() => AuthBloc(sl()));
+  sl.registerFactory<AddressBloc>(() => AddressBloc(sl()));
   sl.registerFactory<ProductBloc>(() => ProductBloc(sl()));
   sl.registerFactory<OrdersBloc>(() => OrdersBloc(sl()));
   sl.registerFactory<CheckoutBloc>(() => CheckoutBloc(sl()));

@@ -125,7 +125,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
           addresses: _addressList(),
           onAddAddress: () {
             Navigator.of(sheetContext).pop();
-            context.go(AddressSelectionWidget.routePath);
+            _openAddressFlow(context);
           },
           onSelectAddress: (CartAddressEntity address) {
             Navigator.of(sheetContext).pop();
@@ -147,6 +147,14 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
         );
       },
     );
+  }
+
+  Future<void> _openAddressFlow(BuildContext context) async {
+    final savedAddress = await context.push(
+      AddressSelectionWidget.routePath,
+    );
+    if (!context.mounted || savedAddress == null) return;
+    context.read<CartBloc>().add(CartLoadRequested());
   }
 
   @override

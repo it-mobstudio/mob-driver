@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/uploaded_file.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/entities/rfq_entity.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/repositories/rfq_repository.dart';
 
@@ -16,6 +17,16 @@ final class RfqDetailRequested extends RfqEvent {
 final class RfqSubmitRequested extends RfqEvent {
   RfqSubmitRequested(this.payload);
   final Map<String, dynamic> payload;
+}
+
+final class MagicQuoteSubmitRequested extends RfqEvent {
+  MagicQuoteSubmitRequested({
+    required this.payload,
+    required this.image,
+  });
+
+  final Map<String, dynamic> payload;
+  final FFUploadedFile image;
 }
 
 // ── States ───────────────────────────────────────────────────────────────────
@@ -43,6 +54,18 @@ final class RfqError extends RfqState {
   final String message;
 }
 
+final class MagicQuoteSubmitting extends RfqState {}
+
+final class MagicQuoteSubmitted extends RfqState {
+  MagicQuoteSubmitted(this.response);
+  final Map<String, dynamic> response;
+}
+
+final class MagicQuoteError extends RfqState {
+  MagicQuoteError(this.message);
+  final String message;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class RfqBloc extends Bloc<RfqEvent, RfqState> {
@@ -50,6 +73,7 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     on<RfqListRequested>(_onList);
     on<RfqDetailRequested>(_onDetail);
     on<RfqSubmitRequested>(_onSubmit);
+    on<MagicQuoteSubmitRequested>(_onMagicQuoteSubmit);
   }
 
   final RfqRepository _repository;
@@ -64,7 +88,8 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     }
   }
 
-  Future<void> _onDetail(RfqDetailRequested event, Emitter<RfqState> emit) async {
+  Future<void> _onDetail(
+      RfqDetailRequested event, Emitter<RfqState> emit) async {
     emit(RfqLoading());
     final (rfq, failure) = await _repository.getRfqDetail(event.id);
     if (failure != null) {
@@ -74,7 +99,8 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     }
   }
 
-  Future<void> _onSubmit(RfqSubmitRequested event, Emitter<RfqState> emit) async {
+  Future<void> _onSubmit(
+      RfqSubmitRequested event, Emitter<RfqState> emit) async {
     emit(RfqLoading());
     final (success, failure) = await _repository.submitRfq(event.payload);
     if (failure != null) {
@@ -83,6 +109,22 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
       emit(RfqSubmitted());
     } else {
       emit(RfqError('RFQ submission failed.'));
+    }
+  }
+
+  Future<void> _onMagicQuoteSubmit(
+    MagicQuoteSubmitRequested event,
+    Emitter<RfqState> emit,
+  ) async {
+    emit(MagicQuoteSubmitting());
+    final (response, failure) = await _repository.submitMagicQuote(
+      payload: event.payload,
+      image: event.image,
+    );
+    if (failure != null) {
+      emit(MagicQuoteError(failure.message));
+    } else {
+      emit(MagicQuoteSubmitted(response ?? const <String, dynamic>{}));
     }
   }
 }

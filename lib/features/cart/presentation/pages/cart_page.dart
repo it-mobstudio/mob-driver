@@ -210,10 +210,18 @@ class _CartPageState extends State<CartPage> {
           },
           onAddAddress: () {
             Navigator.of(sheetContext).pop();
-            context.go(AddressSelectionWidget.routePath);
+            _openAddressFlow();
           },
         );
       },
     );
+  }
+
+  Future<void> _openAddressFlow() async {
+    final savedAddress = await context.push(
+      AddressSelectionWidget.routePath,
+    );
+    if (!mounted || savedAddress == null) return;
+    context.read<CartBloc>().add(CartLoadRequested());
   }
 }

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/uploaded_file.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/rfq/data/datasources/rfq_remote_datasource.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/entities/rfq_entity.dart';
@@ -62,6 +63,29 @@ class RfqRepositoryImpl implements RfqRepository {
       return (false, e.toAppFailure());
     } catch (e) {
       return (false, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(Map<String, dynamic>?, AppFailure?)> submitMagicQuote({
+    required Map<String, dynamic> payload,
+    required FFUploadedFile image,
+  }) async {
+    try {
+      final body = await _datasource.submitMagicQuote(
+        payload: payload,
+        image: image,
+      );
+      if (body['status'] == false) {
+        final message =
+            body['message']?.toString() ?? 'Magic Quote submission failed.';
+        return (null, BusinessFailure(message));
+      }
+      return (body, null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
     }
   }
 }

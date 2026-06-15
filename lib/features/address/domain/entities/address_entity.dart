@@ -1,3 +1,204 @@
+class AddressEntity {
+  const AddressEntity({
+    required this.latitude,
+    required this.longitude,
+    required this.formattedAddress,
+    required this.city,
+    required this.state,
+    required this.pincode,
+    required this.sublocality,
+    required this.locationName,
+    required this.name,
+    required this.email,
+    required this.addressLine1,
+    required this.addressLine2,
+    required this.sitePerson,
+    required this.sitePersonMobile,
+    required this.addressTag,
+    required this.phoneNumber,
+    this.googleMapLink = '',
+    this.isLocationServiceable = true,
+    this.projectName = '',
+  });
+
+  final double latitude;
+  final double longitude;
+  final String googleMapLink;
+  final String formattedAddress;
+  final String city;
+  final String state;
+  final String pincode;
+  final String sublocality;
+  final String locationName;
+  final bool isLocationServiceable;
+  final String name;
+  final String email;
+  final String addressLine1;
+  final String addressLine2;
+  final String sitePerson;
+  final String sitePersonMobile;
+  final String addressTag;
+  final String phoneNumber;
+  final String projectName;
+
+  String get displayAddress => [
+        addressLine1,
+        addressLine2,
+        formattedAddress,
+      ].where((part) => part.trim().isNotEmpty).join(', ');
+
+  factory AddressEntity.fromMap(Map<String, dynamic> map) {
+    return AddressEntity(
+      latitude: _toDouble(
+        _firstValue(map, const ['latitude', 'lat', 'map_latitude']),
+      ),
+      longitude: _toDouble(
+        _firstValue(map, const ['longitude', 'lng', 'lon', 'map_longitude']),
+      ),
+      googleMapLink:
+          _stringValue(map, const ['google_map_link', 'googleMapLink']),
+      formattedAddress: _stringValue(
+        map,
+        const ['formatted_address', 'formattedAddress', 'full_address'],
+      ),
+      city: _stringValue(map, const ['city', 'locality']),
+      state: _stringValue(
+        map,
+        const ['state', 'administrative_area', 'administrativeArea'],
+      ),
+      pincode: _pincodeValue(map),
+      sublocality: _stringValue(
+        map,
+        const ['sublocality', 'sub_locality', 'subLocality'],
+      ),
+      locationName: _stringValue(
+        map,
+        const ['locationName', 'location_name', 'place_name'],
+      ),
+      isLocationServiceable: _toBool(
+        _firstValue(
+          map,
+          const ['isLocationServiceable', 'is_location_serviceable'],
+        ),
+      ),
+      name: _stringValue(map, const ['name', 'full_name']),
+      email: _stringValue(map, const ['email']),
+      addressLine1: _stringValue(map, const ['address_line_1', 'address1']),
+      addressLine2: _stringValue(map, const ['address_line_2', 'address2']),
+      sitePerson: _stringValue(map, const ['site_person', 'delivery_person']),
+      sitePersonMobile: _stringValue(
+        map,
+        const ['site_person_mobile', 'delivery_phone'],
+      ),
+      addressTag:
+          _stringValue(map, const ['address_tag', 'tag', 'address_type']),
+      phoneNumber: _stringValue(map, const ['phone_number', 'phone', 'mobile']),
+      projectName: _stringValue(map, const ['project_name', 'project']),
+    );
+  }
+
+  Map<String, dynamic> toCreatePayload() {
+    return {
+      'latitude': latitude,
+      'longitude': longitude,
+      'google_map_link': googleMapLink.isNotEmpty
+          ? googleMapLink
+          : 'https://www.google.com/maps?q=$latitude,$longitude',
+      'formatted_address': formattedAddress,
+      'city': city,
+      'state': state,
+      'pincode': pincode,
+      'sublocality': sublocality,
+      'locationName': locationName,
+      'isLocationServiceable': isLocationServiceable,
+      'name': name,
+      'email': email,
+      'address_line_1': addressLine1,
+      'site_person': sitePerson,
+      'site_person_mobile': sitePersonMobile,
+      'address_tag': addressTag,
+      'phone_number': phoneNumber,
+      'address_line_2': addressLine2,
+    };
+  }
+
+  static dynamic _firstValue(
+    Map<String, dynamic> map,
+    List<String> keys,
+  ) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value != null && value.toString().trim().isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  static String _stringValue(
+    Map<String, dynamic> map,
+    List<String> keys,
+  ) {
+    return _firstValue(map, keys)?.toString().trim() ?? '';
+  }
+
+  static bool _toBool(dynamic value) {
+    if (value == null) return true;
+    if (value is bool) return value;
+    final normalized = value.toString().trim().toLowerCase();
+    return normalized != 'false' && normalized != '0' && normalized != 'no';
+  }
+
+  static String _pincodeValue(Map<String, dynamic> map) {
+    final direct = _stringValue(
+      map,
+      const ['pincode', 'postal_code', 'postalCode', 'zip'],
+    );
+    if (direct.isNotEmpty) return direct;
+    final address = _stringValue(
+      map,
+      const ['formatted_address', 'formattedAddress', 'full_address'],
+    );
+    return RegExp(r'\b[1-9][0-9]{5}\b').firstMatch(address)?.group(0) ?? '';
+  }
+
+  static double _toDouble(dynamic value) {
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+}
+
+class AddressLocationEntity {
+  const AddressLocationEntity({
+    required this.latitude,
+    required this.longitude,
+    required this.formattedAddress,
+    required this.city,
+    required this.state,
+    required this.pincode,
+    required this.sublocality,
+    required this.locationName,
+  });
+
+  final double latitude;
+  final double longitude;
+  final String formattedAddress;
+  final String city;
+  final String state;
+  final String pincode;
+  final String sublocality;
+  final String locationName;
+}
+
+class AddressSuggestionEntity {
+  const AddressSuggestionEntity({
+    required this.placeId,
+    required this.primaryText,
+    required this.secondaryText,
+  });
+
+  final String placeId;
+  final String primaryText;
+  final String secondaryText;
+}
+
 class UserAddressEntity {
   const UserAddressEntity({
     required this.id,
