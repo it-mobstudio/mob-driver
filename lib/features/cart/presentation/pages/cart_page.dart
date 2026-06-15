@@ -150,7 +150,7 @@ class _CartPageState extends State<CartPage> {
                     shipping: summary.shipping,
                     tax: summary.tax,
                     savings: summary.savings,
-                    total: summary.total,
+                    total: _effectiveTotal(summary),
                     earningPoints: summary.earningPoints,
                   ),
                   const SizedBox(height: 12),
@@ -163,12 +163,18 @@ class _CartPageState extends State<CartPage> {
         ),
         BottomCheckoutBar(
           label: 'Place order',
-          total: summary.total,
+          total: _effectiveTotal(summary),
           onProceed: () =>
               GoRouter.of(context).go(CheckoutAddressPage.routePath),
         ),
       ],
     );
+  }
+
+  // Web shows sub_cart_total + shipping for logged-in users; API total is often 0.
+  double _effectiveTotal(CartSummaryEntity summary) {
+    if (summary.total > 0) return summary.total;
+    return summary.subtotal + summary.shipping;
   }
 
   String _deliveryName(CartSummaryEntity summary) {

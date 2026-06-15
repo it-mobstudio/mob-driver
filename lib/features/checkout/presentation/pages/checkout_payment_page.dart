@@ -620,7 +620,7 @@ class _MobCreditInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         gradient: const LinearGradient(
@@ -630,12 +630,12 @@ class _MobCreditInfo extends StatelessWidget {
       child: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(right: 104),
+                  padding: const EdgeInsets.only(right: 92),
                   child: Text(
                     'Zero% interest for 21 days',
                     style: GoogleFonts.inter(
@@ -679,8 +679,7 @@ class _MobCreditInfo extends StatelessWidget {
               decoration: const BoxDecoration(
                 color: Color(0xFF1E1E20),
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(10),
-                  topRight: Radius.circular(10),
+                  topRight: Radius.circular(12),
                   bottomLeft: Radius.circular(10),
                 ),
               ),

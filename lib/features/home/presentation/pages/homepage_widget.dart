@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_why_ch
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/product_rail_section.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/section_title.dart';
 import 'package:m_o_b_demand_side/shared/main_scaffold.dart';
+import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 
 class HomepageWidget extends StatelessWidget {
   const HomepageWidget({super.key});
@@ -29,115 +31,100 @@ class HomepageWidget extends StatelessWidget {
       currentIndex: 0,
       showTopSearchBar: false,
       showLocationheader: false,
-      child: BlocBuilder<HomeBloc, HomeState>(
-        builder: (context, state) {
-          return switch (state) {
-            HomeLoaded(:final data) => RefreshIndicator(
-                onRefresh: () async =>
-                    context.read<HomeBloc>().add(HomeRefreshRequested()),
-                child: CustomScrollView(
-                  slivers: [
-                    // Location header — scrolls away with content
-                    const SliverToBoxAdapter(child: HomeHeader()),
-                    // Search bar — stays pinned with frosted glass when scrolled
-                    const SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _StickySearchDelegate(),
-                    ),
-                    const SliverToBoxAdapter(child: HomePromoBanner()),
-                    const SliverToBoxAdapter(
-                      child: SectionTitle(
-                          title: 'Explore by categories', topPadding: 24),
-                    ),
-                    SliverToBoxAdapter(
-                      child: HomeCategoryGrid(
-                        categories: data.categories,
-                        isLoading: false,
-                        hasError: false,
-                      ),
-                    ),
-                    const SliverToBoxAdapter(
-                        child: SectionTitle(title: 'Top brands for you')),
-                    const SliverToBoxAdapter(child: HomeBrandGrid()),
-                    const SliverToBoxAdapter(child: HomeSavingsCard()),
-                    ...data.productSections.asMap().entries.map((entry) {
-                      return SliverToBoxAdapter(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ProductRailSection(
-                              title: entry.value.title,
-                              products: entry.value.products,
-                            ),
-                            if (entry.key == 0) const HomeWhyChooseCard(),
-                          ],
+      child: Stack(
+        children: [
+          BlocBuilder<HomeBloc, HomeState>(
+            builder: (context, state) {
+              return switch (state) {
+                HomeLoaded(:final data) => RefreshIndicator(
+                    onRefresh: () async =>
+                        context.read<HomeBloc>().add(HomeRefreshRequested()),
+                    child: CustomScrollView(
+                      slivers: [
+                        // Location header — scrolls away with content
+                        const SliverToBoxAdapter(child: HomeHeader()),
+                        // Search bar — stays pinned with frosted glass when scrolled
+                        const SliverPersistentHeader(
+                          pinned: true,
+                          delegate: _StickySearchDelegate(),
                         ),
-                      );
-                    }),
-                    const SliverToBoxAdapter(child: HomeRewardCard()),
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                  ],
-                ),
-              ),
-            HomeLoading() || HomeInitial() => const CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(child: HomeHeader()),
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _StickySearchDelegate(),
-                  ),
-                  SliverToBoxAdapter(child: HomePromoBanner()),
-                  SliverToBoxAdapter(
-                    child: SectionTitle(
-                        title: 'Explore by categories', topPadding: 24),
-                  ),
-                  SliverToBoxAdapter(
-                    child: HomeCategoryGrid(
-                      categories: [],
-                      isLoading: true,
-                      hasError: false,
-                    ),
-                  ),
-                ],
-              ),
-            HomeError(:final message) => RefreshIndicator(
-                onRefresh: () async =>
-                    context.read<HomeBloc>().add(HomeRefreshRequested()),
-                child: CustomScrollView(
-                  slivers: [
-                    const SliverToBoxAdapter(child: HomeHeader()),
-                    const SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _StickySearchDelegate(),
-                    ),
-                    SliverFillRemaining(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.error_outline,
-                                  size: 40, color: Colors.red),
-                              const SizedBox(height: 12),
-                              Text(message),
-                              const SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: () => context
-                                    .read<HomeBloc>()
-                                    .add(HomeRefreshRequested()),
-                                child: const Text('Retry'),
-                              ),
-                            ],
+                        const SliverToBoxAdapter(child: HomePromoBanner()),
+                        const SliverToBoxAdapter(
+                          child: SectionTitle(
+                              title: 'Explore by categories', topPadding: 24),
+                        ),
+                        SliverToBoxAdapter(
+                          child: HomeCategoryGrid(
+                            categories: data.categories,
+                            isLoading: false,
+                            hasError: false,
                           ),
                         ),
-                      ),
+                        const SliverToBoxAdapter(
+                            child: SectionTitle(title: 'Top brands for you')),
+                        const SliverToBoxAdapter(child: HomeBrandGrid()),
+                        const SliverToBoxAdapter(child: HomeSavingsCard()),
+                        ...data.productSections.asMap().entries.map((entry) {
+                          return SliverToBoxAdapter(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ProductRailSection(
+                                  title: entry.value.title,
+                                  products: entry.value.products,
+                                ),
+                                if (entry.key == 0) const HomeWhyChooseCard(),
+                              ],
+                            ),
+                          );
+                        }),
+                        const SliverToBoxAdapter(child: HomeRewardCard()),
+                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-          };
-        },
+                  ),
+                HomeLoading() || HomeInitial() => const _HomeLoadingSkeleton(),
+                HomeError(:final message) => RefreshIndicator(
+                    onRefresh: () async =>
+                        context.read<HomeBloc>().add(HomeRefreshRequested()),
+                    child: CustomScrollView(
+                      slivers: [
+                        const SliverToBoxAdapter(child: HomeHeader()),
+                        const SliverPersistentHeader(
+                          pinned: true,
+                          delegate: _StickySearchDelegate(),
+                        ),
+                        SliverFillRemaining(
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.error_outline,
+                                      size: 40, color: Colors.red),
+                                  const SizedBox(height: 12),
+                                  Text(message),
+                                  const SizedBox(height: 12),
+                                  ElevatedButton(
+                                    onPressed: () => context
+                                        .read<HomeBloc>()
+                                        .add(HomeRefreshRequested()),
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              };
+            },
+          ),
+          const ViewCartBar(),
+        ],
       ),
     );
   }
@@ -178,34 +165,24 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
               height: 16,
             ),
             const SizedBox(width: 12),
-            Text(
-              'Search "Fevicol"',
-              style: GoogleFonts.inter(
-                color: const Color(0xFF767C8F),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            const _RotatingSearchHint(),
           ],
         ),
       ),
     );
 
     if (isPinned) {
-      // Frosted glass: blur content behind + semi-transparent dark overlay
       return ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
-            color: const Color(0xFF121212).withValues(alpha: 0.65),
+            color: Colors.white.withValues(alpha: 0.10),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: searchBox,
           ),
         ),
       );
     }
-
-    // Natural position — solid dark, seamlessly blends with HomeHeader above
     return Container(
       color: const Color(0xFF121212),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -215,4 +192,320 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_StickySearchDelegate oldDelegate) => false;
+}
+
+class _RotatingSearchHint extends StatefulWidget {
+  const _RotatingSearchHint();
+
+  @override
+  State<_RotatingSearchHint> createState() => _RotatingSearchHintState();
+}
+
+class _RotatingSearchHintState extends State<_RotatingSearchHint>
+    with SingleTickerProviderStateMixin {
+  static const _terms = [
+    'Fevicol',
+    'cements',
+    'TMT bars',
+    'wall putty',
+    'tiles',
+    'electrical wires',
+  ];
+
+  int _current = 0;
+  int _next = 1;
+  Timer? _timer;
+  late AnimationController _ctrl;
+
+  // Current text exits upward + fades out
+  late Animation<Offset> _slideOut;
+  late Animation<double> _fadeOut;
+  // Next text enters from below + fades in
+  late Animation<Offset> _slideIn;
+  late Animation<double> _fadeIn;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _slideOut = Tween<Offset>(begin: Offset.zero, end: const Offset(0, -1))
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+    _fadeOut = Tween<double>(begin: 1, end: 0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0, 0.5)));
+    _slideIn = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _fadeIn = Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.5, 1)));
+
+    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _rotate());
+  }
+
+  Future<void> _rotate() async {
+    if (!mounted || _ctrl.isAnimating) return;
+    _next = (_current + 1) % _terms.length;
+    await _ctrl.forward();
+    if (!mounted) return;
+    setState(() => _current = _next);
+    _ctrl.reset();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  TextStyle get _style => GoogleFonts.inter(
+        color: const Color(0xFF767C8F),
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, __) => Stack(
+          children: [
+            SlideTransition(
+              position: _slideOut,
+              child: FadeTransition(
+                opacity: _fadeOut,
+                child: Text('Search "${_terms[_current]}"', style: _style),
+              ),
+            ),
+            SlideTransition(
+              position: _slideIn,
+              child: FadeTransition(
+                opacity: _fadeIn,
+                child: Text('Search "${_terms[_next]}"', style: _style),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Home skeleton ─────────────────────────────────────────────────────────────
+
+class _HomeLoadingSkeleton extends StatelessWidget {
+  const _HomeLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CustomScrollView(
+      physics: NeverScrollableScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(child: HomeHeader()),
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _StickySearchDelegate(),
+        ),
+        SliverToBoxAdapter(child: HomePromoBanner()),
+        SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 180)),
+        SliverToBoxAdapter(child: _CategoryGridSkeleton()),
+        SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 150)),
+        SliverToBoxAdapter(child: _BrandGridSkeleton()),
+        SliverToBoxAdapter(child: _SavingsCardSkeleton()),
+        SliverToBoxAdapter(child: _ProductRailSkeleton()),
+        SliverToBoxAdapter(child: _ProductRailSkeleton()),
+        SliverToBoxAdapter(child: SizedBox(height: 24)),
+      ],
+    );
+  }
+}
+
+/// Shimmer box that fills its parent — use inside Expanded/SizedBox.expand.
+class _SkeletonFill extends StatefulWidget {
+  const _SkeletonFill({this.borderRadius = 10});
+  final double borderRadius;
+
+  @override
+  State<_SkeletonFill> createState() => _SkeletonFillState();
+}
+
+class _SkeletonFillState extends State<_SkeletonFill>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, child) {
+        return ShaderMask(
+          shaderCallback: (rect) {
+            final w = rect.width <= 0 ? 1.0 : rect.width;
+            final dx = (2 * w * _ctrl.value) - w;
+            return LinearGradient(
+              colors: const [
+                Color(0xFFE9E9E9),
+                Color(0xFFF5F5F5),
+                Color(0xFFE9E9E9)
+              ],
+              stops: const [0.1, 0.5, 0.9],
+              begin: Alignment(-1 + dx / w, 0),
+              end: Alignment(1 + dx / w, 0),
+            ).createShader(rect);
+          },
+          blendMode: BlendMode.srcATop,
+          child: child,
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFE9E9E9),
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonSectionTitle extends StatelessWidget {
+  const _SkeletonSectionTitle({this.width = 160});
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+      child: SizedBox(
+        width: width,
+        height: 20,
+        child: const _SkeletonFill(borderRadius: 6),
+      ),
+    );
+  }
+}
+
+class _CategoryGridSkeleton extends StatelessWidget {
+  const _CategoryGridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        padding: EdgeInsets.zero,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 8,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 13,
+          childAspectRatio: 76 / 114,
+        ),
+        itemBuilder: (_, __) => const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _SkeletonFill(borderRadius: 12)),
+            SizedBox(height: 6),
+            SizedBox(height: 10, child: _SkeletonFill(borderRadius: 4)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandGridSkeleton extends StatelessWidget {
+  const _BrandGridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        padding: EdgeInsets.zero,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 6,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 104 / 160,
+        ),
+        itemBuilder: (_, __) => const _SkeletonFill(borderRadius: 16),
+      ),
+    );
+  }
+}
+
+class _SavingsCardSkeleton extends StatelessWidget {
+  const _SavingsCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: SizedBox(
+        height: 181,
+        child: _SkeletonFill(borderRadius: 16),
+      ),
+    );
+  }
+}
+
+class _ProductRailSkeleton extends StatelessWidget {
+  const _ProductRailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(
+          width: 140,
+          child: _SkeletonSectionTitle(width: 140),
+        ),
+        SizedBox(
+          height: 276,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 4,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, __) => const SizedBox(
+              width: 136,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: 170, child: _SkeletonFill(borderRadius: 12)),
+                  SizedBox(height: 8),
+                  SizedBox(height: 14, child: _SkeletonFill(borderRadius: 6)),
+                  SizedBox(height: 6),
+                  SizedBox(
+                      height: 14,
+                      width: 80,
+                      child: _SkeletonFill(borderRadius: 6)),
+                  SizedBox(height: 10),
+                  SizedBox(height: 36, child: _SkeletonFill(borderRadius: 8)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

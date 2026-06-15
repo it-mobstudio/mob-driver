@@ -108,15 +108,18 @@ class HomeCategoryTile extends StatelessWidget {
                       color: Color(0xFF0A243F),
                       size: 32,
                     )
-                  : CachedNetworkImage(
-                      imageUrl: category.imageUrl,
-                      fit: BoxFit.contain,
-                      memCacheWidth: 120,
-                      placeholder: (_, __) => const ImageShimmer(),
-                      errorWidget: (_, __, ___) => const Icon(
-                        Icons.category,
-                        color: Color(0xFF0A243F),
-                        size: 32,
+                  : SizedBox.expand(
+                      child: CachedNetworkImage(
+                        imageUrl: category.imageUrl,
+                        fit: BoxFit.contain,
+                        memCacheWidth: 120,
+                        fadeInDuration: const Duration(milliseconds: 150),
+                        placeholder: (_, __) => const ImageShimmer(),
+                        errorWidget: (_, __, ___) => const Icon(
+                          Icons.category,
+                          color: Color(0xFF0A243F),
+                          size: 32,
+                        ),
                       ),
                     ),
             ),

@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/product/data/models/product_models.da
 import 'package:m_o_b_demand_side/shared/item_card.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
+import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 
 class BrandProductSearchPage extends StatefulWidget {
   const BrandProductSearchPage({
@@ -109,86 +110,91 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F8FB),
         body: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              _SearchHeader(
-                controller: _searchController,
-                title: title,
-                onBack: () => context.pop(),
-                onSubmitted: _loadSearchResults,
-              ),
-              Expanded(
-                child: BlocBuilder<ProductBloc, ProductState>(
-                  builder: (context, state) {
-                    return switch (state) {
-                      ProductInitial() || ProductLoading() =>
-                        const Center(child: CircularProgressIndicator()),
-                      ProductError(:final message) => Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text(
-                              message,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF0A243F),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+              Column(
+                children: [
+                  _SearchHeader(
+                    controller: _searchController,
+                    title: title,
+                    onBack: () => context.pop(),
+                    onSubmitted: _loadSearchResults,
+                  ),
+                  Expanded(
+                    child: BlocBuilder<ProductBloc, ProductState>(
+                      builder: (context, state) {
+                        return switch (state) {
+                          ProductInitial() || ProductLoading() =>
+                            const Center(child: CircularProgressIndicator()),
+                          ProductError(:final message) => Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  message,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF0A243F),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      ProductSearchLoaded(:final products) when products.isEmpty =>
-                        Center(
-                          child: Text(
-                            'No products found.',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF57627A),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                          ProductSearchLoaded(:final products) when products.isEmpty =>
+                            Center(
+                              child: Text(
+                                'No products found.',
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF57627A),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ProductSearchLoaded(:final products) => GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                          itemCount: products.length,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 20,
-                            childAspectRatio: 136 / 276,
-                          ),
-                          itemBuilder: (context, index) {
-                            final product = products[index];
-                            return BlocBuilder<CartBloc, CartState>(
-                              builder: (context, cartState) {
-                                final cart = cartState is CartLoaded
-                                    ? cartState
-                                    : null;
-                                return Center(
-                                  child: ItemCard(
-                                    product: product,
-                                    onTap: () => context.go(
-                                        '${ProductDetailPage.routePath}/${product.slug}'),
-                                    quantityResolver: cart != null
-                                        ? (id) => cart.quantityFor(id)
-                                        : null,
-                                    isUpdatingResolver: cart != null
-                                        ? (id) => cart.isUpdatingFor(id)
-                                        : null,
-                                    onCartQuantityChanged: _changeProductQuantity,
-                                    onNotifyTap: _handleNotifyTap,
-                                  ),
+                          ProductSearchLoaded(:final products) => GridView.builder(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                              itemCount: products.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 20,
+                                childAspectRatio: 136 / 276,
+                              ),
+                              itemBuilder: (context, index) {
+                                final product = products[index];
+                                return BlocBuilder<CartBloc, CartState>(
+                                  builder: (context, cartState) {
+                                    final cart = cartState is CartLoaded
+                                        ? cartState
+                                        : null;
+                                    return Center(
+                                      child: ItemCard(
+                                        product: product,
+                                        onTap: () => context.go(
+                                            '${ProductDetailPage.routePath}/${product.slug}'),
+                                        quantityResolver: cart != null
+                                            ? (id) => cart.quantityFor(id)
+                                            : null,
+                                        isUpdatingResolver: cart != null
+                                            ? (id) => cart.isUpdatingFor(id)
+                                            : null,
+                                        onCartQuantityChanged: _changeProductQuantity,
+                                        onNotifyTap: _handleNotifyTap,
+                                      ),
+                                    );
+                                  },
                                 );
                               },
-                            );
-                          },
-                        ),
-                      _ => const Center(child: CircularProgressIndicator()),
-                    };
-                  },
-                ),
+                            ),
+                          _ => const Center(child: CircularProgressIndicator()),
+                        };
+                      },
+                    ),
+                  ),
+                ],
               ),
+              const ViewCartBar(),
             ],
           ),
         ),

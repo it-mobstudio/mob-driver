@@ -16,6 +16,7 @@ import 'package:m_o_b_demand_side/features/product/presentation/widgets/browse_p
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/magic_ai_quote_page.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
+import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 
 class ProductListingPage extends StatefulWidget {
   const ProductListingPage({
@@ -592,12 +593,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
                       ),
                     ],
                   ),
-                  if (cartQtyByProductId.isNotEmpty)
-                    FloatingCartSummary(
-                      products: visibleProducts,
-                      cartQtyByProductId: cartQtyByProductId,
-                      onTap: () => context.go('/cart'),
-                    ),
+                  const ViewCartBar(),
                 ],
               );
             },
