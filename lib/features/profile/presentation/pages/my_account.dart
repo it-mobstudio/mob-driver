@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
@@ -122,7 +123,7 @@ class _ProfileBody extends StatelessWidget {
                     _MenuItemData(
                       icon: Icons.person,
                       title: 'Personal info',
-                      onTap: (ctx) => _showComingSoon(ctx, 'Personal info'),
+                      onTap: (ctx) => ctx.push(PersonalInfoPage.routePath),
                     ),
                     _MenuItemData(
                       icon: Icons.location_on,
