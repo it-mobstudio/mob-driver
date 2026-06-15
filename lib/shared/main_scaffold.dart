@@ -1,11 +1,8 @@
 // lib/widgets/main_scaffold.dart
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 
@@ -17,16 +14,7 @@ class MainScaffold extends StatelessWidget {
   final bool showLocationheader;
 
   final Color? headerBackgroundColor;
-  final List<String> searchHints;
-
-  static const _defaultHints = [
-    'Search "Fevicol"',
-    'Search "UltraTech Cement"',
-    'Search "Asian Paints"',
-    'Search "Pipes & Fittings"',
-    'Search "Electrical Wires"',
-    'Search "Berger Paints"',
-  ];
+  final String searchHintText;
 
   const MainScaffold({
     super.key,
@@ -36,7 +24,7 @@ class MainScaffold extends StatelessWidget {
     this.showBackButton = false,
     this.showLocationheader = true,
     this.headerBackgroundColor,
-    this.searchHints = _defaultHints,
+    this.searchHintText = 'Search "Fevicol"',
   });
 
   void _onTabSelected(BuildContext context, int index) {
@@ -64,20 +52,7 @@ class MainScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<CartBloc, CartState>(
-      listenWhen: (_, s) => s is CartLoaded && s.successMessage != null,
-      listener: (context, state) {
-        final msg = (state as CartLoaded).successMessage!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFF0360E5),
-          ),
-        );
-      },
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
@@ -115,7 +90,6 @@ class MainScaffold extends StatelessWidget {
     );
   }
 
-extension on MainScaffold {
   Widget _locationHeader() {
     return Padding(
       padding: const EdgeInsets.only(top: 12, left: 16, right: 16, bottom: 10),
@@ -180,9 +154,44 @@ extension on MainScaffold {
               ),
             ),
           Expanded(
-            child: _AnimatedSearchBar(
-              hints: searchHints,
-              onTap: () => context.push('/search'),
+            child: SizedBox(
+              height: 48,
+              child: TextField(
+                onTap: () {
+                  context.push('/search');
+                },
+                decoration: InputDecoration(
+                  hintText: searchHintText,
+                  hintStyle: GoogleFonts.inter(
+                    color: const Color(0xFF767C8F),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  prefixIcon: const Icon(Icons.search,
+                      color: Color(0xFF767C8F), size: 20),
+                  suffixIcon:
+                      const Icon(Icons.mic, color: Color(0xFF767C8F), size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFD0D4DC), width: 0.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFD0D4DC), width: 0.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFD0D4DC), width: 0.5),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                ),
+              ),
             ),
           ),
         ],
@@ -191,92 +200,107 @@ extension on MainScaffold {
   }
 }
 
-class _AnimatedSearchBar extends StatefulWidget {
-  const _AnimatedSearchBar({required this.hints, required this.onTap});
+class _MainBottomNavigationBar extends StatelessWidget {
+  const _MainBottomNavigationBar({
+    required this.currentIndex,
+    required this.onTap,
+  });
 
-  final List<String> hints;
-  final VoidCallback onTap;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
 
-  @override
-  State<_AnimatedSearchBar> createState() => _AnimatedSearchBarState();
-}
-
-class _AnimatedSearchBarState extends State<_AnimatedSearchBar> {
-  int _index = 0;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.hints.length > 1) {
-      _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-        if (mounted) {
-          setState(() => _index = (_index + 1) % widget.hints.length);
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+  static const _items = [
+    _BottomNavigationItemData(
+      label: 'Home',
+      icon: 'assets/images/Homemenu.svg',
+      selectedIcon: 'assets/images/Homeselect.svg',
+    ),
+    _BottomNavigationItemData(
+      label: 'Categories',
+      icon: 'assets/images/Categories.svg',
+      selectedIcon: 'assets/images/Categoriesselect.svg',
+    ),
+    _BottomNavigationItemData(
+      label: 'Orders',
+      icon: 'assets/images/Orders.svg',
+      selectedIcon: 'assets/images/Ordersselect.svg',
+    ),
+    _BottomNavigationItemData(
+      label: 'Credit',
+      icon: 'assets/images/Credit.svg',
+      selectedIcon: 'assets/images/Creditselect.svg',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        height: 48,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFD0D4DC), width: 0.5),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
-            const Icon(Icons.search, color: Color(0xFF767C8F), size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.4),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOut,
-                    )),
-                    child: child,
-                  ),
-                ),
-                child: Align(
-                  key: ValueKey(_index),
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    widget.hints[_index],
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF767C8F),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 34,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List.generate(_items.length, (index) {
+              final item = _items[index];
+              final isSelected = currentIndex == index;
+
+              return Expanded(
+                child: InkWell(
+                  onTap: () => onTap(index),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 11),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          isSelected ? item.selectedIcon : item.icon,
+                          width: 20,
+                          height: 20,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.label,
+                          style: GoogleFonts.inter(
+                            color: isSelected
+                                ? Colors.black
+                                : const Color(0xFF8D8F91),
+                            fontSize: 11,
+                            height: 16 / 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.mic, color: Color(0xFF767C8F), size: 20),
-            const SizedBox(width: 12),
-          ],
+              );
+            }),
+          ),
         ),
       ),
     );
   }
+}
+
+class _BottomNavigationItemData {
+  const _BottomNavigationItemData({
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+  });
+
+  final String label;
+  final String icon;
+  final String selectedIcon;
 }
