@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
@@ -143,47 +144,6 @@ class _HomeHeaderState extends State<HomeHeader> {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 14),
-          GestureDetector(
-            onTap: () => context.push('/search'),
-            child: Container(
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFD0D4DC),
-                  width: 0.5,
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  SvgPicture.asset(
-                    'assets/images/Searchicon.svg',
-                    width: 16,
-                    height: 16,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Search "Fevicol"',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF767C8F),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  // const Icon(
-                  //   Icons.mic_none,
-                  //   color: Color(0xFF767C8F),
-                  //   size: 20,
-                  // ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
