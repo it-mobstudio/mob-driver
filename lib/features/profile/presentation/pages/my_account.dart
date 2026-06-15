@@ -40,7 +40,7 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
     return BlocProvider<ProfileBloc>.value(
       value: _profileBloc,
       child: const MainScaffold(
-        currentIndex: 3,
+        currentIndex: -1,
         child: _ProfileBody(),
       ),
     );
@@ -101,9 +101,7 @@ class _ProfileBody extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 80),
-
                 _MenuSection(
                   items: [
                     _MenuItemData(
@@ -148,7 +146,6 @@ class _ProfileBody extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
               ],
             ),
@@ -171,8 +168,7 @@ class _HeaderContent extends StatelessWidget {
           fontWeight: FontWeight.w800,
         );
 
-    final displayName =
-        profile.name.isNotEmpty ? profile.name : 'Welcome back';
+    final displayName = profile.name.isNotEmpty ? profile.name : 'Welcome back';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,8 +367,7 @@ class _MenuSection extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          trailing: const Icon(Icons.chevron_right,
-              color: Color(0xFF37516B)),
+          trailing: const Icon(Icons.chevron_right, color: Color(0xFF37516B)),
         );
       },
     );

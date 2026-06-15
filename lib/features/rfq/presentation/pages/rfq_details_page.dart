@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/shared/main_scaffold.dart';
 
@@ -11,7 +11,7 @@ class RfqDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MainScaffold(
-      currentIndex: 3,
+      currentIndex: -1,
       showLocationheader: false,
       showBackButton: true,
       headerBackgroundColor: Color(0xFFE8F2EF),

@@ -4,8 +4,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
-import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
-import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_page.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 
 class MainScaffold extends StatelessWidget {
   final Widget child;
@@ -34,16 +33,13 @@ class MainScaffold extends StatelessWidget {
         context.go(HomepageWidget.routePath);
         break;
       case 1:
-        _showComingSoon(context, 'Projects');
+        _showComingSoon(context, 'Categories');
         break;
       case 2:
-        _showComingSoon(context, 'Mobstar');
+        context.go(OrdersPage.routePath);
         break;
       case 3:
-        context.go(MyAccountWidget.routePath);
-        break;
-      case 4:
-        context.go(CartPage.routePath);
+        _showComingSoon(context, 'Credit');
         break;
     }
   }
@@ -87,161 +83,9 @@ class MainScaffold extends StatelessWidget {
           Expanded(child: child),
         ],
       ),
-
-// Inside your MainScaffold
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
+      bottomNavigationBar: _MainBottomNavigationBar(
         currentIndex: currentIndex,
         onTap: (index) => _onTabSelected(context, index),
-        showUnselectedLabels: true,
-        items: [
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/home.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF6C7C8C),
-                BlendMode.srcIn,
-              ),
-              height: 24,
-            ),
-            activeIcon: SvgPicture.asset(
-              'assets/icons/home.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF0A243F),
-                BlendMode.srcIn,
-              ),
-              height: 24,
-            ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/projects.svg',
-              // colorFilter: const ColorFilter.mode(
-              //   Color(0xFF6C7C8C),
-              //   BlendMode.srcIn,
-              // ),
-              height: 24,
-            ),
-            activeIcon: SvgPicture.asset(
-              'assets/icons/projects.svg',
-              // colorFilter: const ColorFilter.mode(
-              //   Color(0xFF6C7C8C),
-              //   BlendMode.srcIn,
-              // ),
-              height: 24,
-            ),
-            label: 'Projects',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/mobstar.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF6C7C8C),
-                BlendMode.srcIn,
-              ),
-              height: 24,
-            ),
-            activeIcon: SvgPicture.asset(
-              'assets/icons/mobstar.svg',
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF0A243F),
-                BlendMode.srcIn,
-              ),
-              height: 24,
-            ),
-            label: 'Mobstar',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/profile.svg',
-              // colorFilter: const ColorFilter.mode(
-              //   Color(0xFF6C7C8C),
-              //   BlendMode.srcIn,
-              // ),
-              height: 24,
-            ),
-            activeIcon: SvgPicture.asset(
-              'assets/icons/profile.svg',
-              // colorFilter: const ColorFilter.mode(
-              //   Color(0xFF0A243F),
-              //   BlendMode.srcIn,
-              // ),
-              height: 24,
-            ),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
-            icon: Stack(
-              children: [
-                SvgPicture.asset(
-                  'assets/icons/cart.svg',
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xFF6C7C8C),
-                    BlendMode.srcIn,
-                  ),
-                  height: 24,
-                ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints:
-                        const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text(
-                      '0',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            activeIcon: Stack(
-              children: [
-                SvgPicture.asset(
-                  'assets/icons/cart.svg',
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xFF0A243F),
-                    BlendMode.srcIn,
-                  ),
-                  height: 24,
-                ),
-                Positioned(
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints:
-                        const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text(
-                      '0',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            label: 'Cart',
-          ),
-        ],
       ),
     );
   }
@@ -354,4 +198,109 @@ class MainScaffold extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MainBottomNavigationBar extends StatelessWidget {
+  const _MainBottomNavigationBar({
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  static const _items = [
+    _BottomNavigationItemData(
+      label: 'Home',
+      icon: 'assets/images/Homemenu.svg',
+      selectedIcon: 'assets/images/Homeselect.svg',
+    ),
+    _BottomNavigationItemData(
+      label: 'Categories',
+      icon: 'assets/images/Categories.svg',
+      selectedIcon: 'assets/images/Categoriesselect.svg',
+    ),
+    _BottomNavigationItemData(
+      label: 'Orders',
+      icon: 'assets/images/Orders.svg',
+      selectedIcon: 'assets/images/Ordersselect.svg',
+    ),
+    _BottomNavigationItemData(
+      label: 'Credit',
+      icon: 'assets/images/Credit.svg',
+      selectedIcon: 'assets/images/Creditselect.svg',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 34,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List.generate(_items.length, (index) {
+              final item = _items[index];
+              final isSelected = currentIndex == index;
+
+              return Expanded(
+                child: InkWell(
+                  onTap: () => onTap(index),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 11),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          isSelected ? item.selectedIcon : item.icon,
+                          width: 20,
+                          height: 20,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.label,
+                          style: GoogleFonts.inter(
+                            color: isSelected
+                                ? Colors.black
+                                : const Color(0xFF8D8F91),
+                            fontSize: 11,
+                            height: 16 / 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomNavigationItemData {
+  const _BottomNavigationItemData({
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+  });
+
+  final String label;
+  final String icon;
+  final String selectedIcon;
 }

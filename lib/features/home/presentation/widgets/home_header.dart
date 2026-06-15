@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
@@ -77,19 +79,43 @@ class HomeHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFD0D4DC)),
+              InkWell(
+                onTap: () => context.push(ReferralPage.routePath),
+                borderRadius: BorderRadius.circular(18),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFD0D4DC)),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.card_giftcard_outlined,
+                    size: 19,
+                    color: Color(0xFF0A243F),
+                  ),
                 ),
-                alignment: Alignment.center,
-                child: SvgPicture.asset(
-                  'assets/icons/profile.svg',
-                  width: 18,
-                  height: 18,
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => context.push(MyAccountWidget.routePath),
+                borderRadius: BorderRadius.circular(18),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFD0D4DC)),
+                  ),
+                  alignment: Alignment.center,
+                  child: SvgPicture.asset(
+                    'assets/icons/profile.svg',
+                    width: 18,
+                    height: 18,
+                  ),
                 ),
               ),
             ],

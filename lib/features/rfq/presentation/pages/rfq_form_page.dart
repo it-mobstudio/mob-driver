@@ -43,7 +43,7 @@ class _RfqFormPageState extends State<RfqFormPage> {
   Widget build(BuildContext context) {
     return MainScaffold(
       // backgroundColor: const Color(0xFFF0F6F3), // pale green like figma
-      currentIndex: 0,
+      currentIndex: -1,
       // child: SafeArea(
       child: Stack(
         children: [
