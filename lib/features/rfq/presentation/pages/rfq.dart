@@ -40,7 +40,7 @@ class _RfqPageState extends State<RfqPage> {
     return BlocProvider<RfqBloc>.value(
       value: _rfqBloc,
       child: const MainScaffold(
-        currentIndex: 3,
+        currentIndex: -1,
         showLocationheader: false,
         showBackButton: true,
         headerBackgroundColor: Color(0xFFE8F2EF),
@@ -73,9 +73,7 @@ class _RfqBody extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 16),
-
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
@@ -105,9 +103,7 @@ class _RfqBody extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 16),
-
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
@@ -139,9 +135,7 @@ class _RfqBody extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 16),
-
         Expanded(
           child: BlocBuilder<RfqBloc, RfqState>(
             builder: (context, state) {
@@ -270,8 +264,7 @@ class _RfqCard extends StatelessWidget {
 
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(
-                height: 1, thickness: 0.5, color: Color(0xFFD0D4DC)),
+            child: Divider(height: 1, thickness: 0.5, color: Color(0xFFD0D4DC)),
           ),
 
           GestureDetector(
@@ -325,8 +318,7 @@ class _RfqCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  if (displayStatus ==
-                      _RfqDisplayStatus.convertedToOrder) ...[
+                  if (displayStatus == _RfqDisplayStatus.convertedToOrder) ...[
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {},

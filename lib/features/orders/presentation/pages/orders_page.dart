@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
+import 'package:m_o_b_demand_side/shared/main_scaffold.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'order_detail_page.dart';
 
@@ -42,75 +43,79 @@ class _OrdersPageState extends State<OrdersPage> {
   Widget build(BuildContext context) {
     return BlocProvider<OrdersBloc>.value(
       value: _ordersBloc,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              _OrdersHeader(onBack: () => _goBack(context)),
-              Expanded(
-                child: Container(
-                  color: const Color(0xFFF0F0F0),
-                  child: BlocBuilder<OrdersBloc, OrdersState>(
-                    builder: (context, state) {
-                      return switch (state) {
-                        OrdersInitial() ||
-                        OrdersLoading() =>
-                          const Center(child: CircularProgressIndicator()),
-                        OrdersError(:final message) => Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
+      child: MainScaffold(
+        currentIndex: 2,
+        showTopSearchBar: false,
+        showLocationheader: false,
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _OrdersHeader(onBack: () => _goBack(context)),
+                Expanded(
+                  child: Container(
+                    color: const Color(0xFFF0F0F0),
+                    child: BlocBuilder<OrdersBloc, OrdersState>(
+                      builder: (context, state) {
+                        return switch (state) {
+                          OrdersInitial() ||
+                          OrdersLoading() =>
+                            const Center(child: CircularProgressIndicator()),
+                          OrdersError(:final message) => Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  message,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF596378),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          OrdersLoaded(:final orders) when orders.isEmpty =>
+                            Center(
                               child: Text(
-                                message,
-                                textAlign: TextAlign.center,
+                                'No orders yet.',
                                 style: GoogleFonts.inter(
                                   color: const Color(0xFF596378),
                                   fontSize: 14,
                                 ),
                               ),
                             ),
-                          ),
-                        OrdersLoaded(:final orders) when orders.isEmpty =>
-                          Center(
-                            child: Text(
-                              'No orders yet.',
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF596378),
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        OrdersLoaded(:final orders) => ListView(
-                            padding:
-                                const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                            children: [
-                              const _OrdersSearch(),
-                              const SizedBox(height: 12),
-                              const _FilterButton(),
-                              const SizedBox(height: 16),
-                              ...orders.map(
-                                (order) => Padding(
-                                  padding:
-                                      const EdgeInsets.only(bottom: 16),
-                                  child: _OrderCard(
-                                    order: order,
-                                    onTap: () => context.push(
-                                      OrderDetailPage.routePath,
-                                      extra: order.id,
+                          OrdersLoaded(:final orders) => ListView(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                              children: [
+                                const _OrdersSearch(),
+                                const SizedBox(height: 12),
+                                const _FilterButton(),
+                                const SizedBox(height: 16),
+                                ...orders.map(
+                                  (order) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: _OrderCard(
+                                      order: order,
+                                      onTap: () => context.push(
+                                        OrderDetailPage.routePath,
+                                        extra: order.id,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        _ => const SizedBox.shrink(),
-                      };
-                    },
+                              ],
+                            ),
+                          _ => const SizedBox.shrink(),
+                        };
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

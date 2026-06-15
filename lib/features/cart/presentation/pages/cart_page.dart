@@ -26,7 +26,7 @@ class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      currentIndex: 2,
+      currentIndex: -1,
       showTopSearchBar: false,
       showLocationheader: false,
       showBackButton: false,
