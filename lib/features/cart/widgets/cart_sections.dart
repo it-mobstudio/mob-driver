@@ -11,62 +11,58 @@ class CartTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 50,
+      height: 60,
       width: double.infinity,
       color: Colors.white,
-      child: Stack(
-        alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
         children: [
-          Text(
-            'Cart',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF0A243F),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              height: 22 / 15,
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                if (GoRouter.of(context).canPop()) {
-                  GoRouter.of(context).pop();
-                } else {
-                  GoRouter.of(context).go('/homepage');
-                }
-              },
-              child: const SizedBox(
-                width: 48,
-                height: 50,
-                child: Align(
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: Color(0xFF0A243F),
-                    size: 24,
-                  ),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (GoRouter.of(context).canPop()) {
+                GoRouter.of(context).pop();
+              } else {
+                GoRouter.of(context).go('/homepage');
+              }
+            },
+            child: const SizedBox(
+              width: 40,
+              height: 60,
+              child: Align(
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFF0A243F),
+                  size: 22,
                 ),
               ),
             ),
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => GoRouter.of(context).push('/search'),
-              child: const SizedBox(
-                width: 48,
-                height: 50,
-                child: Align(
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.search,
-                    color: Color(0xFF0A243F),
-                    size: 24,
-                  ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Cart',
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                height: 22 / 15,
+              ),
+            ),
+          ),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => GoRouter.of(context).push('/search'),
+            child: const SizedBox(
+              width: 40,
+              height: 60,
+              child: Align(
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.search,
+                  color: Color(0xFF0A243F),
+                  size: 22,
                 ),
               ),
             ),
@@ -102,15 +98,11 @@ class ShippingTile extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      decoration: ShapeDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
@@ -122,38 +114,37 @@ class ShippingTile extends StatelessWidget {
                 Text.rich(
                   TextSpan(
                     children: [
-                      const TextSpan(
-                        text: 'Deliver to:',
-                        style: TextStyle(
-                          color: Color(0xFF67696D),
-                          fontSize: 14,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w600,
-                          height: 1.43,
+                      TextSpan(
+                        text: 'Shipping to:',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          height: 16 / 11,
                         ),
                       ),
                       TextSpan(
                         text: ' $displayRecipient',
-                        style: const TextStyle(
-                          color: Color(0xFF0A243F),
-                          fontSize: 14,
-                          fontFamily: 'Inter',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          height: 1.43,
+                          height: 16 / 11,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF67696D),
-                    fontSize: 12,
-                    fontFamily: 'Inter',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF7D8798),
+                    fontSize: 11,
                     fontWeight: FontWeight.w400,
-                    height: 1.50,
+                    height: 16 / 11,
                   ),
                 ),
               ],
@@ -166,14 +157,13 @@ class ShippingTile extends StatelessWidget {
             child: SizedBox(
               width: 45,
               child: Text(
-                hasAddress ? 'Change' : 'Add',
+                hasAddress ? 'CHANGE' : 'ADD',
                 textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Color(0xFF2973F0),
-                  fontSize: 12,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                  height: 1.50,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0360E5),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  height: 16 / 10,
                 ),
               ),
             ),
@@ -754,32 +744,46 @@ class SavingsStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 41,
-      color: const Color(0xFFE9FAF2),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8FAF3),
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Row(
         children: [
-          const Icon(
-            Icons.local_offer,
-            size: 14,
-            color: Color(0xFFFFAB00),
+          Container(
+            width: 18,
+            height: 18,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFF2BF),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.local_offer,
+              size: 12,
+              color: Color(0xFFFFAB00),
+            ),
           ),
           const SizedBox(width: 8),
           Text(
             'Your total savings',
             style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
               color: const Color(0xFF0A243F),
+              height: 16 / 12,
             ),
           ),
           const Spacer(),
           Text(
             '₹${savings.toStringAsFixed(0)}',
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF01A685),
+              height: 16 / 12,
             ),
           ),
         ],
@@ -1008,7 +1012,12 @@ class OrderDetailsCard extends StatelessWidget {
                 _kvRow('Order details', '', isHeading: true),
                 const SizedBox(height: 4),
                 _kvRow('Subtotal', money(subtotal)),
-                _kvRow('Shipping', money(shipping)),
+                _kvRow(
+                  'Shipping',
+                  shipping == 0 ? 'Free Delivery' : money(shipping),
+                  valueColor:
+                      shipping == 0 ? const Color(0xFF01A685) : null,
+                ),
                 _kvRow(
                   'Total tax',
                   money(tax),
@@ -1149,6 +1158,7 @@ class OrderDetailsCard extends StatelessWidget {
     bool isHeading = false,
     bool isTotal = false,
     bool keyDecorated = false,
+    Color? valueColor,
   }) {
     if (isHeading) {
       return Padding(
@@ -1187,7 +1197,7 @@ class OrderDetailsCard extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: isTotal ? FontWeight.w700 : FontWeight.w500,
-              color: const Color(0xFF0A243F),
+              color: valueColor ?? const Color(0xFF0A243F),
             ),
           ),
         ],
@@ -1349,69 +1359,88 @@ class BottomCheckoutBar extends StatelessWidget {
         right: 0,
         bottom: 0,
         child: Container(
-          height: 64 + bottomInset,
-          color: const Color(0xFF0360E5),
-          padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset),
-          child: Row(
-            children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+          height: 86 + bottomInset,
+          padding: EdgeInsets.fromLTRB(16, 12, 16, bottomInset + 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(14),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, -6),
+              ),
+            ],
+          ),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: active ? onProceed : null,
+            child: Container(
+              height: 54,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                color:
+                    active ? const Color(0xFF0360E5) : const Color(0xFFB0C4DE),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
                 children: [
-                  Text(
-                    'TOTAL',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.75),
-                      letterSpacing: 0.5,
-                    ),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'TOTAL',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.72),
+                          height: 14 / 11,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '₹ ${total!.toStringAsFixed(2)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          height: 20 / 16,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '₹ ${total!.toStringAsFixed(2)}',
-                    style: GoogleFonts.inter(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                  const Spacer(),
+                  if (isLoading)
+                    const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  else
+                    Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 20 / 15,
+                      ),
                     ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 24,
+                    color: Colors.white,
                   ),
                 ],
               ),
-              const Spacer(),
-              GestureDetector(
-                onTap: active ? onProceed : null,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isLoading)
-                      const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    else
-                      Text(
-                        label,
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    const SizedBox(width: 6),
-                    const Icon(
-                      Icons.arrow_forward,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       );

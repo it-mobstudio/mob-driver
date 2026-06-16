@@ -6,7 +6,6 @@ import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/home/data/models/home_models.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_listing_page.dart';
-import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 
 class HomeCategoryGrid extends StatelessWidget {
   const HomeCategoryGrid({
@@ -79,7 +78,7 @@ class HomeCategoryTile extends StatelessWidget {
           category: category.name,
           slug: category.slug,
         );
-        GoRouter.of(context).go(
+        context.push(
           ProductListingPage.routePath,
           extra: {'category': category.name, 'slug': category.slug},
         );
@@ -113,8 +112,8 @@ class HomeCategoryTile extends StatelessWidget {
                         imageUrl: category.imageUrl,
                         fit: BoxFit.contain,
                         memCacheWidth: 120,
-                        fadeInDuration: const Duration(milliseconds: 150),
-                        placeholder: (_, __) => const ImageShimmer(),
+                        fadeInDuration: const Duration(milliseconds: 200),
+                        fadeOutDuration: Duration.zero,
                         errorWidget: (_, __, ___) => const Icon(
                           Icons.category,
                           color: Color(0xFF0A243F),

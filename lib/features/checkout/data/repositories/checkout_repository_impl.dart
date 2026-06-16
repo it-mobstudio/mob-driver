@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/checkout/data/datasources/checkout_remote_datasource.dart';
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
@@ -72,17 +73,24 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
         orderId: orderId,
         signature: signature,
       );
+      debugPrint('🔵 RAZORPAY VERIFY RESPONSE: $body');
       if (body['status'] == false) {
         final msg = body['message']?.toString() ?? 'Payment verification failed.';
+        debugPrint('🔴 RAZORPAY VERIFY FAILED: $msg');
         return (null, BusinessFailure(msg));
       }
       final data = body['data'] is Map
           ? Map<String, dynamic>.from(body['data'] as Map)
           : body;
-      return (PlacedOrderEntity.fromMap(data), null);
+      debugPrint('🟢 RAZORPAY VERIFY DATA: $data');
+      final entity = PlacedOrderEntity.fromMap(data);
+      debugPrint('🟢 RAZORPAY ORDER ID: ${entity.orderId}');
+      return (entity, null);
     } on DioException catch (e) {
+      debugPrint('🔴 RAZORPAY VERIFY DIO ERROR: ${e.response?.statusCode} ${e.response?.data}');
       return (null, e.toAppFailure());
     } catch (e) {
+      debugPrint('🔴 RAZORPAY VERIFY EXCEPTION: $e');
       return (null, UnknownFailure(e.toString()));
     }
   }
@@ -95,20 +103,43 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     required String transactionId,
   }) async {
     try {
+      debugPrint('🔵 SUBORDER DETAILS REQUEST: platformOrderId=$platformOrderId merchantPaymentRefId=$merchantPaymentRefId paymentId=$paymentId');
       final body = await _datasource.getSuborderDetails(
         platformOrderId: platformOrderId,
         merchantPaymentRefId: merchantPaymentRefId,
         paymentId: paymentId,
         transactionId: transactionId,
       );
+      debugPrint('🔵 SUBORDER DETAILS RESPONSE: $body');
       if (body['status'] == false) {
         final msg = body['message']?.toString() ?? 'Payment verification failed.';
+        debugPrint('🔴 SUBORDER DETAILS FAILED: $msg');
         return (null, BusinessFailure(msg));
       }
       final data = body['data'] is Map
           ? Map<String, dynamic>.from(body['data'] as Map)
           : body;
+      debugPrint('🟢 SUBORDER DATA: $data');
       return (PlacedOrderEntity.fromMap(data), null);
+    } on DioException catch (e) {
+      debugPrint('🔴 SUBORDER DETAILS DIO ERROR: ${e.response?.statusCode} ${e.response?.data}');
+      return (null, e.toAppFailure());
+    } catch (e) {
+      debugPrint('🔴 SUBORDER DETAILS EXCEPTION: $e');
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(RupifiOrderEntity?, AppFailure?)> createRupifiOrder(String cartId) async {
+    try {
+      final body = await _datasource.createRupifiOrder(cartId);
+      final paymentUrl = body['payment_url']?.toString() ?? '';
+      if (paymentUrl.isEmpty) {
+        final msg = body['message']?.toString() ?? 'Failed to create mobCREDIT order.';
+        return (null, BusinessFailure(msg));
+      }
+      return (RupifiOrderEntity(paymentUrl: paymentUrl), null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {

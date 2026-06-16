@@ -88,6 +88,18 @@ class RazorpayOrderEntity {
   }
 }
 
+class RupifiOrderEntity {
+  const RupifiOrderEntity({required this.paymentUrl});
+
+  final String paymentUrl;
+
+  factory RupifiOrderEntity.fromMap(Map<String, dynamic> map) {
+    return RupifiOrderEntity(
+      paymentUrl: (map['payment_url'] ?? '').toString(),
+    );
+  }
+}
+
 class PlacedOrderEntity {
   const PlacedOrderEntity({
     required this.orderId,

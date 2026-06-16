@@ -52,6 +52,11 @@ final class CheckoutRazorpayStatusCheckRequested extends CheckoutEvent {
   final String transactionId;
 }
 
+final class CheckoutRupifiOrderRequested extends CheckoutEvent {
+  CheckoutRupifiOrderRequested({required this.cartId});
+  final String cartId;
+}
+
 // ── States ───────────────────────────────────────────────────────────────────
 
 sealed class CheckoutState {}
@@ -87,6 +92,11 @@ final class CheckoutPaymentFailed extends CheckoutState {
   final String message;
 }
 
+final class CheckoutRupifiOrderCreated extends CheckoutState {
+  CheckoutRupifiOrderCreated(this.entity);
+  final RupifiOrderEntity entity;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
@@ -98,6 +108,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     on<CheckoutRazorpayPaymentFailed>(_onRazorpayPaymentFailed);
     on<CheckoutRazorpayVerifyRequested>(_onVerifyRazorpayPayment);
     on<CheckoutRazorpayStatusCheckRequested>(_onRazorpayStatusCheck);
+    on<CheckoutRupifiOrderRequested>(_onCreateRupifiOrder);
   }
 
   final CheckoutRepository _repository;
@@ -163,15 +174,44 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     Emitter<CheckoutState> emit,
   ) async {
     emit(CheckoutLoading());
-    final (order, failure) = await _repository.verifyRazorpayPayment(
+
+    // Step 1: Verify payment with Razorpay → returns platform order ID
+    final (verifiedOrder, verifyFailure) = await _repository.verifyRazorpayPayment(
       paymentId: event.paymentId,
       orderId: event.orderId,
       signature: event.signature,
     );
+    if (verifyFailure != null) {
+      emit(CheckoutPaymentFailed(verifyFailure.message));
+      return;
+    }
+
+    // Step 2: Fetch suborder details using the platform order ID from step 1
+    final platformOrderId = verifiedOrder!.orderId;
+    final (order, failure) = await _repository.getSuborderDetails(
+      platformOrderId: platformOrderId,
+      merchantPaymentRefId: event.orderId,
+      paymentId: event.paymentId,
+      transactionId: event.signature,
+    );
+    if (failure != null) {
+      emit(CheckoutPaymentFailed(failure.message));
+      return;
+    }
+
+    emit(CheckoutOrderPlaced(order!));
+  }
+
+  Future<void> _onCreateRupifiOrder(
+    CheckoutRupifiOrderRequested event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    emit(CheckoutLoading());
+    final (entity, failure) = await _repository.createRupifiOrder(event.cartId);
     if (failure != null) {
       emit(CheckoutError(failure.message));
     } else {
-      emit(CheckoutOrderPlaced(order!));
+      emit(CheckoutRupifiOrderCreated(entity!));
     }
   }
 

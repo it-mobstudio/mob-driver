@@ -1,8 +1,12 @@
-// lib/checkout/order_placed_page.dart
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
 
 class OrderPlacedPage extends StatefulWidget {
   static const routeName = 'OrderPlacedPage';
@@ -18,39 +22,65 @@ class OrderPlacedPage extends StatefulWidget {
 
 class _OrderPlacedPageState extends State<OrderPlacedPage> {
   int _rating = 0;
+  late final OrdersBloc _ordersBloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _ordersBloc = sl<OrdersBloc>();
+    if (widget.orderId.isNotEmpty) {
+      _ordersBloc.add(OrderDetailRequested(widget.orderId));
+    }
+  }
+
+  @override
+  void dispose() {
+    _ordersBloc.close();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            _topGreenBanner(context),
-            const SizedBox(height: 18),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return BlocProvider.value(
+      value: _ordersBloc,
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: BlocBuilder<OrdersBloc, OrdersState>(
+            builder: (context, state) {
+              final order = state is OrderDetailLoaded ? state.order : null;
+              return ListView(
+                padding: EdgeInsets.zero,
                 children: [
-                  _pointsCard(),
-                  const SizedBox(height: 20),
-                  _experienceSection(),
-                  const SizedBox(height: 20),
-                  _orderInfoSection(),
-                  const SizedBox(height: 16),
-                  _viewOrderBtn(context),
-                  const SizedBox(height: 24),
-                  _nextStepsSection(),
-                  const SizedBox(height: 16),
-                  _referCard(),
-                  const SizedBox(height: 24),
+                  _topGreenBanner(context),
+                  const SizedBox(height: 18),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (order != null && order.pointsEarned > 0) ...[
+                          _pointsCard(order.pointsEarned),
+                          const SizedBox(height: 20),
+                        ],
+                        _experienceSection(),
+                        const SizedBox(height: 20),
+                        _orderInfoSection(order),
+                        const SizedBox(height: 16),
+                        _viewOrderBtn(context),
+                        const SizedBox(height: 24),
+                        _nextStepsSection(),
+                        const SizedBox(height: 16),
+                        _referCard(),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
                 ],
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -91,7 +121,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha:0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.close, color: Colors.white, size: 18),
@@ -104,7 +134,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
 
   // ── Points card ───────────────────────────────────────────────────────────
 
-  Widget _pointsCard() => Container(
+  Widget _pointsCard(int points) => Container(
         height: 64,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
@@ -128,7 +158,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '1150 points',
+                  '$points points',
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -141,7 +171,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF0A243F).withOpacity(0.8),
+                    color: const Color(0xFF0A243F).withValues(alpha:0.8),
                     height: 18 / 12,
                   ),
                 ),
@@ -196,7 +226,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
 
   // ── Order info + product thumbnails ──────────────────────────────────────
 
-  Widget _orderInfoSection() => Column(
+  Widget _orderInfoSection(OrderEntity? order) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -206,7 +236,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF0A243F).withOpacity(0.6),
+              color: const Color(0xFF0A243F).withValues(alpha:0.6),
               height: 18 / 12,
             ),
           ),
@@ -231,32 +261,60 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              ...List.generate(3, (_) => _productThumb()),
-              _moreChip(),
-            ],
-          ),
+          if (order == null)
+            const SizedBox(
+              height: 64,
+              child: Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            _itemThumbnails(order.items),
         ],
       );
 
-  Widget _productThumb() => Container(
+  Widget _itemThumbnails(List<OrderItemEntity> items) {
+    const maxVisible = 3;
+    final visible = items.take(maxVisible).toList();
+    final remaining = items.length - maxVisible;
+    return Row(
+      children: [
+        ...visible.map((item) => _productThumb(item.imageUrl)),
+        if (remaining > 0) _moreChip(remaining),
+      ],
+    );
+  }
+
+  Widget _productThumb(String imageUrl) => Container(
         width: 64,
         height: 64,
         margin: const EdgeInsets.only(right: 8),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: const Color(0xFFF7F9FC),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFDEDEDE)),
         ),
-        child: const Icon(
-          Icons.image_outlined,
-          color: Color(0xFFB0B8C1),
-          size: 28,
-        ),
+        child: imageUrl.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                fadeInDuration: const Duration(milliseconds: 150),
+                fadeOutDuration: Duration.zero,
+                errorWidget: (_, __, ___) => const Icon(
+                  Icons.image_outlined,
+                  color: Color(0xFFB0B8C1),
+                  size: 28,
+                ),
+              )
+            : const Icon(
+                Icons.image_outlined,
+                color: Color(0xFFB0B8C1),
+                size: 28,
+              ),
       );
 
-  Widget _moreChip() => Container(
+  Widget _moreChip(int count) => Container(
         width: 64,
         height: 64,
         decoration: BoxDecoration(
@@ -266,12 +324,12 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
         ),
         child: Center(
           child: Text(
-            '+5\nmore',
+            '+$count\nmore',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF0A243F).withOpacity(0.6),
+              color: const Color(0xFF0A243F).withValues(alpha:0.6),
               height: 1.4,
             ),
           ),
@@ -423,7 +481,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
                     'For every friend you refer, you get ₹500 and your friend gets ₹500 after their first order.',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: const Color(0xFF0A243F).withOpacity(0.7),
+                      color: const Color(0xFF0A243F).withValues(alpha:0.7),
                       height: 20 / 12,
                     ),
                   ),
@@ -458,7 +516,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
             Icon(
               Icons.groups_rounded,
               size: 90,
-              color: const Color(0xFF0A243F).withOpacity(0.25),
+              color: const Color(0xFF0A243F).withValues(alpha:0.25),
             ),
           ],
         ),

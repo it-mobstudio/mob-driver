@@ -38,6 +38,7 @@ class OrderEntity {
     required this.total,
     required this.items,
     required this.shippingAddress,
+    this.pointsEarned = 0,
   });
 
   final String id;
@@ -47,6 +48,7 @@ class OrderEntity {
   final double total;
   final List<OrderItemEntity> items;
   final String shippingAddress;
+  final int pointsEarned;
 
   factory OrderEntity.fromMap(Map<String, dynamic> map) {
     final itemsRaw = map['items'] is List ? map['items'] as List : <dynamic>[];
@@ -74,6 +76,10 @@ class OrderEntity {
           .map((e) => OrderItemEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
       shippingAddress: addrParts.join(', '),
+      pointsEarned: int.tryParse(
+            (map['points_earned'] ?? map['reward_points_earned'] ?? map['mobstar_points_earned'] ?? '0').toString(),
+          ) ??
+          0,
     );
   }
 }

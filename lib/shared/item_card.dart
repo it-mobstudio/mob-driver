@@ -104,6 +104,7 @@ class _ItemCardState extends State<ItemCard> {
     final price = product.vendorPricing.vendorSellingPrice;
     final mrp = product.maximumRetailPrice;
     final discount = product.vendorPricing.discount;
+    final shouldShowOutOfStock = product.shouldShowNotify;
 
     return SizedBox(
       width: 136,
@@ -130,24 +131,52 @@ class _ItemCardState extends State<ItemCard> {
                     padding: const EdgeInsets.all(8),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: product.primaryImageUrl.isEmpty
-                          ? Image.asset(
-                              'assets/images/Image-coming-soon.png',
-                              fit: BoxFit.contain,
-                            )
-                          : CachedNetworkImage(
-                              imageUrl: product.primaryImageUrl,
-                              fit: BoxFit.contain,
-                              memCacheWidth: 240,
-                              placeholder: (_, __) => const ImageShimmer(),
-                              errorWidget: (context, url, error) => Image.asset(
+                      child: Opacity(
+                        opacity: shouldShowOutOfStock ? 0.35 : 1,
+                        child: product.primaryImageUrl.isEmpty
+                            ? Image.asset(
                                 'assets/images/Image-coming-soon.png',
                                 fit: BoxFit.contain,
+                              )
+                            : CachedNetworkImage(
+                                imageUrl: product.primaryImageUrl,
+                                fit: BoxFit.contain,
+                                memCacheWidth: 240,
+                                placeholder: (_, __) => const ImageShimmer(),
+                                errorWidget: (context, url, error) =>
+                                    Image.asset(
+                                  'assets/images/Image-coming-soon.png',
+                                  fit: BoxFit.contain,
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                   ),
                 ),
+                if (shouldShowOutOfStock)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFB5B5B5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Out of Stock',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          height: 14 / 10,
+                        ),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   right: 0,
                   bottom: 0,

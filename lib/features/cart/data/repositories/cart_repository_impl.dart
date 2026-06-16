@@ -109,6 +109,12 @@ class CartRepositoryImpl implements CartRepository {
       'mob_star', 'mob_star_tier', 'loyalty', 'loyalty_tier', 'tier', 'reward_tier',
     ]);
 
+    // mobCREDIT balance — look inside user_details under common key names, then root data
+    final mobCreditObjFromUd = _findNestedMap(udMap, const ['mob_credit', 'rupifi', 'credit', 'credit_details']);
+    final mobCreditObjFromRoot = _findNestedMap(data, const ['mob_credit', 'rupifi', 'credit', 'credit_details']);
+    final mobCreditObj = mobCreditObjFromUd.isNotEmpty ? mobCreditObjFromUd : mobCreditObjFromRoot;
+    final mobCreditBalance = _num(mobCreditObj, const ['balance', 'available_balance']).toDouble();
+
     // Wallet nested object (e.g. mob_wallet, wallet, wallet_info)
     final walletObj = _findNestedMap(data, const [
       'mob_wallet', 'wallet', 'wallet_info', 'wallet_details',
@@ -152,6 +158,7 @@ class CartRepositoryImpl implements CartRepository {
       billingAddressId: billingId,
       billingGstNumber: billingGst,
       savedAddresses: savedAddresses,
+      mobCreditBalance: mobCreditBalance,
     );
   }
 

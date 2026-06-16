@@ -103,10 +103,9 @@ class _CartPageState extends State<CartPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const CartTopBar(),
-            if (summary.savings > 0) SavingsStrip(savings: summary.savings),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 112),
                 children: [
                   ShippingTile(
                     title: _deliveryName(summary),
@@ -114,6 +113,10 @@ class _CartPageState extends State<CartPage> {
                     hasAddress: summary.hasDeliveryAddress,
                     onAddressAction: () => _showAddressBottomSheet(summary),
                   ),
+                  if (summary.savings > 0) ...[
+                    const SizedBox(height: 8),
+                    SavingsStrip(savings: summary.savings),
+                  ],
                   const SizedBox(height: 12),
                   ...summary.itemsBySeller.entries.map(
                     (entry) => Padding(

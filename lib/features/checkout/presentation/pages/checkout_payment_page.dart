@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +8,7 @@ import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_ent
 import 'package:m_o_b_demand_side/features/checkout/presentation/bloc/checkout_bloc.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/order_placed_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/payment_failed_page.dart';
+import 'package:m_o_b_demand_side/features/checkout/presentation/pages/rupifi_payment_webview_page.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
@@ -32,6 +32,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   // -1 = none selected, 0 = mobCredit, 1 = Razorpay
   int _paymentOption = -1;
   RazorpayOrderEntity? _razorpayEntity; // populated when radio is selected
+  RupifiOrderEntity? _rupifiEntity; // populated when mobCREDIT radio is selected
 
   late final CheckoutBloc _checkoutBloc;
   late final Razorpay _razorpay;
@@ -41,16 +42,14 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     super.initState();
     _checkoutBloc = sl<CheckoutBloc>();
     _razorpay = Razorpay();
-    if (!kIsWeb) {
-      _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-      _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-      _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-    }
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
   @override
   void dispose() {
-    if (!kIsWeb) _razorpay.clear();
+    _razorpay.clear();
     // Reset redeem state on navigate away (mirrors web handleGetCartData reset)
     final cartBloc = context.read<CartBloc>();
     final cartState = cartBloc.state;
@@ -69,11 +68,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
     _checkoutBloc.add(
-      CheckoutRazorpayStatusCheckRequested(
-        platformOrderId: _razorpayEntity?.platformOrderId ?? '',
-        merchantPaymentRefId: response.orderId ?? '',
+      CheckoutRazorpayVerifyRequested(
         paymentId: response.paymentId ?? '',
-        transactionId: response.signature ?? '',
+        orderId: response.orderId ?? '',
+        signature: response.signature ?? '',
       ),
     );
   }
@@ -91,6 +89,30 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   // Replace with your Razorpay key (rzp_test_xxx or rzp_live_xxx)
   static const _razorpayKey = 'rzp_test_fjQ8CCi7188hME';
 
+  // Called when mobCREDIT radio is tapped — triggers Rupifi order creation immediately
+  void _onMobCreditSelected(String cartId) {
+    setState(() {
+      _paymentOption = 0;
+      _rupifiEntity = null;
+      _razorpayEntity = null;
+    });
+    _checkoutBloc.add(CheckoutRupifiOrderRequested(cartId: cartId));
+  }
+
+  Future<void> _openRupifiGateway(RupifiOrderEntity entity) async {
+    final result = await Navigator.of(context).push<RupifiPaymentResult>(
+      MaterialPageRoute(
+        builder: (_) => RupifiPaymentWebviewPage(paymentUrl: entity.paymentUrl),
+      ),
+    );
+    if (!mounted) return;
+    if (result == null || result.isCancelled) return;
+    GoRouter.of(context).go(
+      OrderPlacedPage.routePath,
+      extra: result.merchantPaymentRefId ?? '',
+    );
+  }
+
   // Called when Razorpay radio is tapped — triggers order creation immediately
   void _onRazorpaySelected(String cartId) {
     setState(() {
@@ -103,12 +125,6 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   }
 
   void _openRazorpayGateway(RazorpayOrderEntity entity) {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Razorpay is only available on the mobile app.')),
-      );
-      return;
-    }
     final options = <String, dynamic>{
       'key': _razorpayKey,
       'amount': entity.amount,
@@ -132,24 +148,20 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       );
       return;
     }
-    if (_paymentOption == 1) {
+    if (_paymentOption == 0) {
+      final entity = _rupifiEntity;
+      if (entity != null) {
+        _openRupifiGateway(entity);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Loading payment details, please try again.')),
+        );
+      }
+    } else if (_paymentOption == 1) {
       final entity = _razorpayEntity;
       if (entity != null) {
         _openRazorpayGateway(entity);
       }
-    } else {
-      _checkoutBloc.add(
-        CheckoutOrderPlaceRequested(
-          payload: {
-            'payment_method': 'mob_credit',
-            'use_mob_star': _useMobstar,
-            'use_mob_wallet': _useMobwallet,
-            if (_useMobstar && summary.rewardPoints > 0) 'points': summary.rewardPoints,
-            if (_useMobwallet && summary.walletBalance > 0) 'wallet_amount': summary.walletBalance,
-            'total': total,
-          },
-        ),
-      );
     }
   }
 
@@ -192,7 +204,9 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                     }
                     return BlocConsumer<CheckoutBloc, CheckoutState>(
                     listener: (context, checkoutState) {
-                      if (checkoutState is CheckoutRazorpayOrderCreated) {
+                      if (checkoutState is CheckoutRupifiOrderCreated) {
+                        setState(() => _rupifiEntity = checkoutState.entity);
+                      } else if (checkoutState is CheckoutRazorpayOrderCreated) {
                         // Store the entity — gateway opens when user taps "Place order"
                         setState(() => _razorpayEntity = checkoutState.entity);
                       } else if (checkoutState is CheckoutOrderPlaced) {
@@ -277,10 +291,8 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                       _MobCreditPaymentCard(
                                         selected: _paymentOption == 0,
                                         total: summary.total,
-                                        onTap: () => setState(() {
-                                          _paymentOption = 0;
-                                          _razorpayEntity = null;
-                                        }),
+                                        mobCreditBalance: summary.mobCreditBalance,
+                                        onTap: () => _onMobCreditSelected(summary.cartId),
                                       ),
                                       const SizedBox(height: 20),
                                       _RazorpayTile(
@@ -556,11 +568,13 @@ class _MobCreditPaymentCard extends StatelessWidget {
   const _MobCreditPaymentCard({
     required this.selected,
     required this.total,
+    required this.mobCreditBalance,
     required this.onTap,
   });
 
   final bool selected;
   final double total;
+  final double mobCreditBalance;
   final VoidCallback onTap;
 
   @override
@@ -593,7 +607,15 @@ class _MobCreditPaymentCard extends StatelessWidget {
                           text: '₹${total.toStringAsFixed(2)}',
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
-                        const TextSpan(text: ' using mobCREDIT'),
+                        if (mobCreditBalance > 0) ...[
+                          const TextSpan(text: ' out of '),
+                          TextSpan(
+                            text: '₹${mobCreditBalance.toStringAsFixed(2)}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const TextSpan(text: ' mobCREDIT available'),
+                        ] else
+                          const TextSpan(text: ' using mobCREDIT'),
                       ],
                     ),
                     style: GoogleFonts.inter(

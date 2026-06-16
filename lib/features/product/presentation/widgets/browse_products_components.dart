@@ -109,8 +109,7 @@ class BrowseFilterRow extends StatelessWidget {
             onTap: onSortTap,
           ),
           ...filterSections.expand((section) {
-            final selectedCount =
-                selectedValuesByKey[section.key]?.length ?? 0;
+            final selectedCount = selectedValuesByKey[section.key]?.length ?? 0;
             return <Widget>[
               const SizedBox(width: 8),
               _FilterChip(
@@ -238,8 +237,10 @@ class BrowseProductFeed extends StatelessWidget {
     final showBrands = brands.isNotEmpty;
     final extraSections = (showProductType ? 1 : 0) + (showBrands ? 1 : 0);
     final itemCount = rowCount + extraSections + (hasMore ? 1 : 0) + 1;
-    final productTypeSectionIndex = showProductType ? (rowCount >= 2 ? 2 : rowCount) : -1;
-    final brandSectionIndex = showBrands ? rowCount + (showProductType ? 1 : 0) : -1;
+    final productTypeSectionIndex =
+        showProductType ? (rowCount >= 2 ? 2 : rowCount) : -1;
+    final brandSectionIndex =
+        showBrands ? rowCount + (showProductType ? 1 : 0) : -1;
     final loadMoreIndex = rowCount + extraSections;
     final requestCardIndex = loadMoreIndex + (hasMore ? 1 : 0);
 
@@ -257,9 +258,9 @@ class BrowseProductFeed extends StatelessWidget {
           );
         }
 
-        if (showBrands && index == brandSectionIndex) {
-          return _BrandRail(brands: brands);
-        }
+        // if (showBrands && index == brandSectionIndex) {
+        //   return _BrandRail(brands: brands);
+        // }
 
         var productRowIndex = index;
         if (showProductType && index > productTypeSectionIndex) {
@@ -814,9 +815,8 @@ class _SubCategoryPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dotColor = isSelected
-        ? const Color(0xFF0360E5)
-        : const Color(0xFFB8C2D1);
+    final dotColor =
+        isSelected ? const Color(0xFF0360E5) : const Color(0xFFB8C2D1);
 
     return Center(
       child: SizedBox(
@@ -905,7 +905,8 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFF4F8FF) : Colors.white,
           border: Border.all(
-            color: isSelected ? const Color(0xFF0360E5) : const Color(0xFFDEDEDE),
+            color:
+                isSelected ? const Color(0xFF0360E5) : const Color(0xFFDEDEDE),
           ),
           borderRadius: BorderRadius.circular(8),
         ),

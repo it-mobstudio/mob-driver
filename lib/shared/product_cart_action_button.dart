@@ -209,8 +209,8 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                 _handleAdd();
               },
         child: Container(
-          width: hasVariants && variantCount > 0 ? 96 : 68,
-          height: hasVariants && variantCount > 0 ? 48 : 40,
+          width: 68,
+          height: 40,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -244,7 +244,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                     if (hasVariants && variantCount > 0)
                       Container(
                         width: double.infinity,
-                        height: 14,
+                        height: 12,
                         color: const Color(0x1A0360E5),
                         alignment: Alignment.center,
                         child: Text(
@@ -252,7 +252,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
                             color: const Color(0xFF7E7E7E),
-                            fontSize: 8,
+                            fontSize: 7,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

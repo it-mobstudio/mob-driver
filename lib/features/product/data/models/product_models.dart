@@ -449,8 +449,14 @@ class ProductModel {
       slug: map['slug']?.toString() ?? '',
       title: map['item_name_title']?.toString() ?? '',
       mobSku: map['mob_sku']?.toString() ?? '',
-      maximumRetailPrice:
-          num.tryParse(map['maximum_retail_price']?.toString() ?? '0') ?? 0,
+      maximumRetailPrice: num.tryParse(
+            (map['maximum_retail_price'] ??
+                    vendorPricingMap['maximum_retail_price'] ??
+                    map['mrp'] ??
+                    '0')
+                .toString(),
+          ) ??
+          0,
       rating: num.tryParse(map['rating']?.toString() ?? '0') ?? 0,
       reviewCount: int.tryParse(map['review_count']?.toString() ?? '0') ?? 0,
       productDescription: map['product_description']?.toString() ?? '',

@@ -19,6 +19,7 @@ abstract interface class CheckoutRemoteDatasource {
     String currency,
     String paymentFor,
   });
+  Future<Map<String, dynamic>> createRupifiOrder(String cartId);
 }
 
 class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
@@ -64,7 +65,7 @@ class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
     String paymentFor = 'CART',
   }) async {
     final response = await _dio.get<dynamic>(
-      '/order/razorpay_payment/',
+      '/order/razorpay_order/',
       queryParameters: {
         'razorpay_payment_id': paymentId,
         'razorpay_order_id': orderId,
@@ -96,6 +97,15 @@ class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
         'paymentFor': paymentFor,
         'userDetails': 'true',
       },
+    );
+    return _toMap(response.data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> createRupifiOrder(String cartId) async {
+    final response = await _dio.post<dynamic>(
+      '/order/rupifi_order/',
+      data: {'cart_id': cartId},
     );
     return _toMap(response.data);
   }

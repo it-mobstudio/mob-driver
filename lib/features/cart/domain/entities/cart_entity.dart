@@ -55,6 +55,7 @@ class CartSummaryEntity {
     required this.billingAddressId,
     required this.billingGstNumber,
     required this.savedAddresses,
+    required this.mobCreditBalance,
   });
 
   final List<CartItem> items;
@@ -111,6 +112,9 @@ class CartSummaryEntity {
   final String billingGstNumber;
   final List<CartAddressEntity> savedAddresses;
 
+  /// mobCREDIT balance available for the user (from user_details in cart API).
+  final double mobCreditBalance;
+
   bool get isEmpty => itemCount == 0 && items.isEmpty;
   bool get hasRfqItems => rfqItemCount > 0;
   bool get hasDeliveryAddress => shippingAddress.trim().isNotEmpty;
@@ -152,5 +156,6 @@ class CartSummaryEntity {
     billingAddressId: '',
     billingGstNumber: '',
     savedAddresses: <CartAddressEntity>[],
+    mobCreditBalance: 0,
   );
 }
