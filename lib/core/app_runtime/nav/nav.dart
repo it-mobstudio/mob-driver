@@ -255,7 +255,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: RfqDetailsPage.routeName,
           path: RfqDetailsPage.routePath,
-          builder: (context, state) => const RfqDetailsPage(),
+          builder: (context, state) => RfqDetailsPage(
+            rfqId: state.extra?.toString() ??
+                state.uri.queryParameters['id'] ??
+                '',
+          ),
         ),
         GoRoute(
           name: MyAccountWidget.routeName,
