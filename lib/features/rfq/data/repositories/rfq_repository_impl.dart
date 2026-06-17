@@ -14,15 +14,7 @@ class RfqRepositoryImpl implements RfqRepository {
   Future<(List<RfqEntity>?, AppFailure?)> getRfqList() async {
     try {
       final raw = await _datasource.getRfqList();
-      List<dynamic> list;
-      if (raw is List) {
-        list = raw;
-      } else if (raw is Map) {
-        final data = raw['data'];
-        list = data is List ? data : <dynamic>[];
-      } else {
-        list = <dynamic>[];
-      }
+      final list = _extractList(raw);
       final rfqs = list
           .whereType<Map>()
           .map((e) => RfqEntity.fromMap(Map<String, dynamic>.from(e)))
@@ -33,6 +25,22 @@ class RfqRepositoryImpl implements RfqRepository {
     } catch (e) {
       return (null, UnknownFailure(e.toString()));
     }
+  }
+
+  List<dynamic> _extractList(dynamic raw) {
+    if (raw is List) return raw;
+    if (raw is! Map) return <dynamic>[];
+
+    for (final key in ['data', 'results', 'rfqs', 'quotes']) {
+      final value = raw[key];
+      if (value is List) return value;
+      if (value is Map) {
+        final nested = _extractList(value);
+        if (nested.isNotEmpty) return nested;
+      }
+    }
+
+    return <dynamic>[];
   }
 
   @override

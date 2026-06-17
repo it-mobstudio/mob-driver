@@ -18,13 +18,16 @@ class RfqRemoteDatasourceImpl implements RfqRemoteDatasource {
 
   @override
   Future<dynamic> getRfqList() async {
-    final response = await _dio.get<dynamic>('/rfq/');
+    final response = await _dio.get<dynamic>(
+      '/rfq/get_rfqs/',
+      queryParameters: {'page': 1},
+    );
     return response.data;
   }
 
   @override
   Future<Map<String, dynamic>> getRfqDetail(String id) async {
-    final response = await _dio.get<dynamic>('/rfq/$id/');
+    final response = await _dio.get<dynamic>('/rfq/$id/get_rfq_details/');
     final raw = response.data;
     if (raw is Map) return Map<String, dynamic>.from(raw);
     return {};

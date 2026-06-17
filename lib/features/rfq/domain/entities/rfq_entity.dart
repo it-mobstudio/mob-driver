@@ -15,8 +15,10 @@ class RfqItemEntity {
 
   factory RfqItemEntity.fromMap(Map<String, dynamic> map) {
     return RfqItemEntity(
-      productName: (map['product_name'] ?? map['name'] ?? map['title'] ?? '').toString(),
-      quantity: int.tryParse((map['quantity'] ?? map['qty'] ?? '1').toString()) ?? 1,
+      productName:
+          (map['product_name'] ?? map['name'] ?? map['title'] ?? '').toString(),
+      quantity:
+          int.tryParse((map['quantity'] ?? map['qty'] ?? '1').toString()) ?? 1,
       unit: (map['unit'] ?? map['uom'] ?? '').toString(),
       notes: (map['notes'] ?? map['description'] ?? '').toString(),
       imageUrl: (map['image'] ?? map['product_image'] ?? '').toString(),
@@ -40,17 +42,39 @@ class RfqEntity {
   final double totalAmount;
 
   factory RfqEntity.fromMap(Map<String, dynamic> map) {
-    final itemsRaw = map['items'] is List ? map['items'] as List : <dynamic>[];
+    final itemsRaw = switch (map['items'] ??
+        map['products'] ??
+        map['rfq_items'] ??
+        map['quote_items']) {
+      final List value => value,
+      _ => <dynamic>[],
+    };
     return RfqEntity(
-      id: (map['id'] ?? map['rfq_id'] ?? '').toString(),
-      status: (map['status'] ?? 'pending').toString(),
-      createdAt: (map['created_at'] ?? '').toString(),
+      id: (map['id'] ??
+              map['rfq_id'] ??
+              map['rfq_number'] ??
+              map['rfq_no'] ??
+              map['quote_id'] ??
+              '')
+          .toString(),
+      status: (map['status'] ?? map['rfq_status'] ?? 'pending').toString(),
+      createdAt: (map['created_at'] ??
+              map['created_on'] ??
+              map['requested_at'] ??
+              map['date'] ??
+              '')
+          .toString(),
       items: itemsRaw
           .whereType<Map>()
           .map((e) => RfqItemEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
-      totalAmount:
-          double.tryParse((map['total'] ?? map['total_amount'] ?? '0').toString()) ?? 0,
+      totalAmount: double.tryParse((map['total'] ??
+                  map['total_amount'] ??
+                  map['amount'] ??
+                  map['quote_total'] ??
+                  '0')
+              .toString()) ??
+          0,
     );
   }
 }
