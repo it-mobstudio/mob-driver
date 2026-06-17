@@ -26,6 +26,8 @@ dependencies:
 
   flutter:
     sdk: flutter
+    config:
+    enable-swift-package-manager: false
   equatable: ^2.0.5
   mime_type: ^1.0.0
   flutter_localizations:
