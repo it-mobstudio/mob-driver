@@ -13,6 +13,8 @@ final class ProfileUpdateRequested extends ProfileEvent {
   final Map<String, dynamic> data;
 }
 
+final class ReferralSummaryLoadRequested extends ProfileEvent {}
+
 // ── States ───────────────────────────────────────────────────────────────────
 
 sealed class ProfileState {}
@@ -36,12 +38,23 @@ final class ProfileError extends ProfileState {
   final String message;
 }
 
+final class ReferralSummaryLoaded extends ProfileState {
+  ReferralSummaryLoaded(this.summary);
+  final ReferralSummaryEntity summary;
+}
+
+final class ReferralSummaryError extends ProfileState {
+  ReferralSummaryError(this.message);
+  final String message;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ProfileBloc(this._repository) : super(ProfileInitial()) {
     on<ProfileLoadRequested>(_onLoad);
     on<ProfileUpdateRequested>(_onUpdate);
+    on<ReferralSummaryLoadRequested>(_onLoadReferralSummary);
   }
 
   final ProfileRepository _repository;
@@ -69,6 +82,19 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       add(ProfileLoadRequested());
     } else {
       emit(ProfileError('Update failed.'));
+    }
+  }
+
+  Future<void> _onLoadReferralSummary(
+    ReferralSummaryLoadRequested event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(ProfileLoading());
+    final (summary, failure) = await _repository.getReferralSummary();
+    if (failure != null) {
+      emit(ReferralSummaryError(failure.message));
+    } else {
+      emit(ReferralSummaryLoaded(summary!));
     }
   }
 }

@@ -81,7 +81,6 @@ class _CartPageState extends State<CartPage> {
                             onAddressAction: () =>
                                 _showAddressBottomSheet(summary),
                           ),
-                          micPill: const AiMicPill(),
                         )
                       : _buildCartWithItems(context, summary, updatingItemKey),
               };

@@ -52,6 +52,21 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
+  Future<(ReferralSummaryEntity?, AppFailure?)> getReferralSummary() async {
+    try {
+      final body = await _datasource.getReferralSummary();
+      final raw = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      return (ReferralSummaryEntity.fromMap(raw), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<(bool, AppFailure?)> updateProfile(Map<String, dynamic> data) async {
     try {
       final body = await _datasource.updateProfile(data);

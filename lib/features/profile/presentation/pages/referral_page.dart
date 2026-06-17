@@ -3,10 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
-import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ReferralPage extends StatelessWidget {
   const ReferralPage({super.key});
@@ -17,7 +18,7 @@ class ReferralPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<ProfileBloc>()..add(ProfileLoadRequested()),
+      create: (_) => sl<ProfileBloc>()..add(ReferralSummaryLoadRequested()),
       child: const _ReferralView(),
     );
   }
@@ -33,12 +34,11 @@ class _ReferralView extends StatelessWidget {
       body: SafeArea(
         child: BlocBuilder<ProfileBloc, ProfileState>(
           builder: (context, state) {
-            final profile = switch (state) {
-              ProfileLoaded(:final profile) => profile,
-              ProfileUpdated(:final profile) => profile,
-              _ => ProfileEntity.empty,
-            };
-            final referralCode = _referralCode(profile);
+            final isLoading = state is ProfileLoading || state is ProfileInitial;
+            final summary =
+                state is ReferralSummaryLoaded ? state.summary : null;
+            final referralCode = summary?.referralCode ?? '';
+            final referralLink = summary?.referralLink ?? '';
 
             return Column(
               children: [
@@ -49,10 +49,14 @@ class _ReferralView extends StatelessWidget {
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.only(bottom: 24),
-                    child: _ReferralContent(
-                      referralCode: referralCode,
-                      isLoading:
-                          state is ProfileLoading || state is ProfileInitial,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ReferralPromoSection(
+                          referralCode: referralCode,
+                          isLoading: isLoading,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -62,7 +66,10 @@ class _ReferralView extends StatelessWidget {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: () => _shareReferral(context, referralCode),
+                      onPressed: isLoading
+                          ? null
+                          : () =>
+                              _shareReferral(context, referralCode, referralLink),
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         backgroundColor: const Color(0xFF0A243F),
@@ -71,13 +78,20 @@ class _ReferralView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text(
-                        'Share referral link',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          height: 21 / 14,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.share, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Share on WhatsApp',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              height: 21 / 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -90,86 +104,86 @@ class _ReferralView extends StatelessWidget {
     );
   }
 
-  String _referralCode(ProfileEntity profile) {
-    if (profile.referralCode.trim().isNotEmpty) {
-      return profile.referralCode.trim().toUpperCase();
-    }
-
-    final compactName =
-        profile.name.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
-    final namePart = compactName.isEmpty
-        ? 'MOB'
-        : compactName.substring(0, compactName.length.clamp(0, 5));
-    final digits = profile.phone.replaceAll(RegExp(r'[^0-9]'), '');
-    final suffix =
-        digits.length >= 2 ? digits.substring(digits.length - 2) : '01';
-    return '$namePart$suffix';
-  }
-
   Future<void> _shareReferral(
     BuildContext context,
     String referralCode,
+    String referralLink,
   ) async {
-    final referralLink = 'https://madoverbuildings.com/referral/$referralCode';
-    await Clipboard.setData(
-      ClipboardData(
-        text: 'Join MOB with my referral code $referralCode: $referralLink',
-      ),
+    final link = referralLink.isNotEmpty
+        ? referralLink
+        : '${AppConfig.webAppBaseUrl}/?ref=$referralCode';
+
+    final message =
+        'Hey! Need construction or interior materials in a flash? '
+        "I've been using Mad over Buildings, and their QWIK 1-4 hour delivery is an absolute lifesaver. "
+        'No more waiting around for supplies! Try it out for yourself: '
+        'sign up with my code $referralCode to get ₹1,000 off your first order. $link';
+
+    final whatsappUri = Uri.parse(
+      'https://wa.me/?text=${Uri.encodeComponent(message)}',
     );
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Referral link copied')),
-    );
+
+    if (await canLaunchUrl(whatsappUri)) {
+      await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+    } else {
+      await Clipboard.setData(ClipboardData(text: message));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Referral link copied — WhatsApp not available'),
+        ),
+      );
+    }
   }
 }
 
 class _ReferralHeader extends StatelessWidget {
-  const _ReferralHeader({
-    required this.onBack,
-    required this.onSearch,
-  });
+  const _ReferralHeader({required this.onBack, required this.onSearch});
 
   final VoidCallback onBack;
   final VoidCallback onSearch;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 68,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: onBack,
-              padding: EdgeInsets.zero,
-              alignment: Alignment.centerLeft,
-              icon: const Icon(
-                Icons.arrow_back,
-                size: 22,
-                color: Color(0xFF0A243F),
+    return ColoredBox(
+      color: Colors.white,
+      child: SizedBox(
+        height: 68,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: onBack,
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerLeft,
+                icon: const Icon(
+                  Icons.arrow_back,
+                  size: 22,
+                  color: Color(0xFF0A243F),
+                ),
               ),
-            ),
-            const Spacer(),
-            IconButton(
-              onPressed: onSearch,
-              padding: EdgeInsets.zero,
-              alignment: Alignment.centerRight,
-              icon: const Icon(
-                Icons.search,
-                size: 24,
-                color: Color(0xFF0A243F),
+              const Spacer(),
+              IconButton(
+                onPressed: onSearch,
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerRight,
+                icon: const Icon(
+                  Icons.search,
+                  size: 24,
+                  color: Color(0xFF0A243F),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ReferralContent extends StatelessWidget {
-  const _ReferralContent({
+class _ReferralPromoSection extends StatelessWidget {
+  const _ReferralPromoSection({
     required this.referralCode,
     required this.isLoading,
   });
@@ -180,17 +194,17 @@ class _ReferralContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 556,
+      height: 606,
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
-          Positioned(
+          const Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: 433,
+            height: 449,
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(
                   bottom: Radius.circular(20),
@@ -198,13 +212,13 @@ class _ReferralContent extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
+          const Positioned(
             left: 0,
             right: 0,
-            top: 237,
+            top: 253,
             height: 196,
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.vertical(
                   bottom: Radius.circular(20),
                 ),
@@ -217,7 +231,7 @@ class _ReferralContent extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 0,
+            top: 16,
             child: Text(
               'Refer a friend to',
               style: GoogleFonts.inter(
@@ -229,7 +243,7 @@ class _ReferralContent extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 40,
+            top: 56,
             child: Text(
               'Get ₹1000',
               style: GoogleFonts.inter(
@@ -241,7 +255,7 @@ class _ReferralContent extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 102,
+            top: 118,
             child: InkWell(
               borderRadius: BorderRadius.circular(48),
               onTap: isLoading
@@ -286,7 +300,7 @@ class _ReferralContent extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 142,
+            top: 158,
             child: SvgPicture.asset(
               'assets/images/Vector.svg',
               width: 183,
@@ -294,7 +308,7 @@ class _ReferralContent extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 145,
+            top: 161,
             left: 34,
             right: 34,
             height: 205,
@@ -304,7 +318,7 @@ class _ReferralContent extends StatelessWidget {
             ),
           ),
           const Positioned(
-            top: 366,
+            top: 382,
             left: 16,
             right: 16,
             child: SizedBox(
@@ -334,7 +348,7 @@ class _ReferralContent extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 516,
+            top: 556,
             left: 16,
             right: 16,
             child: Text(

@@ -4,4 +4,5 @@ import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entit
 abstract interface class ProfileRepository {
   Future<(ProfileEntity?, AppFailure?)> getProfile();
   Future<(bool, AppFailure?)> updateProfile(Map<String, dynamic> data);
+  Future<(ReferralSummaryEntity?, AppFailure?)> getReferralSummary();
 }

@@ -7,6 +7,11 @@ class AppConfig {
     defaultValue: 'https://uat.madoverbuilding.com/api',
   );
 
+  static const String webAppBaseUrl = String.fromEnvironment(
+    'WEB_APP_BASE_URL',
+    defaultValue: 'https://mob-demand-side.netlify.app',
+  );
+
   static const String googleMapsApiKey = String.fromEnvironment(
     'GOOGLE_MAPS_API_KEY',
     defaultValue: 'AIzaSyC_dvw8b7g1e1RB9dQj4rAnFyxGD1S2s7Y',

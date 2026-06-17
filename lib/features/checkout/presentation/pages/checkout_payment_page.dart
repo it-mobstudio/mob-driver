@@ -142,6 +142,20 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   }
 
   void _onProceed(BuildContext context, String cartId, double total, CartSummaryEntity summary) {
+    // Zero total — wallet/points covered the full amount, place order directly
+    if (total == 0) {
+      _checkoutBloc.add(
+        CheckoutOrderPlaceRequested(payload: {
+          'cart_id': int.tryParse(cartId) ?? 0,
+          'use_wallet': _useMobwallet,
+          'wallet_amount': _useMobwallet ? summary.applicableWalletAmount : 0,
+          'use_points': _useMobstar,
+          'points': _useMobstar ? summary.rewardPoints : 0,
+        }),
+      );
+      return;
+    }
+
     if (_paymentOption == -1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a payment method to continue.')),
@@ -252,6 +266,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                         mobstarAmount: summary.mobstarAmount,
                                         walletBalance: summary.walletBalance,
                                         applicableWalletAmount: summary.applicableWalletAmount,
+                                        walletNote: summary.walletNote,
                                         isUpdating: isRedeemUpdating,
                                         onMobstarChanged: summary.rewardPoints > 0
                                             ? () {
@@ -284,22 +299,34 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                               }
                                             : null,
                                       ),
-                                      const SizedBox(height: 20),
-                                      const _SectionTitle(
-                                          'Please select payment option'),
-                                      const SizedBox(height: 12),
-                                      _MobCreditPaymentCard(
-                                        selected: _paymentOption == 0,
-                                        total: summary.total,
-                                        mobCreditBalance: summary.mobCreditBalance,
-                                        onTap: () => _onMobCreditSelected(summary.cartId),
-                                      ),
-                                      const SizedBox(height: 20),
-                                      _RazorpayTile(
-                                        selected: _paymentOption == 1,
-                                        onTap: () => _onRazorpaySelected(
-                                            summary.cartId),
-                                      ),
+                                      if (summary.total > 0) ...[
+                                        const SizedBox(height: 20),
+                                        const _SectionTitle(
+                                            'Please select payment option'),
+                                        const SizedBox(height: 12),
+                                        // mobCredit only shown when account_status is non-null
+                                        if (summary.mobCreditAccountStatus != null) ...[
+                                          if (summary.mobCreditAccountStatus == 'AMOUNT_DUE')
+                                            const _MobCreditOverlimitBanner(),
+                                          _MobCreditPaymentCard(
+                                            selected: _paymentOption == 0,
+                                            total: summary.total,
+                                            mobCreditBalance: summary.mobCreditBalance,
+                                            isDisabled: summary.mobCreditAccountStatus == 'AMOUNT_DUE'
+                                                || summary.mobCreditAccountStatus == 'INACTIVE',
+                                            onTap: () => _onMobCreditSelected(summary.cartId),
+                                          ),
+                                          const SizedBox(height: 12),
+                                        ],
+                                        _RazorpayTile(
+                                          selected: _paymentOption == 1,
+                                          onTap: () => _onRazorpaySelected(
+                                              summary.cartId),
+                                        ),
+                                      ] else ...[
+                                        const SizedBox(height: 20),
+                                        _ZeroTotalBanner(),
+                                      ],
                                       const SizedBox(height: 20),
                                       OrderDetailsCard(
                                         subtotal: summary.subtotal,
@@ -314,7 +341,9 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                     ],
                                   ),
                                   BottomCheckoutBar(
-                                    label: 'Place your order and pay',
+                                    label: summary.total == 0
+                                        ? 'Place order'
+                                        : 'Place your order and pay',
                                     isLoading: isLoading,
                                     onProceed: () => _onProceed(
                                         context, summary.cartId, summary.total, summary),
@@ -418,6 +447,7 @@ class _RedeemOptionsCard extends StatelessWidget {
     required this.applicableWalletAmount,
     required this.onMobstarChanged,
     required this.onMobwalletChanged,
+    this.walletNote = '',
     this.isUpdating = false,
   });
 
@@ -427,9 +457,18 @@ class _RedeemOptionsCard extends StatelessWidget {
   final double mobstarAmount;
   final double walletBalance;
   final double applicableWalletAmount;
+  final String walletNote;
   final bool isUpdating;
   final VoidCallback? onMobstarChanged;
   final VoidCallback? onMobwalletChanged;
+
+  String get _walletNoteText {
+    if (walletNote.isNotEmpty) return walletNote;
+    if (applicableWalletAmount > 0 && applicableWalletAmount < walletBalance) {
+      return 'Only a portion of your wallet balance can be used for this order. You can apply ₹${applicableWalletAmount.toStringAsFixed(2)}.';
+    }
+    return '';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -476,6 +515,23 @@ class _RedeemOptionsCard extends StatelessWidget {
                 label: walletLabel,
                 onTap: isUpdating ? null : onMobwalletChanged,
               ),
+              if (hasWallet && _walletNoteText.isNotEmpty) ...[
+                const Divider(height: 1, color: Color(0xFFE5E8EE)),
+                Container(
+                  width: double.infinity,
+                  color: const Color(0xFFF5F5F5),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Text(
+                    _walletNoteText,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF67696D),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      height: 16 / 11,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -570,18 +626,20 @@ class _MobCreditPaymentCard extends StatelessWidget {
     required this.total,
     required this.mobCreditBalance,
     required this.onTap,
+    this.isDisabled = false,
   });
 
   final bool selected;
   final double total;
   final double mobCreditBalance;
   final VoidCallback onTap;
+  final bool isDisabled;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTap: isDisabled ? null : onTap,
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         decoration: BoxDecoration(
@@ -825,6 +883,96 @@ class _RadioMark extends StatelessWidget {
               ),
             )
           : null,
+    );
+  }
+}
+
+class _MobCreditOverlimitBanner extends StatelessWidget {
+  const _MobCreditOverlimitBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3F0),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFEE2C00).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded,
+              color: Color(0xFFEE2C00), size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Your mobCREDIT has an outstanding due amount. Please clear it to continue.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF0A243F),
+                height: 18 / 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ZeroTotalBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8FAF3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF01A685).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: const BoxDecoration(
+              color: Color(0xFF01A685),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'No payment needed',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0A243F),
+                    height: 20 / 13,
+                  ),
+                ),
+                Text(
+                  'Your wallet / points cover the full amount.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF67696D),
+                    height: 18 / 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

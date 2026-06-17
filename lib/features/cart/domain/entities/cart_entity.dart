@@ -56,6 +56,8 @@ class CartSummaryEntity {
     required this.billingGstNumber,
     required this.savedAddresses,
     required this.mobCreditBalance,
+    this.walletNote = '',
+    this.mobCreditAccountStatus,
   });
 
   final List<CartItem> items;
@@ -114,6 +116,13 @@ class CartSummaryEntity {
 
   /// mobCREDIT balance available for the user (from user_details in cart API).
   final double mobCreditBalance;
+
+  /// Info note from wallet object (e.g. "Only 20% of cart value can be used from referral money").
+  final String walletNote;
+
+  /// Rupifi account_status from rupifiDetails (e.g. "ACTIVE", "AMOUNT_DUE", "INACTIVE").
+  /// null means the user has no mobCredit account — hide the option entirely.
+  final String? mobCreditAccountStatus;
 
   bool get isEmpty => itemCount == 0 && items.isEmpty;
   bool get hasRfqItems => rfqItemCount > 0;

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
 
@@ -31,6 +32,11 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
     if (widget.orderId.isNotEmpty) {
       _ordersBloc.add(OrderDetailRequested(widget.orderId));
     }
+    // Reload cart so it's empty when user navigates back — runs for every
+    // success path (Razorpay, zero-total, Rupifi, status-check).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<CartBloc>().add(CartLoadRequested());
+    });
   }
 
   @override

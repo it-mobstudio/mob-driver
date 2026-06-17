@@ -12,12 +12,14 @@ class CartProductDetails extends StatelessWidget {
     required this.onQtyChanged,
     required this.onQtyInputChanged,
     required this.onDelete,
+    this.index,
     this.showQuantityControl = true,
     this.showDelete = true,
     this.isBusy = false,
   });
 
   final CartItem item;
+  final int? index;
   final ValueChanged<int> onQtyChanged;
   final ValueChanged<String> onQtyInputChanged;
   final VoidCallback onDelete;
@@ -27,120 +29,133 @@ class CartProductDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-      child: Row(
-        children: [
-          Container(
-            height: 26,
-            width: 26,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F4FF),
-              borderRadius: BorderRadius.circular(6),
+    final removeColor =
+        isBusy ? const Color(0xFFBBBBBB) : const Color(0xFF767C8F);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Item row: index · image · name+price ──────────────────────
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Item index number
+            SizedBox(
+              width: 20,
+              child: Text(
+                '${index != null ? index! + 1 : item.qty}',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0A243F),
+                ),
+              ),
             ),
-            child: Text(
-              '${item.qty}',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            height: 54,
-            width: 54,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FC),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE8EEF5)),
-            ),
-            child: item.isNetworkImage
-                ? CachedNetworkImage(
-                    imageUrl: item.imageAsset,
-                    fit: BoxFit.contain,
-                    memCacheWidth: 108,
-                    placeholder: (_, __) => const ImageShimmer(),
-                    errorWidget: (_, __, ___) => Image.asset(
-                      'assets/images/Image-coming-soon.png',
+            const SizedBox(width: 10),
+            // Product image
+            SizedBox(
+              width: 68,
+              height: 68,
+              child: item.isNetworkImage
+                  ? CachedNetworkImage(
+                      imageUrl: item.imageAsset,
                       fit: BoxFit.contain,
+                      memCacheWidth: 136,
+                      placeholder: (_, __) => const ImageShimmer(),
+                      errorWidget: (_, __, ___) => Image.asset(
+                        'assets/images/Image-coming-soon.png',
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : Image.asset(item.imageAsset, fit: BoxFit.contain),
+            ),
+            const SizedBox(width: 10),
+            // Product name + unit price
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF0A243F),
+                      height: 20 / 13,
                     ),
-                  )
-                : Image.asset(item.imageAsset, fit: BoxFit.contain),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '₹ ${item.unitPrice.toStringAsFixed(0)} /unit',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF6C7C8C),
                   ),
-                ),
-                if (showDelete) ...[
-                  const SizedBox(height: 6),
-                  InkWell(
-                    onTap: isBusy ? null : onDelete,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          size: 16,
-                          color: isBusy
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade700,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Remove',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: isBusy
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade700,
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 4),
+                  Text(
+                    '₹ ${item.unitPrice.toStringAsFixed(0)} /unit',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFF767C8F),
+                      height: 18 / 12,
                     ),
                   ),
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '₹${item.lineTotal.toStringAsFixed(0)}',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
               ),
-              if (showQuantityControl) ...[
-                const SizedBox(height: 8),
+            ),
+            const SizedBox(width: 8),
+            // Line total
+            Text(
+              '₹${item.lineTotal.toStringAsFixed(0)}',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: const Color(0xFF0A243F),
+              ),
+            ),
+          ],
+        ),
+
+        // ── Actions row: Remove · Stepper ─────────────────────────────
+        if (showDelete || showQuantityControl) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              if (showDelete)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: isBusy ? null : onDelete,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.delete_outline_rounded,
+                        size: 14,
+                        color: removeColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Remove',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: removeColor,
+                          decoration: TextDecoration.underline,
+                          decorationColor: removeColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const Spacer(),
+              if (showQuantityControl)
                 QuantityStepper(
                   value: item.qty,
+                  width: 108,
                   onDecrement: () => onQtyChanged(item.qty - 1),
                   onIncrement: () => onQtyChanged(item.qty + 1),
                   onInputChanged: onQtyInputChanged,
                   isBusy: isBusy,
                 ),
-              ],
             ],
           ),
         ],
-      ),
+      ],
     );
   }
 }

@@ -875,38 +875,38 @@ class SellerSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Sold by $sellerCode',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF767C8F),
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'Sold by $sellerCode',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF67696D),
-                      ),
+                    SvgPicture.asset(
+                      'assets/images/qwik.svg',
+                      height: 14,
                     ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
+                    const SizedBox(width: 6),
+                    Text(
+                      '1-4 hrs delivery',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                         color: const Color(0xFF0A243F),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'QWIK  1-4 hrs',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
+                        height: 20 / 13,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 for (var i = 0; i < sellerItems.length; i++) ...[
                   CartProductDetails(
+                    index: i,
                     item: sellerItems[i],
                     onQtyChanged: (qty) => onQtyChanged(sellerItems[i], qty),
                     onQtyInputChanged: (value) =>
@@ -1504,53 +1504,6 @@ class BottomCheckoutBar extends StatelessWidget {
   }
 }
 
-class AiMicPill extends StatelessWidget {
-  const AiMicPill({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE8EEF5)),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Talk to me about adding, editing, deleting,\nchanging variations in the cart',
-                style: GoogleFonts.inter(fontSize: 12),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              height: 40,
-              width: 40,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFF6F79FF), Color(0xFF8A3CFF)],
-                ),
-              ),
-              child: const Icon(Icons.mic, color: Colors.white),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class FloatingAiMic extends StatelessWidget {
   const FloatingAiMic({
@@ -1591,54 +1544,93 @@ class EmptyCartBody extends StatelessWidget {
     super.key,
     required this.topBar,
     required this.shippingTile,
-    required this.micPill,
   });
 
   final Widget topBar;
   final Widget shippingTile;
-  final Widget micPill;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         topBar,
         shippingTile,
-        const SizedBox(height: 24),
         Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                height: 160,
-                width: 160,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEFF4FF),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.shopping_basket_outlined, size: 80),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    height: 130,
+                    width: 130,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF4FF),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0A243F).withValues(alpha: 0.06),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.shopping_cart_outlined,
+                      size: 58,
+                      color: Color(0xFF0A243F),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Your cart is empty',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      height: 28 / 20,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Looks like you haven\'t added\nanything to your cart yet.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF767C8F),
+                      fontSize: 14,
+                      height: 22 / 14,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => GoRouter.of(context).go('/homepage'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0A243F),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Start Shopping',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Your cart is empty!',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Talk to me about adding, editing,\ndeleting, changing variations in the cart',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700]),
-              ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
-        micPill,
-        const SizedBox(height: 16),
       ],
     );
   }

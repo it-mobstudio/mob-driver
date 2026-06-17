@@ -178,6 +178,12 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
                                         savings: summary.savings,
                                         total: summary.total,
                                         earningPoints: summary.earningPoints,
+                                        mobstarApplied: summary.usePoints && summary.mobstarAmount > 0
+                                            ? summary.mobstarAmount
+                                            : null,
+                                        walletApplied: summary.useWallet && summary.applicableWalletAmount > 0
+                                            ? summary.applicableWalletAmount
+                                            : null,
                                       ),
                                     ],
                                   ),
@@ -388,16 +394,16 @@ class _ReviewSellerCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.local_shipping_outlined,
-                        size: 16, color: Color(0xFF0A7D83)),
+                    SvgPicture.asset('assets/images/qwik.svg', height: 14),
                     const SizedBox(width: 6),
                     Text(
-                      '${items.length} ${items.length == 1 ? 'item' : 'items'} · Standard delivery',
+                      '1-4 hrs delivery',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF0A243F),
                         fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         height: 20 / 13,
                       ),
                     ),
@@ -575,16 +581,13 @@ class _ReviewItemTile extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              SizedBox(
-                width: 148,
-                height: 40,
-                child: QuantityStepper(
-                  value: item.qty,
-                  onDecrement: () => onQtyChanged(item.qty - 1),
-                  onIncrement: () => onQtyChanged(item.qty + 1),
-                  onInputChanged: onQtyInputChanged,
-                  isBusy: isBusy,
-                ),
+              QuantityStepper(
+                value: item.qty,
+                width: 120,
+                onDecrement: () => onQtyChanged(item.qty - 1),
+                onIncrement: () => onQtyChanged(item.qty + 1),
+                onInputChanged: onQtyInputChanged,
+                isBusy: isBusy,
               ),
             ],
           ),

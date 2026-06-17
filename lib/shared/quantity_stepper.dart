@@ -54,23 +54,21 @@ class _QuantityStepperState extends State<QuantityStepper> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 36,
+      height: 34,
       width: widget.width,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE1E6ED)),
+        border: Border.all(color: const Color(0xFFD6DCE8), width: 1),
         borderRadius: BorderRadius.circular(20),
         color: Colors.white,
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           DecrementButton(
             isDisabled: widget.isBusy,
             onTap: widget.onDecrement,
           ),
-          SizedBox(
-            width: 36,
+          Expanded(
             child: TextField(
               controller: _controller,
               enabled: !widget.isBusy && widget.onInputChanged != null,
@@ -156,11 +154,11 @@ class _StepIconButton extends StatelessWidget {
       onTap: isDisabled ? null : onTap,
       borderRadius: BorderRadius.circular(20),
       child: Padding(
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(5),
         child: Icon(
           icon,
-          size: 18,
-          color: isDisabled ? Colors.grey : null,
+          size: 16,
+          color: isDisabled ? Colors.grey.shade400 : const Color(0xFF0A243F),
         ),
       ),
     );

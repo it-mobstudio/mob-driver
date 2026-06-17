@@ -19,6 +19,7 @@ import 'package:m_o_b_demand_side/features/product/presentation/pages/product_de
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_listing_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/magic_ai_quote_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
@@ -271,6 +272,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: ReferralPage.routeName,
           path: ReferralPage.routePath,
           builder: (context, state) => const ReferralPage(),
+        ),
+        GoRoute(
+          name: ReferralHistoryPage.routeName,
+          path: ReferralHistoryPage.routePath,
+          builder: (context, state) => const ReferralHistoryPage(),
         ),
         GoRoute(
           name: OrdersPage.routeName,
