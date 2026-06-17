@@ -146,7 +146,11 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
   void _updateQuantity(int next) {
     final clamped = next < 0 ? 0 : next;
     if (clamped == 0) {
-      setState(() => _quantity = 0);
+      // Don't setState(_quantity = 0) here — that would repaint this widget
+      // with "0" still inside the counter (showCounter hasn't flipped off
+      // yet), then the parent's rebuild swaps in the ADD button a frame
+      // later. Skipping straight to notifying the parent avoids that
+      // 1 -> 0 -> ADD flash and goes straight to 1 -> ADD.
       widget.onQuantityChanged?.call(0);
       return;
     }

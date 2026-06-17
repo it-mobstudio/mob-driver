@@ -31,5 +31,10 @@ abstract interface class AuthRepository {
     String? email,
     String? gstin,
     String? businessName,
+    String? referralCode,
+  });
+
+  Future<(bool, String, AppFailure?)> checkReferralCode({
+    required String code,
   });
 }

@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/shared/build_wallet_reward.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
+import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '/index.dart';
@@ -26,13 +30,65 @@ class _SignupWidgetState extends State<SignupWidget> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _referralCodeController = TextEditingController();
+  final _referralFocusNode = FocusNode();
+
+  Timer? _referralDebounce;
+  bool _isCheckingReferral = false;
+  bool? _isReferralValid;
+  String _referralMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _referralFocusNode.addListener(() {
+      if (!_referralFocusNode.hasFocus) {
+        _referralDebounce?.cancel();
+        _checkReferralCode();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _referralCodeController.dispose();
+    _referralFocusNode.dispose();
+    _referralDebounce?.cancel();
     super.dispose();
+  }
+
+  void _onReferralCodeChanged(String value) {
+    setState(() {
+      _isReferralValid = null;
+      _referralMessage = '';
+    });
+    _referralDebounce?.cancel();
+    if (value.trim().isEmpty) return;
+    _referralDebounce =
+        Timer(const Duration(milliseconds: 700), _checkReferralCode);
+  }
+
+  Future<void> _checkReferralCode() async {
+    final code = _referralCodeController.text.trim();
+    if (code.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _isReferralValid = null;
+          _referralMessage = '';
+        });
+      }
+      return;
+    }
+    setState(() => _isCheckingReferral = true);
+    final (isValid, message, failure) =
+        await sl<AuthRepository>().checkReferralCode(code: code);
+    if (!mounted) return;
+    setState(() {
+      _isCheckingReferral = false;
+      _isReferralValid = failure == null ? isValid : null;
+      _referralMessage = failure == null ? message : '';
+    });
   }
 
   void _onAgreeAndContinue(BuildContext context) {
@@ -48,12 +104,21 @@ class _SignupWidgetState extends State<SignupWidget> {
         ));
   }
 
+  void _onRegistrationSuccess(BuildContext context) {
+    final usedValidReferral =
+        _isReferralValid == true && _referralCodeController.text.trim().isNotEmpty;
+    context.go(
+      HomepageWidget.routePath,
+      extra: usedValidReferral ? {'showReferralBonus': true} : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthRegistered) {
-          context.go(HomepageWidget.routePath);
+          _onRegistrationSuccess(context);
         } else if (state is AuthError) {
           showDialog<void>(
             context: context,
@@ -236,16 +301,38 @@ class _SignupWidgetState extends State<SignupWidget> {
           height: AppComponentStyles.fieldHeight,
           child: TextFormField(
             controller: _referralCodeController,
+            focusNode: _referralFocusNode,
             textCapitalization: TextCapitalization.characters,
+            onChanged: _onReferralCodeChanged,
             decoration:
                 AppFormFieldStyles.outlinedDecoration('Have a referral code?')
                     .copyWith(
               labelText: null,
               hintText: 'Have a referral code?',
+              suffixIcon: _isCheckingReferral
+                  ? const Padding(
+                      padding: EdgeInsets.all(14),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : null,
             ),
             style: AppTextStyles.inputText,
           ),
         ),
+        if (!_isCheckingReferral && _isReferralValid != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Text(
+              _referralMessage,
+              style: AppTextStyles.legalText.copyWith(
+                color: _isReferralValid == true ? Colors.green : Colors.red,
+              ),
+            ),
+          ),
       ],
     );
   }

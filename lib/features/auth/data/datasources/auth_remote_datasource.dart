@@ -17,7 +17,10 @@ abstract interface class AuthRemoteDatasource {
     String? email,
     String? gstin,
     String? businessName,
+    String? referralCode,
   });
+
+  Future<Map<String, dynamic>> checkReferralCode({required String code});
 }
 
 class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
@@ -56,6 +59,7 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
     String? email,
     String? gstin,
     String? businessName,
+    String? referralCode,
   }) async {
     final formData = FormData.fromMap({
       'full_name': name,
@@ -63,10 +67,20 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
       if (email != null && email.isNotEmpty) 'email': email,
       if (gstin != null && gstin.isNotEmpty) 'gstin': gstin,
       if (businessName != null && businessName.isNotEmpty) 'business_name': businessName,
+      if (referralCode != null && referralCode.isNotEmpty) 'referral_code': referralCode,
     });
     final response = await _dio.post<dynamic>(
       '/accounts/mob_user/auth/update_user/',
       data: formData,
+    );
+    return _body(response.data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> checkReferralCode({required String code}) async {
+    final response = await _dio.get<dynamic>(
+      '/accounts/referral-code-checker/',
+      queryParameters: {'referral_code': code},
     );
     return _body(response.data);
   }

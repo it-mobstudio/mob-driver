@@ -16,14 +16,33 @@ import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_saving
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_why_choose_card.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/product_rail_section.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/section_title.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/widgets/referral_success_dialog.dart';
 import 'package:m_o_b_demand_side/shared/main_scaffold.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 
-class HomepageWidget extends StatelessWidget {
-  const HomepageWidget({super.key});
+class HomepageWidget extends StatefulWidget {
+  const HomepageWidget({super.key, this.showReferralBonus = false});
+
+  final bool showReferralBonus;
 
   static const String routeName = 'Homepage';
   static const String routePath = '/homepage';
+
+  @override
+  State<HomepageWidget> createState() => _HomepageWidgetState();
+}
+
+class _HomepageWidgetState extends State<HomepageWidget> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.showReferralBonus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ReferralSuccessDialog.show(context, amount: 1000, walletBalance: 1000);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

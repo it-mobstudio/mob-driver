@@ -48,18 +48,14 @@ class AuthRepositoryImpl implements AuthRepository {
         return (null, BusinessFailure(msg));
       }
 
-      final data = body['data'] is Map
-          ? Map<String, dynamic>.from(body['data'] as Map)
-          : body;
+      // The backend sometimes wraps the auth payload in an envelope
+      // ({status, message, data: {access, refresh, newAccount, data: {...}}})
+      // and sometimes returns it flat ({access, refresh, newAccount, data: {...}}).
+      // Resolve whichever level actually holds the tokens.
+      final payload = _resolveAuthPayload(body);
 
-      final accessToken = _readToken(data, const [
-        'access',
-        'access_token',
-        'accessToken',
-        'token',
-        'jwt',
-      ]);
-      final refreshToken = _readToken(data, const [
+      final accessToken = _readToken(payload, _tokenKeys);
+      final refreshToken = _readToken(payload, const [
         'refresh',
         'refresh_token',
         'refreshToken',
@@ -69,14 +65,14 @@ class AuthRepositoryImpl implements AuthRepository {
         return (null, const BusinessFailure('Invalid OTP response from server.'));
       }
 
-      final userDetailsRaw = data['data'] is Map
-          ? Map<String, dynamic>.from(data['data'] as Map)
+      final userDetailsRaw = payload['data'] is Map
+          ? Map<String, dynamic>.from(payload['data'] as Map)
           : <String, dynamic>{};
 
       final result = AuthVerifyResult(
         accessToken: accessToken,
         refreshToken: refreshToken,
-        isNewAccount: data['newAccount'] == true,
+        isNewAccount: payload['newAccount'] == true,
         userDetails: userDetailsRaw,
       );
 
@@ -85,6 +81,7 @@ class AuthRepositoryImpl implements AuthRepository {
         accessToken: accessToken,
         refreshToken: refreshToken,
         userDetails: userDetailsRaw.isNotEmpty ? userDetailsRaw : null,
+        needsRegistration: result.isNewAccount,
       );
 
       return (result, null);
@@ -102,6 +99,7 @@ class AuthRepositoryImpl implements AuthRepository {
     String? email,
     String? gstin,
     String? businessName,
+    String? referralCode,
   }) async {
     try {
       final body = await _datasource.registerUser(
@@ -110,17 +108,57 @@ class AuthRepositoryImpl implements AuthRepository {
         email: email,
         gstin: gstin,
         businessName: businessName,
+        referralCode: referralCode,
       );
       if (body['status'] == false) {
         final msg = body['message']?.toString() ?? 'Registration failed.';
         return (false, BusinessFailure(msg));
       }
+      await AuthSession.instance.setNeedsRegistration(false);
       return (true, null);
     } on DioException catch (e) {
       return (false, e.toAppFailure());
     } catch (e) {
       return (false, UnknownFailure(e.toString()));
     }
+  }
+
+  @override
+  Future<(bool, String, AppFailure?)> checkReferralCode({
+    required String code,
+  }) async {
+    try {
+      final body = await _datasource.checkReferralCode(code: code);
+      final isValid = body['status'] == true;
+      final message = body['message']?.toString() ??
+          (isValid ? 'Valid referral code' : 'Invalid referral code');
+      return (isValid, message, null);
+    } on DioException catch (e) {
+      return (false, '', e.toAppFailure());
+    } catch (e) {
+      return (false, '', UnknownFailure(e.toString()));
+    }
+  }
+
+  static const _tokenKeys = [
+    'access',
+    'access_token',
+    'accessToken',
+    'token',
+    'jwt',
+  ];
+
+  Map<String, dynamic> _resolveAuthPayload(Map<String, dynamic> body) {
+    if (body.containsKey('newAccount') || _readToken(body, _tokenKeys) != null) {
+      return body;
+    }
+    if (body['data'] is Map) {
+      final nested = Map<String, dynamic>.from(body['data'] as Map);
+      if (nested.containsKey('newAccount') || _readToken(nested, _tokenKeys) != null) {
+        return nested;
+      }
+    }
+    return body;
   }
 
   String? _readToken(Map<String, dynamic> map, List<String> keys) {

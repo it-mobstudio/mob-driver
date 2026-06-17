@@ -19,6 +19,7 @@ class AuthSession {
   static const String _prefsRefreshTokenKey = 'prefs_auth_refresh_token';
   static const String _prefsUserDetailsKey = 'prefs_auth_user_details';
   static const String _isProFirstTimeKey = 'isProFirstTime';
+  static const String _needsRegistrationKey = 'auth_needs_registration';
   static const String _authRefreshPath = String.fromEnvironment(
     'AUTH_REFRESH_PATH',
     defaultValue: '/accounts/mob_user/auth/refresh/',
@@ -31,6 +32,7 @@ class AuthSession {
   String? _accessToken;
   String? _refreshToken;
   Map<String, dynamic>? _userDetails;
+  bool _needsRegistration = false;
 
   bool get isAuthenticated =>
       _accessToken != null && _accessToken!.trim().isNotEmpty;
@@ -38,6 +40,10 @@ class AuthSession {
   String? get refreshToken => _refreshToken;
   Map<String, dynamic>? get userDetails =>
       _userDetails == null ? null : Map<String, dynamic>.from(_userDetails!);
+  // True when the user has a valid session (e.g. just verified OTP) but
+  // hasn't completed the signup form yet — used to keep them on /signup
+  // instead of routes that gate on isAuthenticated alone.
+  bool get needsRegistration => _needsRegistration;
 
   Future<bool> get isProFirstTime async {
     final prefs = await SharedPreferences.getInstance();
@@ -93,6 +99,8 @@ class AuthSession {
       await prefs?.setString(_prefsUserDetailsKey, encoded);
     }
 
+    _needsRegistration = prefs?.getBool(_needsRegistrationKey) ?? false;
+
     ApiManager.setAccessToken(_accessToken);
     ApiManager.setAuthRecoveryHandlers(
       refreshAccessToken: refreshAccessToken,
@@ -130,12 +138,20 @@ class AuthSession {
     String? refreshToken,
     Map<String, dynamic>? userDetails,
     bool? isProFirstTime,
+    bool needsRegistration = false,
   }) async {
     await saveTokens(accessToken: accessToken, refreshToken: refreshToken);
     await saveUserDetails(userDetails);
     if (isProFirstTime != null) {
       await setIsProFirstTime(isProFirstTime);
     }
+    await setNeedsRegistration(needsRegistration);
+  }
+
+  Future<void> setNeedsRegistration(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    _needsRegistration = value;
+    await prefs.setBool(_needsRegistrationKey, value);
   }
 
   Future<void> saveUserDetails(Map<String, dynamic>? userDetails) async {
@@ -164,6 +180,7 @@ class AuthSession {
     _accessToken = null;
     _refreshToken = null;
     _userDetails = null;
+    _needsRegistration = false;
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userDetailsKey);
@@ -172,6 +189,7 @@ class AuthSession {
     await prefs.remove(_prefsRefreshTokenKey);
     await prefs.remove(_prefsUserDetailsKey);
     await prefs.remove(_isProFirstTimeKey);
+    await prefs.remove(_needsRegistrationKey);
     ApiManager.setAccessToken(null);
     ApiManager.clearCache('homeData');
     ApiManager.clearCache('browseProducts');

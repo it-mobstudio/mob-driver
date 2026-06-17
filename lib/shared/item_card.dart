@@ -55,10 +55,10 @@ class _ItemCardState extends State<ItemCard> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      // Transparent so the close button (floated above the sheet's rounded
+      // top edge) sits on the dim scrim instead of an opaque rectangle.
+      // The white rounded background is painted by the sheet's own content.
+      backgroundColor: Colors.transparent,
       builder: (context) => VariantSelectionSheet(
         product: widget.product,
         quantityResolver: widget.quantityResolver,
@@ -183,8 +183,13 @@ class _ItemCardState extends State<ItemCard> {
                   child: ProductCartActionButton(
                     product: product,
                     style: ProductCartActionButtonStyle.rail,
-                    showCounter:
-                        !product.shouldShowNotify && _quantityFor(product) > 0,
+                    // A multi-variant card always shows ADD / "N options" —
+                    // never an inc/dec counter — even if one of its variants
+                    // happens to share a cart-quantity lookup with the
+                    // parent's own addToCartProductId.
+                    showCounter: !product.hasVariants &&
+                        !product.shouldShowNotify &&
+                        _quantityFor(product) > 0,
                     quantity: _quantityFor(product) > 0
                         ? _quantityFor(product)
                         : 1,

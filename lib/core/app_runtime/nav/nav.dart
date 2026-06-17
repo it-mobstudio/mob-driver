@@ -94,7 +94,8 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: SignupWidget.routeName,
           path: SignupWidget.routePath,
           builder: (context, state) {
-            if (AuthSession.instance.isAuthenticated) {
+            if (AuthSession.instance.isAuthenticated &&
+                !AuthSession.instance.needsRegistration) {
               return const HomepageWidget();
             }
             final extra = state.extra is Map<String, dynamic>
@@ -113,7 +114,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: HomepageWidget.routeName,
           path: HomepageWidget.routePath,
-          builder: (context, state) => const HomepageWidget(),
+          builder: (context, state) {
+            final extra = state.extra is Map<String, dynamic>
+                ? state.extra as Map<String, dynamic>
+                : <String, dynamic>{};
+            return HomepageWidget(
+              showReferralBonus: extra['showReferralBonus'] == true,
+            );
+          },
         ),
         GoRoute(
           name: ProductListingPage.routeName,

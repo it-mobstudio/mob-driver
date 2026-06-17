@@ -33,12 +33,39 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
   List<_VariantRowData> _variantRows = <_VariantRowData>[];
   bool _isLoading = true;
 
+  final _sheetController = DraggableScrollableController();
+  static const double _minFraction = 0.28;
+  static const double _maxFraction = 0.92;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadVariants();
     });
+  }
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  // Rough content-height estimate so the sheet opens at roughly the right
+  // size for 2-3 variants vs. 40-50 of them, instead of either wasting empty
+  // space or always defaulting to a fixed fraction of the screen. Anything
+  // taller than ~5 rows worth is left to maxChildSize + the internal
+  // scrollable rather than growing the initial size further.
+  double _fractionForRowCount(int rowCount) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    if (screenHeight <= 0) return 0.4;
+    const chromeHeight = 96.0; // drag handle + title row + divider
+    const listPadding = 36.0; // ListView top/bottom padding
+    const rowHeight = 88.0; // row content (76) + separator (12)
+    final visibleRows = rowCount.clamp(1, 5);
+    final contentHeight =
+        chromeHeight + listPadding + (visibleRows * rowHeight);
+    return (contentHeight / screenHeight).clamp(_minFraction, _maxFraction);
   }
 
   Future<void> _loadVariants() async {
@@ -106,16 +133,32 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
         setState(() {
           _isLoading = false;
         });
+        final target = _fractionForRowCount(_variantRows.length);
+        if (_sheetController.isAttached) {
+          _sheetController.animateTo(
+            target,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+          );
+        }
       }
     }
   }
 
   int _quantityFor(ProductModel product) {
+    final id = product.addToCartProductId;
+    // A local edit always wins: quantityResolver closes over a snapshot of
+    // the cart taken when this sheet was opened (it's a modal route, not a
+    // descendant of whatever BlocBuilder keeps the grid's resolver fresh),
+    // so it never updates again for the lifetime of this sheet.
+    if (_localQuantities.containsKey(id)) {
+      return _localQuantities[id]!;
+    }
     final resolver = widget.quantityResolver;
     if (resolver != null) {
-      return resolver(product.addToCartProductId);
+      return resolver(id);
     }
-    return _localQuantities[product.addToCartProductId] ?? 0;
+    return 0;
   }
 
   bool _isUpdating(ProductModel product) {
@@ -124,11 +167,6 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
   }
 
   Future<void> _changeQuantity(ProductModel product, int quantity) async {
-    final callback = widget.onCartQuantityChanged;
-    if (callback != null) {
-      await callback(product, quantity);
-      return;
-    }
     if (!mounted) return;
     setState(() {
       if (quantity > 0) {
@@ -137,6 +175,10 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
         _localQuantities.remove(product.addToCartProductId);
       }
     });
+    final callback = widget.onCartQuantityChanged;
+    if (callback != null) {
+      await callback(product, quantity);
+    }
   }
 
   Future<void> _notify(ProductModel product) async {
@@ -156,18 +198,44 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.48,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final initialFraction =
+        _isLoading ? 0.4 : _fractionForRowCount(_variantRows.length);
+    final minFraction =
+        (initialFraction - 0.12).clamp(_minFraction, initialFraction);
+
+    return DraggableScrollableSheet(
+      controller: _sheetController,
+      initialChildSize: initialFraction,
+      minChildSize: minFraction,
+      maxChildSize: _maxFraction,
+      expand: false,
+      builder: (context, scrollController) {
+        return Stack(
+          clipBehavior: Clip.none,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 8, 12),
-              child: Row(
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 10, bottom: 4),
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE1E6ED),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                     child: Text(
                       widget.product.title,
                       maxLines: 2,
@@ -180,38 +248,67 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
                       ),
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : ListView.separated(
+                            controller: scrollController,
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                            itemCount: _variantRows.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final row = _variantRows[index];
+                              return _VariantListRow(
+                                product: row.product,
+                                label: row.label,
+                                quantity: _quantityFor(row.product),
+                                isUpdating: _isUpdating(row.product),
+                                onChanged: (quantity) =>
+                                    _changeQuantity(row.product, quantity),
+                                onNotify: () => _notify(row.product),
+                              );
+                            },
+                          ),
                   ),
                 ],
+                ),
               ),
             ),
-            const Divider(height: 1),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                      itemCount: _variantRows.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final row = _variantRows[index];
-                        return _VariantListRow(
-                          product: row.product,
-                          label: row.label,
-                          quantity: _quantityFor(row.product),
-                          isUpdating: _isUpdating(row.product),
-                          onChanged: (quantity) =>
-                              _changeQuantity(row.product, quantity),
-                          onNotify: () => _notify(row.product),
-                        );
-                      },
+            Positioned(
+              top: -48,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Color(0xFF0A243F),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
