@@ -5,6 +5,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/home/domain/entities/home_entity.dart';
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
@@ -184,8 +185,20 @@ class _HomeHeaderState extends State<HomeHeader> {
 
   Future<void> _loadSelectedAddress() async {
     final selected = await SelectedAddressStore.read();
-    if (!mounted || selected == null) return;
-    setState(() => _selectedAddress = selected);
+    if (!mounted) return;
+    if (selected != null) {
+      setState(() => _selectedAddress = selected);
+      return;
+    }
+
+    final (addresses, failure) = await sl<AddressRepository>().getAddresses();
+    if (!mounted || failure != null || addresses == null || addresses.isEmpty) {
+      return;
+    }
+    final firstSavedAddress = addresses.first;
+    await SelectedAddressStore.save(firstSavedAddress);
+    if (!mounted) return;
+    setState(() => _selectedAddress = firstSavedAddress);
   }
 
   Future<void> _loadStoreStatus() async {

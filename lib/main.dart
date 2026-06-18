@@ -23,6 +23,15 @@ import 'environment_values.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (kIsWeb) {
+    try {
+      usePathUrlStrategy();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('URL strategy warning: $e');
+      }
+    }
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -63,15 +72,6 @@ class _AppBootstrapState extends State<AppBootstrap> {
       }
     }
     GoRouter.optionURLReflectsImperativeAPIs = true;
-    if (kIsWeb) {
-      try {
-        usePathUrlStrategy();
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('URL strategy warning: $e');
-        }
-      }
-    }
 
     final environmentValues = FFDevEnvironmentValues();
     await environmentValues.initialize();

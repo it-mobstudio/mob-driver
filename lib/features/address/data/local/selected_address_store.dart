@@ -9,11 +9,6 @@ class SelectedAddressStore {
   static const _key = 'selected_delivery_address';
   static AddressEntity? _cached;
 
-  // Synchronous, in-memory snapshot kept in sync by save()/clear() and
-  // populated by initialize() at app startup — lets route guards check
-  // "has the user picked a delivery address yet" the same way
-  // AuthSession.isAuthenticated works, without an async gap.
-  static bool get hasSelectedAddress => _cached != null;
   static AddressEntity? get cached => _cached;
 
   static Future<void> initialize() async {

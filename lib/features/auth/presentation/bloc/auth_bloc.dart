@@ -1,6 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
-import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 
 // ── Events ───────────────────────────────────────────────────────────────────
@@ -142,7 +141,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     await AuthSession.instance.signOut();
-    await SelectedAddressStore.clear();
+    // Deliberately NOT clearing SelectedAddressStore here: the delivery
+    // address is tied to where the device/user is, not to the auth session,
+    // so it should survive logout and be picked up automatically on the
+    // next login instead of forcing address selection again.
     emit(AuthSignedOut());
   }
 }

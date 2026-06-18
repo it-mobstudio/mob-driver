@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/bloc/checkout_bloc.dart';
@@ -100,6 +102,29 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   }
 
   Future<void> _openRupifiGateway(RupifiOrderEntity entity) async {
+    if (kIsWeb) {
+      final uri = Uri.tryParse(entity.paymentUrl);
+      if (uri == null) {
+        GoRouter.of(context).go(
+          PaymentFailedPage.routePath,
+          extra: 'Invalid mobCREDIT payment URL. Please try again.',
+        );
+        return;
+      }
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
+      );
+      if (!mounted) return;
+      if (!opened) {
+        GoRouter.of(context).go(
+          PaymentFailedPage.routePath,
+          extra: 'Unable to open mobCREDIT payment. Please try again.',
+        );
+      }
+      return;
+    }
     final result = await Navigator.of(context).push<RupifiPaymentResult>(
       MaterialPageRoute(
         builder: (_) => RupifiPaymentWebviewPage(paymentUrl: entity.paymentUrl),
@@ -107,6 +132,13 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     );
     if (!mounted) return;
     if (result == null || result.isCancelled) return;
+    if (!result.isCompleted) {
+      GoRouter.of(context).go(
+        PaymentFailedPage.routePath,
+        extra: 'mobCREDIT payment was not completed. Please try again.',
+      );
+      return;
+    }
     GoRouter.of(context).go(
       OrderPlacedPage.routePath,
       extra: result.merchantPaymentRefId ?? '',

@@ -134,7 +134,24 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   Future<(RupifiOrderEntity?, AppFailure?)> createRupifiOrder(String cartId) async {
     try {
       final body = await _datasource.createRupifiOrder(cartId);
-      final paymentUrl = body['payment_url']?.toString() ?? '';
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      final response = data['response'] is Map
+          ? Map<String, dynamic>.from(data['response'] as Map)
+          : const <String, dynamic>{};
+      final responseData = response['data'] is Map
+          ? Map<String, dynamic>.from(response['data'] as Map)
+          : const <String, dynamic>{};
+      final paymentUrl = _firstNonEmpty([
+        body['payment_url'],
+        data['payment_url'],
+        data['paymentUrl'],
+        response['payment_url'],
+        response['paymentUrl'],
+        responseData['payment_url'],
+        responseData['paymentUrl'],
+      ]);
       if (paymentUrl.isEmpty) {
         final msg = body['message']?.toString() ?? 'Failed to create mobCREDIT order.';
         return (null, BusinessFailure(msg));
@@ -145,6 +162,14 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     } catch (e) {
       return (null, UnknownFailure(e.toString()));
     }
+  }
+
+  String _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) return text;
+    }
+    return '';
   }
 
   @override

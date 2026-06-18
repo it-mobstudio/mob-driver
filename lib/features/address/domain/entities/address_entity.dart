@@ -20,6 +20,7 @@ class AddressEntity {
     this.googleMapLink = '',
     this.isLocationServiceable = true,
     this.projectName = '',
+    this.mobCredit = false,
   });
 
   final String id;
@@ -42,6 +43,10 @@ class AddressEntity {
   final String addressTag;
   final String phoneNumber;
   final String projectName;
+  /// Marks this saved address as the user's designated mobCREDIT/billing
+  /// address (mirrors web's `address?.mob_credit`, used to auto-pick a
+  /// billing address at checkout).
+  final bool mobCredit;
 
   String get displayAddress => [
         addressLine1,
@@ -97,6 +102,8 @@ class AddressEntity {
           _stringValue(map, const ['address_tag', 'tag', 'address_type']),
       phoneNumber: _stringValue(map, const ['phone_number', 'phone', 'mobile']),
       projectName: _stringValue(map, const ['project_name', 'project']),
+      mobCredit: map['mob_credit'] == true ||
+          map['mob_credit']?.toString().toLowerCase() == 'true',
     );
   }
 
@@ -122,6 +129,7 @@ class AddressEntity {
       'address_tag': addressTag,
       'phone_number': phoneNumber,
       'project_name': projectName,
+      'mob_credit': mobCredit,
     };
   }
 

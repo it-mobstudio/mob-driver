@@ -77,12 +77,12 @@ class RfqRepositoryImpl implements RfqRepository {
   @override
   Future<(Map<String, dynamic>?, AppFailure?)> submitMagicQuote({
     required Map<String, dynamic> payload,
-    required FFUploadedFile image,
+    required List<FFUploadedFile> images,
   }) async {
     try {
       final body = await _datasource.submitMagicQuote(
         payload: payload,
-        image: image,
+        images: images,
       );
       if (body['status'] == false) {
         final message =

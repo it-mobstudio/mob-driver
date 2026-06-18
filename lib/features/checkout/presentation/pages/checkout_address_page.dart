@@ -86,6 +86,38 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
     }
   }
 
+  // Mirrors web's CheckoutAddress.jsx: once saved addresses load, if the
+  // cart doesn't already have a delivery/billing address picked, default
+  // to the first saved address (delivery) and whichever saved address is
+  // flagged as the mobCREDIT/billing address (billing) — instead of
+  // leaving the user to manually pick an address they've already saved.
+  void _autoSelectDefaultAddresses(
+    CartSummaryEntity summary,
+    List<CartAddressEntity> addresses,
+  ) {
+    if (addresses.isEmpty) return;
+    var changed = false;
+
+    if (_selectedDelivery == null && summary.shippingAddress.trim().isEmpty) {
+      _selectedDelivery = addresses.first;
+      changed = true;
+    }
+
+    if (!_sameAddress &&
+        _selectedBilling == null &&
+        summary.billingAddress.trim().isEmpty) {
+      for (final address in addresses) {
+        if (address.isMobCredit) {
+          _selectedBilling = address;
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    if (changed) setState(() {});
+  }
+
   List<CartAddressEntity> _addressList() {
     final state = _addressBloc.state;
     if (state is AddressListLoaded) {
@@ -98,6 +130,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                 phone: a.phoneNumber,
                 tag: a.addressTag,
                 project: a.projectName,
+                isMobCredit: a.mobCredit,
               ))
           .toList();
     }
@@ -200,6 +233,8 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
 
                               // Trigger pincode check on first load
                               WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!mounted) return;
+                                _autoSelectDefaultAddresses(summary, addresses);
                                 final pincode =
                                     _selectedDelivery?.pincode.isNotEmpty ==
                                             true

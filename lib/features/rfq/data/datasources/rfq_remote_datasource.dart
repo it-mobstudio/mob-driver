@@ -7,7 +7,7 @@ abstract interface class RfqRemoteDatasource {
   Future<Map<String, dynamic>> submitRfq(Map<String, dynamic> payload);
   Future<Map<String, dynamic>> submitMagicQuote({
     required Map<String, dynamic> payload,
-    required FFUploadedFile image,
+    required List<FFUploadedFile> images,
   });
 }
 
@@ -44,20 +44,34 @@ class RfqRemoteDatasourceImpl implements RfqRemoteDatasource {
   @override
   Future<Map<String, dynamic>> submitMagicQuote({
     required Map<String, dynamic> payload,
-    required FFUploadedFile image,
+    required List<FFUploadedFile> images,
   }) async {
-    final bytes = image.bytes;
-    if (bytes == null || bytes.isEmpty) {
+    if (images.isEmpty) {
       throw ArgumentError('Magic Quote image is required.');
     }
 
-    final formData = FormData.fromMap({
-      ...payload,
-      'image': MultipartFile.fromBytes(
-        bytes,
-        filename: image.name ?? 'magic-quote-upload',
+    final formData = FormData();
+    formData.fields.addAll(
+      payload.entries.map(
+        (entry) => MapEntry(entry.key, entry.value?.toString() ?? ''),
       ),
-    });
+    );
+    for (final image in images) {
+      final bytes = image.bytes;
+      if (bytes == null || bytes.isEmpty) continue;
+      formData.files.add(
+        MapEntry(
+          'image',
+          MultipartFile.fromBytes(
+            bytes,
+            filename: image.name ?? 'magic-quote-upload',
+          ),
+        ),
+      );
+    }
+    if (formData.files.isEmpty) {
+      throw ArgumentError('Unable to read the selected Magic Quote files.');
+    }
     final response = await _dio.post<dynamic>(
       '/quote-builder/magic-quote/',
       data: formData,

@@ -11,6 +11,7 @@ class CartAddressEntity {
     this.tag = '',
     this.project = '',
     this.gstNumber = '',
+    this.isMobCredit = false,
   });
 
   final String addressId;
@@ -21,6 +22,9 @@ class CartAddressEntity {
   final String tag;
   final String project;
   final String gstNumber;
+  /// Mirrors AddressEntity.mobCredit — the address designated as this
+  /// user's mobCREDIT/billing address, used to auto-pick a billing address.
+  final bool isMobCredit;
 
   bool get hasAddress => address.trim().isNotEmpty;
 }

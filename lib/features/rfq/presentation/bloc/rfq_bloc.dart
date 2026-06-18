@@ -22,11 +22,11 @@ final class RfqSubmitRequested extends RfqEvent {
 final class MagicQuoteSubmitRequested extends RfqEvent {
   MagicQuoteSubmitRequested({
     required this.payload,
-    required this.image,
+    required this.images,
   });
 
   final Map<String, dynamic> payload;
-  final FFUploadedFile image;
+  final List<FFUploadedFile> images;
 }
 
 // ── States ───────────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     emit(MagicQuoteSubmitting());
     final (response, failure) = await _repository.submitMagicQuote(
       payload: event.payload,
-      image: event.image,
+      images: event.images,
     );
     if (failure != null) {
       emit(MagicQuoteError(failure.message));

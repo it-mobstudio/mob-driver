@@ -7,7 +7,37 @@
     <uses-permission
         android:name="android.permission.RECORD_AUDIO"
         tools:node="remove"/>
-    
+
+    <!-- Android 11+ package visibility: without this, url_launcher can
+         report "no app found" for upi:// deep links (Rupifi mobCREDIT/UPI
+         payment flow) even when GPay/PhonePe/Paytm are installed. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="tez" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="phonepe" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="paytmmp" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="gpay" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="intent" />
+        </intent>
+    </queries>
+
     <application
         android:label="MOB Demand Side"
         tools:replace="android:label"

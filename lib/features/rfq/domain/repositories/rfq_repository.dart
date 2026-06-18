@@ -8,6 +8,6 @@ abstract interface class RfqRepository {
   Future<(bool, AppFailure?)> submitRfq(Map<String, dynamic> payload);
   Future<(Map<String, dynamic>?, AppFailure?)> submitMagicQuote({
     required Map<String, dynamic> payload,
-    required FFUploadedFile image,
+    required List<FFUploadedFile> images,
   });
 }

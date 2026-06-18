@@ -109,16 +109,29 @@ class CartRepositoryImpl implements CartRepository {
       'mob_star', 'mob_star_tier', 'loyalty', 'loyalty_tier', 'tier', 'reward_tier',
     ]);
 
-    // mobCREDIT balance + account status — look inside user_details under common key names, then root data
-    final mobCreditObjFromUd = _findNestedMap(udMap, const ['mob_credit', 'rupifi', 'credit', 'credit_details']);
-    final mobCreditObjFromRoot = _findNestedMap(data, const ['mob_credit', 'rupifi', 'credit', 'credit_details']);
+    // mobCREDIT balance + account status — look inside user_details under common key names, then root data.
+    // The real field is `rupifiDetails` (e.g. {is_activated, status, sanctioned, utilized, pending,
+    // available, exists}) — not a flat `account_status`/`balance` pair, which is why this previously
+    // never matched and the option stayed hidden even for activated accounts.
+    final mobCreditObjFromUd = _findNestedMap(udMap, const ['rupifiDetails', 'rupifi_details', 'mob_credit', 'rupifi', 'credit', 'credit_details']);
+    final mobCreditObjFromRoot = _findNestedMap(data, const ['rupifiDetails', 'rupifi_details', 'mob_credit', 'rupifi', 'credit', 'credit_details']);
     final mobCreditObj = mobCreditObjFromUd.isNotEmpty ? mobCreditObjFromUd : mobCreditObjFromRoot;
-    final mobCreditBalance = _num(mobCreditObj, const ['balance', 'available_balance']).toDouble();
-    // account_status: null → no account (hide option); "ACTIVE" → show; "AMOUNT_DUE" / "INACTIVE" → show disabled
-    final rawAccountStatus = mobCreditObj['account_status'];
-    final mobCreditAccountStatus = rawAccountStatus is String && rawAccountStatus.isNotEmpty
-        ? rawAccountStatus
-        : null;
+    final mobCreditBalance = _num(mobCreditObj, const ['available', 'available_balance', 'balance']).toDouble();
+    // null → no rupifi account at all (hide option). Otherwise normalize whatever status string the
+    // backend sends to upper-case (so the existing 'AMOUNT_DUE'/'INACTIVE' checks keep working), and
+    // force INACTIVE when the account exists but hasn't been activated yet.
+    final mobCreditExists = mobCreditObj.isNotEmpty &&
+        (mobCreditObj['exists'] == null || mobCreditObj['exists'] == true);
+    String? mobCreditAccountStatus;
+    if (mobCreditExists) {
+      final isActivated = mobCreditObj['is_activated'] != false;
+      final rawAccountStatus = mobCreditObj['account_status'] ?? mobCreditObj['status'];
+      mobCreditAccountStatus = !isActivated
+          ? 'INACTIVE'
+          : (rawAccountStatus is String && rawAccountStatus.trim().isNotEmpty
+              ? rawAccountStatus.trim().toUpperCase()
+              : 'ACTIVE');
+    }
 
     // Wallet nested object (e.g. mob_wallet, wallet, wallet_info)
     final walletObj = _findNestedMap(data, const [
