@@ -29,7 +29,9 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (AuthSession.instance.isAuthenticated) {
-        context.go(HomepageWidget.routePath);
+        context.go(AuthSession.instance.needsRegistration
+            ? SignupWidget.routePath
+            : HomepageWidget.routePath);
       }
     });
   }

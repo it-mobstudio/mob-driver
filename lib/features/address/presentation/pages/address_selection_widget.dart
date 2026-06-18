@@ -5,15 +5,24 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/map_location_widget.dart';
+import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 
 class AddressSelectionWidget extends StatefulWidget {
-  const AddressSelectionWidget({super.key});
+  const AddressSelectionWidget({
+    super.key,
+    this.returnToHome = false,
+    this.showReferralBonus = false,
+  });
 
   static const String routeName = 'AddressSelection';
   static const String routePath = '/address_selection';
+
+  final bool returnToHome;
+  final bool showReferralBonus;
 
   @override
   State<AddressSelectionWidget> createState() => _AddressSelectionWidgetState();
@@ -244,7 +253,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          onTap: () => context.pop(address),
+          onTap: () => _completeSelection(address),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.all(14),
@@ -351,7 +360,20 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
       extra: location,
     );
     if (!mounted || savedAddress == null) return;
-    context.pop(savedAddress);
+    await _completeSelection(savedAddress);
+  }
+
+  Future<void> _completeSelection(AddressEntity address) async {
+    await SelectedAddressStore.save(address);
+    if (!mounted) return;
+    if (widget.returnToHome) {
+      context.go(
+        HomepageWidget.routePath,
+        extra: {'showReferralBonus': widget.showReferralBonus},
+      );
+    } else {
+      context.pop(address);
+    }
   }
 }
 

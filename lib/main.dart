@@ -12,6 +12,7 @@ import 'backend/analytics/analytics_service.dart';
 import 'backend/firebase/firebase_config.dart';
 import 'core/auth/auth_session.dart';
 import 'core/di/injection.dart';
+import 'features/address/data/local/selected_address_store.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/cart/presentation/bloc/cart_bloc.dart';
 import 'features/home/presentation/bloc/home_bloc.dart';
@@ -93,6 +94,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
       AuthSession.instance.initialize().catchError((_) {}),
       setupDependencies().catchError((_) {}),
       AppTheme.initialize().catchError((_) {}),
+      SelectedAddressStore.initialize().catchError((_) {}),
     ]);
 
     await splashDelay;

@@ -114,7 +114,42 @@ class AuthRepositoryImpl implements AuthRepository {
         final msg = body['message']?.toString() ?? 'Registration failed.';
         return (false, BusinessFailure(msg));
       }
-      await AuthSession.instance.setNeedsRegistration(false);
+      final payload = _resolveUpdateUserPayload(body);
+      final accessToken = _readToken(payload, _tokenKeys);
+      final refreshToken = _readToken(payload, const [
+        'refresh',
+        'refresh_token',
+        'refreshToken',
+      ]);
+      final tokenMap = payload['token'] is Map
+          ? Map<String, dynamic>.from(payload['token'] as Map)
+          : <String, dynamic>{};
+      final tokenAccess = _readToken(tokenMap, _tokenKeys);
+      final tokenRefresh = _readToken(tokenMap, const [
+        'refresh',
+        'refresh_token',
+        'refreshToken',
+      ]);
+      final userDetails = payload['user'] is Map
+          ? Map<String, dynamic>.from(payload['user'] as Map)
+          : payload['data'] is Map
+              ? Map<String, dynamic>.from(payload['data'] as Map)
+              : <String, dynamic>{};
+
+      final nextAccessToken = accessToken ?? tokenAccess;
+      if (nextAccessToken != null && nextAccessToken.isNotEmpty) {
+        await AuthSession.instance.saveSession(
+          accessToken: nextAccessToken,
+          refreshToken: refreshToken ?? tokenRefresh,
+          userDetails: userDetails.isNotEmpty ? userDetails : null,
+          needsRegistration: false,
+        );
+      } else {
+        if (userDetails.isNotEmpty) {
+          await AuthSession.instance.saveUserDetails(userDetails);
+        }
+        await AuthSession.instance.setNeedsRegistration(false);
+      }
       return (true, null);
     } on DioException catch (e) {
       return (false, e.toAppFailure());
@@ -129,7 +164,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       final body = await _datasource.checkReferralCode(code: code);
-      final isValid = body['status'] == true;
+      final hasExistsFlag = body.containsKey('exists');
+      final isValid = body['status'] == true &&
+          (!hasExistsFlag || body['exists'] == true);
       final message = body['message']?.toString() ??
           (isValid ? 'Valid referral code' : 'Invalid referral code');
       return (isValid, message, null);
@@ -157,6 +194,13 @@ class AuthRepositoryImpl implements AuthRepository {
       if (nested.containsKey('newAccount') || _readToken(nested, _tokenKeys) != null) {
         return nested;
       }
+    }
+    return body;
+  }
+
+  Map<String, dynamic> _resolveUpdateUserPayload(Map<String, dynamic> body) {
+    if (body['data'] is Map) {
+      return Map<String, dynamic>.from(body['data'] as Map);
     }
     return body;
   }

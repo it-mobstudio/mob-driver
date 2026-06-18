@@ -16,6 +16,10 @@ abstract interface class ProductRepository {
     String? subCategory,
   });
 
+  Future<(List<FilterSectionEntity>?, AppFailure?)> getSearchFilters({
+    required String query,
+  });
+
   Future<(ProductDetailsEntity?, AppFailure?)> getProductDetail({
     required String slug,
     String? mobSku,
@@ -24,5 +28,20 @@ abstract interface class ProductRepository {
   Future<(List<ProductEntity>?, AppFailure?)> searchProducts({
     required String query,
     int page = 1,
+  });
+
+  /// Typeahead suggestions while typing — brand matches and product
+  /// matches from the same /home/product_search/ response (mirrors the
+  /// web's CustomAutoComplete grouping: brands first, then products).
+  Future<(SearchSuggestionsEntity?, AppFailure?)> searchSuggestions({
+    required String query,
+  });
+
+  Future<(BrowseResultEntity?, AppFailure?)> searchCatalog({
+    required String query,
+    int page = 1,
+    bool isProfessional = true,
+    String? sortBy,
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
   });
 }

@@ -31,6 +31,25 @@ class HomeRepositoryImpl implements HomeRepository {
     }
   }
 
+  @override
+  Future<(StoreOpenStatusEntity?, AppFailure?)> getStoreOpenStatus() async {
+    try {
+      final body = await _datasource.getStoreOpenStatus();
+      return (
+        StoreOpenStatusEntity(
+          message: body['message']?.toString() ?? '1-4 hrs delivery',
+          isOpen: body['is_open'] == true,
+          deliveryDate: body['delivery_date']?.toString() ?? '',
+        ),
+        null,
+      );
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
   List<CategoryEntity> _parseCategories(Map<String, dynamic> body) {
     final data = body['data'] is Map
         ? Map<String, dynamic>.from(body['data'] as Map)

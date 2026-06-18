@@ -4,10 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
-import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
+import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,19 +28,12 @@ class _SearchPageState extends State<SearchPage> {
   String query = '';
   bool _loading = false;
   String? _error;
-  List<ProductModel> _results = [];
+  List<ProductModel> _suggestions = [];
+  List<String> _brandSuggestions = [];
 
   // --- local storage (recently searched)
   static const _historyKey = 'search_history_v1';
   List<String> history = [];
-
-  // --- optional static sections
-  final List<String> trending = [
-    'Ultratech Cement',
-    'Garden chair',
-    'Cement',
-    'Coffee table'
-  ];
 
   Timer? _debounce;
 
@@ -57,14 +50,15 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
-  // ================= API =================
+  // ================= API (live suggestions while typing) =================
 
-  Future<void> _search(String q) async {
+  Future<void> _loadSuggestions(String q) async {
     if (q.trim().isEmpty) {
       setState(() {
         _loading = false;
         _error = null;
-        _results = [];
+        _suggestions = [];
+        _brandSuggestions = [];
       });
       return;
     }
@@ -75,19 +69,25 @@ class _SearchPageState extends State<SearchPage> {
     });
 
     try {
-      final (results, _) = await sl<ProductRepository>().searchProducts(query: q);
+      final (result, failure) =
+          await sl<ProductRepository>().searchSuggestions(query: q);
       if (!mounted) return;
+      if (failure != null) {
+        setState(() {
+          _error = 'Something went wrong. Please try again.';
+          _loading = false;
+        });
+        return;
+      }
       setState(() {
-        _results = results ?? [];
+        _suggestions = result?.products ?? [];
+        _brandSuggestions = result?.brandNames ?? [];
         _loading = false;
       });
-      AnalyticsService.instance.logSearch(
-        query: q,
-        resultCount: _results.length,
-      );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _error = 'Something went wrong. Please try again.+\n${e.toString()}';
+        _error = 'Something went wrong. Please try again.';
         _loading = false;
       });
     }
@@ -97,6 +97,7 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _loadHistory() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       history = prefs.getStringList(_historyKey) ?? [];
     });
@@ -113,7 +114,55 @@ class _SearchPageState extends State<SearchPage> {
     if (current.length > 10) current.removeRange(10, current.length);
 
     await prefs.setStringList(_historyKey, current);
+    if (!mounted) return;
     setState(() => history = current);
+  }
+
+  Future<void> _clearHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_historyKey);
+    if (!mounted) return;
+    setState(() => history = []);
+  }
+
+  // ================= Navigation =================
+
+  Future<void> _submitSearch(String term) async {
+    final trimmed = term.trim();
+    if (trimmed.isEmpty) return;
+    await _saveToHistory(trimmed);
+    if (!mounted) return;
+    final slug = trimmed
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '-');
+    context.push(
+      '${BrandProductSearchPage.routePath}/${Uri.encodeComponent(slug.isEmpty ? 'search' : slug)}',
+      extra: {'searchTerm': trimmed},
+    );
+  }
+
+  Future<void> _openProduct(ProductModel product) async {
+    await _saveToHistory(query);
+    if (!mounted) return;
+    if (product.slug.isNotEmpty) {
+      context.push('${ProductDetailPage.routePath}/${product.slug}');
+    }
+  }
+
+  Future<void> _openBrand(String brandName) async {
+    await _saveToHistory(brandName);
+    if (!mounted) return;
+    final slug = brandName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '-');
+    context.push(
+      '${BrandProductSearchPage.routePath}/${Uri.encodeComponent(slug.isEmpty ? 'brand' : slug)}',
+      extra: {'brandName': brandName},
+    );
   }
 
   // ================= UI =================
@@ -121,13 +170,12 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF7F5),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             _searchBar(context),
-            const SizedBox(height: 12),
-            if (query.isEmpty) _searchHistoryView() else _searchResultsView(),
+            if (query.isEmpty) _searchHistoryView() else _suggestionsView(),
           ],
         ),
       ),
@@ -147,19 +195,17 @@ class _SearchPageState extends State<SearchPage> {
             child: TextField(
               controller: _controller,
               autofocus: true,
+              textInputAction: TextInputAction.search,
               onChanged: (val) {
                 setState(() => query = val);
                 _debounce?.cancel();
                 _debounce = Timer(const Duration(milliseconds: 350), () {
-                  _search(val);
+                  _loadSuggestions(val);
                 });
               },
-              onSubmitted: (val) async {
-                await _saveToHistory(val);
-                _search(val);
-              },
+              onSubmitted: _submitSearch,
               decoration: InputDecoration(
-                hintText: 'Search for product, category, brand...',
+                hintText: 'Search for product, category, brand..',
                 filled: true,
                 fillColor: const Color(0xFFF2F6F9),
                 prefixIcon: const Icon(Icons.search),
@@ -170,13 +216,14 @@ class _SearchPageState extends State<SearchPage> {
                           _controller.clear();
                           setState(() {
                             query = '';
-                            _results = [];
+                            _suggestions = [];
+                            _brandSuggestions = [];
                             _error = null;
                             _loading = false;
                           });
                         },
                       )
-                    : const Icon(Icons.mic),
+                    : const Icon(Icons.mic_none),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -194,87 +241,79 @@ class _SearchPageState extends State<SearchPage> {
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          Text("Recently searched",
-              style:
-                  GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: history
-                .map(
-                  (term) => InputChip(
-                    label: Text(term),
-                    backgroundColor: const Color(0xFFF2F6F9),
-                    onPressed: () {
-                      _controller.text = term;
-                      setState(() => query = term);
-                      _search(term);
-                    },
-                    onDeleted: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      final cur =
-                          prefs.getStringList(_historyKey) ?? <String>[];
-                      cur.remove(term);
-                      await prefs.setStringList(_historyKey, cur);
-                      setState(() => history = cur);
-                    },
+          if (history.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Recently searched',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0A243F),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                   ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 24),
-          Text("Trending in your area",
-              style:
-                  GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 100,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: trending.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, i) {
-                return GestureDetector(
-                  onTap: () {
-                    final term = trending[i];
-                    _controller.text = term;
-                    setState(() => query = term);
-                    _saveToHistory(term);
-                    _search(term);
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.grey.shade300,
-                        ),
-                        child: const Icon(Icons.image),
-                      ),
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        width: 100,
-                        child: Text(
-                          trending[i],
-                          style: GoogleFonts.inter(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                ),
+                GestureDetector(
+                  onTap: _clearHistory,
+                  child: Text(
+                    'Clear',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0360E5),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                );
-              },
+                ),
+              ],
             ),
-          ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: history
+                  .map(
+                    (term) => GestureDetector(
+                      onTap: () => _submitSearch(term),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF2F6F9),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.history,
+                              size: 14,
+                              color: Color(0xFF767C8F),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              term,
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF0A243F),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _searchResultsView() {
+  Widget _suggestionsView() {
     if (_loading) {
       return const Expanded(
         child: Center(child: CircularProgressIndicator()),
@@ -288,61 +327,124 @@ class _SearchPageState extends State<SearchPage> {
       );
     }
 
-    if (_results.isEmpty) {
+    if (query.trim().length < 2) {
+      return const Expanded(child: SizedBox.shrink());
+    }
+
+    if (_brandSuggestions.isEmpty && _suggestions.isEmpty) {
       return Expanded(
         child: Center(
-          child: Text('No results for “$query”.',
-              style: GoogleFonts.inter(color: Colors.black54)),
+          child: Text(
+            'No matches for "$query".',
+            style: GoogleFonts.inter(color: const Color(0xFF767C8F)),
+          ),
         ),
       );
     }
 
     return Expanded(
-      child: ListView.separated(
+      child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        itemCount: _results.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (context, i) {
-          final r = _results[i];
-          return ListTile(
-            onTap: () async {
-              await _saveToHistory(query);
-              if (!context.mounted) {
-                return;
-              }
-              if (r.slug.isNotEmpty) {
-                context.push('${ProductDetailPage.routePath}/${r.slug}');
-              }
-            },
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF2F6F9),
+        children: [
+          if (_brandSuggestions.isNotEmpty) ...[
+            _sectionLabel('Brands'),
+            ..._brandSuggestions.map(_brandTile),
+            const SizedBox(height: 8),
+          ],
+          if (_suggestions.isNotEmpty) ...[
+            _sectionLabel('Products'),
+            ..._suggestions.map(_productTile),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          color: const Color(0xFF767C8F),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+
+  Widget _brandTile(String name) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: () => _openBrand(name),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF2F6F9),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(Icons.storefront_outlined, color: Color(0xFF767C8F)),
+      ),
+      title: Text(
+        name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.inter(
+          color: const Color(0xFF0A243F),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.search,
+        size: 18,
+        color: Color(0xFF767C8F),
+      ),
+    );
+  }
+
+  Widget _productTile(ProductModel r) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: () => _openProduct(r),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF2F6F9),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: r.primaryImageUrl.isNotEmpty
+            ? ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-              ),
-              child: r.primaryImageUrl.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: CachedNetworkImage(
-                        imageUrl: r.primaryImageUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 80,
-                        placeholder: (_, __) => const ImageShimmer(),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.image, color: Colors.grey),
-                      ),
-                    )
-                  : const Icon(Icons.image, color: Colors.grey),
-            ),
-            title: Text(r.title),
-            subtitle: Text(
-              '₹ ${r.vendorPricing.vendorSellingPrice}',
-              style: GoogleFonts.inter(fontSize: 12),
-            ),
-            trailing: const Icon(Icons.north_west), // open/preview icon
-          );
-        },
+                child: CachedNetworkImage(
+                  imageUrl: r.primaryImageUrl,
+                  fit: BoxFit.cover,
+                  memCacheWidth: 80,
+                  placeholder: (_, __) => const ImageShimmer(),
+                  errorWidget: (context, url, error) =>
+                      const Icon(Icons.image, color: Colors.grey),
+                ),
+              )
+            : const Icon(Icons.image, color: Colors.grey),
+      ),
+      title: Text(
+        r.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.inter(
+          color: const Color(0xFF0A243F),
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.search,
+        size: 18,
+        color: Color(0xFF767C8F),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/map_location_widget.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/splash_screen.dart';
@@ -47,6 +48,18 @@ class AppStateNotifier extends ChangeNotifier {
   }
 }
 
+// What to show once we know the user is authenticated and has finished
+// registering: force address selection (Blinkit-style) until one is saved,
+// then Home. Shared by every route guard below so the rule stays consistent
+// regardless of which screen the user lands on.
+Widget _postRegistrationDestination() => SelectedAddressStore.hasSelectedAddress
+    ? const HomepageWidget()
+    : const AddressSelectionWidget(returnToHome: true);
+
+Widget _authenticatedDestination() => AuthSession.instance.needsRegistration
+    ? const SignupWidget(phoneNumber: '')
+    : _postRegistrationDestination();
+
 GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       initialLocation: '/',
       debugLogDiagnostics: kDebugMode,
@@ -56,7 +69,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       errorBuilder: (context, state) => appStateNotifier.showSplashImage
           ? const SplashScreen()
           : (AuthSession.instance.isAuthenticated
-              ? const HomepageWidget()
+              ? _authenticatedDestination()
               : const LoginpageWidget()),
       routes: [
         GoRoute(
@@ -65,14 +78,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, state) => appStateNotifier.showSplashImage
               ? const SplashScreen()
               : (AuthSession.instance.isAuthenticated
-                  ? const HomepageWidget()
+                  ? _authenticatedDestination()
                   : const LoginpageWidget()),
         ),
         GoRoute(
           name: LoginpageWidget.routeName,
           path: LoginpageWidget.routePath,
           builder: (context, state) => AuthSession.instance.isAuthenticated
-              ? const HomepageWidget()
+              ? _authenticatedDestination()
               : const LoginpageWidget(),
         ),
         GoRoute(
@@ -80,7 +93,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: OTPVerificationWidget.routePath,
           builder: (context, state) {
             if (AuthSession.instance.isAuthenticated) {
-              return const HomepageWidget();
+              return _authenticatedDestination();
             }
             final extra = state.extra is Map<String, dynamic>
                 ? state.extra as Map<String, dynamic>
@@ -96,7 +109,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, state) {
             if (AuthSession.instance.isAuthenticated &&
                 !AuthSession.instance.needsRegistration) {
-              return const HomepageWidget();
+              return _postRegistrationDestination();
             }
             final extra = state.extra is Map<String, dynamic>
                 ? state.extra as Map<String, dynamic>
@@ -109,7 +122,15 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: AddressSelectionWidget.routeName,
           path: AddressSelectionWidget.routePath,
-          builder: (context, state) => const AddressSelectionWidget(),
+          builder: (context, state) {
+            final extra = state.extra is Map<String, dynamic>
+                ? state.extra as Map<String, dynamic>
+                : <String, dynamic>{};
+            return AddressSelectionWidget(
+              returnToHome: extra['returnToHome'] == true,
+              showReferralBonus: extra['showReferralBonus'] == true,
+            );
+          },
         ),
         GoRoute(
           name: HomepageWidget.routeName,
@@ -180,10 +201,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
                 : <String, dynamic>{};
             final slug = state.pathParameters['slug'] ?? '';
             final brandName = extra['brandName']?.toString() ??
-                state.uri.queryParameters['brand'] ??
+                state.uri.queryParameters['brand'];
+            final searchTerm = extra['searchTerm']?.toString() ??
+                brandName ??
+                state.uri.queryParameters['search'] ??
                 _labelFromSlug(slug);
             return BrandProductSearchPage(
-              searchTerm: brandName,
+              searchTerm: searchTerm,
               brandName: brandName,
             );
           },

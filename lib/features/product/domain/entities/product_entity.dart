@@ -7,3 +7,4 @@ typedef ProductEntity = ProductModel;
 typedef ProductDetailsEntity = ProductDetailsResult;
 typedef BrowseResultEntity = BrowseProductsResult;
 typedef FilterSectionEntity = BrowseFilterSection;
+typedef SearchSuggestionsEntity = ProductSearchSuggestions;

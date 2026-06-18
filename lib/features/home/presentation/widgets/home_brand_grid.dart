@@ -79,7 +79,7 @@ class HomeBrandTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go(
+      onTap: () => context.push(
         '${BrandProductSearchPage.routePath}/${brand.slug}?brand=${Uri.encodeComponent(brand.name)}',
         extra: <String, dynamic>{
           'brandName': brand.name,

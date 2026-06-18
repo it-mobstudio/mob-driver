@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/shared/build_wallet_reward.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -36,6 +39,25 @@ class _SignupWidgetState extends State<SignupWidget> {
   bool _isCheckingReferral = false;
   bool? _isReferralValid;
   String _referralMessage = '';
+  String _lastValidatedReferralCode = '';
+  String _lastSubmittedReferralCode = '';
+
+  String _normalizeReferralCode(String value) =>
+      value.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+
+  String get _rawPhone {
+    final fromRoute =
+        widget.phoneNumber.replaceAll('+91', '').replaceAll(' ', '').trim();
+    if (fromRoute.isNotEmpty) return fromRoute;
+    final user = AuthSession.instance.userDetails ?? const {};
+    for (final key in const ['phone_number', 'phoneNumber', 'mobile', 'phone']) {
+      final value = user[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty) {
+        return value.replaceAll('+91', '').replaceAll(' ', '').trim();
+      }
+    }
+    return '';
+  }
 
   @override
   void initState() {
@@ -59,57 +81,96 @@ class _SignupWidgetState extends State<SignupWidget> {
   }
 
   void _onReferralCodeChanged(String value) {
+    final normalized = _normalizeReferralCode(value);
+    if (value != normalized) {
+      _referralCodeController.value = TextEditingValue(
+        text: normalized,
+        selection: TextSelection.collapsed(offset: normalized.length),
+      );
+    }
     setState(() {
       _isReferralValid = null;
       _referralMessage = '';
+      _lastValidatedReferralCode = '';
     });
     _referralDebounce?.cancel();
-    if (value.trim().isEmpty) return;
-    _referralDebounce =
-        Timer(const Duration(milliseconds: 700), _checkReferralCode);
+    if (normalized.isEmpty) return;
+    _referralDebounce = Timer(
+      const Duration(milliseconds: 700),
+      () {
+        _checkReferralCode();
+      },
+    );
   }
 
-  Future<void> _checkReferralCode() async {
-    final code = _referralCodeController.text.trim();
+  Future<bool> _checkReferralCode({bool force = false}) async {
+    final code = _normalizeReferralCode(_referralCodeController.text);
     if (code.isEmpty) {
       if (mounted) {
         setState(() {
           _isReferralValid = null;
           _referralMessage = '';
+          _lastValidatedReferralCode = '';
         });
       }
-      return;
+      return true;
+    }
+    if (!RegExp(r'^[A-Z0-9]{4,20}$').hasMatch(code)) {
+      if (mounted) {
+        setState(() {
+          _isReferralValid = false;
+          _referralMessage = 'Please enter a valid referral code format';
+          _lastValidatedReferralCode = '';
+        });
+      }
+      return false;
+    }
+    if (!force && code == _lastValidatedReferralCode && _isReferralValid == true) {
+      return true;
     }
     setState(() => _isCheckingReferral = true);
     final (isValid, message, failure) =
         await sl<AuthRepository>().checkReferralCode(code: code);
-    if (!mounted) return;
+    if (!mounted) return false;
+    final valid = failure == null && isValid;
     setState(() {
       _isCheckingReferral = false;
-      _isReferralValid = failure == null ? isValid : null;
-      _referralMessage = failure == null ? message : '';
+      _isReferralValid = failure == null ? valid : false;
+      _referralMessage = failure == null
+          ? message
+          : 'Unable to validate referral code';
+      _lastValidatedReferralCode = valid ? code : '';
     });
+    return valid;
   }
 
-  void _onAgreeAndContinue(BuildContext context) {
+  Future<void> _onAgreeAndContinue(BuildContext context) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final rawPhone =
-        widget.phoneNumber.replaceAll('+91', '').replaceAll(' ', '').trim();
+    final referralCode = _normalizeReferralCode(_referralCodeController.text);
+    if (referralCode.isNotEmpty) {
+      final isValid = await _checkReferralCode(force: true);
+      if (!isValid) return;
+    }
+    _lastSubmittedReferralCode = referralCode;
     context.read<AuthBloc>().add(AuthRegisterRequested(
           name: _nameController.text.trim(),
-          phone: rawPhone,
+          phone: _rawPhone,
           email: _emailController.text.trim().isNotEmpty
               ? _emailController.text.trim()
               : null,
+          referralCode: referralCode.isNotEmpty ? referralCode : null,
         ));
   }
 
   void _onRegistrationSuccess(BuildContext context) {
     final usedValidReferral =
-        _isReferralValid == true && _referralCodeController.text.trim().isNotEmpty;
+        _lastSubmittedReferralCode.isNotEmpty && _isReferralValid == true;
     context.go(
-      HomepageWidget.routePath,
-      extra: usedValidReferral ? {'showReferralBonus': true} : null,
+      AddressSelectionWidget.routePath,
+      extra: {
+        'returnToHome': true,
+        'showReferralBonus': usedValidReferral,
+      },
     );
   }
 
@@ -303,6 +364,10 @@ class _SignupWidgetState extends State<SignupWidget> {
             controller: _referralCodeController,
             focusNode: _referralFocusNode,
             textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+              LengthLimitingTextInputFormatter(20),
+            ],
             onChanged: _onReferralCodeChanged,
             decoration:
                 AppFormFieldStyles.outlinedDecoration('Have a referral code?')

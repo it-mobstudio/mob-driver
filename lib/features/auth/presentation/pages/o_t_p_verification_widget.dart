@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '/index.dart';
@@ -43,7 +44,9 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (AuthSession.instance.isAuthenticated) {
-        context.go(HomepageWidget.routePath);
+        context.go(AuthSession.instance.needsRegistration
+            ? SignupWidget.routePath
+            : HomepageWidget.routePath);
       }
     });
     _startResendTimer();
@@ -105,8 +108,13 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
               SignupWidget.routePath,
               extra: {'phoneNumber': widget.phoneNumber},
             );
-          } else {
+          } else if (SelectedAddressStore.hasSelectedAddress) {
             context.go(HomepageWidget.routePath);
+          } else {
+            context.go(
+              AddressSelectionWidget.routePath,
+              extra: {'returnToHome': true},
+            );
           }
         } else if (state is AuthOtpSent) {
           _startResendTimer();

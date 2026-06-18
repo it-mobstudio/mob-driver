@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/features/home/domain/entities/home_entity.dart';
+import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 
@@ -16,20 +20,35 @@ class HomeHeader extends StatefulWidget {
 
 class _HomeHeaderState extends State<HomeHeader> {
   AddressEntity? _selectedAddress;
+  StoreOpenStatusEntity? _storeStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSelectedAddress();
+    _loadStoreStatus();
+  }
 
   @override
   Widget build(BuildContext context) {
     final selectedAddress = _selectedAddress;
+    final storeStatus = _storeStatus;
     final addressLabel = selectedAddress == null
-        ? 'Home'
+        ? 'Select location'
         : selectedAddress.addressTag.trim().isNotEmpty
             ? selectedAddress.addressTag.trim()
             : selectedAddress.locationName.trim().isNotEmpty
                 ? selectedAddress.locationName.trim()
                 : 'Home';
     final addressText = selectedAddress == null
-        ? 'Magarpatta Inner Circle, Magarpatta'
+        ? 'Tap to set your delivery address'
         : _selectedAddressText(selectedAddress);
+    final deliveryText = storeStatus?.message.trim().isNotEmpty == true
+        ? storeStatus!.message.trim()
+        : '1-4 hrs delivery';
+    final deliveryIcon = storeStatus?.isOpen == false
+        ? 'assets/images/timer-delivery.svg'
+        : 'assets/images/thunder.svg';
 
     return Container(
       color: const Color(0xFF121212),
@@ -53,18 +72,22 @@ class _HomeHeaderState extends State<HomeHeader> {
                       Row(
                         children: [
                           SvgPicture.asset(
-                            'assets/images/thunder.svg',
+                            deliveryIcon,
                             width: 18,
                             height: 18,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            '1-4 hrs delivery',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 19,
-                              fontWeight: FontWeight.w700,
-                              height: 28 / 19,
+                          Expanded(
+                            child: Text(
+                              deliveryText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                height: 28 / 19,
+                              ),
                             ),
                           ),
                         ],
@@ -155,7 +178,20 @@ class _HomeHeaderState extends State<HomeHeader> {
       AddressSelectionWidget.routePath,
     );
     if (!mounted || selected == null) return;
+    await SelectedAddressStore.save(selected);
     setState(() => _selectedAddress = selected);
+  }
+
+  Future<void> _loadSelectedAddress() async {
+    final selected = await SelectedAddressStore.read();
+    if (!mounted || selected == null) return;
+    setState(() => _selectedAddress = selected);
+  }
+
+  Future<void> _loadStoreStatus() async {
+    final (status, failure) = await sl<HomeRepository>().getStoreOpenStatus();
+    if (!mounted || failure != null || status == null) return;
+    setState(() => _storeStatus = status);
   }
 
   String _selectedAddressText(AddressEntity address) {

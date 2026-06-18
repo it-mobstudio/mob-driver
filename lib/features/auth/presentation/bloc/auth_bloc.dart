@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 
 // ── Events ───────────────────────────────────────────────────────────────────
@@ -25,12 +26,14 @@ final class AuthRegisterRequested extends AuthEvent {
     this.email,
     this.gstin,
     this.businessName,
+    this.referralCode,
   });
   final String name;
   final String? phone;
   final String? email;
   final String? gstin;
   final String? businessName;
+  final String? referralCode;
 }
 
 final class AuthSignOutRequested extends AuthEvent {}
@@ -123,6 +126,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       email: event.email,
       gstin: event.gstin,
       businessName: event.businessName,
+      referralCode: event.referralCode,
     );
     if (failure != null) {
       emit(AuthError(failure.message));
@@ -138,6 +142,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     await AuthSession.instance.signOut();
+    await SelectedAddressStore.clear();
     emit(AuthSignedOut());
   }
 }

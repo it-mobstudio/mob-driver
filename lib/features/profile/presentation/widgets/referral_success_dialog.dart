@@ -18,15 +18,19 @@ class ReferralSuccessDialog {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       transitionDuration: const Duration(milliseconds: 300),
       transitionBuilder: (ctx, animation, _, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 0.15),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-          )),
-          child: FadeTransition(opacity: animation, child: child),
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.18),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
         );
       },
       pageBuilder: (ctx, _, __) => _ReferralSuccessSheet(
@@ -61,44 +65,191 @@ class _ReferralSuccessSheet extends StatelessWidget {
         ? walletBalance.toStringAsFixed(0)
         : walletBalance.toStringAsFixed(2);
 
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Banner image header
-              Stack(
+    return Material(
+      color: Colors.transparent,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth > 480
+              ? 480.0
+              : constraints.maxWidth;
+          final sheetHeight =
+              (constraints.maxHeight * 0.58).clamp(380.0, 430.0).toDouble();
+          final heroHeight =
+              (maxWidth * 0.42).clamp(128.0, 168.0).toDouble();
+          const closeButtonSize = 30.0;
+
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: SizedBox(
+              width: maxWidth,
+              height: sheetHeight + closeButtonSize,
+              child: Stack(
                 clipBehavior: Clip.none,
+                alignment: Alignment.topCenter,
                 children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                    child: Image.asset(
-                      'assets/images/mobReferalBanner.webp',
-                      width: double.infinity,
-                      height: 200,
-                      fit: BoxFit.cover,
+                  Positioned(
+                    top: closeButtonSize,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Container(color: Colors.white),
+                          ),
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: SizedBox(
+                              height: heroHeight,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    height: heroHeight * 0.68,
+                                    child: const DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.centerLeft,
+                                          end: Alignment.centerRight,
+                                          colors: [
+                                            Color(0xFFF3A43D),
+                                            Color(0xFFF7C46D),
+                                            Color(0xFFE89032),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Image.asset(
+                                    'assets/images/mobReferalBanner.webp',
+                                    width: maxWidth,
+                                    height: heroHeight,
+                                    fit: BoxFit.cover,
+                                    alignment: Alignment.topCenter,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: heroHeight,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              color: Colors.white,
+                              child: Column(
+                                children: [
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    '₹$amountStr',
+                                    style: GoogleFonts.inter(
+                                      color: const Color(0xFF0A243F),
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'added to mobwallet',
+                                    style: GoogleFonts.inter(
+                                      color: const Color(0xFF0A243F),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      height: 20 / 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Valid for $validDays days',
+                                    style: GoogleFonts.inter(
+                                      color: const Color(0xFFE9441F),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      height: 16 / 12,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 22),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).pop();
+                                      onViewWallet?.call();
+                                    },
+                                    child: Container(
+                                      width: maxWidth * 0.68,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 230,
+                                        maxWidth: 306,
+                                      ),
+                                      height: 44,
+                                      padding: const EdgeInsets.only(
+                                        left: 18,
+                                        right: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF4F4F4),
+                                        borderRadius: BorderRadius.circular(22),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'mobwallet balance: ₹$balanceStr',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.inter(
+                                                color: const Color(0xFF0A243F),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                height: 16 / 12,
+                                              ),
+                                            ),
+                                          ),
+                                          Container(
+                                            width: 28,
+                                            height: 28,
+                                            decoration: const BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.chevron_right,
+                                              color: Color(0xFF0A243F),
+                                              size: 20,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  // Close button
                   Positioned(
-                    top: 10,
-                    right: 10,
+                    top: closeButtonSize * 0.16,
                     child: GestureDetector(
                       onTap: () => Navigator.of(context).pop(),
                       child: Container(
-                        width: 32,
-                        height: 32,
+                        width: closeButtonSize,
+                        height: closeButtonSize,
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.35),
+                          color: const Color(0xFF8F8F8F)
+                              .withValues(alpha: 0.92),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -111,80 +262,9 @@ class _ReferralSuccessSheet extends StatelessWidget {
                   ),
                 ],
               ),
-              // Content section
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                child: Column(
-                  children: [
-                    Text(
-                      '₹$amountStr',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 40,
-                        fontWeight: FontWeight.w800,
-                        height: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'added to mobwallet',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        height: 24 / 16,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Valid for $validDays days',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFFE85D26),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // Wallet balance pill button
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        onViewWallet?.call();
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF5F5F5),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'mobwallet balance: ₹$balanceStr',
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF0A243F),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const Icon(
-                              Icons.chevron_right,
-                              color: Color(0xFF0A243F),
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

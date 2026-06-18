@@ -6,3 +6,15 @@ export 'package:m_o_b_demand_side/features/home/data/models/home_models.dart';
 typedef HomeEntity = HomeDataModel;
 typedef CategoryEntity = HomeCategoryModel;
 typedef ProductSectionEntity = HomeProductSectionModel;
+
+class StoreOpenStatusEntity {
+  const StoreOpenStatusEntity({
+    required this.message,
+    required this.isOpen,
+    this.deliveryDate = '',
+  });
+
+  final String message;
+  final bool isOpen;
+  final String deliveryDate;
+}

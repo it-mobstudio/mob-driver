@@ -19,10 +19,12 @@ class ItemCard extends StatefulWidget {
     this.isUpdatingResolver,
     this.onCartQuantityChanged,
     this.onNotifyTap,
+    this.width = 136,
   });
 
   final ProductModel product;
   final VoidCallback? onTap;
+  final double width;
   final int? cartQuantity;
   final bool isCartUpdating;
   final int Function(String productId)? quantityResolver;
@@ -106,14 +108,15 @@ class _ItemCardState extends State<ItemCard> {
     final discount = product.vendorPricing.discount;
     final shouldShowOutOfStock = product.shouldShowNotify;
 
+    final cardWidth = widget.width;
     return SizedBox(
-      width: 136,
-      height: 276,
+      width: cardWidth,
+      height: cardWidth + 140,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 156,
+            height: cardWidth + 20,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
@@ -122,8 +125,8 @@ class _ItemCardState extends State<ItemCard> {
                       () => context
                           .push('${ProductDetailPage.routePath}/${product.slug}'),
                   child: Container(
-                    width: 136,
-                    height: 136,
+                    width: cardWidth,
+                    height: cardWidth,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),

@@ -27,35 +27,60 @@ class ProductRepositoryImpl implements ProductRepository {
         sortBy: sortBy,
         queryParameters: queryParameters,
       );
-      final data = _data(body);
-      final productsRaw = _list(data['results'] ?? data['products'] ?? data['data']);
-      final subCatsRaw = _list(data['sub_categories'] ?? data['subCategories']);
-      final paginationMap = data['pagination'] is Map
-          ? Map<String, dynamic>.from(data['pagination'] as Map)
-          : <String, dynamic>{
-              'is_next_page': data['next'] != null,
-              'next_page': page + 1,
-            };
-
-      return (
-        BrowseProductsResult(
-          products: productsRaw
-              .whereType<Map>()
-              .map((e) => ProductModel.fromMap(Map<String, dynamic>.from(e)))
-              .toList(),
-          subCategories: subCatsRaw
-              .whereType<Map>()
-              .map((e) => SubCategoryModel.fromMap(Map<String, dynamic>.from(e)))
-              .toList(),
-          pagination: PaginationModel.fromMap(paginationMap),
-        ),
-        null,
-      );
+      return (_parseBrowseResult(body, page), null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {
       return (null, UnknownFailure(e.toString()));
     }
+  }
+
+  @override
+  Future<(BrowseResultEntity?, AppFailure?)> searchCatalog({
+    required String query,
+    int page = 1,
+    bool isProfessional = true,
+    String? sortBy,
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
+  }) async {
+    try {
+      final body = await _datasource.searchCatalog(
+        query: query,
+        page: page,
+        isProfessional: isProfessional,
+        sortBy: sortBy,
+        queryParameters: queryParameters,
+      );
+      return (_parseBrowseResult(body, page), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  BrowseProductsResult _parseBrowseResult(Map<String, dynamic> body, int page) {
+    final data = _data(body);
+    final productsRaw = _list(data['results'] ?? data['products'] ?? data['data']);
+    final subCatsRaw = _list(data['sub_categories'] ?? data['subCategories']);
+    final paginationMap = data['pagination'] is Map
+        ? Map<String, dynamic>.from(data['pagination'] as Map)
+        : <String, dynamic>{
+            'is_next_page': data['next'] != null,
+            'next_page': page + 1,
+          };
+
+    return BrowseProductsResult(
+      products: productsRaw
+          .whereType<Map>()
+          .map((e) => ProductModel.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
+      subCategories: subCatsRaw
+          .whereType<Map>()
+          .map((e) => SubCategoryModel.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
+      pagination: PaginationModel.fromMap(paginationMap),
+    );
   }
 
   @override
@@ -68,18 +93,35 @@ class ProductRepositoryImpl implements ProductRepository {
         category: category,
         subCategory: subCategory,
       );
-      final list = _extractFilterList(raw);
-      final filters = list
-          .whereType<Map>()
-          .map((e) => BrowseFilterSection.fromMap(Map<String, dynamic>.from(e)))
-          .where((f) => f.key.isNotEmpty)
-          .toList();
-      return (filters, null);
+      return (_parseFilterSections(raw), null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {
       return (null, UnknownFailure(e.toString()));
     }
+  }
+
+  @override
+  Future<(List<FilterSectionEntity>?, AppFailure?)> getSearchFilters({
+    required String query,
+  }) async {
+    try {
+      final raw = await _datasource.getSearchFilters(query: query);
+      return (_parseFilterSections(raw), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  List<FilterSectionEntity> _parseFilterSections(dynamic raw) {
+    final list = _extractFilterList(raw);
+    return list
+        .whereType<Map>()
+        .map((e) => BrowseFilterSection.fromMap(Map<String, dynamic>.from(e)))
+        .where((f) => f.key.isNotEmpty)
+        .toList();
   }
 
   @override
@@ -127,6 +169,37 @@ class ProductRepositoryImpl implements ProductRepository {
           .map((e) => ProductModel.fromMap(Map<String, dynamic>.from(e)))
           .toList();
       return (products, null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(SearchSuggestionsEntity?, AppFailure?)> searchSuggestions({
+    required String query,
+  }) async {
+    try {
+      final raw = await _datasource.searchProducts(query: query);
+      final body = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+      final data = _data(body);
+      final productsRaw = _list(data['results'] ?? data['products'] ?? data['data']);
+      final brandsRaw = _list(data['brands']);
+      return (
+        ProductSearchSuggestions(
+          products: productsRaw
+              .whereType<Map>()
+              .map((e) => ProductModel.fromMap(Map<String, dynamic>.from(e)))
+              .toList(),
+          brandNames: brandsRaw
+              .whereType<Map>()
+              .map((e) => (e['brand_name'] ?? '').toString().trim())
+              .where((name) => name.isNotEmpty)
+              .toList(),
+        ),
+        null,
+      );
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {

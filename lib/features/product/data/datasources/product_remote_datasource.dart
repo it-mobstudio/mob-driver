@@ -15,12 +15,22 @@ abstract interface class ProductRemoteDatasource {
     String? subCategory,
   });
 
+  Future<dynamic> getSearchFilters({required String query});
+
   Future<Map<String, dynamic>> getProductDetail({
     required String slug,
     String? mobSku,
   });
 
   Future<dynamic> searchProducts({required String query, int page = 1});
+
+  Future<Map<String, dynamic>> searchCatalog({
+    required String query,
+    int page = 1,
+    bool isProfessional = true,
+    String? sortBy,
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
+  });
 }
 
 class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
@@ -85,6 +95,36 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
     final response = await _dio.get<dynamic>(
       '/home/product_search/',
       queryParameters: {'search': query, 'page': page},
+    );
+    return response.data;
+  }
+
+  @override
+  Future<Map<String, dynamic>> searchCatalog({
+    required String query,
+    int page = 1,
+    bool isProfessional = true,
+    String? sortBy,
+    Map<String, dynamic> queryParameters = const <String, dynamic>{},
+  }) async {
+    final response = await _dio.get<dynamic>(
+      '/home/product_search/',
+      queryParameters: <String, dynamic>{
+        ...queryParameters,
+        'search': query,
+        'page': page,
+        'is_professional': isProfessional,
+        if (sortBy != null && sortBy.trim().isNotEmpty) 'sort_by': sortBy.trim(),
+      },
+    );
+    return _toMap(response.data);
+  }
+
+  @override
+  Future<dynamic> getSearchFilters({required String query}) async {
+    final response = await _dio.get<dynamic>(
+      '/home/get_filters/',
+      queryParameters: <String, dynamic>{'search': query},
     );
     return response.data;
   }

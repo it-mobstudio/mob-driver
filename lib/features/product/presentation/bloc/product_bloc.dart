@@ -14,14 +14,24 @@ final class ProductDetailRequested extends ProductEvent {
 
 final class ProductListRequested extends ProductEvent {
   ProductListRequested({
-    required this.categorySlug,
+    this.categorySlug,
+    this.searchQuery,
     this.subCategory,
     this.page = 1,
     this.isProfessional = true,
     this.sortBy,
     this.queryParameters = const <String, dynamic>{},
-  });
-  final String categorySlug;
+  }) : assert(
+          categorySlug != null || searchQuery != null,
+          'Either categorySlug (browse) or searchQuery (search) is required.',
+        );
+
+  /// Browse-by-category mode. Mutually exclusive with [searchQuery].
+  final String? categorySlug;
+
+  /// Search mode — when set, results come from the search endpoint instead
+  /// of the category browse endpoint.
+  final String? searchQuery;
   final String? subCategory;
   final int page;
   final bool isProfessional;
@@ -33,10 +43,15 @@ final class ProductListNextPageRequested extends ProductEvent {}
 
 final class ProductFiltersRequested extends ProductEvent {
   ProductFiltersRequested({
-    required this.category,
+    this.category,
+    this.searchQuery,
     this.subCategory,
-  });
-  final String category;
+  }) : assert(
+          category != null || searchQuery != null,
+          'Either category (browse) or searchQuery (search) is required.',
+        );
+  final String? category;
+  final String? searchQuery;
   final String? subCategory;
 }
 
@@ -68,8 +83,9 @@ final class ProductListLoaded extends ProductState {
     required this.products,
     required this.subCategories,
     required this.pagination,
-    required this.categorySlug,
     required this.currentPage,
+    this.categorySlug,
+    this.searchQuery,
     this.subCategory,
     this.filters = const [],
     this.isLoadingMore = false,
@@ -79,13 +95,16 @@ final class ProductListLoaded extends ProductState {
   final List<ProductEntity> products;
   final List<SubCategoryModel> subCategories;
   final PaginationModel pagination;
-  final String categorySlug;
+  final String? categorySlug;
+  final String? searchQuery;
   final String? subCategory;
   final int currentPage;
   final List<FilterSectionEntity> filters;
   final bool isLoadingMore;
   final String? sortBy;
   final Map<String, dynamic> queryParameters;
+
+  bool get isSearchMode => searchQuery != null;
 
   ProductListLoaded copyWith({
     List<ProductEntity>? products,
@@ -101,6 +120,7 @@ final class ProductListLoaded extends ProductState {
       subCategories: subCategories,
       pagination: pagination ?? this.pagination,
       categorySlug: categorySlug,
+      searchQuery: searchQuery,
       subCategory: subCategory,
       currentPage: currentPage ?? this.currentPage,
       filters: filters ?? this.filters,
@@ -159,14 +179,22 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     emit(ProductLoading());
-    final (result, failure) = await _repository.browseProducts(
-      categorySlug: event.categorySlug,
-      subCategory: event.subCategory,
-      page: event.page,
-      isProfessional: event.isProfessional,
-      sortBy: event.sortBy,
-      queryParameters: event.queryParameters,
-    );
+    final (result, failure) = event.searchQuery != null
+        ? await _repository.searchCatalog(
+            query: event.searchQuery!,
+            page: event.page,
+            isProfessional: event.isProfessional,
+            sortBy: event.sortBy,
+            queryParameters: event.queryParameters,
+          )
+        : await _repository.browseProducts(
+            categorySlug: event.categorySlug!,
+            subCategory: event.subCategory,
+            page: event.page,
+            isProfessional: event.isProfessional,
+            sortBy: event.sortBy,
+            queryParameters: event.queryParameters,
+          );
     if (failure != null) {
       emit(ProductError(failure.message));
     } else {
@@ -175,6 +203,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         subCategories: result.subCategories,
         pagination: result.pagination,
         categorySlug: event.categorySlug,
+        searchQuery: event.searchQuery,
         subCategory: event.subCategory,
         currentPage: event.page,
         sortBy: event.sortBy,
@@ -193,13 +222,20 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
 
     emit(current.copyWith(isLoadingMore: true));
     final nextPage = current.currentPage + 1;
-    final (result, failure) = await _repository.browseProducts(
-      categorySlug: current.categorySlug,
-      subCategory: current.subCategory,
-      page: nextPage,
-      sortBy: current.sortBy,
-      queryParameters: current.queryParameters,
-    );
+    final (result, failure) = current.isSearchMode
+        ? await _repository.searchCatalog(
+            query: current.searchQuery!,
+            page: nextPage,
+            sortBy: current.sortBy,
+            queryParameters: current.queryParameters,
+          )
+        : await _repository.browseProducts(
+            categorySlug: current.categorySlug!,
+            subCategory: current.subCategory,
+            page: nextPage,
+            sortBy: current.sortBy,
+            queryParameters: current.queryParameters,
+          );
     if (failure != null) {
       emit(current.copyWith(isLoadingMore: false));
     } else {
@@ -216,10 +252,12 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     ProductFiltersRequested event,
     Emitter<ProductState> emit,
   ) async {
-    final (filters, failure) = await _repository.getFilters(
-      category: event.category,
-      subCategory: event.subCategory,
-    );
+    final (filters, failure) = event.searchQuery != null
+        ? await _repository.getSearchFilters(query: event.searchQuery!)
+        : await _repository.getFilters(
+            category: event.category!,
+            subCategory: event.subCategory,
+          );
     if (failure != null) return;
     final current = state;
     if (current is ProductListLoaded) {

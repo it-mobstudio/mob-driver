@@ -60,9 +60,7 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                         context.read<HomeBloc>().add(HomeRefreshRequested()),
                     child: CustomScrollView(
                       slivers: [
-                        // Location header — scrolls away with content
                         const SliverToBoxAdapter(child: HomeHeader()),
-                        // Search bar — stays pinned with frosted glass when scrolled
                         const SliverPersistentHeader(
                           pinned: true,
                           delegate: _StickySearchDelegate(),

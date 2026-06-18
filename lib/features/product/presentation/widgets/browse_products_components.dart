@@ -202,6 +202,7 @@ class BrowseProductFeed extends StatelessWidget {
     required this.onNotifyTap,
     required this.onProductTypeTap,
     required this.onRequestTap,
+    this.crossAxisCount = 2,
   });
 
   final ScrollController scrollController;
@@ -212,6 +213,7 @@ class BrowseProductFeed extends StatelessWidget {
   final Set<String> selectedProductTypeOptions;
   final String category;
   final String categorySlug;
+  final int crossAxisCount;
   final bool hasMore;
   final bool isLoading;
   final bool loadMoreFailed;
@@ -227,7 +229,7 @@ class BrowseProductFeed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rowCount = (products.length / 2).ceil();
+    final rowCount = (products.length / crossAxisCount).ceil();
     final productTypeLabels = _productTypeLabels();
     final brands = brandOptions
         .where((option) => option.trim().isNotEmpty)
@@ -273,7 +275,8 @@ class BrowseProductFeed extends StatelessWidget {
         if (productRowIndex < rowCount) {
           return _ProductGridRow(
             products: products,
-            startIndex: productRowIndex * 2,
+            startIndex: productRowIndex * crossAxisCount,
+            crossAxisCount: crossAxisCount,
             cartQtyByProductId: cartQtyByProductId,
             cartUpdatingProductId: cartUpdatingProductId,
             onProductTap: onProductTap,
@@ -505,10 +508,14 @@ class _ProductGridRow extends StatelessWidget {
     required this.onProductTap,
     required this.onCartQuantityChanged,
     required this.onNotifyTap,
+    this.crossAxisCount = 2,
   });
+
+  static const double _columnGap = 10;
 
   final List<ProductModel> products;
   final int startIndex;
+  final int crossAxisCount;
   final Map<String, int> cartQtyByProductId;
   final String? cartUpdatingProductId;
   final void Function(ProductModel product) onProductTap;
@@ -520,25 +527,39 @@ class _ProductGridRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 34),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _cardForProduct(products[startIndex])),
-          const SizedBox(width: 10),
-          Expanded(
-            child: startIndex + 1 < products.length
-                ? _cardForProduct(products[startIndex + 1])
-                : const SizedBox(height: 276),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final totalGap = _columnGap * (crossAxisCount - 1);
+          final cardWidth =
+              (constraints.maxWidth - totalGap) / crossAxisCount;
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var column = 0; column < crossAxisCount; column++) ...[
+                if (column > 0) const SizedBox(width: _columnGap),
+                SizedBox(
+                  width: cardWidth,
+                  child: startIndex + column < products.length
+                      ? _cardForProduct(
+                          products[startIndex + column],
+                          cardWidth,
+                        )
+                      : SizedBox(height: cardWidth + 140),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _cardForProduct(ProductModel product) {
+  Widget _cardForProduct(ProductModel product, double width) {
     return Center(
       child: ItemCard(
         product: product,
+        width: width,
         onTap: () => onProductTap(product),
         quantityResolver: (productId) => cartQtyByProductId[productId] ?? 0,
         isUpdatingResolver: (productId) => cartUpdatingProductId == productId,

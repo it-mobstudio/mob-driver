@@ -100,6 +100,31 @@ class AddressEntity {
     );
   }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'latitude': latitude,
+      'longitude': longitude,
+      'google_map_link': googleMapLink,
+      'formatted_address': formattedAddress,
+      'city': city,
+      'state': state,
+      'pincode': pincode,
+      'sublocality': sublocality,
+      'locationName': locationName,
+      'isLocationServiceable': isLocationServiceable,
+      'name': name,
+      'email': email,
+      'address_line_1': addressLine1,
+      'address_line_2': addressLine2,
+      'site_person': sitePerson,
+      'site_person_mobile': sitePersonMobile,
+      'address_tag': addressTag,
+      'phone_number': phoneNumber,
+      'project_name': projectName,
+    };
+  }
+
   Map<String, dynamic> toCreatePayload() {
     return {
       'latitude': latitude,

@@ -581,17 +581,31 @@ class PaginationModel {
   const PaginationModel({
     required this.isNextPage,
     required this.nextPage,
+    this.totalEntries = 0,
   });
 
   final bool isNextPage;
   final int nextPage;
+  final int totalEntries;
 
   factory PaginationModel.fromMap(Map<String, dynamic> map) {
     return PaginationModel(
       isNextPage: map['is_next_page'] == true,
       nextPage: int.tryParse(map['next_page']?.toString() ?? '0') ?? 0,
+      totalEntries:
+          int.tryParse(map['total_entries']?.toString() ?? '0') ?? 0,
     );
   }
+}
+
+class ProductSearchSuggestions {
+  const ProductSearchSuggestions({
+    required this.products,
+    required this.brandNames,
+  });
+
+  final List<ProductModel> products;
+  final List<String> brandNames;
 }
 
 class BrowseProductsResult {
