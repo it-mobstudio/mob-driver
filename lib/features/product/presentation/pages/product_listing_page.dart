@@ -23,10 +23,14 @@ class ProductListingPage extends StatefulWidget {
     super.key,
     required this.category,
     required this.slug,
+    this.initialSubCategorySlug,
+    this.initialSubCategoryName,
   });
 
   final String category;
   final String slug;
+  final String? initialSubCategorySlug;
+  final String? initialSubCategoryName;
 
   static const String routeName = '/ProductListingPage';
   static const String routePath = '/productlisting';
@@ -52,9 +56,12 @@ class _ProductListingPageState extends State<ProductListingPage> {
   @override
   void initState() {
     super.initState();
+    _selectedSubCategorySlug = widget.initialSubCategorySlug;
+    _selectedSubCategoryName = widget.initialSubCategoryName;
     _productBloc = sl<ProductBloc>()..add(
       ProductListRequested(
         categorySlug: widget.slug,
+        subCategory: _selectedSubCategorySlug,
       ),
     );
     _scrollController.addListener(_onScroll);
@@ -539,6 +546,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
               setState(() {
                 if (state.subCategories.isNotEmpty) {
                   _subCategories = state.subCategories;
+                  _syncSelectedSubCategoryIndex();
                 }
                 if (state.filters.isNotEmpty) {
                   _filterSections = state.filters;
@@ -657,6 +665,19 @@ class _ProductListingPageState extends State<ProductListingPage> {
         ),
       ],
     );
+  }
+
+  void _syncSelectedSubCategoryIndex() {
+    final selectedSlug = _selectedSubCategorySlug?.trim();
+    if (selectedSlug == null || selectedSlug.isEmpty) {
+      _selectedSubCategoryIndex = 0;
+      return;
+    }
+
+    final matchedIndex = _subCategories.indexWhere(
+      (item) => item.browseSlug == selectedSlug || item.slug == selectedSlug,
+    );
+    _selectedSubCategoryIndex = matchedIndex < 0 ? 0 : matchedIndex + 1;
   }
 
   Widget _buildProductPane({

@@ -11,7 +11,6 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_h
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
-import 'package:m_o_b_demand_side/shared/main_scaffold.dart';
 
 class MyAccountWidget extends StatefulWidget {
   const MyAccountWidget({super.key});
@@ -41,9 +40,8 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
   Widget build(BuildContext context) {
     return BlocProvider<ProfileBloc>.value(
       value: _profileBloc,
-      child: const MainScaffold(
-        currentIndex: -1,
-        child: _ProfileBody(),
+      child: const Scaffold(
+        body: _ProfileBody(),
       ),
     );
   }
@@ -94,6 +92,17 @@ class _ProfileBody extends StatelessWidget {
                         ),
                       ),
                       child: _HeaderContent(profile: profile),
+                    ),
+                    Positioned(
+                      left: 4,
+                      top: 4,
+                      child: IconButton(
+                        onPressed: () => context.canPop()
+                            ? context.pop()
+                            : context.go('/homepage'),
+                        icon: const Icon(Icons.arrow_back,
+                            color: Color(0xFF0E2545)),
+                      ),
                     ),
                     Positioned(
                       left: 16,

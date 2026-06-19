@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
@@ -1376,7 +1377,12 @@ class BottomCheckoutBar extends StatelessWidget {
           ),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: active ? onProceed : null,
+            onTap: active
+                ? () {
+                    AppHaptics.lightTap();
+                    onProceed();
+                  }
+                : null,
             child: Container(
               height: 54,
               padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -1555,79 +1561,91 @@ class EmptyCartBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         topBar,
-        shippingTile,
         Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    height: 130,
-                    width: 130,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF4FF),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0A243F).withValues(alpha: 0.06),
-                          blurRadius: 20,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.shopping_cart_outlined,
-                      size: 58,
-                      color: Color(0xFF0A243F),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Your cart is empty',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF0A243F),
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      height: 28 / 20,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Looks like you haven\'t added\nanything to your cart yet.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF767C8F),
-                      fontSize: 14,
-                      height: 22 / 14,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () => GoRouter.of(context).go('/homepage'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0A243F),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+          child: ColoredBox(
+            color: const Color(0xFFF0F0F0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                shippingTile,
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            height: 130,
+                            width: 130,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF4FF),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0A243F)
+                                      .withValues(alpha: 0.06),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.shopping_cart_outlined,
+                              size: 58,
+                              color: Color(0xFF0A243F),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Your cart is empty',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF0A243F),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              height: 28 / 20,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Looks like you haven\'t added\nanything to your cart yet.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF767C8F),
+                              fontSize: 14,
+                              height: 22 / 14,
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: () =>
+                                  GoRouter.of(context).go('/homepage'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0A243F),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Start Shopping',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        'Start Shopping',
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

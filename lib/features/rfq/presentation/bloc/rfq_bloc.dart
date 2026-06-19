@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/uploaded_file.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/entities/rfq_entity.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/repositories/rfq_repository.dart';
@@ -82,6 +83,7 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     emit(RfqLoading());
     final (rfqs, failure) = await _repository.getRfqList();
     if (failure != null) {
+      AppHaptics.error();
       emit(RfqError(failure.message));
     } else {
       emit(RfqListLoaded(rfqs!));
@@ -93,6 +95,7 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     emit(RfqLoading());
     final (rfq, failure) = await _repository.getRfqDetail(event.id);
     if (failure != null) {
+      AppHaptics.error();
       emit(RfqError(failure.message));
     } else {
       emit(RfqDetailLoaded(rfq!));
@@ -104,10 +107,12 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     emit(RfqLoading());
     final (success, failure) = await _repository.submitRfq(event.payload);
     if (failure != null) {
+      AppHaptics.error();
       emit(RfqError(failure.message));
     } else if (success) {
       emit(RfqSubmitted());
     } else {
+      AppHaptics.error();
       emit(RfqError('RFQ submission failed.'));
     }
   }
@@ -122,6 +127,7 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
       images: event.images,
     );
     if (failure != null) {
+      AppHaptics.error();
       emit(MagicQuoteError(failure.message));
     } else {
       emit(MagicQuoteSubmitted(response ?? const <String, dynamic>{}));

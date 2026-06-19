@@ -7,7 +7,6 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
-import 'package:m_o_b_demand_side/shared/main_scaffold.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'order_detail_page.dart';
 
@@ -43,13 +42,9 @@ class _OrdersPageState extends State<OrdersPage> {
   Widget build(BuildContext context) {
     return BlocProvider<OrdersBloc>.value(
       value: _ordersBloc,
-      child: MainScaffold(
-        currentIndex: 2,
-        showTopSearchBar: false,
-        showLocationheader: false,
-        child: Scaffold(
-          backgroundColor: Colors.white,
-          body: SafeArea(
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
             bottom: false,
             child: Column(
               children: [
@@ -118,8 +113,7 @@ class _OrdersPageState extends State<OrdersPage> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   void _goBack(BuildContext context) {

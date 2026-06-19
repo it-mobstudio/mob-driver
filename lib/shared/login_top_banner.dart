@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '/index.dart';
-import 'package:go_router/go_router.dart';
 
 class LoginTopBanner extends StatelessWidget {
   const LoginTopBanner({super.key});
@@ -38,19 +36,7 @@ class LoginTopBanner extends StatelessWidget {
                       fit: BoxFit.contain,
                     ),
                     const Spacer(),
-                    GestureDetector(
-                      onTap: () {
-                        context.go(HomepageWidget.routePath);
-                      },
-                      child: const Text(
-                        'Skip',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
+                    const SizedBox(width: 32, height: 24),
                   ],
                 ),
                 SizedBox(height: size.height * 0.025),

@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/repositories/cart_repository.dart';
 
@@ -133,6 +134,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     emit(CartLoading());
     final (summary, failure) = await _repository.getCart(outOfStock: event.outOfStock);
     if (failure != null) {
+      AppHaptics.error();
       emit(CartError(failure.message));
     } else {
       emit(CartLoaded(summary: summary!));
@@ -178,6 +180,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
           );
 
     if (failure != null) {
+      AppHaptics.error();
       emit(current.copyWith(
         clearUpdatingKey: true,
         actionError: failure.message,
@@ -188,6 +191,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     // Add/remove endpoints don't return the full cart — fetch fresh state.
     final (freshSummary, freshFailure) = await _repository.getCart();
     if (freshFailure != null) {
+      AppHaptics.error();
       emit(current.copyWith(clearUpdatingKey: true));
     } else {
       emit(CartLoaded(
@@ -218,6 +222,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     );
 
     if (failure != null) {
+      AppHaptics.error();
       emit(current.copyWith(
           clearUpdatingKey: true, actionError: failure.message));
       return;
@@ -225,6 +230,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
     final (freshSummary, freshFailure) = await _repository.getCart();
     if (freshFailure != null) {
+      AppHaptics.error();
       emit(current.copyWith(clearUpdatingKey: true));
     } else {
       emit(CartLoaded(summary: freshSummary!));
@@ -256,6 +262,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     );
 
     if (failure != null) {
+      AppHaptics.error();
       emit(current.copyWith(
         isRedeemUpdating: false,
         actionError: failure.message,

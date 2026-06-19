@@ -8,7 +8,6 @@ import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
-import 'package:m_o_b_demand_side/shared/main_scaffold.dart';
 
 class CartPage extends StatefulWidget {
   static const String routeName = 'CartPage';
@@ -25,17 +24,13 @@ class _CartPageState extends State<CartPage> {
 
   @override
   Widget build(BuildContext context) {
-    return MainScaffold(
-      currentIndex: -1,
-      showTopSearchBar: false,
-      showLocationheader: false,
-      showBackButton: false,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF0F0F0),
-        body: SafeArea(
-          child: BlocBuilder<CartBloc, CartState>(
-            builder: (context, state) {
-              return switch (state) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: false,
+        child: BlocBuilder<CartBloc, CartState>(
+          builder: (context, state) {
+            return switch (state) {
                 CartInitial() || CartLoading() => const Center(
                     child: CircularProgressIndicator(),
                   ),
@@ -87,8 +82,7 @@ class _CartPageState extends State<CartPage> {
             },
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildCartWithItems(
@@ -103,62 +97,65 @@ class _CartPageState extends State<CartPage> {
           children: [
             const CartTopBar(),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 112),
-                children: [
-                  ShippingTile(
-                    title: _deliveryName(summary),
-                    subtitle: _deliveryDetails(summary),
-                    hasAddress: summary.hasDeliveryAddress,
-                    onAddressAction: () => _showAddressBottomSheet(summary),
-                  ),
-                  if (summary.savings > 0) ...[
-                    const SizedBox(height: 8),
-                    SavingsStrip(savings: summary.savings),
-                  ],
-                  const SizedBox(height: 12),
-                  ...summary.itemsBySeller.entries.map(
-                    (entry) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: SellerSection(
-                        sellerCode: entry.key,
-                        sellerItems: entry.value,
-                        isUpdatingCart: updatingItemKey != null,
-                        updatingItemKey: updatingItemKey,
-                        onQtyChanged: (item, qty) =>
-                            context.read<CartBloc>().add(
-                                  CartQuantityUpdateRequested(
-                                      item: item, newQty: qty),
-                                ),
-                        onQtyInputChanged: (item, text) {
-                          final qty = int.tryParse(text);
-                          if (qty != null) {
-                            context.read<CartBloc>().add(
-                                  CartQuantityUpdateRequested(
-                                      item: item, newQty: qty),
-                                );
-                          }
-                        },
-                        onRemove: (item) => context.read<CartBloc>().add(
-                              CartItemRemoveRequested(item: item),
-                            ),
+              child: ColoredBox(
+                color: const Color(0xFFF0F0F0),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 112),
+                  children: [
+                    ShippingTile(
+                      title: _deliveryName(summary),
+                      subtitle: _deliveryDetails(summary),
+                      hasAddress: summary.hasDeliveryAddress,
+                      onAddressAction: () => _showAddressBottomSheet(summary),
+                    ),
+                    if (summary.savings > 0) ...[
+                      const SizedBox(height: 8),
+                      SavingsStrip(savings: summary.savings),
+                    ],
+                    const SizedBox(height: 12),
+                    ...summary.itemsBySeller.entries.map(
+                      (entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SellerSection(
+                          sellerCode: entry.key,
+                          sellerItems: entry.value,
+                          isUpdatingCart: updatingItemKey != null,
+                          updatingItemKey: updatingItemKey,
+                          onQtyChanged: (item, qty) =>
+                              context.read<CartBloc>().add(
+                                    CartQuantityUpdateRequested(
+                                        item: item, newQty: qty),
+                                  ),
+                          onQtyInputChanged: (item, text) {
+                            final qty = int.tryParse(text);
+                            if (qty != null) {
+                              context.read<CartBloc>().add(
+                                    CartQuantityUpdateRequested(
+                                        item: item, newQty: qty),
+                                  );
+                            }
+                          },
+                          onRemove: (item) => context.read<CartBloc>().add(
+                                CartItemRemoveRequested(item: item),
+                              ),
+                        ),
                       ),
                     ),
-                  ),
-                  // const ViewCouponsTile(),
-                  const SizedBox(height: 12),
-                  OrderDetailsCard(
-                    subtotal: summary.subtotal,
-                    shipping: summary.shipping,
-                    tax: summary.tax,
-                    savings: summary.savings,
-                    total: _effectiveTotal(summary),
-                    earningPoints: summary.earningPoints,
-                  ),
-                  const SizedBox(height: 12),
-                  const CartActionRow(),
-                  const SizedBox(height: 12),
-                ],
+                    // const ViewCouponsTile(),
+                    const SizedBox(height: 12),
+                    OrderDetailsCard(
+                      subtotal: summary.subtotal,
+                      shipping: summary.shipping,
+                      tax: summary.tax,
+                      savings: summary.savings,
+                      total: _effectiveTotal(summary),
+                      earningPoints: summary.earningPoints,
+                    ),
+                    const SizedBox(height: 12),
+                    const CartActionRow(),
+                    const SizedBox(height: 12),
+                  ],
+                ),
               ),
             ),
           ],

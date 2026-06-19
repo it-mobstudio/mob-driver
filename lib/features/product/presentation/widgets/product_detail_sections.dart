@@ -1,8 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
+import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 
 class ProductDetailTopHeader extends StatelessWidget {
@@ -369,7 +371,14 @@ class ProductInfoBlock extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    if (brand.isNotEmpty) _BrandNameRow(brandName: brand),
+                    if (brand.isNotEmpty)
+                      _BrandNameRow(
+                        brandName: brand,
+                        onTap: () => context.push(
+                          '${BrandProductSearchPage.routePath}/${_slugFromLabel(brand)}?brand=${Uri.encodeComponent(brand)}',
+                          extra: <String, dynamic>{'brandName': brand},
+                        ),
+                      ),
                     const Spacer(),
                     if (product.rating > 0)
                       _RatingBadge(
@@ -1160,15 +1169,20 @@ class VariantOptionsSection extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Builder(builder: (context) {
-                final options = groupedVariants[key] ?? const <ProductVariantOption>[];
+                final options =
+                    groupedVariants[key] ?? const <ProductVariantOption>[];
                 final activeValue =
                     selectedVariants[key] ?? product.activeVariantSelections[key];
-                // Split into 2 rows: even indices → top, odd indices → bottom
+                final shouldSplitRows = options.length > 4;
                 final topRow = <({ProductVariantOption option, int index})>[];
                 final bottomRow = <({ProductVariantOption option, int index})>[];
                 for (var i = 0; i < options.length; i++) {
                   final record = (option: options[i], index: i);
-                  if (i.isEven) { topRow.add(record); } else { bottomRow.add(record); }
+                  if (!shouldSplitRows || i.isEven) {
+                    topRow.add(record);
+                  } else {
+                    bottomRow.add(record);
+                  }
                 }
                 Widget chip(ProductVariantOption opt, int idx) {
                   final selected = activeValue == opt.value ||
@@ -1189,7 +1203,8 @@ class VariantOptionsSection extends StatelessWidget {
                         children: [
                           for (var i = 0; i < topRow.length; i++) ...[
                             chip(topRow[i].option, topRow[i].index),
-                            if (i < topRow.length - 1) const SizedBox(width: 10),
+                            if (i < topRow.length - 1)
+                              const SizedBox(width: 10),
                           ],
                         ],
                       ),
@@ -1202,7 +1217,8 @@ class VariantOptionsSection extends StatelessWidget {
                           children: [
                             for (var i = 0; i < bottomRow.length; i++) ...[
                               chip(bottomRow[i].option, bottomRow[i].index),
-                              if (i < bottomRow.length - 1) const SizedBox(width: 10),
+                              if (i < bottomRow.length - 1)
+                                const SizedBox(width: 10),
                             ],
                           ],
                         ),
@@ -1327,35 +1343,54 @@ class VariantOptionsSection extends StatelessWidget {
 }
 
 class _BrandNameRow extends StatelessWidget {
-  const _BrandNameRow({required this.brandName});
+  const _BrandNameRow({
+    required this.brandName,
+    required this.onTap,
+  });
 
   final String brandName;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          brandName,
-          style: GoogleFonts.inter(
-            color: const Color(0xFF01A685),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            height: 18 / 12,
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              brandName,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF01A685),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                height: 18 / 12,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.keyboard_arrow_right_rounded,
+              size: 14,
+              color: Color(0xFF01A685),
+            ),
+          ],
         ),
-        const SizedBox(width: 4),
-        const Icon(
-          Icons.keyboard_arrow_right_rounded,
-          size: 14,
-          color: Color(0xFF01A685),
-        ),
-      ],
+      ),
     );
   }
+}
+
+String _slugFromLabel(String value) {
+  return value
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
 }
 
 class _RewardLine extends StatelessWidget {

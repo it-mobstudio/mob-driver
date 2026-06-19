@@ -32,19 +32,22 @@ void main() async {
       }
     }
   }
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
       statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarContrastEnforced: false,
     ),
   );
   runZonedGuarded(() {
     runApp(const AppBootstrap());
   }, (error, stack) async {
     if (!kIsWeb) {
-      await FirebaseCrashlytics.instance
-          .recordError(error, stack, fatal: true);
+      await FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     }
   });
 }
@@ -83,7 +86,10 @@ class _AppBootstrapState extends State<AppBootstrap> {
     if (!kIsWeb) {
       final crashlytics = FirebaseCrashlytics.instance;
       crashlytics.setCrashlyticsCollectionEnabled(true).catchError((_) {});
-      FlutterError.onError = crashlytics.recordFlutterFatalError;
+      FlutterError.onError = (details) {
+        if (kDebugMode) FlutterError.dumpErrorToConsole(details);
+        crashlytics.recordFlutterFatalError(details);
+      };
       PlatformDispatcher.instance.onError = (error, stack) {
         crashlytics.recordError(error, stack, fatal: true);
         return true;
@@ -190,58 +196,58 @@ class MyAppState extends State<MyApp> {
         ),
       ],
       child: MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      title: 'MOB Demand Side',
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('en', '')],
-      theme: ThemeData(
-        brightness: Brightness.light,
-        fontFamily: 'Inter',
-        useMaterial3: false,
-        scaffoldBackgroundColor: theme.primaryBackground,
-        textTheme: TextTheme(
-          bodyMedium: theme.typography.bodyMedium,
+        debugShowCheckedModeBanner: false,
+        title: 'MOB',
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en', '')],
+        theme: ThemeData(
+          brightness: Brightness.light,
+          fontFamily: 'Inter',
+          useMaterial3: false,
+          scaffoldBackgroundColor: theme.primaryBackground,
+          textTheme: TextTheme(
+            bodyMedium: theme.typography.bodyMedium,
+          ),
+          primaryColor: theme.primary,
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            },
+          ),
         ),
-        primaryColor: theme.primary,
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-          },
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          fontFamily: 'Inter',
+          useMaterial3: false,
+          scaffoldBackgroundColor: theme.primaryBackground,
+          textTheme: TextTheme(
+            bodyMedium: theme.typography.bodyMedium,
+          ),
+          primaryColor: theme.primary,
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            },
+          ),
         ),
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        fontFamily: 'Inter',
-        useMaterial3: false,
-        scaffoldBackgroundColor: theme.primaryBackground,
-        textTheme: TextTheme(
-          bodyMedium: theme.typography.bodyMedium,
-        ),
-        primaryColor: theme.primary,
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-          },
-        ),
-      ),
-      themeMode: _themeMode,
-      routerConfig: _router,
-      builder: kIsWeb
-          ? (context, child) => Container(
-                color: const Color(0xFF1A1A2E),
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 430),
-                  child: ClipRect(child: child!),
-                ),
-              )
-          : null,
+        themeMode: _themeMode,
+        routerConfig: _router,
+        builder: kIsWeb
+            ? (context, child) => Container(
+                  color: const Color(0xFF1A1A2E),
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 430),
+                    child: ClipRect(child: child!),
+                  ),
+                )
+            : null,
       ),
     );
   }

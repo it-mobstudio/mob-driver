@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'rfq_success_page.dart';
-import 'package:m_o_b_demand_side/shared/main_scaffold.dart';
 
 class RfqFormPage extends StatefulWidget {
   const RfqFormPage({super.key});
@@ -41,16 +40,23 @@ class _RfqFormPageState extends State<RfqFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return MainScaffold(
-      // backgroundColor: const Color(0xFFF0F6F3), // pale green like figma
-      currentIndex: -1,
-      // child: SafeArea(
-      child: Stack(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
         children: [
           // Content
           ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
             children: [
+              GestureDetector(
+                onTap: () => GoRouter.of(context).pop(),
+                child: const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Icon(Icons.arrow_back, color: Color(0xFF0A243F)),
+                ),
+              ),
               Text('Request for quotation',
                   style: GoogleFonts.inter(
                       fontSize: 22, fontWeight: FontWeight.w800)),
@@ -129,8 +135,8 @@ class _RfqFormPageState extends State<RfqFormPage> {
             ),
           ),
         ],
+        ),
       ),
-      // ),
     );
   }
 

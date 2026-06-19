@@ -3,19 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
-import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
-import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
+import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
+import 'package:m_o_b_demand_side/features/checkout/presentation/bloc/checkout_bloc.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
 
 class OrderPlacedPage extends StatefulWidget {
   static const routeName = 'OrderPlacedPage';
   static const routePath = '/checkout/success';
 
-  const OrderPlacedPage({super.key, required this.orderId});
+  const OrderPlacedPage({super.key, this.orderId = '', this.order});
 
+  /// Platform order id (e.g. "OD20260618004988"). Used as a fallback to fetch
+  /// the full order via [CheckoutOrderConfirmationRequested] when [order]
+  /// hasn't already been loaded by the payment flow.
   final String orderId;
+
+  /// Full order details, already fetched by the payment flow (Razorpay
+  /// verify/status-check). When present, no extra API call is made.
+  final PlacedOrderEntity? order;
 
   @override
   State<OrderPlacedPage> createState() => _OrderPlacedPageState();
@@ -23,14 +32,15 @@ class OrderPlacedPage extends StatefulWidget {
 
 class _OrderPlacedPageState extends State<OrderPlacedPage> {
   int _rating = 0;
-  late final OrdersBloc _ordersBloc;
+  CheckoutBloc? _checkoutBloc;
 
   @override
   void initState() {
     super.initState();
-    _ordersBloc = sl<OrdersBloc>();
-    if (widget.orderId.isNotEmpty) {
-      _ordersBloc.add(OrderDetailRequested(widget.orderId));
+    AppHaptics.success();
+    if (widget.order == null && widget.orderId.isNotEmpty) {
+      _checkoutBloc = sl<CheckoutBloc>()
+        ..add(CheckoutOrderConfirmationRequested(widget.orderId));
     }
     // Reload cart so it's empty when user navigates back — runs for every
     // success path (Razorpay, zero-total, Rupifi, status-check).
@@ -41,52 +51,67 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
 
   @override
   void dispose() {
-    _ordersBloc.close();
+    _checkoutBloc?.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.order != null) {
+      return _scaffold(context, widget.order);
+    }
     return BlocProvider.value(
-      value: _ordersBloc,
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Scaffold(
-          backgroundColor: Colors.white,
-          body: BlocBuilder<OrdersBloc, OrdersState>(
-            builder: (context, state) {
-              final order = state is OrderDetailLoaded ? state.order : null;
-              return ListView(
-                padding: EdgeInsets.zero,
+      value: _checkoutBloc!,
+      child: BlocBuilder<CheckoutBloc, CheckoutState>(
+        builder: (context, state) {
+          final order = state is CheckoutOrderPlaced ? state.order : null;
+          return _scaffold(context, order);
+        },
+      ),
+    );
+  }
+
+  Widget _scaffold(BuildContext context, PlacedOrderEntity? order) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            _topGreenBanner(context),
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _topGreenBanner(context),
-                  const SizedBox(height: 18),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (order != null && order.pointsEarned > 0) ...[
-                          _pointsCard(order.pointsEarned),
-                          const SizedBox(height: 20),
-                        ],
-                        _experienceSection(),
-                        const SizedBox(height: 20),
-                        _orderInfoSection(order),
-                        const SizedBox(height: 16),
-                        _viewOrderBtn(context),
-                        const SizedBox(height: 24),
-                        _nextStepsSection(),
-                        const SizedBox(height: 16),
-                        _referCard(),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
+                  if (order != null && (order.pointsSummary?.totalPoints ?? 0) > 0) ...[
+                    _pointsCard(order.pointsSummary!),
+                    const SizedBox(height: 20),
+                  ],
+                  _experienceSection(),
+                  const SizedBox(height: 20),
+                  _orderInfoSection(order),
+                  const SizedBox(height: 16),
+                  _viewOrderBtn(context, order),
+                  if (order != null && order.suborders.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _deliveryBreakdownSection(order.suborders),
+                  ],
+                  if (order != null) ...[
+                    const SizedBox(height: 24),
+                    _billSummarySection(order),
+                  ],
+                  const SizedBox(height: 24),
+                  _nextStepsSection(),
+                  const SizedBox(height: 16),
+                  _referCard(),
+                  const SizedBox(height: 24),
                 ],
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -127,7 +152,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha:0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.close, color: Colors.white, size: 18),
@@ -140,14 +165,15 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
 
   // ── Points card ───────────────────────────────────────────────────────────
 
-  Widget _pointsCard(int points) => Container(
-        height: 64,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+  Widget _pointsCard(PlacedOrderPointsEntity points) => Container(
+        constraints: const BoxConstraints(minHeight: 64),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: const Color(0xFFF8E6B6),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: 32,
@@ -159,29 +185,32 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
               child: const Icon(Icons.star, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$points points',
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0A243F),
-                    height: 22 / 15,
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${points.totalPoints} points',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0A243F),
+                      height: 22 / 15,
+                    ),
                   ),
-                ),
-                Text(
-                  'on the way!',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF0A243F).withValues(alpha:0.8),
-                    height: 18 / 12,
-                  ),
-                ),
-              ],
+                  if (points.message.isNotEmpty)
+                    Text(
+                      points.message,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF0A243F).withValues(alpha: 0.8),
+                        height: 18 / 12,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
@@ -232,23 +261,23 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
 
   // ── Order info + product thumbnails ──────────────────────────────────────
 
-  Widget _orderInfoSection(OrderEntity? order) => Column(
+  Widget _orderInfoSection(PlacedOrderEntity? order) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.orderId.isNotEmpty
-                ? 'Order ID: ${widget.orderId}'
+            order != null && order.orderId.isNotEmpty
+                ? 'Order ID: ${order.orderId}'
                 : 'Order confirmed',
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF0A243F).withValues(alpha:0.6),
+              color: const Color(0xFF0A243F).withValues(alpha: 0.6),
               height: 18 / 12,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Estimated delivery in 1–4 working days',
+            order != null ? _deliveryEstimate(order) : 'Confirming your order…',
             style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -256,16 +285,18 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
               height: 22 / 15,
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Your items are on the way',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF0A243F),
-              height: 20 / 14,
+          if (order != null && order.status.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              _formatStatus(order.status),
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF0A243F),
+                height: 20 / 14,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 12),
           if (order == null)
             const SizedBox(
@@ -275,11 +306,46 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
               ),
             )
           else
-            _itemThumbnails(order.items),
+            _itemThumbnails(_displayItems(order)),
         ],
       );
 
-  Widget _itemThumbnails(List<OrderItemEntity> items) {
+  List<PlacedOrderProductEntity> _displayItems(PlacedOrderEntity order) {
+    if (order.items.isNotEmpty) return order.items;
+    return order.suborders.expand((s) => s.products).toList();
+  }
+
+  String _formatStatus(String status) {
+    if (status.isEmpty) return '';
+    return status[0].toUpperCase() + status.substring(1).toLowerCase();
+  }
+
+  String _deliveryEstimate(PlacedOrderEntity order) {
+    final dates = order.suborders
+        .map((s) => DateTime.tryParse(s.deliveryDate))
+        .whereType<DateTime>()
+        .toList();
+    if (dates.isEmpty) return 'Your items are on the way';
+    dates.sort();
+    final earliest = dates.first;
+    final latest = dates.last;
+    if (earliest.year == latest.year &&
+        earliest.month == latest.month &&
+        earliest.day == latest.day) {
+      return 'Estimated delivery on ${_formatDate(earliest)}';
+    }
+    return 'Estimated delivery between ${_formatDate(earliest)} and ${_formatDate(latest)}';
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  Widget _itemThumbnails(List<PlacedOrderProductEntity> items) {
     const maxVisible = 3;
     final visible = items.take(maxVisible).toList();
     final remaining = items.length - maxVisible;
@@ -335,7 +401,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF0A243F).withValues(alpha:0.6),
+              color: const Color(0xFF0A243F).withValues(alpha: 0.6),
               height: 1.4,
             ),
           ),
@@ -344,11 +410,16 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
 
   // ── View order details button ─────────────────────────────────────────────
 
-  Widget _viewOrderBtn(BuildContext context) => SizedBox(
+  Widget _viewOrderBtn(BuildContext context, PlacedOrderEntity? order) => SizedBox(
         width: double.infinity,
         height: 52,
         child: OutlinedButton(
-          onPressed: () {},
+          onPressed: order != null && order.numericId.isNotEmpty
+              ? () => context.push(
+                    OrderDetailPage.routePath,
+                    extra: order.numericId,
+                  )
+              : null,
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: Color(0xFFDEDEDE)),
             shape: RoundedRectangleBorder(
@@ -364,6 +435,195 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
               height: 22 / 15,
             ),
           ),
+        ),
+      );
+
+  // ── Delivery breakdown (per vendor / suborder) ────────────────────────────
+
+  Widget _deliveryBreakdownSection(List<PlacedSubOrderEntity> suborders) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Delivery details',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF0A243F),
+              height: 21 / 14,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...suborders.map(
+            (s) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _suborderCard(s),
+            ),
+          ),
+        ],
+      );
+
+  Widget _suborderCard(PlacedSubOrderEntity suborder) {
+    final date = DateTime.tryParse(suborder.deliveryDate);
+    final productNames = suborder.products.map((p) => p.productName).where((n) => n.isNotEmpty).join(', ');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E8EE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  suborder.vendorName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0A243F),
+                    height: 20 / 13,
+                  ),
+                ),
+              ),
+              if (suborder.status.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F2FC),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _formatStatus(suborder.status),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0057A8),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (productNames.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              productNames,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF0A243F).withValues(alpha: 0.7),
+                height: 18 / 12,
+              ),
+            ),
+          ],
+          if (date != null || suborder.deliverySlot.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              [
+                if (date != null) 'Delivery on ${_formatDate(date)}',
+                if (suborder.deliverySlot.isNotEmpty) suborder.deliverySlot,
+              ].join(' · '),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF0A243F),
+                height: 18 / 12,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Bill summary ───────────────────────────────────────────────────────────
+
+  Widget _billSummarySection(PlacedOrderEntity order) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Bill summary',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF0A243F),
+              height: 21 / 14,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F9FC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE5E8EE)),
+            ),
+            child: Column(
+              children: [
+                _billRow('Subtotal', order.subTotal),
+                if (order.sgst > 0) _billRow('SGST', order.sgst),
+                if (order.cgst > 0) _billRow('CGST', order.cgst),
+                _billRow('Shipping fee', order.shippingFee),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(height: 1, color: Color(0xFFE5E8EE)),
+                ),
+                _billRow('Total paid', order.total, isTotal: true),
+                if (order.deliveryAddress != null) ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Delivering to ${order.deliveryAddress!.name.isNotEmpty ? order.deliveryAddress!.name : ''}'
+                              '${order.deliveryAddress!.name.isNotEmpty ? ', ' : ''}'
+                              '${order.deliveryAddress!.fullAddress}',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF0A243F).withValues(alpha: 0.7),
+                        height: 18 / 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      );
+
+  Widget _billRow(String label, double amount, {bool isTotal = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: isTotal ? FontWeight.w700 : FontWeight.w400,
+                color: const Color(0xFF0A243F),
+                height: 20 / 13,
+              ),
+            ),
+            Text(
+              '₹${amount.toStringAsFixed(2)}',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
+                color: const Color(0xFF0A243F),
+                height: 20 / 13,
+              ),
+            ),
+          ],
         ),
       );
 
@@ -487,7 +747,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
                     'For every friend you refer, you get ₹500 and your friend gets ₹500 after their first order.',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: const Color(0xFF0A243F).withValues(alpha:0.7),
+                      color: const Color(0xFF0A243F).withValues(alpha: 0.7),
                       height: 20 / 12,
                     ),
                   ),
@@ -522,7 +782,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
             Icon(
               Icons.groups_rounded,
               size: 90,
-              color: const Color(0xFF0A243F).withValues(alpha:0.25),
+              color: const Color(0xFF0A243F).withValues(alpha: 0.25),
             ),
           ],
         ),

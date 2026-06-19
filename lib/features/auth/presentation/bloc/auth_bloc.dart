@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 
@@ -87,10 +88,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       isPhone: event.isPhone,
     );
     if (failure != null) {
+      AppHaptics.error();
       emit(AuthError(failure.message));
     } else if (success) {
       emit(AuthOtpSent(event.emailOrPhone));
     } else {
+      AppHaptics.error();
       emit(AuthError('Failed to send OTP. Please try again.'));
     }
   }
@@ -105,6 +108,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       otp: event.otp,
     );
     if (failure != null) {
+      AppHaptics.error();
       emit(AuthError(failure.message));
     } else {
       emit(AuthVerified(
@@ -128,10 +132,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       referralCode: event.referralCode,
     );
     if (failure != null) {
+      AppHaptics.error();
       emit(AuthError(failure.message));
     } else if (success) {
       emit(AuthRegistered());
     } else {
+      AppHaptics.error();
       emit(AuthError('Registration failed. Please try again.'));
     }
   }

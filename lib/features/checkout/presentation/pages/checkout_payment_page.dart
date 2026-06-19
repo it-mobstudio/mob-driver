@@ -258,7 +258,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                       } else if (checkoutState is CheckoutOrderPlaced) {
                         GoRouter.of(context).go(
                           OrderPlacedPage.routePath,
-                          extra: checkoutState.order.orderId,
+                          extra: checkoutState.order,
                         );
                       } else if (checkoutState is CheckoutPaymentFailed) {
                         GoRouter.of(context).go(

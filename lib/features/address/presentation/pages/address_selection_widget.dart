@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
@@ -34,6 +36,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   final _searchController = TextEditingController();
   Timer? _debounce;
   List<AddressEntity> _addresses = const [];
+  bool _detectingLocation = false;
 
   @override
   void initState() {
@@ -131,7 +134,8 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
           icon: Icons.my_location,
           title: 'Detect my location',
           subtitle: 'Use your current GPS location',
-          onTap: _openMap,
+          onTap: _detectCurrentLocation,
+          loading: _detectingLocation,
         ),
         const SizedBox(height: 10),
         _actionTile(
@@ -196,13 +200,14 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     required String title,
     required VoidCallback onTap,
     String? subtitle,
+    bool loading = false,
   }) {
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
+        onTap: loading ? null : onTap,
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -238,7 +243,13 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Color(0xFF767C8F)),
+              loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.chevron_right, color: Color(0xFF767C8F)),
             ],
           ),
         ),
@@ -346,7 +357,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     if (state is AddressListLoaded) {
       setState(() => _addresses = state.addresses);
     } else if (state is AddressLocationResolved) {
-      _openMap(state.location);
+      _completeSelection(_addressFromLocation(state.location));
     } else if (state is AddressError) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -361,6 +372,115 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     );
     if (!mounted || savedAddress == null) return;
     await _completeSelection(savedAddress);
+  }
+
+  /// Builds a lightweight [AddressEntity] purely for setting the active
+  /// delivery location (top nav bar / browsing context). Contact fields
+  /// (name, phone, email, site person) are intentionally left blank — those
+  /// are only collected when the user explicitly adds a new address via the
+  /// "Add new address" button, which opens [MapLocationWidget].
+  AddressEntity _addressFromLocation(AddressLocationEntity location) {
+    return AddressEntity(
+      latitude: location.latitude,
+      longitude: location.longitude,
+      googleMapLink:
+          'https://www.google.com/maps?q=${location.latitude},${location.longitude}',
+      formattedAddress: location.formattedAddress,
+      city: location.city,
+      state: location.state,
+      pincode: location.pincode,
+      sublocality: location.sublocality,
+      locationName: location.locationName,
+      name: '',
+      email: '',
+      addressLine1: '',
+      addressLine2: '',
+      sitePerson: '',
+      sitePersonMobile: '',
+      addressTag: '',
+      phoneNumber: '',
+    );
+  }
+
+  Future<void> _detectCurrentLocation() async {
+    if (_detectingLocation) return;
+    setState(() => _detectingLocation = true);
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _showError('Location permission is required.');
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      if (placemarks.isEmpty) {
+        _showError('Unable to resolve your current address.');
+        return;
+      }
+      final place = placemarks.firstWhere(
+        (item) => (item.postalCode ?? '').trim().isNotEmpty,
+        orElse: () => placemarks.first,
+      );
+      final formattedAddress = [
+        place.name,
+        place.street,
+        place.subLocality,
+        place.locality,
+        place.administrativeArea,
+        place.postalCode,
+        place.country,
+      ].where((part) => (part ?? '').trim().isNotEmpty).join(', ');
+      final address = AddressEntity(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        googleMapLink:
+            'https://www.google.com/maps?q=${position.latitude},${position.longitude}',
+        formattedAddress: formattedAddress,
+        city: place.locality ?? '',
+        state: place.administrativeArea ?? '',
+        pincode: _resolvePincode(place.postalCode, formattedAddress),
+        sublocality: place.subLocality ?? '',
+        locationName: (place.name ?? '').trim().isEmpty
+            ? 'Current location'
+            : place.name!.trim(),
+        name: '',
+        email: '',
+        addressLine1: '',
+        addressLine2: '',
+        sitePerson: '',
+        sitePersonMobile: '',
+        addressTag: '',
+        phoneNumber: '',
+      );
+      if (!mounted) return;
+      await _completeSelection(address);
+    } catch (_) {
+      _showError('Unable to detect your current location.');
+    } finally {
+      if (mounted) setState(() => _detectingLocation = false);
+    }
+  }
+
+  String _resolvePincode(String? postalCode, String address) {
+    final direct = postalCode?.trim() ?? '';
+    if (RegExp(r'^[1-9][0-9]{5}$').hasMatch(direct)) return direct;
+    return RegExp(r'\b[1-9][0-9]{5}\b').firstMatch(address)?.group(0) ?? '';
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _completeSelection(AddressEntity address) async {

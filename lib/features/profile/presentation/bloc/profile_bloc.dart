@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/repositories/profile_repository.dart';
 
@@ -63,6 +64,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(ProfileLoading());
     final (profile, failure) = await _repository.getProfile();
     if (failure != null) {
+      AppHaptics.error();
       emit(ProfileError(failure.message));
     } else {
       emit(ProfileLoaded(profile!));
@@ -76,11 +78,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(ProfileLoading());
     final (success, failure) = await _repository.updateProfile(event.data);
     if (failure != null) {
+      AppHaptics.error();
       emit(ProfileError(failure.message));
     } else if (success) {
       // Reload profile after successful update
       add(ProfileLoadRequested());
     } else {
+      AppHaptics.error();
       emit(ProfileError('Update failed.'));
     }
   }
@@ -92,6 +96,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(ProfileLoading());
     final (summary, failure) = await _repository.getReferralSummary();
     if (failure != null) {
+      AppHaptics.error();
       emit(ReferralSummaryError(failure.message));
     } else {
       emit(ReferralSummaryLoaded(summary!));

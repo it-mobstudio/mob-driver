@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
 import 'package:m_o_b_demand_side/features/checkout/domain/repositories/checkout_repository.dart';
 
@@ -57,6 +58,11 @@ final class CheckoutRupifiOrderRequested extends CheckoutEvent {
   final String cartId;
 }
 
+final class CheckoutOrderConfirmationRequested extends CheckoutEvent {
+  CheckoutOrderConfirmationRequested(this.orderId);
+  final String orderId;
+}
+
 // ── States ───────────────────────────────────────────────────────────────────
 
 sealed class CheckoutState {}
@@ -109,6 +115,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     on<CheckoutRazorpayVerifyRequested>(_onVerifyRazorpayPayment);
     on<CheckoutRazorpayStatusCheckRequested>(_onRazorpayStatusCheck);
     on<CheckoutRupifiOrderRequested>(_onCreateRupifiOrder);
+    on<CheckoutOrderConfirmationRequested>(_onOrderConfirmation);
   }
 
   final CheckoutRepository _repository;
@@ -120,6 +127,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(CheckoutLoading());
     final failure = await _repository.updateAddressToOrder(event.payload);
     if (failure != null) {
+      AppHaptics.error();
       emit(CheckoutError(failure.message));
     } else {
       emit(CheckoutAddressUpdated());
@@ -130,6 +138,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(CheckoutLoading());
     final (summary, failure) = await _repository.getCheckoutSummary();
     if (failure != null) {
+      AppHaptics.error();
       emit(CheckoutError(failure.message));
     } else {
       emit(CheckoutSummaryLoaded(summary!));
@@ -143,6 +152,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(CheckoutLoading());
     final (order, failure) = await _repository.placeOrder(event.payload);
     if (failure != null) {
+      AppHaptics.error();
       emit(CheckoutError(failure.message));
     } else {
       emit(CheckoutOrderPlaced(order!));
@@ -156,6 +166,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(CheckoutLoading());
     final (entity, failure) = await _repository.createRazorpayOrder(event.cartId);
     if (failure != null) {
+      AppHaptics.error();
       emit(CheckoutError(failure.message));
     } else {
       emit(CheckoutRazorpayOrderCreated(entity!));
@@ -166,6 +177,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     CheckoutRazorpayPaymentFailed event,
     Emitter<CheckoutState> emit,
   ) async {
+    AppHaptics.error();
     emit(CheckoutError(event.message));
   }
 
@@ -182,6 +194,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
       signature: event.signature,
     );
     if (verifyFailure != null) {
+      AppHaptics.error();
       emit(CheckoutPaymentFailed(verifyFailure.message));
       return;
     }
@@ -195,6 +208,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
       transactionId: event.signature,
     );
     if (failure != null) {
+      AppHaptics.error();
       emit(CheckoutPaymentFailed(failure.message));
       return;
     }
@@ -209,9 +223,29 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(CheckoutLoading());
     final (entity, failure) = await _repository.createRupifiOrder(event.cartId);
     if (failure != null) {
+      AppHaptics.error();
       emit(CheckoutError(failure.message));
     } else {
       emit(CheckoutRupifiOrderCreated(entity!));
+    }
+  }
+
+  Future<void> _onOrderConfirmation(
+    CheckoutOrderConfirmationRequested event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    emit(CheckoutLoading());
+    final (order, failure) = await _repository.getSuborderDetails(
+      platformOrderId: event.orderId,
+      merchantPaymentRefId: '',
+      paymentId: '',
+      transactionId: '',
+    );
+    if (failure != null) {
+      AppHaptics.error();
+      emit(CheckoutError(failure.message));
+    } else {
+      emit(CheckoutOrderPlaced(order!));
     }
   }
 
@@ -227,6 +261,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
       transactionId: event.transactionId,
     );
     if (failure != null) {
+      AppHaptics.error();
       emit(CheckoutPaymentFailed(failure.message));
     } else {
       emit(CheckoutOrderPlaced(order!));

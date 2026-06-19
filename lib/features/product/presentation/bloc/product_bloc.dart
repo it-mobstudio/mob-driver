@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/features/product/domain/entities/product_entity.dart';
 import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
 
@@ -165,6 +166,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
       mobSku: event.mobSku,
     );
     if (failure != null) {
+      AppHaptics.error();
       emit(ProductError(failure.message));
     } else {
       emit(ProductDetailLoaded(
@@ -196,6 +198,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
             queryParameters: event.queryParameters,
           );
     if (failure != null) {
+      AppHaptics.error();
       emit(ProductError(failure.message));
     } else {
       emit(ProductListLoaded(
@@ -237,6 +240,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
             queryParameters: current.queryParameters,
           );
     if (failure != null) {
+      AppHaptics.error();
       emit(current.copyWith(isLoadingMore: false));
     } else {
       emit(current.copyWith(
@@ -258,7 +262,10 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
             category: event.category!,
             subCategory: event.subCategory,
           );
-    if (failure != null) return;
+    if (failure != null) {
+      AppHaptics.error();
+      return;
+    }
     final current = state;
     if (current is ProductListLoaded) {
       emit(current.copyWith(filters: filters));
@@ -275,6 +282,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
       page: event.page,
     );
     if (failure != null) {
+      AppHaptics.error();
       emit(ProductError(failure.message));
     } else {
       emit(ProductSearchLoaded(products: products!, query: event.query));

@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 
@@ -73,6 +74,7 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
     emit(AddressLoading());
     final (addresses, failure) = await _repository.getAddresses();
     if (failure != null) {
+      AppHaptics.error();
       emit(AddressError(failure.message));
     } else {
       emit(AddressListLoaded(addresses ?? const []));
@@ -91,6 +93,7 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
     emit(AddressSearching());
     final (suggestions, failure) = await _repository.searchLocations(query);
     if (failure != null) {
+      AppHaptics.error();
       emit(AddressError(failure.message));
     } else {
       emit(AddressSearchLoaded(suggestions ?? const []));
@@ -105,6 +108,7 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
     final (location, failure) =
         await _repository.getLocationDetails(event.placeId);
     if (failure != null) {
+      AppHaptics.error();
       emit(AddressError(failure.message));
     } else {
       emit(AddressLocationResolved(location!));
@@ -118,6 +122,7 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
     emit(AddressSaving());
     final (address, failure) = await _repository.createAddress(event.address);
     if (failure != null) {
+      AppHaptics.error();
       emit(AddressError(failure.message));
     } else {
       emit(AddressSaved(address!));

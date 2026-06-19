@@ -17,7 +17,7 @@ import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_why_ch
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/product_rail_section.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/section_title.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/widgets/referral_success_dialog.dart';
-import 'package:m_o_b_demand_side/shared/main_scaffold.dart';
+import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 
 class HomepageWidget extends StatefulWidget {
@@ -46,24 +46,24 @@ class _HomepageWidgetState extends State<HomepageWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return MainScaffold(
-      currentIndex: 0,
-      showTopSearchBar: false,
-      showLocationheader: false,
-      child: Stack(
+    final topInset = MediaQuery.paddingOf(context).top;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
         children: [
           BlocBuilder<HomeBloc, HomeState>(
             builder: (context, state) {
               return switch (state) {
-                HomeLoaded(:final data) => RefreshIndicator(
+                HomeLoaded(:final data) => PullToRefresh(
                     onRefresh: () async =>
                         context.read<HomeBloc>().add(HomeRefreshRequested()),
                     child: CustomScrollView(
                       slivers: [
                         const SliverToBoxAdapter(child: HomeHeader()),
-                        const SliverPersistentHeader(
+                        SliverPersistentHeader(
                           pinned: true,
-                          delegate: _StickySearchDelegate(),
+                          delegate: _StickySearchDelegate(topInset: topInset),
                         ),
                         const SliverToBoxAdapter(child: HomePromoBanner()),
                         const SliverToBoxAdapter(
@@ -101,15 +101,15 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                     ),
                   ),
                 HomeLoading() || HomeInitial() => const _HomeLoadingSkeleton(),
-                HomeError(:final message) => RefreshIndicator(
+                HomeError(:final message) => PullToRefresh(
                     onRefresh: () async =>
                         context.read<HomeBloc>().add(HomeRefreshRequested()),
                     child: CustomScrollView(
                       slivers: [
                         const SliverToBoxAdapter(child: HomeHeader()),
-                        const SliverPersistentHeader(
+                        SliverPersistentHeader(
                           pinned: true,
-                          delegate: _StickySearchDelegate(),
+                          delegate: _StickySearchDelegate(topInset: topInset),
                         ),
                         SliverFillRemaining(
                           child: Center(
@@ -148,16 +148,18 @@ class _HomepageWidgetState extends State<HomepageWidget> {
 }
 
 class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
-  const _StickySearchDelegate();
+  const _StickySearchDelegate({required this.topInset});
+
+  final double topInset;
 
   // 8 top padding + 48 search bar + 8 bottom padding
   static const double _height = 64.0;
 
   @override
-  double get minExtent => _height;
+  double get minExtent => topInset + _height;
 
   @override
-  double get maxExtent => _height;
+  double get maxExtent => topInset + _height;
 
   @override
   Widget build(
@@ -194,7 +196,7 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             color: Colors.white.withValues(alpha: 0.10),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 8),
             child: searchBox,
           ),
         ),
@@ -202,13 +204,14 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
     }
     return Container(
       color: const Color(0xFF121212),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 8),
       child: searchBox,
     );
   }
 
   @override
-  bool shouldRebuild(_StickySearchDelegate oldDelegate) => false;
+  bool shouldRebuild(_StickySearchDelegate oldDelegate) =>
+      topInset != oldDelegate.topInset;
 }
 
 class _RotatingSearchHint extends StatefulWidget {
@@ -317,23 +320,25 @@ class _HomeLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const CustomScrollView(
-      physics: NeverScrollableScrollPhysics(),
+    final topInset = MediaQuery.paddingOf(context).top;
+
+    return CustomScrollView(
+      physics: const NeverScrollableScrollPhysics(),
       slivers: [
-        SliverToBoxAdapter(child: HomeHeader()),
+        const SliverToBoxAdapter(child: HomeHeader()),
         SliverPersistentHeader(
           pinned: true,
-          delegate: _StickySearchDelegate(),
+          delegate: _StickySearchDelegate(topInset: topInset),
         ),
-        SliverToBoxAdapter(child: HomePromoBanner()),
-        SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 180)),
-        SliverToBoxAdapter(child: _CategoryGridSkeleton()),
-        SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 150)),
-        SliverToBoxAdapter(child: _BrandGridSkeleton()),
-        SliverToBoxAdapter(child: _SavingsCardSkeleton()),
-        SliverToBoxAdapter(child: _ProductRailSkeleton()),
-        SliverToBoxAdapter(child: _ProductRailSkeleton()),
-        SliverToBoxAdapter(child: SizedBox(height: 24)),
+        const SliverToBoxAdapter(child: HomePromoBanner()),
+        const SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 180)),
+        const SliverToBoxAdapter(child: _CategoryGridSkeleton()),
+        const SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 150)),
+        const SliverToBoxAdapter(child: _BrandGridSkeleton()),
+        const SliverToBoxAdapter(child: _SavingsCardSkeleton()),
+        const SliverToBoxAdapter(child: _ProductRailSkeleton()),
+        const SliverToBoxAdapter(child: _ProductRailSkeleton()),
+        const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
     );
   }

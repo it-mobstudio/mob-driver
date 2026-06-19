@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/repositories/orders_repository.dart';
 
@@ -50,6 +51,7 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     emit(OrdersLoading());
     final (orders, failure) = await _repository.getOrders();
     if (failure != null) {
+      AppHaptics.error();
       emit(OrdersError(failure.message));
     } else {
       emit(OrdersLoaded(orders!));
@@ -60,6 +62,7 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     emit(OrdersLoading());
     final (order, failure) = await _repository.getOrderDetail(event.id);
     if (failure != null) {
+      AppHaptics.error();
       emit(OrdersError(failure.message));
     } else {
       emit(OrderDetailLoaded(order!));

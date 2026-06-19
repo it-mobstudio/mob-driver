@@ -15,12 +15,12 @@ class HomeBrandGrid extends StatelessWidget {
     _HomeBrandItem(
       name: 'UltraTech',
       titleImage: 'assets/images/Brands/Ultratechlogo.svg',
-      productImage: 'assets/images/Brands/Ultratech.webp',
+      productImage: 'assets/images/Brands/ultratech.webp',
     ),
     _HomeBrandItem(
       name: 'Dr Fixit',
       titleImage: 'assets/images/Brands/Drfixitlogo.png',
-      productImage: 'assets/images/Brands/Drfixit.webp',
+      productImage: 'assets/images/Brands/DrFixit.webp',
     ),
     _HomeBrandItem(
       name: 'Birla Opus',
@@ -116,6 +116,11 @@ class HomeBrandTile extends StatelessWidget {
                   : Image.asset(
                       brand.titleImage,
                       fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.storefront_outlined,
+                        color: Color(0xFF0A243F),
+                        size: 22,
+                      ),
                     ),
             ),
             Positioned(
@@ -133,6 +138,13 @@ class HomeBrandTile extends StatelessWidget {
                       brand.productImage,
                       fit: BoxFit.cover,
                       alignment: Alignment.bottomCenter,
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(
+                          Icons.image_not_supported_outlined,
+                          color: Color(0xFF0A243F),
+                          size: 28,
+                        ),
+                      ),
                     ),
             ),
           ],

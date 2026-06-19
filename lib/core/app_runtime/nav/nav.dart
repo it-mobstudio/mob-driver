@@ -7,9 +7,12 @@ import 'package:m_o_b_demand_side/features/address/presentation/pages/map_locati
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/splash_screen.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_page.dart';
+import 'package:m_o_b_demand_side/features/categories/presentation/pages/categories_page.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_order_review_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_payment_page.dart';
+import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/order_placed_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/payment_failed_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
@@ -27,6 +30,7 @@ import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq_details_pa
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq_form_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq_success_page.dart';
 import 'package:m_o_b_demand_side/index.dart';
+import 'package:m_o_b_demand_side/shared/scaffold_with_nav_bar.dart';
 import 'package:m_o_b_demand_side/shared/top_search_page.dart';
 
 export 'package:go_router/go_router.dart';
@@ -47,9 +51,12 @@ class AppStateNotifier extends ChangeNotifier {
   }
 }
 
-Widget _authenticatedDestination() => AuthSession.instance.needsRegistration
-    ? const SignupWidget(phoneNumber: '')
-    : const HomepageWidget();
+final _authRoutePaths = {
+  '/',
+  LoginpageWidget.routePath,
+  OTPVerificationWidget.routePath,
+  SignupWidget.routePath,
+};
 
 GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       initialLocation: '/',
@@ -57,10 +64,19 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       refreshListenable: appStateNotifier,
       navigatorKey: appNavigatorKey,
       observers: <NavigatorObserver>[AnalyticsService.instance.observer],
+      redirect: (context, state) {
+        if (appStateNotifier.showSplashImage) return null;
+        if (!AuthSession.instance.isAuthenticated) return null;
+        final loc = state.matchedLocation;
+        if (AuthSession.instance.needsRegistration) {
+          return loc == SignupWidget.routePath ? null : SignupWidget.routePath;
+        }
+        return _authRoutePaths.contains(loc) ? HomepageWidget.routePath : null;
+      },
       errorBuilder: (context, state) => appStateNotifier.showSplashImage
           ? const SplashScreen()
           : (AuthSession.instance.isAuthenticated
-              ? _authenticatedDestination()
+              ? const HomepageWidget()
               : const LoginpageWidget()),
       routes: [
         GoRoute(
@@ -68,24 +84,17 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: '/',
           builder: (context, state) => appStateNotifier.showSplashImage
               ? const SplashScreen()
-              : (AuthSession.instance.isAuthenticated
-                  ? _authenticatedDestination()
-                  : const LoginpageWidget()),
+              : const LoginpageWidget(),
         ),
         GoRoute(
           name: LoginpageWidget.routeName,
           path: LoginpageWidget.routePath,
-          builder: (context, state) => AuthSession.instance.isAuthenticated
-              ? _authenticatedDestination()
-              : const LoginpageWidget(),
+          builder: (context, state) => const LoginpageWidget(),
         ),
         GoRoute(
           name: OTPVerificationWidget.routeName,
           path: OTPVerificationWidget.routePath,
           builder: (context, state) {
-            if (AuthSession.instance.isAuthenticated) {
-              return _authenticatedDestination();
-            }
             final extra = state.extra is Map<String, dynamic>
                 ? state.extra as Map<String, dynamic>
                 : <String, dynamic>{};
@@ -98,10 +107,6 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: SignupWidget.routeName,
           path: SignupWidget.routePath,
           builder: (context, state) {
-            if (AuthSession.instance.isAuthenticated &&
-                !AuthSession.instance.needsRegistration) {
-              return const HomepageWidget();
-            }
             final extra = state.extra is Map<String, dynamic>
                 ? state.extra as Map<String, dynamic>
                 : <String, dynamic>{};
@@ -113,6 +118,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: AddressSelectionWidget.routeName,
           path: AddressSelectionWidget.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) {
             final extra = state.extra is Map<String, dynamic>
                 ? state.extra as Map<String, dynamic>
@@ -123,21 +129,51 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             );
           },
         ),
-        GoRoute(
-          name: HomepageWidget.routeName,
-          path: HomepageWidget.routePath,
-          builder: (context, state) {
-            final extra = state.extra is Map<String, dynamic>
-                ? state.extra as Map<String, dynamic>
-                : <String, dynamic>{};
-            return HomepageWidget(
-              showReferralBonus: extra['showReferralBonus'] == true,
-            );
-          },
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) =>
+              ScaffoldWithNavBar(navigationShell: navigationShell),
+          branches: [
+            StatefulShellBranch(routes: [
+              GoRoute(
+                name: HomepageWidget.routeName,
+                path: HomepageWidget.routePath,
+                builder: (context, state) {
+                  final extra = state.extra is Map<String, dynamic>
+                      ? state.extra as Map<String, dynamic>
+                      : <String, dynamic>{};
+                  return HomepageWidget(
+                    showReferralBonus: extra['showReferralBonus'] == true,
+                  );
+                },
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                name: CategoriesPage.routeName,
+                path: CategoriesPage.routePath,
+                builder: (context, state) => const CategoriesPage(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                name: OrdersPage.routeName,
+                path: OrdersPage.routePath,
+                builder: (context, state) => const OrdersPage(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                name: CreditPage.routeName,
+                path: CreditPage.routePath,
+                builder: (context, state) => const CreditPage(),
+              ),
+            ]),
+          ],
         ),
         GoRoute(
           name: ProductListingPage.routeName,
           path: ProductListingPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) {
             final extra = state.extra is Map
                 ? Map<String, dynamic>.from(state.extra as Map)
@@ -148,12 +184,21 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             final slug = extra['slug']?.toString() ??
                 state.uri.queryParameters['slug'] ??
                 '';
-            return ProductListingPage(category: category, slug: slug);
+            final subCategorySlug = extra['subCategorySlug']?.toString() ??
+                state.uri.queryParameters['sub_category'];
+            final subCategoryName = extra['subCategoryName']?.toString();
+            return ProductListingPage(
+              category: category,
+              slug: slug,
+              initialSubCategorySlug: subCategorySlug,
+              initialSubCategoryName: subCategoryName,
+            );
           },
         ),
         GoRoute(
           name: ProductDetailPage.routeName,
           path: '${ProductDetailPage.routePath}/:slug',
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => ProductDetailPage(
             slug: state.pathParameters['slug'] ?? '',
           ),
@@ -161,6 +206,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: 'CategoryWebAlias',
           path: '/home/:slug',
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) {
             final categorySlug = state.pathParameters['slug'] ?? '';
             return ProductListingPage(
@@ -172,6 +218,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: 'ProductDetailHomeWebAlias',
           path: '/home/product-details/:slug',
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => ProductDetailPage(
             slug: state.pathParameters['slug'] ?? '',
           ),
@@ -179,6 +226,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: 'ProductDetailWebAlias',
           path: '/products/:slug',
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => ProductDetailPage(
             slug: state.pathParameters['slug'] ?? '',
           ),
@@ -186,6 +234,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: BrandProductSearchPage.routeName,
           path: '${BrandProductSearchPage.routePath}/:slug',
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) {
             final extra = state.extra is Map
                 ? Map<String, dynamic>.from(state.extra as Map)
@@ -206,21 +255,25 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: SearchPage.routeName,
           path: SearchPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const SearchPage(),
         ),
         GoRoute(
           name: CartPage.routeName,
           path: CartPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const CartPage(),
         ),
         GoRoute(
           name: CheckoutAddressPage.routeName,
           path: CheckoutAddressPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const CheckoutAddressPage(),
         ),
         GoRoute(
           name: CheckoutOrderReviewPage.routeName,
           path: CheckoutOrderReviewPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) {
             final extra = state.extra as Map<String, dynamic>? ?? {};
             return CheckoutOrderReviewPage(
@@ -233,23 +286,32 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: CheckoutPaymentPage.routeName,
           path: CheckoutPaymentPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const CheckoutPaymentPage(),
         ),
         GoRoute(
           name: OrderPlacedPage.routeName,
           path: OrderPlacedPage.routePath,
-          builder: (context, state) =>
-              OrderPlacedPage(orderId: state.extra as String? ?? ''),
+          parentNavigatorKey: appNavigatorKey,
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is PlacedOrderEntity) {
+              return OrderPlacedPage(order: extra);
+            }
+            return OrderPlacedPage(orderId: extra as String? ?? '');
+          },
         ),
         GoRoute(
           name: PaymentFailedPage.routeName,
           path: PaymentFailedPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) =>
               PaymentFailedPage(message: state.extra as String? ?? ''),
         ),
         GoRoute(
           name: MapLocationWidget.routeName,
           path: MapLocationWidget.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => MapLocationWidget(
             initialLocation: state.extra is AddressLocationEntity
                 ? state.extra as AddressLocationEntity
@@ -259,26 +321,31 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: MagicAiQuotePage.routeName,
           path: MagicAiQuotePage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const MagicAiQuotePage(),
         ),
         GoRoute(
           name: RfqFormPage.routeName,
           path: RfqFormPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const RfqFormPage(),
         ),
         GoRoute(
           name: RfqSuccessPage.routeName,
           path: RfqSuccessPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const RfqSuccessPage(),
         ),
         GoRoute(
           name: RfqPage.routeName,
           path: RfqPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const RfqPage(),
         ),
         GoRoute(
           name: RfqDetailsPage.routeName,
           path: RfqDetailsPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => RfqDetailsPage(
             rfqId: state.extra?.toString() ??
                 state.uri.queryParameters['id'] ??
@@ -288,31 +355,31 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         GoRoute(
           name: MyAccountWidget.routeName,
           path: MyAccountWidget.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const MyAccountWidget(),
         ),
         GoRoute(
           name: PersonalInfoPage.routeName,
           path: PersonalInfoPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const PersonalInfoPage(),
         ),
         GoRoute(
           name: ReferralPage.routeName,
           path: ReferralPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const ReferralPage(),
         ),
         GoRoute(
           name: ReferralHistoryPage.routeName,
           path: ReferralHistoryPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const ReferralHistoryPage(),
-        ),
-        GoRoute(
-          name: OrdersPage.routeName,
-          path: OrdersPage.routePath,
-          builder: (context, state) => const OrdersPage(),
         ),
         GoRoute(
           name: OrderDetailPage.routeName,
           path: OrderDetailPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const OrderDetailPage(),
         ),
       ],

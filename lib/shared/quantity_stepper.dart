@@ -54,7 +54,7 @@ class _QuantityStepperState extends State<QuantityStepper> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 34,
+      height: 40,
       width: widget.width,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
