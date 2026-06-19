@@ -41,6 +41,22 @@ class RfqEntity {
   final List<RfqItemEntity> items;
   final double totalAmount;
 
+  RfqEntity copyWith({
+    String? id,
+    String? status,
+    String? createdAt,
+    List<RfqItemEntity>? items,
+    double? totalAmount,
+  }) {
+    return RfqEntity(
+      id: id ?? this.id,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      items: items ?? this.items,
+      totalAmount: totalAmount ?? this.totalAmount,
+    );
+  }
+
   factory RfqEntity.fromMap(Map<String, dynamic> map) {
     final itemsRaw = switch (map['items'] ??
         map['products'] ??

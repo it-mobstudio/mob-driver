@@ -5,6 +5,7 @@ class _ShipmentSection extends StatelessWidget {
   final String title;
   final IconData icon;
   final Color iconBackground;
+  final Color iconColor;
   final List<OrderItemEntity> items;
 
   const _ShipmentSection({
@@ -12,6 +13,7 @@ class _ShipmentSection extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.iconBackground,
+    required this.iconColor,
     required this.items,
   });
 
@@ -30,9 +32,9 @@ class _ShipmentSection extends StatelessWidget {
                 height: 38,
                 decoration: BoxDecoration(
                   color: iconBackground,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: Icon(icon, size: 24, color: const Color(0xFF0A7D83)),
+                child: Icon(icon, size: 24, color: iconColor),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -64,14 +66,18 @@ class _ShipmentSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFFE0E0E0)),
+          const Divider(
+            height: 0,
+            thickness: 1,
+            color: Color(0xFFE0E0E0),
+          ),
           const SizedBox(height: 14),
           Text(
             '${items.length} ${items.length == 1 ? 'item' : 'items'} in shipment',
             style: GoogleFonts.inter(
               color: const Color(0xFF0A243F),
               fontSize: 14,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               height: 20 / 14,
             ),
           ),
@@ -107,17 +113,17 @@ class _ShipmentItemTile extends StatelessWidget {
               child: item.imageUrl.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: item.imageUrl,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       memCacheWidth: 88,
                       placeholder: (_, __) => const ImageShimmer(),
                       errorWidget: (_, __, ___) => Image.asset(
                         'assets/images/Image-coming-soon.png',
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                       ),
                     )
                   : Image.asset(
                       'assets/images/Image-coming-soon.png',
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                     ),
             ),
           ),
@@ -141,7 +147,7 @@ class _ShipmentItemTile extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      '₹ ${item.unitPrice.toStringAsFixed(0)} /unit',
+                      '\u20B9 ${item.unitPrice.toStringAsFixed(0)} /unit',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF8A8A8A),
                         fontSize: 12,
@@ -170,14 +176,30 @@ class _ShipmentItemTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            '₹${item.lineTotal.toStringAsFixed(0)}',
-            style: GoogleFonts.inter(
-              color: const Color(0xFF0A243F),
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              height: 20 / 14,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '\u20B9${item.lineTotal.toStringAsFixed(0)}.00',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0A243F),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  height: 20 / 14,
+                ),
+              ),
+              Text(
+                '\u20B9${(item.lineTotal * 1.37).toStringAsFixed(0)}',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFFA2AABA),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  height: 16 / 11,
+                  decoration: TextDecoration.lineThrough,
+                  decorationColor: const Color(0xFFA2AABA),
+                ),
+              ),
+            ],
           ),
         ],
       ),

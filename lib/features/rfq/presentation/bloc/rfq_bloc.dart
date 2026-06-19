@@ -19,6 +19,10 @@ final class RfqSubmitRequested extends RfqEvent {
   final Map<String, dynamic> payload;
 }
 
+final class RfqQuoteAcceptedLocally extends RfqEvent {}
+
+final class RfqPaymentCompletedLocally extends RfqEvent {}
+
 final class MagicQuoteSubmitRequested extends RfqEvent {
   MagicQuoteSubmitRequested({
     required this.payload,
@@ -73,6 +77,8 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     on<RfqListRequested>(_onList);
     on<RfqDetailRequested>(_onDetail);
     on<RfqSubmitRequested>(_onSubmit);
+    on<RfqQuoteAcceptedLocally>(_onQuoteAcceptedLocally);
+    on<RfqPaymentCompletedLocally>(_onPaymentCompletedLocally);
     on<MagicQuoteSubmitRequested>(_onMagicQuoteSubmit);
   }
 
@@ -109,6 +115,26 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
       emit(RfqSubmitted());
     } else {
       emit(RfqError('RFQ submission failed.'));
+    }
+  }
+
+  void _onQuoteAcceptedLocally(
+    RfqQuoteAcceptedLocally event,
+    Emitter<RfqState> emit,
+  ) {
+    final currentState = state;
+    if (currentState case RfqDetailLoaded(:final rfq)) {
+      emit(RfqDetailLoaded(rfq.copyWith(status: 'quote_accepted')));
+    }
+  }
+
+  void _onPaymentCompletedLocally(
+    RfqPaymentCompletedLocally event,
+    Emitter<RfqState> emit,
+  ) {
+    final currentState = state;
+    if (currentState case RfqDetailLoaded(:final rfq)) {
+      emit(RfqDetailLoaded(rfq.copyWith(status: 'converted_to_order')));
     }
   }
 

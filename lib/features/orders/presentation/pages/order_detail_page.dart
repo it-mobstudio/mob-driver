@@ -72,6 +72,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 OrderDetailLoaded(:final order) => order,
                 _ => null,
               };
+              final shipments = _shipmentsFor(order);
 
               return Column(
                 children: [
@@ -98,14 +99,20 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (order != null && order.items.isNotEmpty)
-                                _ShipmentSection(
-                                  index: 1,
-                                  title: _formatStatus(order.status),
-                                  icon: Icons.local_shipping_outlined,
-                                  iconBackground: const Color(0xFFDFF8F9),
-                                  items: order.items,
-                                )
+                              if (order != null && shipments.isNotEmpty)
+                                for (var i = 0; i < shipments.length; i++) ...[
+                                  _ShipmentSection(
+                                    index: i + 1,
+                                    title: _shipmentTitle(shipments[i], i),
+                                    icon: _shipmentIcon(shipments[i], i),
+                                    iconBackground:
+                                        _shipmentIconBackground(shipments[i], i),
+                                    iconColor: _shipmentIconColor(shipments[i]),
+                                    items: shipments[i].items,
+                                  ),
+                                  if (i < shipments.length - 1)
+                                    const _SectionGap(),
+                                ]
                               else
                                 const SizedBox(height: 8),
                               const _SectionGap(),
@@ -130,6 +137,57 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         ),
       ),
     );
+  }
+
+  List<OrderShipmentEntity> _shipmentsFor(OrderEntity? order) {
+    if (order == null) return const [];
+    if (order.shipments.isNotEmpty) return order.shipments;
+    if (order.items.isEmpty) return const [];
+    return [
+      OrderShipmentEntity(
+        id: order.id,
+        status: order.status,
+        deliveryDate: order.createdAt,
+        items: order.items,
+      ),
+    ];
+  }
+
+  String _shipmentTitle(OrderShipmentEntity shipment, int index) {
+    final status = shipment.status.trim().toLowerCase();
+    if (status.contains('deliver')) return 'Delivered';
+    if (status.contains('pack')) return 'Packing your order';
+    if (status.contains('wait') || status.contains('arriv')) {
+      return index == 0 ? 'Arriving in 5 mins' : 'Arriving in 34 mins';
+    }
+    if (shipment.status.trim().isNotEmpty) {
+      return _formatStatus(shipment.status);
+    }
+    return index < 2
+        ? 'Arriving in ${index == 0 ? 5 : 34} mins'
+        : 'Packing your order';
+  }
+
+  IconData _shipmentIcon(OrderShipmentEntity shipment, int index) {
+    if (_isDelivered(shipment)) return Icons.check_rounded;
+    return index < 2
+        ? Icons.local_shipping_outlined
+        : Icons.shopping_cart_outlined;
+  }
+
+  Color _shipmentIconBackground(OrderShipmentEntity shipment, int index) {
+    if (_isDelivered(shipment)) return const Color(0xFFCEFBE3);
+    return index < 2 ? const Color(0xFFDFF8F9) : const Color(0xFFFFF2C3);
+  }
+
+  Color _shipmentIconColor(OrderShipmentEntity shipment) {
+    return _isDelivered(shipment)
+        ? const Color(0xFF0BCB60)
+        : const Color(0xFF0A7D83);
+  }
+
+  bool _isDelivered(OrderShipmentEntity shipment) {
+    return shipment.status.trim().toLowerCase().contains('deliver');
   }
 }
 

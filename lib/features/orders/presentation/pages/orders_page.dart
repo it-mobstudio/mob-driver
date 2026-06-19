@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
@@ -47,16 +48,18 @@ class _OrdersPageState extends State<OrdersPage> {
         currentIndex: 2,
         showTopSearchBar: false,
         showLocationheader: false,
+        headerBackgroundColor: Colors.white,
         child: Scaffold(
           backgroundColor: Colors.white,
           body: SafeArea(
+            top: false,
             bottom: false,
             child: Column(
               children: [
                 _OrdersHeader(onBack: () => _goBack(context)),
                 Expanded(
                   child: Container(
-                    color: const Color(0xFFF0F0F0),
+                    color: const Color(0xFFF1F1F2),
                     child: BlocBuilder<OrdersBloc, OrdersState>(
                       builder: (context, state) {
                         return switch (state) {

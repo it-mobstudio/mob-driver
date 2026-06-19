@@ -8,7 +8,7 @@ class _OrdersHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 58,
+      height: 66,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
@@ -37,9 +37,9 @@ class _OrdersHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
                   color: const Color(0xFF0A243F),
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  height: 22 / 15,
+                  height: 20 / 14,
                 ),
               ),
             ),
@@ -78,7 +78,7 @@ class _OrdersSearch extends StatelessWidget {
             style: GoogleFonts.inter(
               color: const Color(0xFF596378),
               fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w400,
               height: 20 / 14,
             ),
           ),
@@ -101,12 +101,12 @@ class _FilterButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: const Color(0xFFDEDEDE)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.tune, color: Color(0xFF0A243F), size: 12),
+            const Icon(Icons.tune, color: Color(0xFF0A243F), size: 13),
             const SizedBox(width: 8),
             Text(
               'Filters',

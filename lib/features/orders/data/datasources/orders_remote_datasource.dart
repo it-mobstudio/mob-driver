@@ -12,13 +12,18 @@ class OrdersRemoteDatasourceImpl implements OrdersRemoteDatasource {
 
   @override
   Future<dynamic> getOrders() async {
-    final response = await _dio.get<dynamic>('/orders/');
+    final response = await _dio.get<dynamic>(
+      '/orders/customer-orders/get_orders/',
+      queryParameters: const {'page': 1},
+    );
     return response.data;
   }
 
   @override
   Future<Map<String, dynamic>> getOrderDetail(String id) async {
-    final response = await _dio.get<dynamic>('/orders/$id/');
+    final response = await _dio.get<dynamic>(
+      '/orders/customer-orders/$id/get_suborder_details/',
+    );
     final raw = response.data;
     if (raw is Map) return Map<String, dynamic>.from(raw);
     return {};

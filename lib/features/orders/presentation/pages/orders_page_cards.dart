@@ -11,35 +11,44 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrls = order.items
-        .map((e) => e.imageUrl)
-        .where((u) => u.isNotEmpty)
-        .toList();
+    final imageUrls = order.items.map((e) => e.imageUrl).toList();
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               child: _OrderHeader(order: order),
             ),
-            const Divider(height: 1, color: Color(0xFFE5E8EE)),
+            const Divider(
+              height: 0,
+              thickness: 1,
+              color: Color(0xFFE5E8EE),
+            ),
             if (imageUrls.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 15, 0, 15),
+                padding: const EdgeInsets.fromLTRB(16, 16, 0, 16),
                 child: _ProductStrip(imageUrls: imageUrls),
               )
             else
               const SizedBox(height: 8),
-            _ItemCountBanner(itemCount: order.items.length),
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: Color(0xFFE5E8EE)),
+            _RewardBanner(message: order.rewardMessage),
+            if (order.projectName.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _ProjectChip(projectName: order.projectName.trim()),
+            ],
+            const SizedBox(height: 16),
+            const Divider(
+              height: 0,
+              thickness: 1,
+              color: Color(0xFFE5E8EE),
+            ),
             const _OrderActions(),
           ],
         ),
@@ -58,6 +67,12 @@ class _OrderHeader extends StatelessWidget {
     return '${status[0].toUpperCase()}${status.substring(1).toLowerCase().replaceAll('_', ' ')}';
   }
 
+  String _formatDate(String value) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return value;
+    return DateFormat('d MMM, h:mm a').format(parsed.toLocal()).toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -68,7 +83,7 @@ class _OrderHeader extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
             color: const Color(0xFFCEFBE3),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: const Icon(Icons.check, color: Color(0xFF0BCB60), size: 26),
         ),
@@ -92,23 +107,25 @@ class _OrderHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Container(
-                    width: 1,
-                    height: 16,
-                    color: const Color(0xFFD9D9D9),
-                  ),
-                  const SizedBox(width: 10),
-                  SvgPicture.asset(
-                    'assets/images/qwik.svg',
-                    width: 54,
-                    height: 14,
-                  ),
+                  if (order.isQuickCommerceOrder) ...[
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 1,
+                      height: 16,
+                      color: const Color(0xFFD9D9D9),
+                    ),
+                    const SizedBox(width: 10),
+                    SvgPicture.asset(
+                      'assets/images/qwik.svg',
+                      width: 54,
+                      height: 14,
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 4),
               Text(
-                '₹${order.total.toStringAsFixed(0)} • ${order.createdAt}',
+                '₹${order.total.toStringAsFixed(0)}  • ${_formatDate(order.createdAt)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
@@ -164,30 +181,53 @@ class _ProductThumb extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: CachedNetworkImage(
-          imageUrl: imageUrl,
-          fit: BoxFit.contain,
-          memCacheWidth: 120,
-          placeholder: (_, __) => const ImageShimmer(),
-          errorWidget: (_, __, ___) => Image.asset(
-            'assets/images/Image-coming-soon.png',
-            fit: BoxFit.contain,
-          ),
-        ),
+        borderRadius: BorderRadius.circular(6),
+        child: imageUrl.isEmpty
+            ? Image.asset(
+                'assets/images/Image-coming-soon.png',
+                fit: BoxFit.contain,
+              )
+            : CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain,
+                memCacheWidth: 120,
+                placeholder: (_, __) => const ImageShimmer(),
+                errorWidget: (_, __, ___) => Image.asset(
+                  'assets/images/Image-coming-soon.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
       ),
     );
   }
 }
 
-class _ItemCountBanner extends StatelessWidget {
-  const _ItemCountBanner({required this.itemCount});
+class _RewardBanner extends StatelessWidget {
+  const _RewardBanner({required this.message});
 
-  final int itemCount;
+  final String message;
+
+  String get _displayMessage {
+    if (message.trim().isEmpty) {
+      return '100 points will be added 7 days after delivery';
+    }
+    return message
+        .replaceAll('(', '')
+        .replaceAll(')', '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll('It will be', 'will be')
+        .trim();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (itemCount == 0) return const SizedBox.shrink();
+    final displayMessage = _displayMessage;
+    final pointsMatch = RegExp(r'^\d+\s+points').firstMatch(displayMessage);
+    final pointsLabel = pointsMatch?.group(0) ?? '100 points';
+    final suffix = displayMessage.startsWith(pointsLabel)
+        ? displayMessage.substring(pointsLabel.length)
+        : ' will be added 7 days after delivery';
+
     return Container(
       height: 24,
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -207,10 +247,10 @@ class _ItemCountBanner extends StatelessWidget {
               TextSpan(
                 children: [
                   TextSpan(
-                    text: '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
+                    text: pointsLabel,
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
-                  const TextSpan(text: ' in this order'),
+                  TextSpan(text: suffix),
                 ],
               ),
               maxLines: 1,
@@ -229,18 +269,73 @@ class _ItemCountBanner extends StatelessWidget {
   }
 }
 
+class _ProjectChip extends StatelessWidget {
+  const _ProjectChip({required this.projectName});
+
+  final String projectName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        height: 24,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: ShapeDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment(0.98, 0.5),
+            end: Alignment(-0.0, 0.5),
+            colors: [Color(0x00FFD911), Color(0xFFFFD911)],
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(
+              fit: FlexFit.loose,
+              child: Text(
+                projectName.startsWith('Project:')
+                    ? projectName
+                    : 'Project: $projectName',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0A243F),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  height: 16 / 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _OrderActions extends StatelessWidget {
   const _OrderActions();
 
   @override
   Widget build(BuildContext context) {
     return const SizedBox(
-      height: 52,
-      child: Row(
-        children: [
-          Expanded(child: _OrderActionButton(label: 'Repeat')),
-          Expanded(child: _OrderActionButton(label: 'Rate order')),
-        ],
+      height: 44,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: Row(
+          children: [
+            Expanded(child: _OrderActionButton(label: 'Repeat')),
+            SizedBox(width: 15),
+            Expanded(child: _OrderActionButton(label: 'Rate order')),
+          ],
+        ),
       ),
     );
   }
@@ -256,6 +351,8 @@ class _OrderActionButton extends StatelessWidget {
     return TextButton(
       onPressed: () {},
       style: TextButton.styleFrom(
+        minimumSize: const Size.fromHeight(36),
+        padding: EdgeInsets.zero,
         foregroundColor: const Color(0xFF0360E5),
         textStyle: GoogleFonts.inter(
           fontSize: 12,
