@@ -16,15 +16,67 @@ class OrderItemEntity {
   double get lineTotal => unitPrice * qty;
 
   factory OrderItemEntity.fromMap(Map<String, dynamic> map) {
+    final product = map['product'] is Map
+        ? Map<String, dynamic>.from(map['product'] as Map)
+        : <String, dynamic>{};
+
     return OrderItemEntity(
-      title: (map['item_name_title'] ?? map['title'] ?? map['name'] ?? '').toString(),
-      imageUrl: (map['image'] ?? map['product_image'] ?? '').toString(),
+      title: (map['item_name_title'] ??
+              map['title'] ??
+              map['name'] ??
+              map['product_name'] ??
+              product['product_name'] ??
+              '')
+          .toString(),
+      imageUrl: (map['image'] ??
+              map['product_image'] ??
+              product['product_image'] ??
+              '')
+          .toString(),
       qty: int.tryParse(map['quantity']?.toString() ?? '1') ?? 1,
       unitPrice: double.tryParse(
-            (map['vendor_selling_price'] ?? map['selling_price'] ?? map['price'] ?? '0').toString(),
+            (map['vendor_selling_price'] ??
+                    map['selling_price'] ??
+                    map['price'] ??
+                    map['price_after_tax'] ??
+                    product['vendor_selling_price'] ??
+                    product['selling_price'] ??
+                    product['price'] ??
+                    product['price_after_tax'] ??
+                    '0')
+                .toString(),
           ) ??
           0,
-      mobSku: (map['mob_sku'] ?? '').toString(),
+      mobSku: (map['mob_sku'] ?? product['mob_sku'] ?? '').toString(),
+    );
+  }
+}
+
+class OrderShipmentEntity {
+  const OrderShipmentEntity({
+    required this.id,
+    required this.status,
+    required this.deliveryDate,
+    required this.items,
+  });
+
+  final String id;
+  final String status;
+  final String deliveryDate;
+  final List<OrderItemEntity> items;
+
+  factory OrderShipmentEntity.fromMap(Map<String, dynamic> map) {
+    final productsRaw =
+        map['products'] is List ? map['products'] as List : <dynamic>[];
+
+    return OrderShipmentEntity(
+      id: (map['suborder_id'] ?? map['id'] ?? '').toString(),
+      status: (map['status'] ?? '').toString(),
+      deliveryDate: (map['delivery_date'] ?? '').toString(),
+      items: productsRaw
+          .whereType<Map>()
+          .map((e) => OrderItemEntity.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
     );
   }
 }
@@ -38,7 +90,10 @@ class OrderEntity {
     required this.total,
     required this.items,
     required this.shippingAddress,
-    this.pointsEarned = 0,
+    required this.projectName,
+    required this.rewardMessage,
+    required this.isQuickCommerceOrder,
+    required this.shipments,
   });
 
   final String id;
@@ -48,27 +103,51 @@ class OrderEntity {
   final double total;
   final List<OrderItemEntity> items;
   final String shippingAddress;
-  final int pointsEarned;
 
   factory OrderEntity.fromMap(Map<String, dynamic> map) {
     final itemsRaw = map['items'] is List ? map['items'] as List : <dynamic>[];
-    final addr = map['shipping_address'] is Map
-        ? Map<String, dynamic>.from(map['shipping_address'] as Map)
+    final subordersRaw =
+        map['suborders'] is List ? map['suborders'] as List : <dynamic>[];
+    final addr = map['delivery_address'] is Map
+        ? Map<String, dynamic>.from(map['delivery_address'] as Map)
+        : map['shipping_address'] is Map
+            ? Map<String, dynamic>.from(map['shipping_address'] as Map)
+            : <String, dynamic>{};
+    final addressProject = addr['project'] is Map
+        ? Map<String, dynamic>.from(addr['project'] as Map)
         : <String, dynamic>{};
     final addrParts = [
       addr['address_line_1']?.toString() ?? '',
+      addr['address_line_2']?.toString() ?? '',
       addr['city']?.toString() ?? '',
       addr['state']?.toString() ?? '',
       addr['pincode']?.toString() ?? '',
     ].where((e) => e.isNotEmpty).toList();
+    final project = map['project'] is Map
+        ? Map<String, dynamic>.from(map['project'] as Map)
+        : <String, dynamic>{};
+    final pointsSummary = map['order_points_summary'] is Map
+        ? Map<String, dynamic>.from(map['order_points_summary'] as Map)
+        : <String, dynamic>{};
 
     return OrderEntity(
-      id: (map['id'] ?? map['order_id'] ?? '').toString(),
-      orderNumber: (map['order_number'] ?? map['order_no'] ?? map['id'] ?? '').toString(),
+      id: (map['order_id'] ??
+              map['order_number'] ??
+              map['order_no'] ??
+              map['id'] ??
+              '')
+          .toString(),
+      orderNumber: (map['order_id'] ??
+              map['order_number'] ??
+              map['order_no'] ??
+              map['id'] ??
+              '')
+          .toString(),
       status: (map['status'] ?? map['order_status'] ?? '').toString(),
       createdAt: (map['created_at'] ?? map['date'] ?? '').toString(),
       total: double.tryParse(
-            (map['total'] ?? map['order_total'] ?? map['grand_total'] ?? '0').toString(),
+            (map['total'] ?? map['order_total'] ?? map['grand_total'] ?? '0')
+                .toString(),
           ) ??
           0,
       items: itemsRaw
@@ -76,10 +155,6 @@ class OrderEntity {
           .map((e) => OrderItemEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
       shippingAddress: addrParts.join(', '),
-      pointsEarned: int.tryParse(
-            (map['points_earned'] ?? map['reward_points_earned'] ?? map['mobstar_points_earned'] ?? '0').toString(),
-          ) ??
-          0,
     );
   }
 }
