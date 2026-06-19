@@ -13,9 +13,10 @@ abstract interface class CheckoutRepository {
   });
   Future<(PlacedOrderEntity?, AppFailure?)> getSuborderDetails({
     required String platformOrderId,
-    required String merchantPaymentRefId,
-    required String paymentId,
-    required String transactionId,
+    String paymentGateway,
+    String merchantPaymentRefId,
+    String paymentId,
+    String transactionId,
   });
   Future<(RupifiOrderEntity?, AppFailure?)> createRupifiOrder(String cartId);
 }

@@ -404,7 +404,7 @@ class ProductInfoBlock extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      '\u20B9 ${price.toStringAsFixed(0)}',
+                      '\u20B9${price.toStringAsFixed(0)}',
                       style: GoogleFonts.inter(
                         fontSize: 21,
                         fontWeight: FontWeight.w700,
@@ -423,7 +423,7 @@ class ProductInfoBlock extends StatelessWidget {
                   children: [
                     if (oldPrice > 0)
                       Text(
-                        'MRP: \u20B9 ${oldPrice.toStringAsFixed(0)}',
+                        'MRP: \u20B9${oldPrice.toStringAsFixed(0)}',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w400,

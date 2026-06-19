@@ -2,7 +2,8 @@ import 'package:dio/dio.dart';
 
 abstract interface class CheckoutRemoteDatasource {
   Future<Map<String, dynamic>> getCheckoutSummary();
-  Future<Map<String, dynamic>> updateAddressToOrder(Map<String, dynamic> payload);
+  Future<Map<String, dynamic>> updateAddressToOrder(
+      Map<String, dynamic> payload);
   Future<Map<String, dynamic>> placeOrder(Map<String, dynamic> payload);
   Future<Map<String, dynamic>> createRazorpayOrder(int cartId);
   Future<Map<String, dynamic>> verifyRazorpayPayment({
@@ -13,9 +14,10 @@ abstract interface class CheckoutRemoteDatasource {
   });
   Future<Map<String, dynamic>> getSuborderDetails({
     required String platformOrderId,
-    required String merchantPaymentRefId,
-    required String paymentId,
-    required String transactionId,
+    String paymentGateway,
+    String merchantPaymentRefId,
+    String paymentId,
+    String transactionId,
     String currency,
     String paymentFor,
   });
@@ -34,7 +36,8 @@ class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
   }
 
   @override
-  Future<Map<String, dynamic>> updateAddressToOrder(Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> updateAddressToOrder(
+      Map<String, dynamic> payload) async {
     final response = await _dio.patch<dynamic>(
       '/orders/cart/update_address_to_order/',
       data: payload,
@@ -44,7 +47,8 @@ class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
 
   @override
   Future<Map<String, dynamic>> placeOrder(Map<String, dynamic> payload) async {
-    final response = await _dio.post<dynamic>('/checkout/place-order/', data: payload);
+    final response =
+        await _dio.post<dynamic>('/rfq/place_direct_order/', data: payload);
     return _toMap(response.data);
   }
 
@@ -80,23 +84,30 @@ class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
   @override
   Future<Map<String, dynamic>> getSuborderDetails({
     required String platformOrderId,
-    required String merchantPaymentRefId,
-    required String paymentId,
-    required String transactionId,
-    String currency = 'INR',
-    String paymentFor = 'CART',
+    String paymentGateway = '',
+    String merchantPaymentRefId = '',
+    String paymentId = '',
+    String transactionId = '',
+    String currency = '',
+    String paymentFor = '',
   }) async {
+    final queryParameters = <String, dynamic>{'userDetails': 'true'};
+    if (paymentGateway.isNotEmpty) {
+      queryParameters['payment_Gateway'] = paymentGateway;
+    }
+    if (merchantPaymentRefId.isNotEmpty) {
+      queryParameters['merchantPaymentRefId'] = merchantPaymentRefId;
+    }
+    if (paymentId.isNotEmpty) queryParameters['paymentId'] = paymentId;
+    if (transactionId.isNotEmpty) {
+      queryParameters['transactionId'] = transactionId;
+    }
+    if (currency.isNotEmpty) queryParameters['currency'] = currency;
+    if (paymentFor.isNotEmpty) queryParameters['paymentFor'] = paymentFor;
+
     final response = await _dio.get<dynamic>(
       '/orders/customer-orders/$platformOrderId/get_suborder_details/',
-      queryParameters: {
-        'payment_Gateway': 'RAZORPAY',
-        'merchantPaymentRefId': merchantPaymentRefId,
-        'paymentId': paymentId,
-        'transactionId': transactionId,
-        'currency': currency,
-        'paymentFor': paymentFor,
-        'userDetails': 'true',
-      },
+      queryParameters: queryParameters,
     );
     return _toMap(response.data);
   }

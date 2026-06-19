@@ -43,6 +43,15 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
     }
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel(
+        'RupifiUPIIntentHandler',
+        onMessageReceived: (message) {
+          final uri = Uri.tryParse(message.message);
+          if (uri != null) {
+            _launchExternally(uri);
+          }
+        },
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) => setState(() => _isLoading = true),
@@ -163,8 +172,112 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
           else
             WebViewWidget(controller: _controller!),
           if (_isLoading)
-            const Center(child: CircularProgressIndicator()),
+            const _RupifiLoadingOverlay(),
         ],
+      ),
+    );
+  }
+}
+
+class _RupifiLoadingOverlay extends StatefulWidget {
+  const _RupifiLoadingOverlay();
+
+  @override
+  State<_RupifiLoadingOverlay> createState() => _RupifiLoadingOverlayState();
+}
+
+class _RupifiLoadingOverlayState extends State<_RupifiLoadingOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _pulse = Tween<double>(
+    begin: 0.92,
+    end: 1.08,
+  ).animate(
+    CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: ColoredBox(
+        color: Colors.white,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ScaleTransition(
+                scale: _pulse,
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF2FF),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Icon(
+                    Icons.lock_clock_outlined,
+                    color: Color(0xFF0360E5),
+                    size: 34,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Opening mobCREDIT',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0A243F),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  height: 22 / 16,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please complete OTP verification on the secure Rupifi page.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF667085),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  height: 18 / 12,
+                ),
+              ),
+              const SizedBox(height: 18),
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(3, (index) {
+                      final phase = (_controller.value + index * 0.22) % 1;
+                      final opacity = 0.35 + (phase * 0.65);
+                      return Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0360E5)
+                              .withValues(alpha: opacity.clamp(0.35, 1)),
+                          shape: BoxShape.circle,
+                        ),
+                      );
+                    }),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

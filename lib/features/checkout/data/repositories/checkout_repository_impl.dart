@@ -98,17 +98,23 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   @override
   Future<(PlacedOrderEntity?, AppFailure?)> getSuborderDetails({
     required String platformOrderId,
-    required String merchantPaymentRefId,
-    required String paymentId,
-    required String transactionId,
+    String paymentGateway = '',
+    String merchantPaymentRefId = '',
+    String paymentId = '',
+    String transactionId = '',
   }) async {
     try {
       debugPrint('🔵 SUBORDER DETAILS REQUEST: platformOrderId=$platformOrderId merchantPaymentRefId=$merchantPaymentRefId paymentId=$paymentId');
       final body = await _datasource.getSuborderDetails(
         platformOrderId: platformOrderId,
+        paymentGateway: paymentGateway,
         merchantPaymentRefId: merchantPaymentRefId,
         paymentId: paymentId,
         transactionId: transactionId,
+        // currency/paymentFor only make sense alongside an actual payment
+        // gateway (Razorpay flow) — omitted for wallet/direct-order success.
+        currency: paymentGateway.isNotEmpty ? 'INR' : '',
+        paymentFor: paymentGateway.isNotEmpty ? 'CART' : '',
       );
       debugPrint('🔵 SUBORDER DETAILS RESPONSE: $body');
       if (body['status'] == false) {

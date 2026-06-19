@@ -28,128 +28,179 @@ class ViewCartBar extends StatelessWidget {
         return prev.runtimeType != next.runtimeType;
       },
       builder: (context, state) {
-        if (state is! CartLoaded || state.summary.itemCount == 0) {
-          return const SizedBox.shrink();
-        }
-
-        final summary = state.summary;
-        final itemCount = summary.itemCount;
-        final miniImages = summary.items
-            .where((i) => i.imageAsset.isNotEmpty)
-            .take(3)
-            .map((i) => i.imageAsset)
-            .toList();
-
         final bottomInset = MediaQuery.paddingOf(context).bottom;
+        final hasCart = state is CartLoaded && state.summary.itemCount > 0;
+        final summary = hasCart ? state.summary : null;
+        final itemCount = summary?.itemCount ?? 0;
+        final miniImages = summary == null
+            ? const <String>[]
+            : summary.items
+                .where((i) => i.imageAsset.isNotEmpty)
+                .take(3)
+                .map((i) => i.imageAsset)
+                .toList();
 
         return Positioned(
           bottom: bottomOffset + bottomInset + 16,
           left: 0,
           right: 0,
-          child: Center(
-            child: GestureDetector(
-              onTap: () {
-                AppHaptics.lightTap();
-                context.push('/cart');
-              },
-              child: Container(
-                width: 240,
-                height: 56,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0360E5).withValues(alpha: 0.24),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.14),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      width: 240,
-                      height: 56,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            const Color(0xFF0360E5).withValues(alpha: 0.92),
-                            const Color(0xFF034FC0).withValues(alpha: 0.86),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.22),
-                        ),
+          child: IgnorePointer(
+            ignoring: !hasCart,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 320),
+              reverseDuration: const Duration(milliseconds: 220),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                final offset = Tween<Offset>(
+                  begin: const Offset(0, 1.2),
+                  end: Offset.zero,
+                ).animate(animation);
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: offset,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.96, end: 1).animate(
+                        animation,
                       ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 72,
-                            height: 32,
-                            child: Stack(
-                              children: List.generate(3, (i) {
-                                final url =
-                                    i < miniImages.length ? miniImages[i] : '';
-                                return Positioned(
-                                  left: i * 20.0,
-                                  child: _MiniImage(url: url),
-                                );
-                              }),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'View cart',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    height: 20 / 14,
-                                  ),
-                                ),
-                                Text(
-                                  '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white.withValues(alpha: 0.82),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    height: 18 / 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.chevron_right,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                        ],
-                      ),
+                      child: child,
                     ),
                   ),
-                ),
-              ),
+                );
+              },
+              child: hasCart
+                  ? _ViewCartBarContent(
+                      key: const ValueKey<String>('view-cart-bar'),
+                      itemCount: itemCount,
+                      miniImages: miniImages,
+                    )
+                  : const SizedBox(
+                      key: ValueKey<String>('view-cart-empty'),
+                      width: 240,
+                      height: 56,
+                    ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _ViewCartBarContent extends StatelessWidget {
+  const _ViewCartBarContent({
+    super.key,
+    required this.itemCount,
+    required this.miniImages,
+  });
+
+  final int itemCount;
+  final List<String> miniImages;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.lightTap();
+          context.push('/cart');
+        },
+        child: Container(
+          width: 240,
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0360E5).withValues(alpha: 0.24),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                width: 240,
+                height: 56,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF0360E5).withValues(alpha: 0.92),
+                      const Color(0xFF034FC0).withValues(alpha: 0.86),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    if (miniImages.isNotEmpty) ...[
+                      SizedBox(
+                        width: 32 + ((miniImages.length - 1) * 20),
+                        height: 32,
+                        child: Stack(
+                          children: List.generate(miniImages.length, (i) {
+                            return Positioned(
+                              left: i * 20.0,
+                              child: _MiniImage(url: miniImages[i]),
+                            );
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'View cart',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              height: 20 / 14,
+                            ),
+                          ),
+                          Text(
+                            '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
+                            style: GoogleFonts.inter(
+                              color: Colors.white.withValues(alpha: 0.82),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              height: 18 / 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -833,7 +833,7 @@ class _AiQuoteCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 _QuoteMetric(
                   label: 'Total:',
-                  value: '\u20B9 ${total.toStringAsFixed(0)}',
+                  value: '\u20B9${total.toStringAsFixed(0)}',
                   valueWeight: FontWeight.w800,
                 ),
                 const Spacer(),
@@ -946,7 +946,7 @@ class _QuoteCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 _QuoteMetric(
                   label: 'Total:',
-                  value: '\u20B9 ${total.toStringAsFixed(0)}',
+                  value: '\u20B9${total.toStringAsFixed(0)}',
                   valueWeight: FontWeight.w800,
                 ),
               ],

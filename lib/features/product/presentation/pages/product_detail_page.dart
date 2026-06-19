@@ -853,7 +853,12 @@ class ProductDetailBottomBar extends StatelessWidget {
           child: GestureDetector(
             onTap: () {
               AppHaptics.lightTap();
-              context.go('/cart');
+              // push (not go) — keeps the StatefulShellRoute/Home tab
+              // underneath in the stack so the cart's back button can pop
+              // back to it normally instead of tearing down and recreating
+              // the shell, which raced and threw duplicate-GlobalKey /
+              // deactivated-element errors.
+              context.push('/cart');
             },
             child: Container(
               height: 48,

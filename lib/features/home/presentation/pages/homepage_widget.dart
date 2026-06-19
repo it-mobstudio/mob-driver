@@ -96,7 +96,11 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                           );
                         }),
                         const SliverToBoxAdapter(child: HomeRewardCard()),
-                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                        SliverToBoxAdapter(
+                          child: SizedBox(
+                            height: 112 + MediaQuery.paddingOf(context).bottom,
+                          ),
+                        ),
                       ],
                     ),
                   ),

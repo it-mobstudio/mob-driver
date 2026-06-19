@@ -147,7 +147,7 @@ class _ShipmentItemTile extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      '\u20B9 ${item.unitPrice.toStringAsFixed(0)} /unit',
+                      '\u20B9${item.unitPrice.toStringAsFixed(0)} /unit',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF8A8A8A),
                         fontSize: 12,

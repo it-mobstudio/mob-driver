@@ -298,8 +298,20 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             if (extra is PlacedOrderEntity) {
               return OrderPlacedPage(order: extra);
             }
-            return OrderPlacedPage(orderId: extra as String? ?? '');
+            return OrderPlacedPage(
+              orderId: extra as String? ??
+                  state.uri.queryParameters['order_id'] ??
+                  '',
+            );
           },
+        ),
+        GoRoute(
+          name: 'OrderPlacedDeepLinkAlias',
+          path: '/success',
+          parentNavigatorKey: appNavigatorKey,
+          builder: (context, state) => OrderPlacedPage(
+            orderId: state.uri.queryParameters['order_id'] ?? '',
+          ),
         ),
         GoRoute(
           name: PaymentFailedPage.routeName,

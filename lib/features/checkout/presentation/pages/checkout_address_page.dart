@@ -53,7 +53,11 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go('/cart');
+      // push (not go) — preserves the StatefulShellRoute underneath so
+      // Cart's own back button can simply pop instead of having to tear
+      // down and recreate the shell (which raced and threw duplicate
+      // GlobalKey / deactivated-element errors).
+      context.push('/cart');
     }
   }
 

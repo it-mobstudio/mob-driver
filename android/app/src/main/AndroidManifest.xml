@@ -89,6 +89,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="mobdemandside" android:host="mob-demand-side.netlify.app" />
+                <data android:scheme="mobdemandside" android:host="checkout" />
             </intent-filter>
 
         </activity>

@@ -5,6 +5,7 @@ import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
+import 'package:m_o_b_demand_side/index.dart';
 
 class CartTopBar extends StatelessWidget {
   const CartTopBar({super.key});
@@ -20,13 +21,7 @@ class CartTopBar extends StatelessWidget {
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () {
-              if (GoRouter.of(context).canPop()) {
-                GoRouter.of(context).pop();
-              } else {
-                GoRouter.of(context).go('/homepage');
-              }
-            },
+            onTap: () => GoRouter.of(context).go(HomepageWidget.routePath),
             child: const SizedBox(
               width: 40,
               height: 60,

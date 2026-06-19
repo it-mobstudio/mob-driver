@@ -104,9 +104,13 @@ class CartRepositoryImpl implements CartRepository {
     final ud = data['user_details'];
     final udMap = ud is Map ? Map<String, dynamic>.from(ud) : <String, dynamic>{};
 
-    // Mob star tier nested inside user_details (e.g. mob_star, loyalty, tier)
+    // Mob star tier nested inside user_details. The real field is
+    // `mobStarPoints` (e.g. {points, actual_money, name, percentage,
+    // free_delivery}) — it was missing from this candidate list, so the
+    // lookup always fell through to {} and checkout showed "No mobstar
+    // points available" even when the user had a positive balance.
     final mobStarTier = _findNestedMap(udMap, const [
-      'mob_star', 'mob_star_tier', 'loyalty', 'loyalty_tier', 'tier', 'reward_tier',
+      'mobStarPoints', 'mob_star', 'mob_star_tier', 'loyalty', 'loyalty_tier', 'tier', 'reward_tier',
     ]);
 
     // mobCREDIT balance + account status — look inside user_details under common key names, then root data.
@@ -116,21 +120,33 @@ class CartRepositoryImpl implements CartRepository {
     final mobCreditObjFromUd = _findNestedMap(udMap, const ['rupifiDetails', 'rupifi_details', 'mob_credit', 'rupifi', 'credit', 'credit_details']);
     final mobCreditObjFromRoot = _findNestedMap(data, const ['rupifiDetails', 'rupifi_details', 'mob_credit', 'rupifi', 'credit', 'credit_details']);
     final mobCreditObj = mobCreditObjFromUd.isNotEmpty ? mobCreditObjFromUd : mobCreditObjFromRoot;
-    final mobCreditBalance = _num(mobCreditObj, const ['available', 'available_balance', 'balance']).toDouble();
-    // null → no rupifi account at all (hide option). Otherwise normalize whatever status string the
-    // backend sends to upper-case (so the existing 'AMOUNT_DUE'/'INACTIVE' checks keep working), and
-    // force INACTIVE when the account exists but hasn't been activated yet.
+    final mobCreditBalance = _num(
+      mobCreditObj,
+      const ['available', 'available_balance', 'balance', 'current_limit'],
+    ).toDouble();
+    // null → no Rupifi details at all. Otherwise normalize from rupifiDetails.
+    // A usable mobCREDIT account needs both account_status and primary_status
+    // active; incomplete/null statuses should keep the option visible but disabled.
     final mobCreditExists = mobCreditObj.isNotEmpty &&
         (mobCreditObj['exists'] == null || mobCreditObj['exists'] == true);
     String? mobCreditAccountStatus;
     if (mobCreditExists) {
       final isActivated = mobCreditObj['is_activated'] != false;
-      final rawAccountStatus = mobCreditObj['account_status'] ?? mobCreditObj['status'];
-      mobCreditAccountStatus = !isActivated
-          ? 'INACTIVE'
-          : (rawAccountStatus is String && rawAccountStatus.trim().isNotEmpty
-              ? rawAccountStatus.trim().toUpperCase()
-              : 'ACTIVE');
+      final accountStatus =
+          (mobCreditObj['account_status'] ?? mobCreditObj['status'])
+              ?.toString()
+              .trim()
+              .toUpperCase();
+      final primaryStatus =
+          mobCreditObj['primary_status']?.toString().trim().toUpperCase();
+      final hasDue = accountStatus == 'AMOUNT_DUE' || primaryStatus == 'AMOUNT_DUE';
+      final isAccountActive = accountStatus == 'ACTIVE';
+      final isPrimaryActive = primaryStatus == 'ACTIVE';
+      mobCreditAccountStatus = hasDue
+          ? 'AMOUNT_DUE'
+          : isActivated && isAccountActive && isPrimaryActive
+              ? 'ACTIVE'
+              : 'INACTIVE';
     }
 
     // Wallet nested object (e.g. mob_wallet, wallet, wallet_info)

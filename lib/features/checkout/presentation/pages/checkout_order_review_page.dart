@@ -119,6 +119,10 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
       value: _checkoutBloc,
       child: BlocConsumer<CheckoutBloc, CheckoutState>(
         listener: (context, checkoutState) {
+          // Guard against navigating on a context whose element has already
+          // been deactivated (e.g. user pressed back while the address
+          // update request was still in flight).
+          if (!context.mounted) return;
           if (checkoutState is CheckoutAddressUpdated) {
             GoRouter.of(context).push(CheckoutPaymentPage.routePath);
           } else if (checkoutState is CheckoutError) {

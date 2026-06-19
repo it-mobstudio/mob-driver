@@ -122,8 +122,8 @@ class _ItemCardState extends State<ItemCard> {
               children: [
                 GestureDetector(
                   onTap: widget.onTap ??
-                      () => context
-                          .push('${ProductDetailPage.routePath}/${product.slug}'),
+                      () => context.push(
+                          '${ProductDetailPage.routePath}/${product.slug}'),
                   child: Container(
                     width: cardWidth,
                     height: cardWidth,
@@ -186,16 +186,11 @@ class _ItemCardState extends State<ItemCard> {
                   child: ProductCartActionButton(
                     product: product,
                     style: ProductCartActionButtonStyle.rail,
-                    // A multi-variant card always shows ADD / "N options" —
-                    // never an inc/dec counter — even if one of its variants
-                    // happens to share a cart-quantity lookup with the
-                    // parent's own addToCartProductId.
                     showCounter: !product.hasVariants &&
                         !product.shouldShowNotify &&
                         _quantityFor(product) > 0,
-                    quantity: _quantityFor(product) > 0
-                        ? _quantityFor(product)
-                        : 1,
+                    quantity:
+                        _quantityFor(product) > 0 ? _quantityFor(product) : 1,
                     isFetchingCart: _isUpdating(product),
                     onAdd: (_) async => _increment(),
                     onAddForQuote: (_) async => _increment(),
@@ -264,7 +259,7 @@ class _ItemCardState extends State<ItemCard> {
             child: Row(
               children: [
                 Text(
-                  '\u20B9 ${price.round()}',
+                  '\u20B9${price.round()}',
                   style: GoogleFonts.inter(
                     color: const Color(0xFF0A243F),
                     fontSize: 16,
@@ -276,7 +271,7 @@ class _ItemCardState extends State<ItemCard> {
                 if (mrp > 0)
                   Flexible(
                     child: Text(
-                      '\u20B9 ${mrp.round()}',
+                      '\u20B9${mrp.round()}',
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
                         color: const Color(0xFFB5B5B5),

@@ -327,23 +327,7 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
   }
 
   Future<void> _showFilterSection(BrowseFilterSection section) async {
-    if (!mounted) return;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => FilterBottomSheet(
-        sections: <BrowseFilterSection>[section],
-        initialSectionKey: section.key,
-        title: section.label.isNotEmpty ? section.label : section.key,
-        showSidebar: false,
-        selectedValuesByKey: _selectedFilterValuesByKey,
-        onSelectionChanged: _updateSelectedFilters,
-      ),
-    );
+    await _showFilters(initialSectionKey: section.key);
   }
 
   Future<void> _showSortOptions() async {

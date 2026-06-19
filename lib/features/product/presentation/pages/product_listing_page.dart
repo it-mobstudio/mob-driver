@@ -409,61 +409,15 @@ class _ProductListingPageState extends State<ProductListingPage> {
   }
 
   Future<void> _showBrandFilters() async {
-    await _showSingleFilterSheet(sectionKey: 'brand', title: 'Brands');
+    await _showFilters(initialSectionKey: 'brand');
   }
 
   Future<void> _showPriceFilters() async {
-    if (!mounted) return;
-    await _showSingleFilterSheet(
-      sectionKey: _priceFilterKey(),
-      title: 'Price',
-    );
-  }
-
-  Future<void> _showSingleFilterSheet({
-    required String sectionKey,
-    required String title,
-  }) async {
-    if (!mounted) return;
-    final sections = _filterSections
-        .where((section) => section.key == sectionKey)
-        .toList(growable: false);
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => FilterBottomSheet(
-        sections: sections,
-        title: title,
-        showSidebar: false,
-        selectedValuesByKey: _selectedFilterValuesByKey,
-        onSelectionChanged: _updateSelectedFilters,
-      ),
-    );
+    await _showFilters(initialSectionKey: _priceFilterKey());
   }
 
   Future<void> _showFilterSection(BrowseFilterSection section) async {
-    if (!mounted) return;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => FilterBottomSheet(
-        sections: <BrowseFilterSection>[section],
-        initialSectionKey: section.key,
-        title: section.label.isNotEmpty ? section.label : section.key,
-        showSidebar: false,
-        selectedValuesByKey: _selectedFilterValuesByKey,
-        onSelectionChanged: _updateSelectedFilters,
-      ),
-    );
+    await _showFilters(initialSectionKey: section.key);
   }
 
   String _priceFilterKey() {

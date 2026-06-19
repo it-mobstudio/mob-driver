@@ -27,7 +27,7 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
   @override
   void initState() {
     super.initState();
-    _profileBloc = sl<ProfileBloc>()..add(ProfileLoadRequested());
+    _profileBloc = sl<ProfileBloc>();
   }
 
   @override

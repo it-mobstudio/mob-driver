@@ -154,9 +154,21 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     if (failure != null) {
       AppHaptics.error();
       emit(CheckoutError(failure.message));
-    } else {
-      emit(CheckoutOrderPlaced(order!));
+      return;
     }
+
+    // Order is already placed at this point — a failure fetching the richer
+    // suborder details below must not surface as a checkout error. Fall back
+    // to the lighter confirmation entity from place_direct_order instead.
+    final placedOrder = order!;
+    if (placedOrder.orderId.isEmpty) {
+      emit(CheckoutOrderPlaced(placedOrder));
+      return;
+    }
+    final (detailedOrder, detailFailure) = await _repository.getSuborderDetails(
+      platformOrderId: placedOrder.orderId,
+    );
+    emit(CheckoutOrderPlaced(detailFailure != null ? placedOrder : detailedOrder!));
   }
 
   Future<void> _onCreateRazorpayOrder(
@@ -203,6 +215,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     final platformOrderId = verifiedOrder!.orderId;
     final (order, failure) = await _repository.getSuborderDetails(
       platformOrderId: platformOrderId,
+      paymentGateway: 'RAZORPAY',
       merchantPaymentRefId: event.orderId,
       paymentId: event.paymentId,
       transactionId: event.signature,
@@ -237,9 +250,6 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(CheckoutLoading());
     final (order, failure) = await _repository.getSuborderDetails(
       platformOrderId: event.orderId,
-      merchantPaymentRefId: '',
-      paymentId: '',
-      transactionId: '',
     );
     if (failure != null) {
       AppHaptics.error();
@@ -256,6 +266,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(CheckoutLoading());
     final (order, failure) = await _repository.getSuborderDetails(
       platformOrderId: event.platformOrderId,
+      paymentGateway: 'RAZORPAY',
       merchantPaymentRefId: event.merchantPaymentRefId,
       paymentId: event.paymentId,
       transactionId: event.transactionId,

@@ -622,24 +622,30 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                   icon: Icons.remove,
                   onPressed:
                       _isBusy ? null : () => _updateQuantity(_quantity - 1),
-                  width: 44,
+                  width: 38,
                   height: _cartActionHeight,
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
                   disabledColor: Colors.white.withValues(alpha: 0.45),
                 ),
-                AnimatedSwitcher(
-                  duration: _cartActionAnimationDuration,
-                  transitionBuilder: _fadeScaleTransition,
-                  child: Text(
-                    '$_quantity',
-                    key: ValueKey<int>(_quantity),
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      height: 20 / 14,
+                Expanded(
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: _cartActionAnimationDuration,
+                      transitionBuilder: _fadeScaleTransition,
+                      child: Text(
+                        '$_quantity',
+                        key: ValueKey<int>(_quantity),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 20 / 14,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -649,7 +655,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                   onPressed: _isBusy || !canIncrease
                       ? null
                       : () => _updateQuantity(_quantity + 1),
-                  width: 44,
+                  width: 38,
                   height: _cartActionHeight,
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
