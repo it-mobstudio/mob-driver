@@ -103,6 +103,10 @@ class OrderEntity {
   final double total;
   final List<OrderItemEntity> items;
   final String shippingAddress;
+  final bool isQuickCommerceOrder;
+  final String projectName;
+  final String rewardMessage;
+  final List<OrderShipmentEntity> shipments;
 
   factory OrderEntity.fromMap(Map<String, dynamic> map) {
     final itemsRaw = map['items'] is List ? map['items'] as List : <dynamic>[];
@@ -129,6 +133,11 @@ class OrderEntity {
     final pointsSummary = map['order_points_summary'] is Map
         ? Map<String, dynamic>.from(map['order_points_summary'] as Map)
         : <String, dynamic>{};
+    final isQuickCommerceOrder =
+        map['is_quick_commerce_order'] == true ||
+            map['is_quick_commerce_order'] == 1 ||
+            map['isQuickCommerceOrder'] == true ||
+            map['quick_commerce'] == true;
 
     return OrderEntity(
       id: (map['order_id'] ??
@@ -155,6 +164,23 @@ class OrderEntity {
           .map((e) => OrderItemEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
       shippingAddress: addrParts.join(', '),
+      projectName: (map['project_name'] ??
+              project['name'] ??
+              project['project_name'] ??
+              addressProject['name'] ??
+              addressProject['project_name'] ??
+              '')
+          .toString(),
+      rewardMessage: (pointsSummary['message'] ??
+              pointsSummary['reward_message'] ??
+              map['reward_message'] ??
+              '')
+          .toString(),
+      isQuickCommerceOrder: isQuickCommerceOrder,
+      shipments: subordersRaw
+          .whereType<Map>()
+          .map((e) => OrderShipmentEntity.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
     );
   }
 }

@@ -1,5 +1,3 @@
-import 'package:auto_size_text/auto_size_text.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +5,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/home/data/models/home_models.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
-import 'package:m_o_b_demand_side/features/product/presentation/pages/product_listing_page.dart';
+import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_category_grid.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 
 class CategoriesPage extends StatefulWidget {
@@ -126,177 +124,20 @@ class _CategoriesContent extends StatelessWidget {
       onRefresh: () async {
         context.read<HomeBloc>().add(HomeRefreshRequested());
       },
-      child: ListView.separated(
+      child: GridView.builder(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
         itemCount: visibleCategories.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 24),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 13,
+          childAspectRatio: 76 / 114,
+        ),
         itemBuilder: (context, index) {
-          final category = visibleCategories[index];
-          final tiles = _tilesFor(category);
-          if (tiles.isEmpty) return const SizedBox.shrink();
-
-          return _CategorySection(
-            title: category.name,
-            tiles: tiles,
+          return Center(
+            child: HomeCategoryTile(category: visibleCategories[index]),
           );
         },
-      ),
-    );
-  }
-
-  List<_CategoryTileData> _tilesFor(HomeCategoryModel category) {
-    final subCategories = category.subCategories
-        .where((item) => item.name.trim().isNotEmpty)
-        .toList()
-      ..sort((a, b) => a.index.compareTo(b.index));
-
-    if (subCategories.isEmpty) {
-      return [
-        _CategoryTileData(
-          name: category.name,
-          categoryName: category.name,
-          categorySlug: category.slug,
-          subCategorySlug: '',
-          imageUrl: category.imageUrl,
-        ),
-      ];
-    }
-
-    return subCategories.map((item) {
-      return _CategoryTileData(
-        name: item.name,
-        categoryName: category.name,
-        categorySlug: category.slug,
-        subCategorySlug: item.slug,
-        imageUrl: item.imageUrl.isNotEmpty ? item.imageUrl : category.imageUrl,
-      );
-    }).toList();
-  }
-}
-
-class _CategorySection extends StatelessWidget {
-  const _CategorySection({
-    required this.title,
-    required this.tiles,
-  });
-
-  final String title;
-  final List<_CategoryTileData> tiles;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            title,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF0A243F),
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              height: 22 / 16,
-            ),
-          ),
-        ),
-        GridView.builder(
-          padding: EdgeInsets.zero,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: tiles.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 13,
-            childAspectRatio: 76 / 106,
-          ),
-          itemBuilder: (context, index) {
-            return _CategoryTile(tile: tiles[index]);
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.tile});
-
-  final _CategoryTileData tile;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () {
-        context.push(
-          ProductListingPage.routePath,
-          extra: {
-            'category': tile.categoryName,
-            'slug': tile.categorySlug,
-            if (tile.subCategorySlug.isNotEmpty)
-              'subCategorySlug': tile.subCategorySlug,
-            if (tile.subCategorySlug.isNotEmpty)
-              'subCategoryName': tile.name,
-          },
-        );
-      },
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment(0.07, 0.07),
-                  end: Alignment(0.91, 1),
-                  colors: [
-                    Color(0xFFFFF2EE),
-                    Color(0xFFFFE4B0),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.all(8),
-              child: tile.imageUrl.isEmpty
-                  ? const Icon(
-                      Icons.category_outlined,
-                      color: Color(0xFF0A243F),
-                      size: 30,
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: tile.imageUrl,
-                      fit: BoxFit.contain,
-                      memCacheWidth: 140,
-                      fadeInDuration: const Duration(milliseconds: 180),
-                      fadeOutDuration: Duration.zero,
-                      errorWidget: (_, __, ___) => const Icon(
-                        Icons.category_outlined,
-                        color: Color(0xFF0A243F),
-                        size: 30,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 32,
-            child: AutoSizeText(
-              tile.name,
-              maxLines: 2,
-              minFontSize: 8,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                height: 1.15,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -349,53 +190,32 @@ class _CategoriesSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
+    return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-      itemCount: 4,
-      separatorBuilder: (_, __) => const SizedBox(height: 24),
+      itemCount: 12,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 13,
+        childAspectRatio: 76 / 114,
+      ),
       itemBuilder: (_, __) {
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE9E9E9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
             Container(
-              width: 150,
-              height: 18,
+              height: 30,
               decoration: BoxDecoration(
                 color: const Color(0xFFE9E9E9),
                 borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: 12),
-            GridView.builder(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 8,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 13,
-                childAspectRatio: 76 / 106,
-              ),
-              itemBuilder: (_, __) => Column(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE9E9E9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE9E9E9),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
               ),
             ),
           ],
@@ -403,20 +223,4 @@ class _CategoriesSkeleton extends StatelessWidget {
       },
     );
   }
-}
-
-class _CategoryTileData {
-  const _CategoryTileData({
-    required this.name,
-    required this.categoryName,
-    required this.categorySlug,
-    required this.subCategorySlug,
-    required this.imageUrl,
-  });
-
-  final String name;
-  final String categoryName;
-  final String categorySlug;
-  final String subCategorySlug;
-  final String imageUrl;
 }
