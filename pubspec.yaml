@@ -81,6 +81,7 @@ dependencies:
   google_maps_flutter: ^2.5.0
   geolocator: ^9.0.2
   geocoding: ^2.1.0
+  web_socket_channel: ^3.0.3
 
 dependency_overrides:
   http: 1.4.0

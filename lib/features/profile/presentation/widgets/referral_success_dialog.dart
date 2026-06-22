@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 
 class ReferralSuccessDialog {
@@ -76,7 +77,7 @@ class _ReferralSuccessSheet extends StatelessWidget {
               (constraints.maxHeight * 0.58).clamp(380.0, 430.0).toDouble();
           final heroHeight =
               (maxWidth * 0.42).clamp(128.0, 168.0).toDouble();
-          const closeButtonSize = 30.0;
+          const closeButtonSize = 44.0;
 
           return Align(
             alignment: Alignment.bottomCenter,
@@ -110,12 +111,8 @@ class _ReferralSuccessSheet extends StatelessWidget {
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  Positioned(
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    height: heroHeight * 0.68,
-                                    child: const DecoratedBox(
+                                  const Positioned.fill(
+                                    child: DecoratedBox(
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           begin: Alignment.centerLeft,
@@ -241,22 +238,13 @@ class _ReferralSuccessSheet extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    top: closeButtonSize * 0.16,
+                    top: closeButtonSize / 2,
                     child: GestureDetector(
                       onTap: () => Navigator.of(context).pop(),
-                      child: Container(
+                      child: SvgPicture.asset(
+                        'assets/images/closeicon.svg',
                         width: closeButtonSize,
                         height: closeButtonSize,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8F8F8F)
-                              .withValues(alpha: 0.92),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 18,
-                        ),
                       ),
                     ),
                   ),

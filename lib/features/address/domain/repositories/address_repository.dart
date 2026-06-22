@@ -13,4 +13,9 @@ abstract interface class AddressRepository {
   Future<(AddressLocationEntity?, AppFailure?)> getLocationDetails(
     String placeId,
   );
+
+  Future<(AddressLocationEntity?, AppFailure?)> reverseGeocode(
+    double latitude,
+    double longitude,
+  );
 }

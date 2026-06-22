@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/map_location_widget.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
@@ -33,6 +33,7 @@ class AddressSelectionWidget extends StatefulWidget {
 class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   static const _navy = Color(0xFF0A243F);
   late final AddressBloc _addressBloc;
+  late final AddressRepository _addressRepository;
   final _searchController = TextEditingController();
   Timer? _debounce;
   List<AddressEntity> _addresses = const [];
@@ -42,6 +43,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   void initState() {
     super.initState();
     _addressBloc = sl<AddressBloc>()..add(AddressLoadRequested());
+    _addressRepository = sl<AddressRepository>();
   }
 
   @override
@@ -418,40 +420,28 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      final placemarks = await placemarkFromCoordinates(
+      final (location, failure) = await _addressRepository.reverseGeocode(
         position.latitude,
         position.longitude,
       );
-      if (placemarks.isEmpty) {
-        _showError('Unable to resolve your current address.');
+      if (!mounted) return;
+      if (failure != null || location == null) {
+        _showError(failure?.message ?? 'Unable to resolve your current address.');
         return;
       }
-      final place = placemarks.firstWhere(
-        (item) => (item.postalCode ?? '').trim().isNotEmpty,
-        orElse: () => placemarks.first,
-      );
-      final formattedAddress = [
-        place.name,
-        place.street,
-        place.subLocality,
-        place.locality,
-        place.administrativeArea,
-        place.postalCode,
-        place.country,
-      ].where((part) => (part ?? '').trim().isNotEmpty).join(', ');
       final address = AddressEntity(
-        latitude: position.latitude,
-        longitude: position.longitude,
+        latitude: location.latitude,
+        longitude: location.longitude,
         googleMapLink:
-            'https://www.google.com/maps?q=${position.latitude},${position.longitude}',
-        formattedAddress: formattedAddress,
-        city: place.locality ?? '',
-        state: place.administrativeArea ?? '',
-        pincode: _resolvePincode(place.postalCode, formattedAddress),
-        sublocality: place.subLocality ?? '',
-        locationName: (place.name ?? '').trim().isEmpty
+            'https://www.google.com/maps?q=${location.latitude},${location.longitude}',
+        formattedAddress: location.formattedAddress,
+        city: location.city,
+        state: location.state,
+        pincode: _resolvePincode(location.pincode, location.formattedAddress),
+        sublocality: location.sublocality,
+        locationName: location.locationName.trim().isEmpty
             ? 'Current location'
-            : place.name!.trim(),
+            : location.locationName.trim(),
         name: '',
         email: '',
         addressLine1: '',

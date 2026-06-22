@@ -48,6 +48,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   final List<_PickedMagicQuoteFile> _files = [];
   _MagicQuoteScreen _screen = _MagicQuoteScreen.upload;
   Map<String, dynamic>? _quoteResponse;
+  String _generatingStatus = 'Uploading your list';
 
   @override
   void initState() {
@@ -487,12 +488,6 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   Widget _generatingScreen() {
-    const steps = [
-      'Uploading your list',
-      'Reading items with AI',
-      'Matching available products',
-      'Preparing your quote',
-    ];
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 34, 16, 24),
       children: [
@@ -524,7 +519,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'This can take a few seconds for long BOQs.',
+                'Please don’t close this screen. Takes 30-60 sec.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   color: _muted,
@@ -533,7 +528,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
                 ),
               ),
               const SizedBox(height: 24),
-              ...steps.map(_generatingStep),
+              _generatingStatusRow(_generatingStatus),
             ],
           ),
         ),
@@ -541,16 +536,17 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     );
   }
 
-  Widget _generatingStep(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Color(0xFF1EAD66), size: 20),
-          const SizedBox(width: 10),
-          Expanded(
+  Widget _generatingStatusRow(String label) {
+    return Row(
+      children: [
+        const Icon(Icons.check_circle, color: Color(0xFF1EAD66), size: 20),
+        const SizedBox(width: 10),
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
             child: Text(
               label,
+              key: ValueKey(label),
               style: GoogleFonts.inter(
                 color: _navy,
                 fontSize: 14,
@@ -558,8 +554,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -654,6 +650,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     final rfqOrder = _mapValue(payload, 'rfq_order');
     final quoteId = _stringValue(quote, const ['id', 'quote_id']);
     final rfqNumber = _stringValue(rfqOrder, const ['rfq_id', 'id']);
+    final backendMessage = _stringValue(payload, const ['message']);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
@@ -670,8 +667,9 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
           child: _emptyMessage(
             icon: Icons.schedule,
             title: 'Our AI hit a snag',
-            text:
-                'Your request is sent. Our team will review your list manually and reach out shortly.',
+            text: backendMessage.isEmpty
+                ? 'Your request is sent. Our team will review your list manually and reach out shortly.'
+                : '$backendMessage. Your request is sent for manual review and we\'ll reach out shortly.',
           ),
         ),
         const SizedBox(height: 14),
@@ -1225,6 +1223,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     setState(() {
       _screen = _MagicQuoteScreen.generating;
       _quoteResponse = null;
+      _generatingStatus = 'Uploading your list';
     });
     _rfqBloc.add(
       MagicQuoteSubmitRequested(
@@ -1246,6 +1245,10 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   void _onRfqStateChanged(BuildContext context, RfqState state) {
+    if (state is MagicQuoteProgress) {
+      setState(() => _generatingStatus = state.status);
+      return;
+    }
     if (state is MagicQuoteSubmitted) {
       final payload = _quotePayload(state.response);
       setState(() {

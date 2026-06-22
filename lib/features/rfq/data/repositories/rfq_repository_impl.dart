@@ -96,4 +96,15 @@ class RfqRepositoryImpl implements RfqRepository {
       return (null, UnknownFailure(e.toString()));
     }
   }
+
+  @override
+  Stream<Map<String, dynamic>> watchMagicQuoteStatus({
+    required Map<String, dynamic> acceptedResponse,
+    required String phoneNumber,
+  }) {
+    return _datasource.watchMagicQuoteStatus(
+      acceptedResponse: acceptedResponse,
+      phoneNumber: phoneNumber,
+    );
+  }
 }

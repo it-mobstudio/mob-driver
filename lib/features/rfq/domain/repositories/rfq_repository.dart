@@ -10,4 +10,12 @@ abstract interface class RfqRepository {
     required Map<String, dynamic> payload,
     required List<FFUploadedFile> images,
   });
+
+  /// Streams `magic_quote_status` updates following up on [acceptedResponse]
+  /// (the response from [submitMagicQuote]) until the backend finishes
+  /// processing.
+  Stream<Map<String, dynamic>> watchMagicQuoteStatus({
+    required Map<String, dynamic> acceptedResponse,
+    required String phoneNumber,
+  });
 }

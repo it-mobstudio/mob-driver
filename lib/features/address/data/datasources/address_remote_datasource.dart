@@ -6,6 +6,7 @@ abstract interface class AddressRemoteDatasource {
   Future<Map<String, dynamic>> createAddress(Map<String, dynamic> payload);
   Future<Map<String, dynamic>> searchLocations(String query);
   Future<Map<String, dynamic>> getLocationDetails(String placeId);
+  Future<Map<String, dynamic>> reverseGeocode(double latitude, double longitude);
 }
 
 class AddressRemoteDatasourceImpl implements AddressRemoteDatasource {
@@ -62,6 +63,22 @@ class AddressRemoteDatasourceImpl implements AddressRemoteDatasource {
       queryParameters: {
         'place_id': placeId,
         'fields': 'geometry,formatted_address,address_component,name',
+        'key': AppConfig.googleMapsApiKey,
+      },
+    );
+    return _toMap(response.data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> reverseGeocode(
+    double latitude,
+    double longitude,
+  ) async {
+    _ensureGoogleKey();
+    final response = await _googleDio.get<dynamic>(
+      'https://maps.googleapis.com/maps/api/geocode/json',
+      queryParameters: {
+        'latlng': '$latitude,$longitude',
         'key': AppConfig.googleMapsApiKey,
       },
     );

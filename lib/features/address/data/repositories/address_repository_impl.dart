@@ -159,6 +159,82 @@ class AddressRepositoryImpl implements AddressRepository {
     }
   }
 
+  @override
+  Future<(AddressLocationEntity?, AppFailure?)> reverseGeocode(
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      final body = await _datasource.reverseGeocode(latitude, longitude);
+      final status = body['status']?.toString() ?? '';
+      final results = body['results'] is List
+          ? (body['results'] as List).whereType<Map>().toList()
+          : const <Map>[];
+      if (status != 'OK' || results.isEmpty) {
+        return (
+          null,
+          BusinessFailure(
+            body['error_message']?.toString() ??
+                'Unable to resolve this address.',
+          ),
+        );
+      }
+      final result = Map<String, dynamic>.from(results.first);
+      final geometry = result['geometry'] is Map
+          ? Map<String, dynamic>.from(result['geometry'] as Map)
+          : const <String, dynamic>{};
+      final location = geometry['location'] is Map
+          ? Map<String, dynamic>.from(geometry['location'] as Map)
+          : const <String, dynamic>{};
+      final components = result['address_components'] is List
+          ? result['address_components'] as List<dynamic>
+          : const <dynamic>[];
+      final formattedAddress = result['formatted_address']?.toString() ?? '';
+      final locationName = _component(
+        components,
+        const ['premise', 'route'],
+      ).isNotEmpty
+          ? _component(components, const ['premise', 'route'])
+          : _component(
+              components,
+              const ['sublocality_level_1', 'sublocality'],
+            );
+
+      return (
+        AddressLocationEntity(
+          latitude: location['lat'] == null
+              ? latitude
+              : _toDouble(location['lat']),
+          longitude: location['lng'] == null
+              ? longitude
+              : _toDouble(location['lng']),
+          formattedAddress: formattedAddress,
+          city: _component(
+            components,
+            const ['locality', 'administrative_area_level_2'],
+          ),
+          state: _component(
+            components,
+            const ['administrative_area_level_1'],
+          ),
+          pincode: _component(components, const ['postal_code']),
+          sublocality: _component(
+            components,
+            const ['sublocality_level_1', 'sublocality'],
+          ),
+          locationName: locationName.isEmpty
+              ? formattedAddress.split(',').first.trim()
+              : locationName,
+        ),
+        null,
+      );
+    } on DioException catch (error) {
+      return (null, error.toAppFailure());
+    } catch (error) {
+      return (null, UnknownFailure(error.toString()));
+    }
+  }
+
   List<dynamic> _extractList(dynamic raw) {
     if (raw is List) return raw;
     if (raw is Map) {

@@ -3,6 +3,7 @@ import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/uploaded_file.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/entities/rfq_entity.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/repositories/rfq_repository.dart';
+import 'package:m_o_b_demand_side/features/rfq/domain/utils/magic_quote_status.dart';
 
 // ── Events ───────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,12 @@ final class RfqError extends RfqState {
 }
 
 final class MagicQuoteSubmitting extends RfqState {}
+
+final class MagicQuoteProgress extends RfqState {
+  MagicQuoteProgress({required this.status, required this.steps});
+  final String status;
+  final List<String> steps;
+}
 
 final class MagicQuoteSubmitted extends RfqState {
   MagicQuoteSubmitted(this.response);
@@ -155,8 +162,49 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     if (failure != null) {
       AppHaptics.error();
       emit(MagicQuoteError(failure.message));
-    } else {
-      emit(MagicQuoteSubmitted(response ?? const <String, dynamic>{}));
+      return;
     }
+
+    final accepted = response ?? const <String, dynamic>{};
+    if (magicQuoteHasGeneratedItems(accepted)) {
+      emit(MagicQuoteSubmitted(accepted));
+      return;
+    }
+
+    final steps = <String>[];
+    final initialStatus = magicQuoteStatusOf(accepted);
+    if (initialStatus.isNotEmpty) steps.add(initialStatus);
+    emit(MagicQuoteProgress(
+      status: initialStatus.isEmpty ? 'Uploaded' : initialStatus,
+      steps: List.of(steps),
+    ));
+
+    await emit.forEach<Map<String, dynamic>>(
+      _repository.watchMagicQuoteStatus(
+        acceptedResponse: accepted,
+        phoneNumber: event.payload['phone']?.toString() ?? '',
+      ),
+      onData: (message) {
+        final status = magicQuoteStatusOf(message);
+        if (status.isNotEmpty && !steps.contains(status)) steps.add(status);
+        if (magicQuoteIsProcessingOf(message) == false) {
+          return MagicQuoteSubmitted(message);
+        }
+        return MagicQuoteProgress(
+          status: status.isEmpty
+              ? (steps.isEmpty ? 'Processing' : steps.last)
+              : status,
+          steps: List.of(steps),
+        );
+      },
+      onError: (error, _) {
+        AppHaptics.error();
+        return MagicQuoteError(
+          error is StateError
+              ? error.message
+              : 'Magic Quote updates failed.',
+        );
+      },
+    );
   }
 }

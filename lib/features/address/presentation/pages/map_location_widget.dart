@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -9,6 +8,7 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
 
 class MapLocationWidget extends StatefulWidget {
@@ -29,6 +29,7 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
   static const _border = Color(0xFFDFE4EC);
 
   late final AddressBloc _addressBloc;
+  late final AddressRepository _addressRepository;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -56,6 +57,7 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
   void initState() {
     super.initState();
     _addressBloc = sl<AddressBloc>();
+    _addressRepository = sl<AddressRepository>();
     _prefillUserDetails();
     final initial = widget.initialLocation;
     if (initial != null) {
@@ -590,40 +592,26 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
   Future<void> _reverseGeocode(LatLng location) async {
     if (!mounted) return;
     setState(() => _resolvingAddress = true);
-    try {
-      final results = await placemarkFromCoordinates(
-        location.latitude,
-        location.longitude,
-      );
-      if (results.isEmpty || !mounted) return;
-      final place = results.firstWhere(
-        (item) => (item.postalCode ?? '').trim().isNotEmpty,
-        orElse: () => results.first,
-      );
-      final address = [
-        place.name,
-        place.street,
-        place.subLocality,
-        place.locality,
-        place.administrativeArea,
-        place.postalCode,
-        place.country,
-      ].where((part) => (part ?? '').trim().isNotEmpty).join(', ');
+    final (resolved, failure) = await _addressRepository.reverseGeocode(
+      location.latitude,
+      location.longitude,
+    );
+    if (!mounted) return;
+    if (failure != null || resolved == null) {
+      _showMessage(failure?.message ?? 'Unable to resolve this address.');
+    } else {
       setState(() {
-        _formattedAddress = address;
-        _city = place.locality ?? '';
-        _state = place.administrativeArea ?? '';
-        _pincode = _resolvePincode(place.postalCode, address);
-        _sublocality = place.subLocality ?? '';
-        _locationName = (place.name ?? '').trim().isEmpty
+        _formattedAddress = resolved.formattedAddress;
+        _city = resolved.city;
+        _state = resolved.state;
+        _pincode = _resolvePincode(resolved.pincode, resolved.formattedAddress);
+        _sublocality = resolved.sublocality;
+        _locationName = resolved.locationName.trim().isEmpty
             ? 'Selected location'
-            : place.name!;
+            : resolved.locationName;
       });
-    } catch (_) {
-      _showMessage('Unable to resolve this address.');
-    } finally {
-      if (mounted) setState(() => _resolvingAddress = false);
     }
+    if (mounted) setState(() => _resolvingAddress = false);
   }
 
   void _saveAddress() {
