@@ -15,6 +15,8 @@ final class ProfileUpdateRequested extends ProfileEvent {
 }
 
 final class ReferralSummaryLoadRequested extends ProfileEvent {}
+final class WalletHistoryLoadRequested extends ProfileEvent {}
+final class MobstarLoadRequested extends ProfileEvent {}
 
 // ── States ───────────────────────────────────────────────────────────────────
 
@@ -49,6 +51,26 @@ final class ReferralSummaryError extends ProfileState {
   final String message;
 }
 
+final class WalletHistoryLoaded extends ProfileState {
+  WalletHistoryLoaded(this.wallet);
+  final WalletHistoryEntity wallet;
+}
+
+final class WalletHistoryError extends ProfileState {
+  WalletHistoryError(this.message);
+  final String message;
+}
+
+final class MobstarLoaded extends ProfileState {
+  MobstarLoaded(this.mobstar);
+  final MobstarEntity mobstar;
+}
+
+final class MobstarError extends ProfileState {
+  MobstarError(this.message);
+  final String message;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
@@ -56,6 +78,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<ProfileLoadRequested>(_onLoad);
     on<ProfileUpdateRequested>(_onUpdate);
     on<ReferralSummaryLoadRequested>(_onLoadReferralSummary);
+    on<WalletHistoryLoadRequested>(_onLoadWalletHistory);
+    on<MobstarLoadRequested>(_onLoadMobstar);
   }
 
   final ProfileRepository _repository;
@@ -100,6 +124,34 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(ReferralSummaryError(failure.message));
     } else {
       emit(ReferralSummaryLoaded(summary!));
+    }
+  }
+
+  Future<void> _onLoadWalletHistory(
+    WalletHistoryLoadRequested event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(ProfileLoading());
+    final (wallet, failure) = await _repository.getWalletHistory();
+    if (failure != null) {
+      AppHaptics.error();
+      emit(WalletHistoryError(failure.message));
+    } else {
+      emit(WalletHistoryLoaded(wallet!));
+    }
+  }
+
+  Future<void> _onLoadMobstar(
+    MobstarLoadRequested event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(ProfileLoading());
+    final (mobstar, failure) = await _repository.getMobstar();
+    if (failure != null) {
+      AppHaptics.error();
+      emit(MobstarError(failure.message));
+    } else {
+      emit(MobstarLoaded(mobstar!));
     }
   }
 }
