@@ -11,6 +11,9 @@ abstract interface class RfqRemoteDatasource {
   Future<dynamic> getRfqList();
   Future<Map<String, dynamic>> getRfqDetail(String id);
   Future<Map<String, dynamic>> submitRfq(Map<String, dynamic> payload);
+  Future<Map<String, dynamic>> createCartQuoteRequest(
+    Map<String, dynamic> payload,
+  );
   Future<Map<String, dynamic>> submitMagicQuote({
     required Map<String, dynamic> payload,
     required List<FFUploadedFile> images,
@@ -50,6 +53,19 @@ class RfqRemoteDatasourceImpl implements RfqRemoteDatasource {
   @override
   Future<Map<String, dynamic>> submitRfq(Map<String, dynamic> payload) async {
     final response = await _dio.post<dynamic>('/rfq/submit/', data: payload);
+    final raw = response.data;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return {};
+  }
+
+  @override
+  Future<Map<String, dynamic>> createCartQuoteRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post<dynamic>(
+      '/orders/rfq_quotecreate_offline/',
+      data: payload,
+    );
     final raw = response.data;
     if (raw is Map) return Map<String, dynamic>.from(raw);
     return {};

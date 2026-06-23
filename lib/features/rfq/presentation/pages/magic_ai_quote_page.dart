@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/uploaded_file.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum _MagicQuoteScreen { upload, generating, results, unread, reviewSuccess }
 
@@ -24,7 +27,7 @@ class MagicAiQuotePage extends StatefulWidget {
 }
 
 class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
-  static const _navy = Color(0xFF092743);
+  static const _navy = AppColors.primaryText;
   static const _blue = Color(0xFF0968E8);
   static const _muted = Color(0xFF687482);
   static const _border = Color(0xFFE3E8EF);
@@ -34,6 +37,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
 
   final _formKey = GlobalKey<FormState>();
   late final RfqBloc _rfqBloc;
+  final _noteFocusNode = FocusNode();
   final _noteController = TextEditingController();
   final _brandsController = TextEditingController();
   final _nameController = TextEditingController();
@@ -60,6 +64,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   @override
   void dispose() {
     _rfqBloc.close();
+    _noteFocusNode.dispose();
     _noteController.dispose();
     _brandsController.dispose();
     _nameController.dispose();
@@ -108,7 +113,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   Widget _header() {
     final title = switch (_screen) {
       _MagicQuoteScreen.upload => 'Magic AI Quote',
-      _MagicQuoteScreen.generating => 'Generating quote',
+      _MagicQuoteScreen.generating => 'Reading your list...',
       _MagicQuoteScreen.results => 'Your Quote',
       _MagicQuoteScreen.unread => 'Your Quote',
       _MagicQuoteScreen.reviewSuccess => 'Request submitted',
@@ -229,166 +234,184 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+        padding: EdgeInsets.zero,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.zero,
+              topRight: Radius.zero,
+              bottomLeft: Radius.circular(14),
+              bottomRight: Radius.circular(14),
+            ),
             child: Image.asset(
               'assets/images/magicquote.jpeg',
               width: double.infinity,
-              height: 142,
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
             ),
           ),
-          const SizedBox(height: 14),
-          _card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionTitle('Send us your BOQ or material list'),
-                const SizedBox(height: 12),
-                _uploadDropZone(submitting),
-                if (_files.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  ..._files.map(_fileRow),
-                ],
-                const SizedBox(height: 16),
-                _field(
-                  'Add note',
-                  _noteController,
-                  optional: true,
-                  hint: 'Mention brands, sizes or delivery notes',
-                  minLines: 3,
-                  maxLines: 4,
-                ),
-                const SizedBox(height: 14),
-                _field(
-                  'Preferred brands',
-                  _brandsController,
-                  optional: true,
-                  hint: 'e.g. Asian Paints, Jaquar, Havells',
-                ),
-              ],
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+            child: _uploadScreenCards(submitting),
           ),
-          const SizedBox(height: 14),
-          _card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionTitle('Your details'),
-                const SizedBox(height: 14),
-                _field(
-                  'Name',
-                  _nameController,
-                  required: true,
-                  validator: (value) => _required(value, 'Please enter name'),
-                ),
-                const SizedBox(height: 18),
-                _field(
-                  'Phone',
-                  _phoneController,
-                  required: true,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
-                  ],
-                  validator: (value) =>
-                      value == null || value.trim().length != 10
-                          ? 'Enter a valid 10-digit phone number'
-                          : null,
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _field(
-                        'City',
-                        _cityController,
-                        required: true,
-                        validator: (value) =>
-                            _required(value, 'Please enter city'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _field(
-                        'State',
-                        _stateController,
-                        required: true,
-                        validator: (value) =>
-                            _required(value, 'Please enter state'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _field(
-                  'Delivery pincode',
-                  _pincodeController,
-                  required: true,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(6),
-                  ],
-                  validator: (value) =>
-                      value == null || value.trim().length != 6
-                          ? 'Enter a valid pincode'
-                          : null,
-                ),
-                const SizedBox(height: 18),
-                _field(
-                  'Project name',
-                  _projectController,
-                  optional: true,
-                  hint: 'e.g. Koramangala site',
-                ),
-                const SizedBox(height: 18),
-                _field(
-                  'GSTIN',
-                  _gstController,
-                  optional: true,
-                  hint: '15-digit GSTIN',
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(15),
-                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                  ],
-                  validator: (value) {
-                    final text = value?.trim() ?? '';
-                    if (text.isEmpty) return null;
-                    return text.length == 15 ? null : 'Enter a valid GSTIN';
-                  },
-                ),
-                const SizedBox(height: 18),
-                _field(
-                  'Email',
-                  _emailController,
-                  optional: true,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    final text = value?.trim() ?? '';
-                    if (text.isEmpty) return null;
-                    return text.contains('@') ? null : 'Enter a valid email';
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          _infoCard(),
         ],
       ),
+    );
+  }
+
+  Widget _uploadScreenCards(bool submitting) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionTitle('Send us your BOQ or material list'),
+              const SizedBox(height: 12),
+              _uploadDropZone(submitting),
+              if (_files.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: _files.map(_fileTile).toList(),
+                ),
+              ],
+              const SizedBox(height: 16),
+              _field(
+                'Add note',
+                _noteController,
+                optional: true,
+                hint: 'Mention brands, sizes or delivery notes',
+                focusNode: _noteFocusNode,
+                minLines: 3,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 14),
+              _field(
+                'Preferred brands',
+                _brandsController,
+                optional: true,
+                hint: 'e.g. Asian Paints, Jaquar, Havells',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        _card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionTitle('Your details'),
+              const SizedBox(height: 14),
+              _field(
+                'Name',
+                _nameController,
+                required: true,
+                validator: (value) => _required(value, 'Please enter name'),
+              ),
+              const SizedBox(height: 18),
+              _field(
+                'Phone',
+                _phoneController,
+                required: true,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                validator: (value) => value == null || value.trim().length != 10
+                    ? 'Enter a valid 10-digit phone number'
+                    : null,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _field(
+                      'City',
+                      _cityController,
+                      required: true,
+                      validator: (value) =>
+                          _required(value, 'Please enter city'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _field(
+                      'State',
+                      _stateController,
+                      required: true,
+                      validator: (value) =>
+                          _required(value, 'Please enter state'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _field(
+                'Delivery pincode',
+                _pincodeController,
+                required: true,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
+                validator: (value) => value == null || value.trim().length != 6
+                    ? 'Enter a valid pincode'
+                    : null,
+              ),
+              const SizedBox(height: 18),
+              _field(
+                'Project name',
+                _projectController,
+                optional: true,
+                hint: 'e.g. Koramangala site',
+              ),
+              const SizedBox(height: 18),
+              _field(
+                'GSTIN',
+                _gstController,
+                optional: true,
+                hint: '15-digit GSTIN',
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(15),
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                ],
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.isEmpty) return null;
+                  return text.length == 15 ? null : 'Enter a valid GSTIN';
+                },
+              ),
+              const SizedBox(height: 18),
+              _field(
+                'Email',
+                _emailController,
+                optional: true,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.isEmpty) return null;
+                  return text.contains('@') ? null : 'Enter a valid email';
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        _infoCard(),
+      ],
     );
   }
 
   Widget _uploadDropZone(bool submitting) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: submitting ? null : _pickFiles,
+      onTap: submitting ? null : _showUploadOptionsSheet,
       child: CustomPaint(
         painter: const _DashedBorderPainter(color: Color(0xFFC5CCD5)),
         child: Container(
@@ -415,7 +438,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _files.isEmpty ? 'Add files' : 'Add more files',
+                      _files.isEmpty ? 'Add your list/ BOQ' : 'Add more files',
                       style: GoogleFonts.inter(
                         color: _navy,
                         fontSize: 16,
@@ -424,7 +447,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'PDF, Excel, Word, JPG or PNG. Up to $_maxFiles files, 20 MB total.',
+                      'Photo, PDF, Excel or paste text\nMax $_maxFiles files · 20 MB',
                       style: GoogleFonts.inter(
                         color: _muted,
                         fontSize: 13,
@@ -441,117 +464,212 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     );
   }
 
-  Widget _fileRow(_PickedMagicQuoteFile file) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F9FC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _border),
-      ),
-      child: Row(
+  static const _imageExtensions = ['jpg', 'jpeg', 'png'];
+
+  bool _isImageFile(String name) {
+    final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';
+    return _imageExtensions.contains(ext);
+  }
+
+  Widget _fileTile(_PickedMagicQuoteFile file, {bool removable = true}) {
+    final bytes = file.file.bytes;
+    final isImage = _isImageFile(file.name) && bytes != null && bytes.isNotEmpty;
+    const tileSize = 84.0;
+    return SizedBox(
+      width: tileSize,
+      height: tileSize,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          const Icon(Icons.attach_file, color: _navy, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  file.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: _navy,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  _formatFileSize(file.size),
-                  style: GoogleFonts.inter(color: _muted, fontSize: 12),
-                ),
-              ],
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: tileSize,
+              height: tileSize,
+              color: const Color(0xFFF7F9FC),
+              child: isImage
+                  ? Image.memory(
+                      bytes,
+                      width: tileSize,
+                      height: tileSize,
+                      fit: BoxFit.cover,
+                    )
+                  : Center(
+                      child: Text(
+                        (file.name.contains('.')
+                                ? file.name.split('.').last
+                                : file.name)
+                            .toUpperCase(),
+                        style: GoogleFonts.inter(
+                          color: _navy,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
             ),
           ),
-          IconButton(
-            tooltip: 'Remove',
-            onPressed: () => setState(() => _files.remove(file)),
-            icon: const Icon(Icons.close, size: 19),
-            color: _muted,
-            constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00000000), Color(0xCC000000)],
+                ),
+              ),
+              child: Text(
+                file.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
+          if (removable)
+            Positioned(
+              top: -6,
+              right: -6,
+              child: GestureDetector(
+                onTap: () => setState(() => _files.remove(file)),
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF687482),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
   Widget _generatingScreen() {
+    final pincode = _pincodeController.text.trim();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 34, 16, 24),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
       children: [
-        _card(
-          child: Column(
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEAF2FF),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    color: _blue,
-                    strokeWidth: 3,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Generating your quote',
-                style: GoogleFonts.inter(
-                  color: _navy,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Please don’t close this screen. Takes 30-60 sec.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  color: _muted,
-                  fontSize: 14,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 24),
-              _generatingStatusRow(_generatingStatus),
-            ],
+        _generatingWarningBanner(),
+        const SizedBox(height: 22),
+        const Center(child: _ScanningDocumentCard()),
+        const SizedBox(height: 26),
+        Text(
+          'Putting your quote together',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            color: _navy,
+            fontSize: 21,
+            fontWeight: FontWeight.w900,
           ),
         ),
+        const SizedBox(height: 8),
+        Text.rich(
+          TextSpan(
+            style: GoogleFonts.inter(
+              color: _muted,
+              fontSize: 14,
+              height: 1.4,
+            ),
+            children: [
+              const TextSpan(
+                text: 'Reading your list, matching brands and checking '
+                    'live prices for ',
+              ),
+              TextSpan(
+                text: pincode.isEmpty ? 'your area' : pincode,
+                style: GoogleFonts.inter(
+                  color: _navy,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const TextSpan(text: '.'),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 22),
+        const ClipRRect(
+          borderRadius: BorderRadius.all(Radius.circular(6)),
+          child: LinearProgressIndicator(
+            minHeight: 6,
+            backgroundColor: Color(0xFFE3E8EF),
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1EAD66)),
+          ),
+        ),
+        const SizedBox(height: 18),
+        _generatingStatusRow(_generatingStatus),
       ],
+    );
+  }
+
+  Widget _generatingWarningBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF6DC),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            "Please don't close this screen",
+            style: GoogleFonts.inter(
+              color: const Color(0xFF8A5A00),
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Takes 30-60 sec',
+            style: GoogleFonts.inter(
+              color: const Color(0xFFB07D1F),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _generatingStatusRow(String label) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Icon(Icons.check_circle, color: Color(0xFF1EAD66), size: 20),
         const SizedBox(width: 10),
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            child: Text(
-              label,
-              key: ValueKey(label),
-              style: GoogleFonts.inter(
-                color: _navy,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: Text(
+            label,
+            key: ValueKey(label),
+            style: GoogleFonts.inter(
+              color: _navy,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -567,7 +685,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     final total = _moneyValue(quote, const ['total', 'grand_total']);
     final subtotal = _moneyValue(quote, const ['sub_total', 'subtotal']);
     final discount = _moneyValue(quote, const ['discount']);
-    final tax = _moneyValue(quote, const ['sgst']) + _moneyValue(quote, const ['cgst']);
+    final tax =
+        _moneyValue(quote, const ['sgst']) + _moneyValue(quote, const ['cgst']);
     final quoteTitle = _stringValue(quote, const ['id', 'quote_id']).isEmpty
         ? 'Quote'
         : 'Quote ${_stringValue(quote, const ['id', 'quote_id'])}';
@@ -605,7 +724,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
                 _emptyMessage(
                   icon: Icons.search_off,
                   title: 'No matched items',
-                  text: 'Your request was created, but no product match was returned.',
+                  text:
+                      'Your request was created, but no product match was returned.',
                 )
               else
                 ...items.map(_quoteItemRow),
@@ -650,7 +770,6 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     final rfqOrder = _mapValue(payload, 'rfq_order');
     final quoteId = _stringValue(quote, const ['id', 'quote_id']);
     final rfqNumber = _stringValue(rfqOrder, const ['rfq_id', 'id']);
-    final backendMessage = _stringValue(payload, const ['message']);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
@@ -666,33 +785,67 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
         _card(
           child: _emptyMessage(
             icon: Icons.schedule,
-            title: 'Our AI hit a snag',
-            text: backendMessage.isEmpty
-                ? 'Your request is sent. Our team will review your list manually and reach out shortly.'
-                : '$backendMessage. Your request is sent for manual review and we\'ll reach out shortly.',
+            title: 'Uh oh, our AI hit a snag',
+            text: "Don't worry, your request is sent. Our team will review "
+                "your list manually and reach out shortly!",
           ),
         ),
         const SizedBox(height: 14),
-        _card(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _sectionTitle('Your uploads'),
-              const SizedBox(height: 10),
-              if (_files.isEmpty)
-                Text(
-                  _noteController.text.trim().isEmpty
-                      ? 'No upload details available.'
-                      : _noteController.text.trim(),
-                  style: GoogleFonts.inter(color: _muted, fontSize: 14),
-                )
-              else
-                ..._files.map(_fileRow),
-            ],
-          ),
-        ),
+        _needHelpCard(),
       ],
     );
+  }
+
+  Widget _needHelpCard() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle('Need help?'),
+          const SizedBox(height: 6),
+          Text(
+            "Chat with our team and we'll get your list reviewed quickly.",
+            style: GoogleFonts.inter(
+              color: _muted,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _openWhatsApp,
+              icon: const Icon(Icons.chat_bubble, size: 18),
+              label: Text(
+                'Chat with us',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                backgroundColor: const Color(0xFF1EAD66),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openWhatsApp() async {
+    final ok = await launchUrl(
+      Uri.parse('https://wa.me/918970415365'),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!ok) _showMessage('Unable to open WhatsApp.');
   }
 
   Widget _reviewSuccessScreen() {
@@ -811,8 +964,145 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
               ),
             ],
           ),
+          if (_hasUploadsContext) ...[
+            const SizedBox(height: 12),
+            _uploadsSummaryRow(),
+          ],
+          const SizedBox(height: 12),
+          _aiDisclaimerRow(),
         ],
       ),
+    );
+  }
+
+  bool get _hasUploadsContext =>
+      _files.isNotEmpty || _noteController.text.trim().isNotEmpty;
+
+  Widget _aiDisclaimerRow() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.auto_awesome, size: 14, color: Color(0xFFE9A23B)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            'This is AI generated and can have mistakes',
+            style: GoogleFonts.inter(
+              color: _muted,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _uploadsSummaryRow() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: _showUploadsViewer,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F9FC),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.attachment, color: _navy, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Your uploads',
+                style: GoogleFonts.inter(
+                  color: _navy,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            Text(
+              'View',
+              style: GoogleFonts.inter(
+                color: _blue,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 16, color: _blue),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showUploadsViewer() async {
+    final note = _noteController.text.trim();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your uploads & note',
+                  style: GoogleFonts.inter(
+                    color: _navy,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (_files.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Files (${_files.length})',
+                    style: GoogleFonts.inter(
+                      color: _muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: _files
+                        .map((file) => _fileTile(file, removable: false))
+                        .toList(),
+                  ),
+                ],
+                if (note.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Note',
+                    style: GoogleFonts.inter(
+                      color: _muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    note,
+                    style: GoogleFonts.inter(color: _navy, fontSize: 14),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -832,7 +1122,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     );
     final quantity = _stringValue(item, const ['quantity', 'qty']);
     final unit = _stringValue(item, const ['unit', 'uom']);
-    final lineTotal = _moneyValue(item, const ['total', 'line_total', 'amount']);
+    final lineTotal =
+        _moneyValue(item, const ['total', 'line_total', 'amount']);
     final price = _moneyValue(item, const ['price', 'selling_price', 'rate']);
 
     return Container(
@@ -1032,6 +1323,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     String? Function(String?)? validator,
     int minLines = 1,
     int maxLines = 1,
+    FocusNode? focusNode,
   }) {
     final labelText = required
         ? '$label *'
@@ -1040,6 +1332,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
             : label;
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       validator: validator,
@@ -1081,7 +1374,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
       style: GoogleFonts.inter(
         color: _navy,
         fontSize: 18,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w800,
       ),
     );
   }
@@ -1138,7 +1431,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     }
     _emailController.text = _firstUserValue(user, const ['email']);
 
-    final address = SelectedAddressStore.cached ?? await SelectedAddressStore.read();
+    final address =
+        SelectedAddressStore.cached ?? await SelectedAddressStore.read();
     if (!mounted || address == null) return;
     _applyAddress(address);
   }
@@ -1167,24 +1461,195 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     }
   }
 
-  Future<void> _pickFiles() async {
+  Future<void> _showUploadOptionsSheet() async {
+    FocusScope.of(context).unfocus();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3E8EF),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Add your shopping list',
+                  style: GoogleFonts.inter(
+                    color: _navy,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'We accept handwritten lists, PDFs, Excel, or even '
+                  'WhatsApp screenshots.',
+                  style: GoogleFonts.inter(
+                    color: _muted,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _uploadSheetOption(
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Use Camera',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _pickFromCamera();
+                  },
+                ),
+                _uploadSheetOption(
+                  icon: Icons.image_outlined,
+                  label: 'Upload from Gallery',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _pickFromGallery();
+                  },
+                ),
+                _uploadSheetOption(
+                  icon: Icons.insert_drive_file_outlined,
+                  label: 'Pick PDF / Excel / Doc',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _pickDocuments();
+                  },
+                ),
+                _uploadSheetOption(
+                  icon: Icons.notes_outlined,
+                  label: 'Paste text',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _focusNoteField();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _uploadSheetOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, color: _navy, size: 22),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.inter(
+                  color: _navy,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Color(0xFF9AA3B2)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _focusNoteField() {
+    Future.delayed(
+      const Duration(milliseconds: 150),
+      () {
+        if (!mounted) return;
+        _noteFocusNode.requestFocus();
+      },
+    );
+  }
+
+  Future<void> _pickFromCamera() async {
+    if (_files.length >= _maxFiles) {
+      _showMessage('Only $_maxFiles files can be uploaded.');
+      return;
+    }
+    final shot = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+    );
+    if (!mounted || shot == null) return;
+    final bytes = await shot.readAsBytes();
+    if (bytes.isEmpty) {
+      _showMessage('Unable to read the captured photo.');
+      return;
+    }
+    await _addPickedFiles([
+      _PickedMagicQuoteFile(
+        name: shot.name,
+        size: bytes.length,
+        file: FFUploadedFile(name: shot.name, bytes: bytes),
+      ),
+    ]);
+  }
+
+  Future<void> _pickFromGallery() async {
+    final shots = await ImagePicker().pickMultiImage(imageQuality: 85);
+    if (!mounted || shots.isEmpty) return;
+    final picked = <_PickedMagicQuoteFile>[];
+    for (final shot in shots) {
+      final bytes = await shot.readAsBytes();
+      if (bytes.isEmpty) {
+        _showMessage('Unable to read ${shot.name}.');
+        continue;
+      }
+      picked.add(
+        _PickedMagicQuoteFile(
+          name: shot.name,
+          size: bytes.length,
+          file: FFUploadedFile(name: shot.name, bytes: bytes),
+        ),
+      );
+    }
+    await _addPickedFiles(picked);
+  }
+
+  Future<void> _pickDocuments() async {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['xls', 'xlsx', 'doc', 'docx', 'pdf', 'jpeg', 'jpg', 'png'],
+      allowedExtensions: const ['xls', 'xlsx', 'doc', 'docx', 'pdf'],
       allowMultiple: true,
       withData: true,
     );
     if (!mounted || result == null || result.files.isEmpty) return;
 
-    final next = [..._files];
+    final picked = <_PickedMagicQuoteFile>[];
     for (final file in result.files) {
-      if (next.length >= _maxFiles) break;
       final bytes = file.bytes;
       if (bytes == null || bytes.isEmpty) {
         _showMessage('Unable to read ${file.name}.');
         continue;
       }
-      next.add(
+      picked.add(
         _PickedMagicQuoteFile(
           name: file.name,
           size: file.size,
@@ -1192,13 +1657,19 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
         ),
       );
     }
+    await _addPickedFiles(picked);
+  }
+
+  Future<void> _addPickedFiles(List<_PickedMagicQuoteFile> picked) async {
+    if (!mounted || picked.isEmpty) return;
+    final next = [..._files, ...picked];
 
     final totalBytes = next.fold<int>(0, (sum, file) => sum + file.size);
     if (totalBytes > _maxTotalBytes) {
       _showMessage('Total upload size should be less than 20 MB.');
       return;
     }
-    if (result.files.length + _files.length > _maxFiles) {
+    if (next.length > _maxFiles) {
       _showMessage('Only $_maxFiles files can be uploaded.');
     }
     setState(() {
@@ -1294,7 +1765,9 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
 
   Map<String, dynamic> _quotePayload(Map<String, dynamic>? response) {
     final candidates = [
-      response?['payload'] is Map ? (response!['payload'] as Map)['data'] : null,
+      response?['payload'] is Map
+          ? (response!['payload'] as Map)['data']
+          : null,
       response?['payload'],
       response?['data'] is Map ? (response!['data'] as Map)['data'] : null,
       response?['data'],
@@ -1373,13 +1846,6 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
 
   String _onlyDigits(String value) => value.replaceAll(RegExp(r'\D'), '');
 
-  String _formatFileSize(int bytes) {
-    if (bytes >= 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / 1024).toStringAsFixed(1)} KB';
-  }
-
   String _formatInr(num value) {
     final text = value.toStringAsFixed(value % 1 == 0 ? 0 : 2);
     final parts = text.split('.');
@@ -1399,6 +1865,132 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _ScanningDocumentCard extends StatefulWidget {
+  const _ScanningDocumentCard();
+
+  @override
+  State<_ScanningDocumentCard> createState() => _ScanningDocumentCardState();
+}
+
+class _ScanningDocumentCardState extends State<_ScanningDocumentCard>
+    with SingleTickerProviderStateMixin {
+  static const _cardWidth = 220.0;
+  static const _cardHeight = 250.0;
+  static const _scanHeight = 56.0;
+  static const _rowWidthFactors = [0.9, 0.75, 0.55, 0.65, 0.45, 0.6];
+
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _cardWidth,
+      height: _cardHeight,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'I need these products',
+                    style: GoogleFonts.caveat(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ..._rowWidthFactors.map(_skeletonRow),
+                ],
+              ),
+            ),
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) {
+                final top = (_cardHeight + _scanHeight) * _controller.value -
+                    _scanHeight;
+                return Positioned(
+                  left: 0,
+                  right: 0,
+                  top: top,
+                  height: _scanHeight,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            const Color(0xFF1EAD66).withValues(alpha: 0),
+                            const Color(0xFF1EAD66).withValues(alpha: 0.16),
+                            const Color(0xFF1EAD66).withValues(alpha: 0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _skeletonRow(double widthFactor) {
+    const checkboxSize = 14.0;
+    const gap = 8.0;
+    const maxBarWidth = _cardWidth - 16 - 16 - checkboxSize - gap;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            width: checkboxSize,
+            height: checkboxSize,
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFDDE3EC)),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: gap),
+          Container(
+            width: maxBarWidth * widthFactor,
+            height: 10,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDEFF3),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

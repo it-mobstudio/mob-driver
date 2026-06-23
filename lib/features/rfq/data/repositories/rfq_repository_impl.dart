@@ -75,6 +75,28 @@ class RfqRepositoryImpl implements RfqRepository {
   }
 
   @override
+  Future<(String?, AppFailure?)> createCartQuoteRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      final body = await _datasource.createCartQuoteRequest(payload);
+      if (body['status'] == false) {
+        final msg = body['message']?.toString() ??
+            'Failed to create quote request.';
+        return (null, BusinessFailure(msg));
+      }
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      return (data['rfq_id']?.toString() ?? '', null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<(Map<String, dynamic>?, AppFailure?)> submitMagicQuote({
     required Map<String, dynamic> payload,
     required List<FFUploadedFile> images,

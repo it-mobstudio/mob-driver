@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
+import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_rfq_request_page.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
 import 'package:m_o_b_demand_side/index.dart';
 
@@ -1272,7 +1273,9 @@ class _DashedLinePainter extends CustomPainter {
 }
 
 class CartActionRow extends StatelessWidget {
-  const CartActionRow({super.key});
+  const CartActionRow({super.key, required this.summary});
+
+  final CartSummaryEntity summary;
 
   @override
   Widget build(BuildContext context) {
@@ -1296,7 +1299,10 @@ class CartActionRow extends StatelessWidget {
           ),
           const Spacer(),
           OutlinedButton(
-            onPressed: () {},
+            onPressed: () => context.push(
+              CartRfqRequestPage.routePath,
+              extra: summary,
+            ),
             style: OutlinedButton.styleFrom(
               backgroundColor: Colors.white,
               side: const BorderSide(

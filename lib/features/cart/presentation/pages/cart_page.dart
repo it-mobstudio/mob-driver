@@ -152,7 +152,7 @@ class _CartPageState extends State<CartPage> {
                       earningPoints: summary.earningPoints,
                     ),
                     const SizedBox(height: 12),
-                    const CartActionRow(),
+                    CartActionRow(summary: summary),
                     const SizedBox(height: 12),
                   ],
                 ),

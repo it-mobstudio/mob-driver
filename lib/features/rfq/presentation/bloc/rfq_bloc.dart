@@ -35,6 +35,11 @@ final class MagicQuoteSubmitRequested extends RfqEvent {
   final List<FFUploadedFile> images;
 }
 
+final class CartRfqSubmitRequested extends RfqEvent {
+  CartRfqSubmitRequested(this.payload);
+  final Map<String, dynamic> payload;
+}
+
 // ── States ───────────────────────────────────────────────────────────────────
 
 sealed class RfqState {}
@@ -57,6 +62,18 @@ final class RfqSubmitted extends RfqState {}
 
 final class RfqError extends RfqState {
   RfqError(this.message);
+  final String message;
+}
+
+final class CartRfqSubmitting extends RfqState {}
+
+final class CartRfqSubmitted extends RfqState {
+  CartRfqSubmitted(this.rfqId);
+  final String rfqId;
+}
+
+final class CartRfqError extends RfqState {
+  CartRfqError(this.message);
   final String message;
 }
 
@@ -88,6 +105,7 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     on<RfqQuoteAcceptedLocally>(_onQuoteAcceptedLocally);
     on<RfqPaymentCompletedLocally>(_onPaymentCompletedLocally);
     on<MagicQuoteSubmitRequested>(_onMagicQuoteSubmit);
+    on<CartRfqSubmitRequested>(_onCartRfqSubmit);
   }
 
   final RfqRepository _repository;
@@ -147,6 +165,21 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     final currentState = state;
     if (currentState case RfqDetailLoaded(:final rfq)) {
       emit(RfqDetailLoaded(rfq.copyWith(status: 'converted_to_order')));
+    }
+  }
+
+  Future<void> _onCartRfqSubmit(
+    CartRfqSubmitRequested event,
+    Emitter<RfqState> emit,
+  ) async {
+    emit(CartRfqSubmitting());
+    final (rfqId, failure) =
+        await _repository.createCartQuoteRequest(event.payload);
+    if (failure != null) {
+      AppHaptics.error();
+      emit(CartRfqError(failure.message));
+    } else {
+      emit(CartRfqSubmitted(rfqId ?? ''));
     }
   }
 

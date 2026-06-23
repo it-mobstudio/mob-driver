@@ -94,6 +94,10 @@
 
 <key>NSMicrophoneUsageDescription</key>
 <string>This app needs the microphone for speech recognition.</string>
+<key>NSCameraUsageDescription</key>
+<string>We use your camera to capture photos of your shopping list.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>We use your photo library to upload photos of your shopping list.</string>
 <key>NSAppTransportSecurity</key>
 <dict>
   <key>NSAllowsArbitraryLoads</key><true/>

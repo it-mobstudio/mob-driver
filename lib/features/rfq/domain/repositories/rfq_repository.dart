@@ -6,6 +6,11 @@ abstract interface class RfqRepository {
   Future<(List<RfqEntity>?, AppFailure?)> getRfqList();
   Future<(RfqEntity?, AppFailure?)> getRfqDetail(String id);
   Future<(bool, AppFailure?)> submitRfq(Map<String, dynamic> payload);
+
+  /// Creates a quote request from the items currently in the cart.
+  Future<(String?, AppFailure?)> createCartQuoteRequest(
+    Map<String, dynamic> payload,
+  );
   Future<(Map<String, dynamic>?, AppFailure?)> submitMagicQuote({
     required Map<String, dynamic> payload,
     required List<FFUploadedFile> images,
