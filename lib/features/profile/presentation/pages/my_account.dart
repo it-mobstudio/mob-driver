@@ -8,6 +8,8 @@ import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entit
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
@@ -148,7 +150,12 @@ class _ProfileBody extends StatelessWidget {
                     _MenuItemData(
                       icon: Icons.account_balance_wallet,
                       title: 'Wallet & points',
-                      onTap: (ctx) => _showComingSoon(ctx, 'Wallet & points'),
+                      onTap: (ctx) => ctx.push(WalletPointsPage.routePath),
+                    ),
+                    _MenuItemData(
+                      icon: Icons.stars_rounded,
+                      title: 'Mobstar',
+                      onTap: (ctx) => ctx.push(MobstarPage.routePath),
                     ),
                     _MenuItemData(
                       icon: Icons.logout,
