@@ -5,4 +5,6 @@ abstract interface class ProfileRepository {
   Future<(ProfileEntity?, AppFailure?)> getProfile();
   Future<(bool, AppFailure?)> updateProfile(Map<String, dynamic> data);
   Future<(ReferralSummaryEntity?, AppFailure?)> getReferralSummary();
+  Future<(WalletHistoryEntity?, AppFailure?)> getWalletHistory();
+  Future<(MobstarEntity?, AppFailure?)> getMobstar();
 }

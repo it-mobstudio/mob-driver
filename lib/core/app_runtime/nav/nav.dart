@@ -26,6 +26,8 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/magic_ai_quote_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq_details_page.dart';
@@ -399,6 +401,18 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: ReferralHistoryPage.routePath,
           parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const ReferralHistoryPage(),
+        ),
+        GoRoute(
+          name: WalletPointsPage.routeName,
+          path: WalletPointsPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
+          builder: (context, state) => const WalletPointsPage(),
+        ),
+        GoRoute(
+          name: MobstarPage.routeName,
+          path: MobstarPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
+          builder: (context, state) => const MobstarPage(),
         ),
         GoRoute(
           name: OrderDetailPage.routeName,

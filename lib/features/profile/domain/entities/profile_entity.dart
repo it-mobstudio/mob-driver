@@ -173,3 +173,104 @@ class ProfileEntity {
     referralCode: '',
   );
 }
+
+class WalletTransactionEntity {
+  const WalletTransactionEntity({
+    required this.id,
+    required this.amount,
+    required this.remarks,
+    required this.transactionType,
+    required this.createdAt,
+    required this.orderNumber,
+  });
+
+  final int id;
+  final double amount;
+  final String remarks;
+  final String transactionType;
+  final DateTime? createdAt;
+  final String orderNumber;
+
+  bool get isDebit => transactionType.toUpperCase() == 'DEBIT';
+
+  factory WalletTransactionEntity.fromMap(Map<String, dynamic> map) {
+    final details = map['details'] is Map
+        ? Map<String, dynamic>.from(map['details'] as Map)
+        : <String, dynamic>{};
+    return WalletTransactionEntity(
+      id: int.tryParse((map['id'] ?? '0').toString()) ?? 0,
+      amount: double.tryParse((map['amount'] ?? '0').toString()) ?? 0,
+      remarks: (map['remarks'] ?? '').toString(),
+      transactionType: (map['transaction_type'] ?? '').toString(),
+      createdAt: DateTime.tryParse((map['created_at'] ?? '').toString()),
+      orderNumber: (details['order_id'] ??
+              (map['metadata'] is Map
+                  ? (map['metadata'] as Map)['order_number']
+                  : null) ??
+              '')
+          .toString(),
+    );
+  }
+}
+
+class WalletHistoryEntity {
+  const WalletHistoryEntity({required this.balance, required this.transactions});
+
+  final double balance;
+  final List<WalletTransactionEntity> transactions;
+
+  factory WalletHistoryEntity.fromMap(Map<String, dynamic> map) {
+    final results = map['results'] is List
+        ? map['results'] as List
+        : const <dynamic>[];
+    return WalletHistoryEntity(
+      balance: double.tryParse((map['wallet'] ?? '0').toString()) ?? 0,
+      transactions: results
+          .whereType<Map>()
+          .map((item) => WalletTransactionEntity.fromMap(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList(),
+    );
+  }
+}
+
+class MobstarEntity {
+  const MobstarEntity({
+    required this.points,
+    required this.actualMoney,
+    required this.levelName,
+    required this.percentage,
+    required this.freeDelivery,
+  });
+
+  final int points;
+  final double actualMoney;
+  final String levelName;
+  final double percentage;
+  final int freeDelivery;
+
+  String get membership {
+    final match = RegExp(r'\(([^)]+)\)').firstMatch(levelName);
+    return match?.group(1) ?? (levelName.isEmpty ? 'Bronze' : levelName);
+  }
+
+  factory MobstarEntity.fromMap(Map<String, dynamic> map) => MobstarEntity(
+        points: int.tryParse((map['points'] ?? '0').toString()) ?? 0,
+        actualMoney:
+            double.tryParse((map['actual_money'] ?? '0').toString()) ?? 0,
+        levelName: (map['name'] ?? '').toString(),
+        percentage:
+            double.tryParse((map['percentage'] ?? '0').toString()) ?? 0,
+        freeDelivery:
+            int.tryParse((map['free_delivery'] ?? '0').toString()) ?? 0,
+      );
+
+  static const empty = MobstarEntity(
+    points: 0,
+    actualMoney: 0,
+    levelName: 'Level 01 (Bronze)',
+    percentage: 0,
+    freeDelivery: 0,
+  );
+}
