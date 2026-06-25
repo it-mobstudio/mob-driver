@@ -26,6 +26,10 @@ abstract interface class RfqRemoteDatasource {
     required Map<String, dynamic> acceptedResponse,
     required String phoneNumber,
   });
+
+  Future<Map<String, dynamic>> getMagicQuoteQuestions();
+
+  Future<Map<String, dynamic>> saveMagicQuoteItems(Map<String, dynamic> body);
 }
 
 class RfqRemoteDatasourceImpl implements RfqRemoteDatasource {
@@ -110,6 +114,27 @@ class RfqRemoteDatasourceImpl implements RfqRemoteDatasource {
     final raw = response.data;
     if (raw is Map) return Map<String, dynamic>.from(raw);
     return <String, dynamic>{'data': raw};
+  }
+
+  @override
+  Future<Map<String, dynamic>> getMagicQuoteQuestions() async {
+    final response = await _dio.get<dynamic>('/quote-builder/magic-quote/');
+    final raw = response.data;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return {};
+  }
+
+  @override
+  Future<Map<String, dynamic>> saveMagicQuoteItems(
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _dio.patch<dynamic>(
+      '/quote-builder/magic-quote/',
+      data: body,
+    );
+    final raw = response.data;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return {};
   }
 
   static const _maxSocketReconnects = 5;

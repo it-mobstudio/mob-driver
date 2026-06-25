@@ -40,6 +40,20 @@ final class CartRfqSubmitRequested extends RfqEvent {
   final Map<String, dynamic> payload;
 }
 
+final class MagicQuoteQuestionsRequested extends RfqEvent {}
+
+final class MagicQuoteReviewSubmitRequested extends RfqEvent {
+  MagicQuoteReviewSubmitRequested({
+    required this.quoteId,
+    required this.questionnaireAnswers,
+    required this.additionalInstructions,
+  });
+
+  final String quoteId;
+  final Map<String, dynamic> questionnaireAnswers;
+  final String additionalInstructions;
+}
+
 // ── States ───────────────────────────────────────────────────────────────────
 
 sealed class RfqState {}
@@ -95,6 +109,27 @@ final class MagicQuoteError extends RfqState {
   final String message;
 }
 
+final class MagicQuoteQuestionsLoading extends RfqState {}
+
+final class MagicQuoteQuestionsLoaded extends RfqState {
+  MagicQuoteQuestionsLoaded(this.questions);
+  final List<Map<String, dynamic>> questions;
+}
+
+final class MagicQuoteQuestionsError extends RfqState {
+  MagicQuoteQuestionsError(this.message);
+  final String message;
+}
+
+final class MagicQuoteReviewSubmitting extends RfqState {}
+
+final class MagicQuoteReviewSubmitted extends RfqState {}
+
+final class MagicQuoteReviewError extends RfqState {
+  MagicQuoteReviewError(this.message);
+  final String message;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class RfqBloc extends Bloc<RfqEvent, RfqState> {
@@ -106,6 +141,8 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     on<RfqPaymentCompletedLocally>(_onPaymentCompletedLocally);
     on<MagicQuoteSubmitRequested>(_onMagicQuoteSubmit);
     on<CartRfqSubmitRequested>(_onCartRfqSubmit);
+    on<MagicQuoteQuestionsRequested>(_onMagicQuoteQuestions);
+    on<MagicQuoteReviewSubmitRequested>(_onMagicQuoteReviewSubmit);
   }
 
   final RfqRepository _repository;
@@ -239,5 +276,39 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
         );
       },
     );
+  }
+
+  Future<void> _onMagicQuoteQuestions(
+    MagicQuoteQuestionsRequested event,
+    Emitter<RfqState> emit,
+  ) async {
+    emit(MagicQuoteQuestionsLoading());
+    final (questions, failure) = await _repository.getMagicQuoteQuestions();
+    if (failure != null) {
+      emit(MagicQuoteQuestionsError(failure.message));
+    } else {
+      emit(MagicQuoteQuestionsLoaded(questions ?? const []));
+    }
+  }
+
+  Future<void> _onMagicQuoteReviewSubmit(
+    MagicQuoteReviewSubmitRequested event,
+    Emitter<RfqState> emit,
+  ) async {
+    emit(MagicQuoteReviewSubmitting());
+    final (success, failure) = await _repository.saveMagicQuoteReview(
+      quoteId: event.quoteId,
+      questionnaireAnswers: event.questionnaireAnswers,
+      additionalInstructions: event.additionalInstructions,
+    );
+    if (failure != null) {
+      AppHaptics.error();
+      emit(MagicQuoteReviewError(failure.message));
+    } else if (success) {
+      emit(MagicQuoteReviewSubmitted());
+    } else {
+      AppHaptics.error();
+      emit(MagicQuoteReviewError('Failed to submit quote for review.'));
+    }
   }
 }
