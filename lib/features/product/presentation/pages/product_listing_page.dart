@@ -13,7 +13,7 @@ import 'package:m_o_b_demand_side/features/product/presentation/pages/product_de
 import 'package:m_o_b_demand_side/features/product/presentation/pages/filter_bottom_sheet.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/sort_bottom_sheet.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/widgets/browse_products_components.dart';
-import 'package:m_o_b_demand_side/features/rfq/presentation/pages/magic_ai_quote_page.dart';
+import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_page.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';

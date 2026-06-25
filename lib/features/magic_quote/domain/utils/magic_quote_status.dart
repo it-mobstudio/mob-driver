@@ -41,6 +41,32 @@ Map<String, dynamic> magicQuotePayloadOf(Map<String, dynamic>? response) {
   return payload;
 }
 
+/// Like [magicQuotePayloadOf], but returns `null` when none of the
+/// candidates actually look like a `{rfq_order, quote, items}` payload —
+/// signalling to the caller that it should apply an optimistic local update
+/// instead. Mirrors the web's `extractQuotePayloadFromAddResponse`.
+Map<String, dynamic>? magicQuoteUpdatedPayloadOrNull(
+  Map<String, dynamic>? response,
+) {
+  if (response == null) return null;
+  final candidates = <Map<String, dynamic>?>[
+    _nestedMap(response, 'payload', 'data'),
+    _asMap(response['payload']),
+    _nestedMap(response, 'data', 'data'),
+    _asMap(response['data']),
+    response,
+  ];
+  for (final candidate in candidates) {
+    if (candidate == null) continue;
+    if (candidate['rfq_order'] != null ||
+        candidate['quote'] != null ||
+        candidate['items'] is List) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 dynamic _stringStatusOf(Map<String, dynamic>? map) {
   final value = map?['status'];
   return value is String ? value : null;
