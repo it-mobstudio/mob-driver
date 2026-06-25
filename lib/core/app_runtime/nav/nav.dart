@@ -28,7 +28,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_h
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
-import 'package:m_o_b_demand_side/features/rfq/presentation/pages/magic_ai_quote_page.dart';
+import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq_details_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq_form_page.dart';

@@ -55,6 +55,12 @@ import 'package:m_o_b_demand_side/features/rfq/data/repositories/rfq_repository_
 import 'package:m_o_b_demand_side/features/rfq/domain/repositories/rfq_repository.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
 
+// Magic Quote
+import 'package:m_o_b_demand_side/features/magic_quote/data/datasources/magic_quote_remote_datasource.dart';
+import 'package:m_o_b_demand_side/features/magic_quote/data/repositories/magic_quote_repository_impl.dart';
+import 'package:m_o_b_demand_side/features/magic_quote/domain/repositories/magic_quote_repository.dart';
+import 'package:m_o_b_demand_side/features/magic_quote/presentation/bloc/magic_quote_bloc.dart';
+
 final GetIt sl = GetIt.instance;
 
 Future<void> setupDependencies() async {
@@ -90,6 +96,9 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton<RfqRemoteDatasource>(
     () => RfqRemoteDatasourceImpl(dio),
   );
+  sl.registerLazySingleton<MagicQuoteRemoteDatasource>(
+    () => MagicQuoteRemoteDatasourceImpl(dio),
+  );
 
   // ── 3. Repositories ──────────────────────────────────────────────────────
   sl.registerLazySingleton<AuthRepository>(
@@ -119,6 +128,9 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton<RfqRepository>(
     () => RfqRepositoryImpl(sl()),
   );
+  sl.registerLazySingleton<MagicQuoteRepository>(
+    () => MagicQuoteRepositoryImpl(sl()),
+  );
 
   // ── 4. BLoCs ─────────────────────────────────────────────────────────────
 
@@ -134,4 +146,5 @@ Future<void> setupDependencies() async {
   sl.registerFactory<CheckoutBloc>(() => CheckoutBloc(sl()));
   sl.registerFactory<ProfileBloc>(() => ProfileBloc(sl()));
   sl.registerFactory<RfqBloc>(() => RfqBloc(sl()));
+  sl.registerFactory<MagicQuoteBloc>(() => MagicQuoteBloc(sl()));
 }
