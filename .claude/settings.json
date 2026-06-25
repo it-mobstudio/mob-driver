@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s https://pub.dev/api/packages/url_launcher_android)",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

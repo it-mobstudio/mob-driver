@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/uploaded_file.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/core/network/dio_client.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
@@ -54,16 +55,22 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   Map<String, dynamic>? _quoteResponse;
   String _generatingStatus = 'Uploading your list';
 
+  // null = not checked yet, true = serviceable, false = not serviceable
+  bool? _pincodeServiceable;
+  String _lastCheckedPincode = '';
+
   @override
   void initState() {
     super.initState();
     _rfqBloc = sl<RfqBloc>();
+    _pincodeController.addListener(_onPincodeChanged);
     _prefillForm();
   }
 
   @override
   void dispose() {
     _rfqBloc.close();
+    _pincodeController.removeListener(_onPincodeChanged);
     _noteFocusNode.dispose();
     _noteController.dispose();
     _brandsController.dispose();
@@ -163,14 +170,13 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
       _MagicQuoteScreen.upload => _BottomAction(
           label: 'Generate quote',
           icon: Icons.auto_awesome,
-          onPressed: submitting ? null : _submit,
+          onPressed:
+              submitting || _pincodeServiceable == false ? null : _submit,
         ),
       _MagicQuoteScreen.results => _BottomAction(
           label: 'Submit for review',
           icon: Icons.check_circle_outline,
-          onPressed: () => setState(() {
-            _screen = _MagicQuoteScreen.reviewSuccess;
-          }),
+          onPressed: _showReviewQuestionsSheet,
         ),
       _MagicQuoteScreen.unread => _BottomAction(
           label: 'Upload another list',
@@ -326,31 +332,6 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
                     : null,
               ),
               const SizedBox(height: 18),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _field(
-                      'City',
-                      _cityController,
-                      required: true,
-                      validator: (value) =>
-                          _required(value, 'Please enter city'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _field(
-                      'State',
-                      _stateController,
-                      required: true,
-                      validator: (value) =>
-                          _required(value, 'Please enter state'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
               _field(
                 'Delivery pincode',
                 _pincodeController,
@@ -363,6 +344,59 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
                 validator: (value) => value == null || value.trim().length != 6
                     ? 'Enter a valid pincode'
                     : null,
+              ),
+              if (_pincodeServiceable == false) ...[
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Color(0xFFE14040),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        "We don't deliver to ${_pincodeController.text.trim()} yet",
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFFE14040),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 18),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _field(
+                      'City',
+                      _cityController,
+                      required: true,
+                      enabled: false,
+                      hint: 'Auto-filled from pincode',
+                      validator: (value) =>
+                          _required(value, 'Please enter a valid pincode'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _field(
+                      'State',
+                      _stateController,
+                      required: true,
+                      enabled: false,
+                      hint: 'Auto-filled from pincode',
+                      validator: (value) =>
+                          _required(value, 'Please enter a valid pincode'),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 18),
               _field(
@@ -487,26 +521,29 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
               width: tileSize,
               height: tileSize,
               color: const Color(0xFFF7F9FC),
-              child: isImage
-                  ? Image.memory(
-                      bytes,
-                      width: tileSize,
-                      height: tileSize,
-                      fit: BoxFit.cover,
-                    )
-                  : Center(
-                      child: Text(
-                        (file.name.contains('.')
-                                ? file.name.split('.').last
-                                : file.name)
-                            .toUpperCase(),
-                        style: GoogleFonts.inter(
-                          color: _navy,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
+              child: InkWell(
+                onTap: isImage ? () => _showFilePreview(file.name, bytes) : null,
+                child: isImage
+                    ? Image.memory(
+                        bytes,
+                        width: tileSize,
+                        height: tileSize,
+                        fit: BoxFit.cover,
+                      )
+                    : Center(
+                        child: Text(
+                          (file.name.contains('.')
+                                  ? file.name.split('.').last
+                                  : file.name)
+                              .toUpperCase(),
+                          style: GoogleFonts.inter(
+                            color: _navy,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                    ),
+              ),
             ),
           ),
           Positioned(
@@ -677,6 +714,34 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     );
   }
 
+  Future<void> _showReviewQuestionsSheet() async {
+    final quote = _mapValue(_quotePayload(_quoteResponse), 'quote');
+    final quoteId = _stringValue(quote, const ['id', 'quote_id']);
+    if (quoteId.isEmpty) {
+      _showMessage('Unable to find this quote. Please try again.');
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return _ReviewQuestionsSheet(
+          rfqBloc: _rfqBloc,
+          quoteId: quoteId,
+          onSubmitted: () {
+            Navigator.of(sheetContext).pop();
+            setState(() => _screen = _MagicQuoteScreen.reviewSuccess);
+          },
+        );
+      },
+    );
+  }
+
   Widget _resultsScreen() {
     final payload = _quotePayload(_quoteResponse);
     final quote = _mapValue(payload, 'quote');
@@ -728,7 +793,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
                       'Your request was created, but no product match was returned.',
                 )
               else
-                ...items.map(_quoteItemRow),
+                ...items.indexed.map((entry) => _quoteItemRow(entry.$2, entry.$1)),
             ],
           ),
         ),
@@ -1038,6 +1103,43 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     );
   }
 
+  Future<void> _showFilePreview(String name, Uint8List bytes) async {
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              InteractiveViewer(
+                child: Image.memory(bytes, fit: BoxFit.contain),
+              ),
+              Positioned(
+                top: -8,
+                right: -8,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(dialogContext).pop(),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, color: _navy, size: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showUploadsViewer() async {
     final note = _noteController.text.trim();
     await showModalBottomSheet<void>(
@@ -1106,7 +1208,59 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     );
   }
 
-  Widget _quoteItemRow(Map<String, dynamic> item) {
+  Widget _noMatchItemRow(int idx) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF6F6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFAD7D7)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFAD7D7),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '${idx + 1}',
+              style: GoogleFonts.inter(
+                color: const Color(0xFFB3261E),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                "Don't worry! Please submit and our team will be in touch",
+                style: GoogleFonts.inter(
+                  color: const Color(0xFFB3261E),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _quoteItemRow(Map<String, dynamic> item, int idx) {
+    if (item['is_product_available'] == false) {
+      return _noMatchItemRow(idx);
+    }
     final product = _mapValue(item, 'product');
     final name = _firstNonEmpty(
       [
@@ -1317,6 +1471,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     TextEditingController controller, {
     bool required = false,
     bool optional = false,
+    bool enabled = true,
     String? hint,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
@@ -1333,12 +1488,16 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     return TextFormField(
       controller: controller,
       focusNode: focusNode,
+      enabled: enabled,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       validator: validator,
       minLines: minLines,
       maxLines: maxLines,
-      style: GoogleFonts.inter(color: _navy, fontSize: 15),
+      style: GoogleFonts.inter(
+        color: enabled ? _navy : _muted,
+        fontSize: 15,
+      ),
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hint,
@@ -1355,11 +1514,12 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
         ),
         hintStyle: GoogleFonts.inter(color: _muted, fontSize: 14),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: enabled ? Colors.white : const Color(0xFFF5F7FA),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
         border: _inputBorder(),
         enabledBorder: _inputBorder(),
+        disabledBorder: _inputBorder(),
         focusedBorder: _inputBorder(color: _blue, width: 1.6),
         errorBorder: _inputBorder(color: const Color(0xFFE14040)),
         focusedErrorBorder:
@@ -1759,6 +1919,118 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     });
   }
 
+  void _onPincodeChanged() {
+    final digits = _pincodeController.text.trim();
+    if (digits.length != 6) {
+      _lastCheckedPincode = '';
+      if (_pincodeServiceable != null ||
+          _cityController.text.isNotEmpty ||
+          _stateController.text.isNotEmpty) {
+        setState(() {
+          _pincodeServiceable = null;
+          _cityController.clear();
+          _stateController.clear();
+        });
+      }
+      return;
+    }
+    _checkPincodeServiceability(digits);
+  }
+
+  Future<void> _checkPincodeServiceability(String pincode) async {
+    if (pincode == _lastCheckedPincode) return;
+    _lastCheckedPincode = pincode;
+    try {
+      final response = await DioClient.instance.dio.get<dynamic>(
+        '/utility/serviceble/',
+        queryParameters: {'pincode': pincode},
+      );
+      final candidates = _pincodeResponseCandidates(response.data);
+      final state = _firstFromCandidates(
+        candidates,
+        const ['state', 'state_name', 'stateName'],
+      );
+      final city = _firstFromCandidates(
+        candidates,
+        const ['city', 'city_name', 'cityName', 'district'],
+      );
+      final serviceableFlag = _firstBoolFromCandidates(
+        candidates,
+        const ['serviceable', 'is_serviceable', 'isServiceable', 'deliverable', 'status'],
+      );
+      final isServiceable = serviceableFlag ?? (state.isNotEmpty && city.isNotEmpty);
+      if (!mounted) return;
+      setState(() {
+        _pincodeServiceable = isServiceable;
+        if (state.isNotEmpty) _stateController.text = state;
+        if (city.isNotEmpty) _cityController.text = city;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _pincodeServiceable = null);
+    }
+  }
+
+  /// Pincode-check responses are observed both flat (`{status, city, ...}`)
+  /// and nested (`{data: {city, ...}}` / `{data: {data: {...}}}`). Returns
+  /// every plausible payload map, most-nested first, so lookups can just
+  /// scan in order.
+  List<Map<String, dynamic>> _pincodeResponseCandidates(dynamic body) {
+    if (body is! Map) return const [];
+    final flat = Map<String, dynamic>.from(body);
+    final candidates = <Map<String, dynamic>>[];
+    final data = flat['data'];
+    if (data is Map) {
+      final nested = Map<String, dynamic>.from(data);
+      final nestedData = nested['data'];
+      if (nestedData is Map) candidates.add(Map<String, dynamic>.from(nestedData));
+      candidates.add(nested);
+    }
+    candidates.add(flat);
+    return candidates;
+  }
+
+  String _firstFromCandidates(
+    List<Map<String, dynamic>> candidates,
+    List<String> keys,
+  ) {
+    for (final map in candidates) {
+      for (final key in keys) {
+        final value = map[key];
+        if (value != null && value.toString().trim().isNotEmpty) {
+          return value.toString().trim();
+        }
+      }
+      for (final nestedKey in ['location', 'address']) {
+        final nested = map[nestedKey];
+        if (nested is! Map) continue;
+        for (final key in keys) {
+          final value = nested[key];
+          if (value != null && value.toString().trim().isNotEmpty) {
+            return value.toString().trim();
+          }
+        }
+      }
+    }
+    return '';
+  }
+
+  bool? _firstBoolFromCandidates(
+    List<Map<String, dynamic>> candidates,
+    List<String> keys,
+  ) {
+    for (final map in candidates) {
+      for (final key in keys) {
+        final value = map[key];
+        if (value is bool) return value;
+        if (value is String) {
+          return value.toLowerCase() == 'serviceable' || value.toLowerCase() == 'true';
+        }
+      }
+    }
+    return null;
+  }
+
   String? _required(String? value, String message) {
     return value == null || value.trim().isEmpty ? message : null;
   }
@@ -2056,5 +2328,377 @@ class _DashedBorderPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
     return oldDelegate.color != color;
+  }
+}
+
+/// "Submit for review" bottom sheet: fetches the dynamic questionnaire via
+/// [MagicQuoteQuestionsRequested] and submits answers + a free-text note via
+/// [MagicQuoteReviewSubmitRequested]. Mirrors the web app's
+/// MagicQuote/ReviewQuestionsModal.jsx.
+class _ReviewQuestionsSheet extends StatefulWidget {
+  const _ReviewQuestionsSheet({
+    required this.rfqBloc,
+    required this.quoteId,
+    required this.onSubmitted,
+  });
+
+  final RfqBloc rfqBloc;
+  final String quoteId;
+  final VoidCallback onSubmitted;
+
+  @override
+  State<_ReviewQuestionsSheet> createState() => _ReviewQuestionsSheetState();
+}
+
+class _ReviewQuestionsSheetState extends State<_ReviewQuestionsSheet> {
+  static const _noteQuestionId = 'specific_preferences_note';
+  static const _navy = AppColors.primaryText;
+  static const _muted = Color(0xFF687482);
+  static const _blue = Color(0xFF0968E8);
+  static const _border = Color(0xFFE3E8EF);
+
+  final _noteController = TextEditingController();
+  final Map<String, String> _answers = {};
+
+  List<Map<String, dynamic>> _questions = const [];
+  bool _isLoadingQuestions = true;
+  bool _isSubmitting = false;
+  String _fetchError = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchQuestions();
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  void _fetchQuestions() {
+    setState(() {
+      _isLoadingQuestions = true;
+      _fetchError = '';
+    });
+    widget.rfqBloc.add(MagicQuoteQuestionsRequested());
+  }
+
+  List<Map<String, dynamic>> get _visibleQuestions =>
+      _questions.where((q) => q['id'] != _noteQuestionId).toList();
+
+  Map<String, dynamic>? get _noteQuestion {
+    for (final question in _questions) {
+      if (question['id'] == _noteQuestionId) return question;
+    }
+    return null;
+  }
+
+  bool get _hasUnansweredRequired => _visibleQuestions.any(
+        (q) =>
+            q['required'] == true &&
+            (_answers[q['id']?.toString() ?? ''] ?? '').isEmpty,
+      );
+
+  bool get _isSubmitDisabled =>
+      _isSubmitting ||
+      _isLoadingQuestions ||
+      _visibleQuestions.isEmpty ||
+      _hasUnansweredRequired;
+
+  void _onBlocState(BuildContext context, RfqState state) {
+    if (state is MagicQuoteQuestionsLoaded) {
+      setState(() {
+        _questions = state.questions;
+        _isLoadingQuestions = false;
+      });
+    } else if (state is MagicQuoteQuestionsError) {
+      setState(() {
+        _isLoadingQuestions = false;
+        _fetchError = state.message;
+      });
+    } else if (state is MagicQuoteReviewSubmitting) {
+      setState(() => _isSubmitting = true);
+    } else if (state is MagicQuoteReviewSubmitted) {
+      setState(() => _isSubmitting = false);
+      widget.onSubmitted();
+    } else if (state is MagicQuoteReviewError) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(state.message)));
+    }
+  }
+
+  void _submit() {
+    if (_isSubmitDisabled) return;
+    final note = _noteController.text.trim();
+    final answers = Map<String, String>.from(_answers);
+    answers[_noteQuestionId] = note;
+    widget.rfqBloc.add(
+      MagicQuoteReviewSubmitRequested(
+        quoteId: widget.quoteId,
+        questionnaireAnswers: answers,
+        additionalInstructions: note,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notePlaceholder = (_noteQuestion?['placeholder']?.toString() ?? '')
+        .trim();
+    final noteSubtitle = (_noteQuestion?['question']?.toString() ?? '').trim();
+
+    return BlocListener<RfqBloc, RfqState>(
+      bloc: widget.rfqBloc,
+      listener: _onBlocState,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            14,
+            20,
+            16 + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: _border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: 'Additional instructions ',
+                    style: GoogleFonts.inter(
+                      color: _navy,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '(optional)',
+                        style: GoogleFonts.inter(
+                          color: _muted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  noteSubtitle.isNotEmpty
+                      ? noteSubtitle
+                      : 'Have any specific preferences or noticed something '
+                          'missing? Drop us a note!',
+                  style: GoogleFonts.inter(
+                    color: _muted,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _noteController,
+                  minLines: 3,
+                  maxLines: 4,
+                  style: GoogleFonts.inter(color: _navy, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: notePlaceholder.isNotEmpty
+                        ? notePlaceholder
+                        : 'e.g. need a specific brand, flagged a missing '
+                            'item, delivery preferences...',
+                    hintStyle: GoogleFonts.inter(color: _muted, fontSize: 13),
+                    filled: true,
+                    fillColor: const Color(0xFFF7F9FC),
+                    contentPadding: const EdgeInsets.all(14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: _border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: _border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: _blue, width: 1.6),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _questionsBody(),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: _border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.inter(
+                            color: _navy,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isSubmitDisabled ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: _blue,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: _blue.withValues(alpha: 0.5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                'Submit for review',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _questionsBody() {
+    if (_isLoadingQuestions) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_fetchError.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _fetchError,
+            style: GoogleFonts.inter(color: const Color(0xFFE14040)),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(onPressed: _fetchQuestions, child: const Text('Retry')),
+        ],
+      );
+    }
+    if (_visibleQuestions.isEmpty) {
+      return Text(
+        'No questions are available right now.',
+        style: GoogleFonts.inter(color: _muted, fontSize: 13),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: _visibleQuestions.map(_questionTile).toList(),
+    );
+  }
+
+  Widget _questionTile(Map<String, dynamic> question) {
+    final id = question['id']?.toString() ?? '';
+    final label = question['question']?.toString() ?? '';
+    final isRequired = question['required'] == true;
+    final options = (question['options'] as List? ?? const [])
+        .whereType<Map>()
+        .map((o) => Map<String, dynamic>.from(o))
+        .toList();
+    final selected = _answers[id];
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              text: label,
+              style: GoogleFonts.inter(
+                color: _navy,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+              children: [
+                if (isRequired)
+                  TextSpan(
+                    text: ' *',
+                    style: GoogleFonts.inter(color: const Color(0xFFE14040)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: options.map((opt) {
+              final value = opt['value']?.toString() ?? opt['label']?.toString() ?? '';
+              final optionLabel = opt['label']?.toString() ?? value;
+              final isSelected = selected == value;
+              return ChoiceChip(
+                label: Text(optionLabel),
+                selected: isSelected,
+                onSelected: (_) => setState(() => _answers[id] = value),
+                selectedColor: _blue.withValues(alpha: 0.12),
+                backgroundColor: Colors.white,
+                labelStyle: GoogleFonts.inter(
+                  color: isSelected ? _blue : _navy,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+                side: BorderSide(color: isSelected ? _blue : _border),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
   }
 }

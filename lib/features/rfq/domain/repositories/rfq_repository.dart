@@ -23,4 +23,16 @@ abstract interface class RfqRepository {
     required Map<String, dynamic> acceptedResponse,
     required String phoneNumber,
   });
+
+  /// Fetches the dynamic "submit for review" questionnaire shown before a
+  /// Magic Quote is sent for manual review.
+  Future<(List<Map<String, dynamic>>?, AppFailure?)> getMagicQuoteQuestions();
+
+  /// Submits the review questionnaire answers (and free-text note) for
+  /// [quoteId], moving the quote into manual review.
+  Future<(bool, AppFailure?)> saveMagicQuoteReview({
+    required String quoteId,
+    required Map<String, dynamic> questionnaireAnswers,
+    required String additionalInstructions,
+  });
 }
