@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
@@ -114,7 +115,7 @@ class _ProfileBody extends StatelessWidget {
                       _MenuItem(
                         iconAsset: 'assets/images/mobcreditprofile.svg',
                         label: 'mob Credit',
-                        onTap: () => _comingSoon(context, 'mob Credit'),
+                        onTap: () => context.push(CreditPage.routePath),
                       ),
                       _MenuItem(
                         iconAsset: 'assets/images/myprojects.svg',
