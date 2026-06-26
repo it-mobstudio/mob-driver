@@ -7,7 +7,7 @@ class _OrderInfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -20,7 +20,7 @@ class _OrderInfoSection extends StatelessWidget {
               height: 24 / 17,
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 7),
           const _DetailLabel('Order ID'),
           Row(
             children: [
