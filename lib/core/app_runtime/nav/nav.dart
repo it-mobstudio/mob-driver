@@ -15,7 +15,9 @@ import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/order_placed_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/payment_failed_page.dart';
+import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
@@ -407,6 +409,24 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: OrderDetailPage.routePath,
           parentNavigatorKey: appNavigatorKey,
           builder: (context, state) => const OrderDetailPage(),
+        ),
+        GoRoute(
+          name: OrderTrackingPage.routeName,
+          path: OrderTrackingPage.routePath,
+          parentNavigatorKey: appNavigatorKey,
+          builder: (context, state) {
+            final extra = state.extra is Map
+                ? Map<String, dynamic>.from(state.extra as Map)
+                : <String, dynamic>{};
+            return OrderTrackingPage(
+              order: extra['order'] is OrderEntity
+                  ? extra['order'] as OrderEntity
+                  : null,
+              shipment: extra['shipment'] is OrderShipmentEntity
+                  ? extra['shipment'] as OrderShipmentEntity
+                  : null,
+            );
+          },
         ),
       ],
     );

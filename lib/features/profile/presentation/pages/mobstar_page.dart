@@ -170,7 +170,7 @@ class _MobstarView extends StatelessWidget {
             const SizedBox(height: 40),
             const _SectionLabel('LEVEL UPGRADE'),
             const SizedBox(height: 16),
-            const _LevelCard(),
+            _LevelCard(mobstar: mobstar),
             const SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text('View all levels', style: _text(14, muted, FontWeight.w500)), const SizedBox(width: 5), const Icon(Icons.chevron_right, color: muted, size: 18)]),
             const SizedBox(height: 40),
@@ -210,8 +210,120 @@ class _BenefitCard extends StatelessWidget {
 }
 
 class _LevelCard extends StatelessWidget {
-  const _LevelCard();
-  @override Widget build(BuildContext context) => Container(width: 343, height: 130, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .03), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: .1))), child: Column(children: [Padding(padding: const EdgeInsets.fromLTRB(15, 14, 15, 8), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Bronze', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)), Text('Silver', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12))])), Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [CircleAvatar(radius: 20, backgroundColor: const Color(0xFF161722), child: SvgPicture.asset('assets/images/goldstar.svg', width: 24, height: 23)), Expanded(child: Container(height: 8, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFC57B2C), Color(0xFFE2E2E2), Color(0xFF41414B)]), borderRadius: BorderRadius.circular(8)))), CircleAvatar(radius: 20, backgroundColor: const Color(0xFF161722), child: SvgPicture.asset('assets/images/silverstar.svg', width: 24, height: 24))])), const Spacer(), Container(height: 32, alignment: Alignment.center, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .05), borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16))), child: Text('Shop for ₹250,000 before 16 Oct to reach Silver level', style: GoogleFonts.inter(color: _MobstarView.muted, fontSize: 11)))]));
+  const _LevelCard({required this.mobstar});
+
+  final MobstarEntity mobstar;
+
+  double get progress {
+    final raw = mobstar.percentage;
+    return (raw > 1 ? raw / 100 : raw).clamp(0.0, 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const target = 250000.0;
+    final remaining = (target * (1 - progress)).round();
+    final remainingText = remaining.toString().replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => ',',
+    );
+
+    return Container(
+      width: 343,
+      height: 130,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: .1)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(15, 14, 15, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(mobstar.membership, style: GoogleFonts.inter(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+                Text('Silver', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              height: 40,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned(
+                    left: 34,
+                    right: 34,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) => Stack(
+                        children: [
+                          Container(
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF41414B),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 450),
+                            curve: Curves.easeOut,
+                            width: constraints.maxWidth * progress,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF996E37), Color(0xFFFFB75C)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: const Color(0xFF161722),
+                      child: SvgPicture.asset('assets/images/goldstar.svg', width: 24, height: 23),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: const Color(0xFF161722),
+                      child: SvgPicture.asset('assets/images/silverstar.svg', width: 24, height: 24),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          Container(
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .05),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
+            ),
+            child: Text(
+              'Shop for ₹$remainingText before 16 Oct to reach Silver level',
+              style: GoogleFonts.inter(color: _MobstarView.muted, fontSize: 11),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _FaqRow extends StatelessWidget {

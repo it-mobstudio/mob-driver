@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 
 part 'order_detail_bill_section.dart';
@@ -102,6 +103,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                               if (order != null && shipments.isNotEmpty)
                                 for (var i = 0; i < shipments.length; i++) ...[
                                   _ShipmentSection(
+                                    order: order,
+                                    shipment: shipments[i],
                                     index: i + 1,
                                     title: _shipmentTitle(shipments[i], i),
                                     icon: _shipmentIcon(shipments[i], i),
