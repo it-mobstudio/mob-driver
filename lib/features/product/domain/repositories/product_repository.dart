@@ -18,6 +18,7 @@ abstract interface class ProductRepository {
 
   Future<(List<FilterSectionEntity>?, AppFailure?)> getSearchFilters({
     required String query,
+    Map<String, dynamic> extraParams = const <String, dynamic>{},
   });
 
   Future<(ProductDetailsEntity?, AppFailure?)> getProductDetail({
