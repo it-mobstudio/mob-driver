@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
@@ -73,6 +74,10 @@ class _ProfileBody extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               sliver: SliverList.list(
                 children: [
+                  _MobCreditCard(
+                    onTap: () => context.push(CreditPage.routePath),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
@@ -89,8 +94,7 @@ class _ProfileBody extends StatelessWidget {
                           iconAsset: 'assets/images/walletprofile.svg',
                           title: 'Wallet',
                           subtitle: '₹1500',
-                          onTap: () =>
-                              context.push(WalletPointsPage.routePath),
+                          onTap: () => context.push(WalletPointsPage.routePath),
                         ),
                       ),
                     ],
@@ -274,7 +278,10 @@ class _ProfileHeader extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              _MembershipBar(points: profile.rewardPoints),
+              _MembershipBar(
+                points: profile.rewardPoints,
+                onTap: () => context.push(MobstarPage.routePath),
+              ),
             ],
           ),
         ),
@@ -284,59 +291,69 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _MembershipBar extends StatelessWidget {
-  const _MembershipBar({required this.points});
+  const _MembershipBar({
+    required this.points,
+    required this.onTap,
+  });
 
   final int points;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 58,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.black,
+    return Material(
+      color: Colors.black,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          SvgPicture.asset(
-            'assets/images/goldstar.svg',
-            width: 24,
-            height: 23,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+        onTap: onTap,
+        child: SizedBox(
+          height: 58,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
               children: [
                 SvgPicture.asset(
-                  'assets/images/mobstar logo.svg',
-                  width: 64,
-                  height: 11,
+                  'assets/images/goldstar.svg',
+                  width: 24,
+                  height: 23,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/images/mobstar logo.svg',
+                        width: 64,
+                        height: 11,
+                      ),
+                      Text(
+                        'Bronze member',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Text(
-                  'Bronze member',
+                  '$points Points',
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+                const SizedBox(width: 7),
+                const Icon(Icons.chevron_right, color: Colors.white, size: 12),
               ],
             ),
           ),
-          Text(
-            '$points Points',
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 7),
-          const Icon(Icons.chevron_right, color: Colors.white, size: 12),
-        ],
+        ),
       ),
     );
   }
@@ -392,6 +409,109 @@ class _SummaryCard extends StatelessWidget {
                   ],
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobCreditCard extends StatelessWidget {
+  const _MobCreditCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFF55A77B), Color(0xFF0D889C)],
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 96),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/images/mobcreditlogo.svg',
+                        width: 92,
+                        height: 24,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Credit limit: ₹100000.00',
+                          textAlign: TextAlign.right,
+                          softWrap: true,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            height: 20 / 13,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 13),
+                  Container(
+                    height: 1,
+                    color: Colors.white.withValues(alpha: .22),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Available balance',
+                          softWrap: true,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            height: 20 / 13,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '₹800000.00',
+                        textAlign: TextAlign.right,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          height: 24 / 17,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

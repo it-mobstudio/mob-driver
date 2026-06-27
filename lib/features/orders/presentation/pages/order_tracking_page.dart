@@ -30,9 +30,11 @@ class OrderTrackingPage extends StatelessWidget {
     final address = order?.shippingAddress.isNotEmpty == true
         ? order!.shippingAddress
         : '10 Downing Street, 4th floor, Infront of westend mall, Chennai, 600005';
-    final trackingState = _TrackingState.fromStatus(
-      shipment?.status ?? order?.status ?? '',
-    );
+    final shipmentStatus = shipment?.status.trim() ?? '';
+    final orderStatus = order?.status.trim() ?? '';
+    final trackingStatus =
+        shipmentStatus.isNotEmpty ? shipmentStatus : orderStatus;
+    final trackingState = _TrackingState.fromStatus(trackingStatus);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F1F2),
@@ -43,46 +45,36 @@ class OrderTrackingPage extends StatelessWidget {
             const _TrackingHeader(),
             Expanded(
               child: SingleChildScrollView(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 375),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 420,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              _TrackingHero(state: trackingState),
-                              Positioned(
-                                left: 16,
-                                right: 16,
-                                top: 300,
-                                child: _EtaCard(state: trackingState),
-                              ),
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F1F2),
+                  ),
+                  child: Column(
+                    children: [
+                      _TrackingHeroSection(state: trackingState),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
+                        child: Column(
+                          children: [
+                            const _DeliveryPartnerCard(),
+                            const SizedBox(height: 12),
+                            _DeliveryAddressCard(address: address),
+                            const SizedBox(height: 12),
+                            _TrackingItemsCard(
+                              items: items,
+                              orderNumber: orderNumber,
+                            ),
+                            const SizedBox(height: 12),
+                            if (trackingState.isOutForDelivery) ...[
+                              const _DownloadInvoiceButton(),
+                              const SizedBox(height: 12),
                             ],
-                          ),
+                            const _TrackingHelpCard(),
+                            const SizedBox(height: 32),
+                          ],
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Column(
-                            children: [
-                              const _DeliveryPartnerCard(),
-                              const SizedBox(height: 12),
-                              _DeliveryAddressCard(address: address),
-                              const SizedBox(height: 12),
-                              _TrackingItemsCard(
-                                items: items,
-                                orderNumber: orderNumber,
-                              ),
-                              const SizedBox(height: 12),
-                              const _TrackingHelpCard(),
-                              const SizedBox(height: 32),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -99,45 +91,57 @@ class _TrackingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 375),
-        child: Container(
-          height: 44,
-          color: Colors.white,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned(
-                left: 4,
-                child: IconButton(
-                  onPressed: () => context.pop(),
-                  icon: const Icon(
-                    Icons.arrow_back_rounded,
-                    size: 22,
-                    color: _TrackingColors.navy,
-                  ),
+    return Container(
+      height: 44,
+      width: double.infinity,
+      color: Colors.white,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: SizedBox(
+              width: 48,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.expand(),
+                onPressed: () => context.pop(),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  size: 22,
+                  color: _TrackingColors.navy,
                 ),
               ),
-              Text(
+            ),
+          ),
+          Positioned.fill(
+            left: 56,
+            right: 56,
+            child: Center(
+              child: Text(
                 'Track order',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  color: _TrackingColors.navy,
+                  color: const Color(0xFF0A243F),
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   height: 22 / 15,
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _TrackingHero extends StatelessWidget {
-  const _TrackingHero({required this.state});
+class _TrackingHeroSection extends StatelessWidget {
+  const _TrackingHeroSection({required this.state});
 
   final _TrackingState state;
 
@@ -145,54 +149,99 @@ class _TrackingHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final canvasWidth = constraints.maxWidth;
-        final availableWidth = canvasWidth - 32;
-        final imageScale = (availableWidth / state.heroWidth).clamp(0.0, 1.0);
-        final imageWidth = state.heroWidth * imageScale;
-        final imageHeight = state.heroHeight * imageScale;
-        final preferredLeft = state.heroLeft;
-        final imageLeft = preferredLeft + imageWidth <= canvasWidth
-            ? preferredLeft
-            : (canvasWidth - imageWidth) / 2;
+        final width = constraints.maxWidth;
+        final scale = width / 375;
+        final sectionHeight = 390 * scale;
+        final etaTop = 300 * scale;
 
-        return Container(
-          height: 394,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-          ),
+        return SizedBox(
+          height: sectionHeight,
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: 0,
-                child: Container(
-                  height: 84,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0x00F1F1F2), Color(0xFFE5E7EC)],
-                    ),
-                  ),
+                top: 0,
+                child: _TrackingHero(
+                  state: state,
+                  height: 404 * scale,
+                  gradientHeight: 120 * scale,
                 ),
               ),
               Positioned(
-                left: imageLeft,
-                top: state.heroTop,
-                child: Image.asset(
-                  state.heroAsset,
-                  width: imageWidth,
-                  height: imageHeight,
-                  fit: BoxFit.fill,
-                ),
+                left: 16,
+                right: 16,
+                top: etaTop,
+                child: _EtaCard(state: state),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _TrackingHero extends StatelessWidget {
+  const _TrackingHero({
+    required this.state,
+    required this.height,
+    required this.gradientHeight,
+  });
+
+  final _TrackingState state;
+  final double height;
+  final double gradientHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(24),
+        ),
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: Colors.white),
+              ),
+            ),
+            Positioned.fill(
+              child: Image.asset(
+                state.heroAsset,
+                fit: BoxFit.cover,
+                alignment: Alignment.bottomCenter,
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: double.infinity,
+                height: gradientHeight,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment(0.5, 0),
+                    end: Alignment(0.5, 1),
+                    colors: [
+                      Color(0x00F1F1F2),
+                      Color(0xFF828282),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(24),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -204,66 +253,84 @@ class _EtaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _TrackingCard(
+    return Container(
       height: 88,
-      child: Row(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDEDEDE)),
+      ),
+      child: Stack(
         children: [
-          SvgPicture.asset(
-            'assets/images/thunder.svg',
-            width: 24,
-            height: 24,
-            colorFilter: const ColorFilter.mode(
-              Color(0xFF329537),
-              BlendMode.srcIn,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
+          Positioned(
+            left: 16,
+            top: 16,
+            width: 188,
+            height: 56,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '3h 30mins',
-                    style: GoogleFonts.inter(
-                      color: Colors.black,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      height: 30 / 24,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/images/thunder.svg',
+                      width: 24,
+                      height: 24,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF329537),
+                        BlendMode.srcIn,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '3h 30mins',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF010101),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        height: 30 / 24,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  state.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: _TrackingColors.navy,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    height: 20 / 14,
+                SizedBox(
+                  width: 188,
+                  child: Text(
+                    state.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: _TrackingColors.navy,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 20 / 14,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Container(
-            height: 26,
-            width: 86,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF6E6),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: SvgPicture.asset(
-              'assets/images/qwik.svg',
-              width: 54,
-              height: 14,
+          Positioned(
+            top: 19,
+            right: 16,
+            child: Container(
+              height: 26,
+              width: 86,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF6E6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: SvgPicture.asset(
+                'assets/images/qwik.svg',
+                width: 54,
+                height: 14,
+              ),
             ),
           ),
         ],
@@ -345,8 +412,15 @@ class _DeliveryAddressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _TrackingCard(
-      height: 108,
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 108),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDEDEDE)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -355,31 +429,40 @@ class _DeliveryAddressCard extends StatelessWidget {
             size: 48,
           ),
           const SizedBox(width: 12),
-          Expanded(
+          SizedBox(
+            width: 204,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Delivery to Carlos Sainz',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: _TrackingColors.navy,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    height: 20 / 13,
+                SizedBox(
+                  width: 204,
+                  height: 20,
+                  child: Text(
+                    'Delivery to Carlos Sainz ',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: _TrackingColors.navy,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 20 / 13,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '$address\n+91 9876554324',
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: _TrackingColors.greyText,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    height: 18 / 12,
+                SizedBox(
+                  width: 204,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 54),
+                    child: Text(
+                      '$address\n+91 9876554324',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF67696D),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        height: 18 / 12,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -497,6 +580,48 @@ class _TrackingItemsCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DownloadInvoiceButton extends StatelessWidget {
+  const _DownloadInvoiceButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () {},
+        icon: const Icon(
+          Icons.file_download_outlined,
+          size: 20,
+          color: Color(0xFF0360E5),
+        ),
+        label: Text(
+          'Download invoice',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.inter(
+            color: const Color(0xFF0360E5),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            height: 21 / 14,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF0360E5),
+          side: const BorderSide(color: Color(0xFF0360E5)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: EdgeInsets.zero,
+          minimumSize: const Size.fromHeight(48),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
       ),
     );
   }
@@ -676,11 +801,22 @@ class _ProductThumb extends StatelessWidget {
 
 enum _TrackingState {
   packing,
-  packed;
+  packed,
+  outForDelivery;
 
   factory _TrackingState.fromStatus(String status) {
-    final value = status.trim().toLowerCase().replaceAll('_', ' ');
-    if (value.contains('packed') ||
+    final value =
+        status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    final compactValue = value.replaceAll(' ', '');
+    if (value.contains('out for delivery') ||
+        compactValue.contains('outfordelivery') ||
+        value.contains('out for shipment') ||
+        value.contains('on the way')) {
+      return _TrackingState.outForDelivery;
+    }
+    if (value.contains('order is packed') ||
+        value.contains('your order is packed') ||
+        value.contains('packed') ||
         value.contains('ready for pickup') ||
         value.contains('ready to ship')) {
       return _TrackingState.packed;
@@ -690,6 +826,7 @@ enum _TrackingState {
 
   String get subtitle {
     return switch (this) {
+      _TrackingState.outForDelivery => 'Out for delivery',
       _TrackingState.packed => 'Your order is packed',
       _TrackingState.packing => 'Packing your order',
     };
@@ -697,38 +834,13 @@ enum _TrackingState {
 
   String get heroAsset {
     return switch (this) {
-      _TrackingState.packed => 'assets/images/orderispacked.png',
-      _TrackingState.packing => 'assets/images/orderpacking.png',
+      _TrackingState.outForDelivery => 'assets/images/Deliveredintacking.webp',
+      _TrackingState.packed => 'assets/images/Your order is packed.webp',
+      _TrackingState.packing => 'assets/images/Packing your order.webp',
     };
   }
 
-  double get heroLeft {
-    return switch (this) {
-      _TrackingState.packed => 66,
-      _TrackingState.packing => 32,
-    };
-  }
-
-  double get heroTop {
-    return switch (this) {
-      _TrackingState.packed => 41,
-      _TrackingState.packing => 46,
-    };
-  }
-
-  double get heroWidth {
-    return switch (this) {
-      _TrackingState.packed => 283,
-      _TrackingState.packing => 272,
-    };
-  }
-
-  double get heroHeight {
-    return switch (this) {
-      _TrackingState.packed => 241,
-      _TrackingState.packing => 243,
-    };
-  }
+  bool get isOutForDelivery => this == _TrackingState.outForDelivery;
 }
 
 class _TrackingColors {
