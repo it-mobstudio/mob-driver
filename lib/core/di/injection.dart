@@ -37,6 +37,12 @@ import 'package:m_o_b_demand_side/features/orders/data/repositories/orders_repos
 import 'package:m_o_b_demand_side/features/orders/domain/repositories/orders_repository.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
 
+// Credit
+import 'package:m_o_b_demand_side/features/credit/data/datasources/credit_remote_datasource.dart';
+import 'package:m_o_b_demand_side/features/credit/data/repositories/credit_repository_impl.dart';
+import 'package:m_o_b_demand_side/features/credit/domain/repositories/credit_repository.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/bloc/credit_bloc.dart';
+
 // Checkout
 import 'package:m_o_b_demand_side/features/checkout/data/datasources/checkout_remote_datasource.dart';
 import 'package:m_o_b_demand_side/features/checkout/data/repositories/checkout_repository_impl.dart';
@@ -99,6 +105,9 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton<MagicQuoteRemoteDatasource>(
     () => MagicQuoteRemoteDatasourceImpl(dio),
   );
+  sl.registerLazySingleton<CreditRemoteDatasource>(
+    () => CreditRemoteDatasourceImpl(dio),
+  );
 
   // ── 3. Repositories ──────────────────────────────────────────────────────
   sl.registerLazySingleton<AuthRepository>(
@@ -131,6 +140,9 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton<MagicQuoteRepository>(
     () => MagicQuoteRepositoryImpl(sl()),
   );
+  sl.registerLazySingleton<CreditRepository>(
+    () => CreditRepositoryImpl(sl()),
+  );
 
   // ── 4. BLoCs ─────────────────────────────────────────────────────────────
 
@@ -147,4 +159,5 @@ Future<void> setupDependencies() async {
   sl.registerFactory<ProfileBloc>(() => ProfileBloc(sl()));
   sl.registerFactory<RfqBloc>(() => RfqBloc(sl()));
   sl.registerFactory<MagicQuoteBloc>(() => MagicQuoteBloc(sl()));
+  sl.registerFactory<CreditBloc>(() => CreditBloc(sl()));
 }

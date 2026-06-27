@@ -22,9 +22,11 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/file_t
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/generating_screen.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
+import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/quote_item_row.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/results_screen.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/review_questions_sheet.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/review_success_screen.dart';
+import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/swap_product_sheet.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/unread_screen.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/upload_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -223,6 +225,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
           quantityOf: _itemQuantity,
           onQuantityChange: _handleQuantityChange,
           onDeleteItem: _handleDeleteItem,
+          onChangeItem: _handleChangeItem,
           onShowAddMoreItems: _showAddMoreItemsSheet,
           onAddRecommended: _handleAddProductBySku,
           onShowUploadsViewer: _showUploadsViewer,
@@ -655,6 +658,37 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
       }
     });
     return true;
+  }
+
+  Future<void> _handleChangeItem(Map<String, dynamic> item) async {
+    final itemId = _itemId(item);
+    final sku = magicQuoteItemSku(item);
+    if (itemId.isEmpty || sku.isEmpty) {
+      _showMessage('Unable to find this product. Please try again.');
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SwapProductSheet(
+          productRepository: _productRepository,
+          magicQuoteRepository: _magicQuoteRepository,
+          itemId: itemId,
+          mobSku: sku,
+          city: _cityController.text.trim(),
+          onReplaced: (payload) {
+            setState(() {
+              if (payload != null) _quotePayloadOverride = payload;
+            });
+          },
+        );
+      },
+    );
   }
 
   Future<void> _handleAddProductBySku(String sku) async {

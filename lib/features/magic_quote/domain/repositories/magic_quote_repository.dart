@@ -51,4 +51,11 @@ abstract interface class MagicQuoteRepository {
     required String quoteId,
     required String mobSku,
   });
+
+  /// Swaps quote item [itemId] for [mobSku]. Returns the refreshed payload,
+  /// or `null` if the caller should apply a local update instead.
+  Future<(Map<String, dynamic>?, AppFailure?)> replaceMagicQuoteItem({
+    required String itemId,
+    required String mobSku,
+  });
 }

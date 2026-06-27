@@ -15,7 +15,10 @@ abstract interface class ProductRemoteDatasource {
     String? subCategory,
   });
 
-  Future<dynamic> getSearchFilters({required String query});
+  Future<dynamic> getSearchFilters({
+    required String query,
+    Map<String, dynamic> extraParams = const <String, dynamic>{},
+  });
 
   Future<Map<String, dynamic>> getProductDetail({
     required String slug,
@@ -121,10 +124,16 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
   }
 
   @override
-  Future<dynamic> getSearchFilters({required String query}) async {
+  Future<dynamic> getSearchFilters({
+    required String query,
+    Map<String, dynamic> extraParams = const <String, dynamic>{},
+  }) async {
     final response = await _dio.get<dynamic>(
       '/home/get_filters/',
-      queryParameters: <String, dynamic>{'search': query},
+      queryParameters: <String, dynamic>{
+        'search': query,
+        ...extraParams,
+      },
     );
     return response.data;
   }

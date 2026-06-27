@@ -120,6 +120,29 @@ class MagicQuoteRepositoryImpl implements MagicQuoteRepository {
   }
 
   @override
+  Future<(Map<String, dynamic>?, AppFailure?)> replaceMagicQuoteItem({
+    required String itemId,
+    required String mobSku,
+  }) async {
+    try {
+      final body = await _datasource.patchMagicQuote({
+        'id': itemId,
+        'mob_sku': mobSku,
+      });
+      if (body['status'] == false) {
+        final message = body['message']?.toString() ??
+            'Failed to replace product.';
+        return (null, BusinessFailure(message));
+      }
+      return (magicQuoteUpdatedPayloadOrNull(body), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<(Map<String, dynamic>?, AppFailure?)> deleteMagicQuoteItem(
     String itemId,
   ) async {

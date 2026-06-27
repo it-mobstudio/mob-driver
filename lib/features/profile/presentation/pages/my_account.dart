@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
-import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
-import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
-import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
-import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
-import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 
 class MyAccountWidget extends StatefulWidget {
   const MyAccountWidget({super.key});
+
   static const String routeName = 'MyAccount';
   static const String routePath = '/myaccount';
 
@@ -29,7 +32,7 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
   @override
   void initState() {
     super.initState();
-    _profileBloc = sl<ProfileBloc>();
+    _profileBloc = sl<ProfileBloc>()..add(ProfileLoadRequested());
   }
 
   @override
@@ -40,9 +43,10 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<ProfileBloc>.value(
+    return BlocProvider.value(
       value: _profileBloc,
       child: const Scaffold(
+        backgroundColor: _ProfileColors.background,
         body: _ProfileBody(),
       ),
     );
@@ -52,16 +56,8 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
 class _ProfileBody extends StatelessWidget {
   const _ProfileBody();
 
-  void _showComingSoon(BuildContext context, String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label is coming soon')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    const radiusLg = Radius.circular(28);
-
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
         final profile = switch (state) {
@@ -70,236 +66,546 @@ class _ProfileBody extends StatelessWidget {
           _ => ProfileEntity.empty,
         };
 
-        return SafeArea(
-          bottom: false,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFFA6E3D1), Color(0xFF9BD9D2)],
-                        ),
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: radiusLg,
-                          bottomRight: radiusLg,
+        return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: _ProfileHeader(profile: profile)),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              sliver: SliverList.list(
+                children: [
+                  _MobCreditCard(
+                    onTap: () => context.push(CreditPage.routePath),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SummaryCard(
+                          iconAsset: 'assets/images/ordersprofile.svg',
+                          title: 'Orders',
+                          subtitle: 'View all orders',
+                          onTap: () => context.push(OrdersPage.routePath),
                         ),
                       ),
-                      child: _HeaderContent(profile: profile),
-                    ),
-                    Positioned(
-                      left: 4,
-                      top: 4,
-                      child: IconButton(
-                        onPressed: () => context.canPop()
-                            ? context.pop()
-                            : context.go('/homepage'),
-                        icon: const Icon(Icons.arrow_back,
-                            color: Color(0xFF0E2545)),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: _SummaryCard(
+                          iconAsset: 'assets/images/walletprofile.svg',
+                          title: 'Wallet',
+                          subtitle: '₹1500',
+                          onTap: () => context.push(WalletPointsPage.routePath),
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _ReferralCard(
+                    onTap: () => context.push(ReferralPage.routePath),
+                  ),
+                  const SizedBox(height: 16),
+                  _MenuCard(
+                    items: [
+                      _MenuItem(
+                        iconAsset: 'assets/images/quotationreq.svg',
+                        label: 'Quotation request',
+                        onTap: () => context.push(RfqPage.routePath),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/addresses.svg',
+                        label: 'Address',
+                        onTap: () => _comingSoon(context, 'Address'),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/mobcreditprofile.svg',
+                        label: 'mob Credit',
+                        onTap: () => context.push(CreditPage.routePath),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/myprojects.svg',
+                        label: 'My projects',
+                        onTap: () => _comingSoon(context, 'My projects'),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/mobsupport.svg',
+                        label: 'mob support',
+                        onTap: () => _comingSoon(context, 'mob support'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'OTHER INFORMATION',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF717A84),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
                     ),
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: -48,
-                      child: _StatsCard(profile: profile),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 80),
-                _MenuSection(
-                  items: [
-                    _MenuItemData(
-                      icon: Icons.inventory_2,
-                      title: 'Orders',
-                      onTap: (ctx) => ctx.push(OrdersPage.routePath),
-                    ),
-                    _MenuItemData(
-                      icon: Icons.description,
-                      title: "My RFQ's",
-                      onTap: (ctx) => ctx.push(RfqPage.routePath),
-                    ),
-                    _MenuItemData(
-                      icon: Icons.favorite,
-                      title: 'Wishlist',
-                      onTap: (ctx) => _showComingSoon(ctx, 'Wishlist'),
-                    ),
-                    _MenuItemData(
-                      icon: Icons.person,
-                      title: 'Personal info',
-                      onTap: (ctx) => ctx.push(PersonalInfoPage.routePath),
-                    ),
-                    _MenuItemData(
-                      icon: Icons.card_giftcard,
-                      title: 'Referrals',
-                      onTap: (ctx) => ctx.push(ReferralHistoryPage.routePath),
-                    ),
-                    _MenuItemData(
-                      icon: Icons.location_on,
-                      title: 'Address',
-                      onTap: (ctx) => _showComingSoon(ctx, 'Address'),
-                    ),
-                    _MenuItemData(
-                      icon: Icons.account_balance_wallet,
-                      title: 'Wallet & points',
-                      onTap: (ctx) => ctx.push(WalletPointsPage.routePath),
-                    ),
-                    _MenuItemData(
-                      icon: Icons.stars_rounded,
-                      title: 'Mobstar',
-                      onTap: (ctx) => ctx.push(MobstarPage.routePath),
-                    ),
-                    _MenuItemData(
-                      icon: Icons.logout,
-                      title: 'Logout',
-                      onTap: (ctx) async {
-                        await AuthSession.instance.signOut();
-                        if (ctx.mounted) {
-                          ctx.go(LoginpageWidget.routePath);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-              ],
+                  ),
+                  const SizedBox(height: 20),
+                  _MenuCard(
+                    items: [
+                      _MenuItem(
+                        iconAsset: 'assets/images/notifications.svg',
+                        label: 'Notification preferences',
+                        onTap: () =>
+                            _comingSoon(context, 'Notification preferences'),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/aboutus.svg',
+                        label: 'About us',
+                        onTap: () => _comingSoon(context, 'About us'),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/faqs.svg',
+                        label: 'FAQs',
+                        onTap: () => _comingSoon(context, 'FAQs'),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/becomepartner.svg',
+                        label: 'Become a partner',
+                        onTap: () => _comingSoon(context, 'Become a partner'),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/logout.svg',
+                        label: 'Logout',
+                        showChevron: false,
+                        onTap: () => _logout(context),
+                      ),
+                    ],
+                  ),
+                  const _VersionFooter(),
+                ],
+              ),
             ),
-          ),
+          ],
         );
       },
     );
   }
+
+  static void _comingSoon(BuildContext context, String label) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$label is coming soon')),
+    );
+  }
+
+  static Future<void> _logout(BuildContext context) async {
+    await AuthSession.instance.signOut();
+    if (context.mounted) context.go(LoginpageWidget.routePath);
+  }
 }
 
-class _HeaderContent extends StatelessWidget {
-  const _HeaderContent({required this.profile});
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.profile});
 
   final ProfileEntity profile;
 
   @override
   Widget build(BuildContext context) {
-    final nameStyle = Theme.of(context).textTheme.headlineMedium?.copyWith(
-          color: const Color(0xFF0E2545),
-          fontWeight: FontWeight.w800,
-        );
+    final name = profile.name.trim().isEmpty ? 'Welcome back' : profile.name;
+    final phone = profile.phone.trim().isEmpty ? 'Your profile' : profile.phone;
 
-    final displayName = profile.name.isNotEmpty ? profile.name : 'Welcome back';
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
+    return ColoredBox(
+      color: _ProfileColors.navy,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
-              Text(displayName, style: nameStyle),
-              const SizedBox(height: 12),
-              const _BadgeChip(
-                text: 'MOB member',
-                icon: Icons.ac_unit_rounded,
-              ),
-              if (profile.businessName.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                  profile.businessName,
-                  style: const TextStyle(
-                    color: Color(0xFF0E2545),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+              SizedBox(
+                width: 36,
+                height: 36,
+                child: Material(
+                  color: Colors.white,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => context.canPop()
+                        ? context.pop()
+                        : context.go('/homepage'),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      size: 19,
+                      color: _ProfileColors.navy,
+                    ),
                   ),
                 ),
-              ],
+              ),
+              const SizedBox(height: 34),
+              Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      Icons.person,
+                      size: 31,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w700,
+                            height: 31 / 21,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          phone,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFFB8C4D0),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            height: 20 / 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _MembershipBar(
+                points: profile.rewardPoints,
+                onTap: () => context.push(MobstarPage.routePath),
+              ),
             ],
           ),
         ),
-        const CircleAvatar(
-          radius: 38,
-          backgroundColor: Colors.white,
-          child: Icon(Icons.person, size: 38, color: Color(0xFF0E2545)),
-        ),
-      ],
-    );
-  }
-}
-
-class _BadgeChip extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  const _BadgeChip({required this.text, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x1F000000), blurRadius: 4, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: const Color(0xFF3BB6C5), size: 18),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: const TextStyle(
-              color: Color(0xFF0E2545),
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
       ),
     );
   }
 }
 
-class _StatsCard extends StatelessWidget {
-  const _StatsCard({required this.profile});
+class _MembershipBar extends StatelessWidget {
+  const _MembershipBar({
+    required this.points,
+    required this.onTap,
+  });
 
-  final ProfileEntity profile;
+  final int points;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      elevation: 3,
-      borderRadius: BorderRadius.circular(20),
+      color: Colors.black,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: SizedBox(
+          height: 58,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                SvgPicture.asset(
+                  'assets/images/goldstar.svg',
+                  width: 24,
+                  height: 23,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/images/mobstar logo.svg',
+                        width: 64,
+                        height: 11,
+                      ),
+                      Text(
+                        'Bronze member',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '$points Points',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 7),
+                const Icon(Icons.chevron_right, color: Colors.white, size: 12),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.iconAsset,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String iconAsset;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
       color: Colors.white,
-      child: Container(
-        height: 110,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
-        child: Row(
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: SizedBox(
+          height: 112,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SvgPicture.asset(iconAsset, width: 24, height: 24),
+                const SizedBox(height: 12),
+                Text(title, style: _labelStyle),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _subtleStyle,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 12,
+                      color: Color(0xFF78838F),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobCreditCard extends StatelessWidget {
+  const _MobCreditCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFF55A77B), Color(0xFF0D889C)],
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 96),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/images/mobcreditlogo.svg',
+                        width: 92,
+                        height: 24,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Credit limit: ₹100000.00',
+                          textAlign: TextAlign.right,
+                          softWrap: true,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            height: 20 / 13,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 13),
+                  Container(
+                    height: 1,
+                    color: Colors.white.withValues(alpha: .22),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Available balance',
+                          softWrap: true,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            height: 20 / 13,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '₹800000.00',
+                        textAlign: TextAlign.right,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          height: 24 / 17,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReferralCard extends StatelessWidget {
+  const _ReferralCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: SizedBox(
+          height: 58,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                SvgPicture.asset(
+                  'assets/images/referandearn.svg',
+                  width: 24,
+                  height: 24,
+                ),
+                const SizedBox(width: 16),
+                Text('Refer and earn', style: _labelStyle),
+                const SizedBox(width: 16),
+                SvgPicture.asset(
+                  'assets/images/rs1000.svg',
+                  width: 61,
+                  height: 24,
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 12,
+                  color: Color(0xFF78838F),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuItem {
+  const _MenuItem({
+    required this.iconAsset,
+    required this.label,
+    required this.onTap,
+    this.showChevron = true,
+  });
+
+  final String iconAsset;
+  final String label;
+  final VoidCallback onTap;
+  final bool showChevron;
+}
+
+class _MenuCard extends StatelessWidget {
+  const _MenuCard({required this.items});
+
+  final List<_MenuItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: ColoredBox(
+        color: Colors.white,
+        child: Column(
           children: [
-            Expanded(
-              child: _StatTile(
-                icon: Icons.stars_rounded,
-                title: 'Points',
-                value: profile.rewardPoints.toString(),
-              ),
-            ),
-            const VerticalDivider(
-                width: 1, thickness: 1, color: Color(0xFFE8EDF2)),
-            const Expanded(
-              child: _StatTile(
-                icon: Icons.account_balance_wallet_rounded,
-                title: 'Wallet',
-                value: '₹0',
-              ),
-            ),
+            for (var index = 0; index < items.length; index++) ...[
+              _MenuRow(item: items[index]),
+              if (index != items.length - 1)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(
+                    height: 0,
+                    thickness: 1,
+                    color: Color(0xFFE7EAEE),
+                  ),
+                ),
+            ],
           ],
         ),
       ),
@@ -307,43 +613,69 @@ class _StatsCard extends StatelessWidget {
   }
 }
 
-class _StatTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.item});
 
-  const _StatTile(
-      {required this.icon, required this.title, required this.value});
+  final _MenuItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: item.onTap,
+        child: SizedBox(
+          height: 56,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                SvgPicture.asset(
+                  item.iconAsset,
+                  width: 24,
+                  height: 24,
+                ),
+                const SizedBox(width: 16),
+                Expanded(child: Text(item.label, style: _labelStyle)),
+                if (item.showChevron)
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 12,
+                    color: Color(0xFF78838F),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VersionFooter extends StatelessWidget {
+  const _VersionFooter();
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(0, 26, 0, 16),
+      child: Column(
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: const Color(0xFFF1F5F9),
-            child: Icon(icon, color: const Color(0xFF0E2545), size: 20),
+          Text(
+            'mob∷',
+            style: GoogleFonts.inter(
+              color: const Color(0xFFC5C8CC),
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        color: Color(0xFF37516B),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Text(value,
-                    style: const TextStyle(
-                        color: Color(0xFF0E2545),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800)),
-              ],
+          const SizedBox(height: 2),
+          Text(
+            'APP VERSION 0.2.456',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF9FA4AA),
+              fontSize: 8,
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
@@ -352,47 +684,21 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _MenuItemData {
-  final IconData icon;
-  final String title;
-  final void Function(BuildContext) onTap;
-  _MenuItemData({required this.icon, required this.title, required this.onTap});
-}
+final TextStyle _labelStyle = GoogleFonts.inter(
+  color: _ProfileColors.navy,
+  fontSize: 15,
+  fontWeight: FontWeight.w600,
+  height: 22 / 15,
+);
 
-class _MenuSection extends StatelessWidget {
-  final List<_MenuItemData> items;
-  const _MenuSection({required this.items});
+final TextStyle _subtleStyle = GoogleFonts.inter(
+  color: const Color(0xFF747D87),
+  fontSize: 13,
+  fontWeight: FontWeight.w400,
+  height: 20 / 13,
+);
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      itemCount: items.length,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      separatorBuilder: (_, __) =>
-          const Divider(height: 1, thickness: 1, color: Color(0xFFEFF3F7)),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return ListTile(
-          onTap: () => item.onTap(context),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-          leading: CircleAvatar(
-            radius: 18,
-            backgroundColor: const Color(0xFFF1F5F9),
-            child: Icon(item.icon, color: const Color(0xFF0E2545), size: 20),
-          ),
-          title: Text(
-            item.title,
-            style: const TextStyle(
-              color: Color(0xFF0E2545),
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          trailing: const Icon(Icons.chevron_right, color: Color(0xFF37516B)),
-        );
-      },
-    );
-  }
+abstract final class _ProfileColors {
+  static const navy = Color(0xFF0A243F);
+  static const background = Color(0xFFF0F0F0);
 }

@@ -6,11 +6,7 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/quote_item_row.dart';
 
-/// The post-generation quote view: hero total card, no-match summary,
-/// item list with delete/qty controls, "Add more items", recommended
-/// products, quote details, and next steps. Mirrors the web's
-/// MagicQuote/ResultsScreen.jsx (swap/replace + filters intentionally not
-/// ported — see project notes on scope).
+
 class ResultsScreen extends StatelessWidget {
   const ResultsScreen({
     super.key,
@@ -22,6 +18,7 @@ class ResultsScreen extends StatelessWidget {
     required this.quantityOf,
     required this.onQuantityChange,
     required this.onDeleteItem,
+    required this.onChangeItem,
     required this.onShowAddMoreItems,
     required this.onAddRecommended,
     required this.onShowUploadsViewer,
@@ -36,6 +33,7 @@ class ResultsScreen extends StatelessWidget {
   final num Function(Map<String, dynamic> item) quantityOf;
   final void Function(Map<String, dynamic> item, bool increase) onQuantityChange;
   final void Function(Map<String, dynamic> item) onDeleteItem;
+  final void Function(Map<String, dynamic> item) onChangeItem;
   final void Function(String quoteId) onShowAddMoreItems;
   final void Function(String sku) onAddRecommended;
   final VoidCallback onShowUploadsViewer;
@@ -115,6 +113,7 @@ class ResultsScreen extends StatelessWidget {
                     quantity: quantityOf(entry.$2),
                     onQuantityChange: onQuantityChange,
                     onDelete: onDeleteItem,
+                    onChange: onChangeItem,
                   ),
                 ),
               ),

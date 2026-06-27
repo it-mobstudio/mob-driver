@@ -1,6 +1,8 @@
 part of 'order_detail_page.dart';
 
 class _ShipmentSection extends StatelessWidget {
+  final OrderEntity order;
+  final OrderShipmentEntity shipment;
   final int index;
   final String title;
   final IconData icon;
@@ -9,6 +11,8 @@ class _ShipmentSection extends StatelessWidget {
   final List<OrderItemEntity> items;
 
   const _ShipmentSection({
+    required this.order,
+    required this.shipment,
     required this.index,
     required this.title,
     required this.icon,
@@ -25,45 +29,52 @@ class _ShipmentSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: iconBackground,
-                  borderRadius: BorderRadius.circular(6),
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => context.push(
+              OrderTrackingPage.routePath,
+              extra: {'order': order, 'shipment': shipment},
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: iconBackground,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(icon, size: 24, color: iconColor),
                 ),
-                child: Icon(icon, size: 24, color: iconColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'SHIPMENT $index',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF596378),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                        height: 16 / 11,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SHIPMENT $index',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF596378),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                          height: 16 / 11,
+                        ),
                       ),
-                    ),
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                        height: 28 / 19,
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          height: 28 / 19,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right_rounded, size: 24),
-            ],
+                const Icon(Icons.chevron_right_rounded, size: 24),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           const Divider(

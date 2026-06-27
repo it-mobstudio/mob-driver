@@ -104,9 +104,13 @@ class ProductRepositoryImpl implements ProductRepository {
   @override
   Future<(List<FilterSectionEntity>?, AppFailure?)> getSearchFilters({
     required String query,
+    Map<String, dynamic> extraParams = const <String, dynamic>{},
   }) async {
     try {
-      final raw = await _datasource.getSearchFilters(query: query);
+      final raw = await _datasource.getSearchFilters(
+        query: query,
+        extraParams: extraParams,
+      );
       return (_parseFilterSections(raw), null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());

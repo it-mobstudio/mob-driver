@@ -3,6 +3,16 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 
+/// Mirrors the web's `getItemSku`: the mob_sku used to look up swap
+/// candidates for [item].
+String magicQuoteItemSku(Map<String, dynamic> item) {
+  final product = mapValueOf(item, 'product');
+  return firstNonEmptyOf([
+    stringValueOf(product, const ['mob_sku', 'MOBSKU', 'sku']),
+    stringValueOf(item, const ['mob_sku', 'MOBSKU', 'sku']),
+  ]);
+}
+
 /// Mirrors the web's `getQuoteItemStatus`: derives a (label, colour-kind)
 /// pair from `status_label` / `status` / match-status fields so each item
 /// can show a "Matched" / "Similar" / "No match found" badge.
@@ -38,10 +48,9 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_
   return (label: rawStatus.isEmpty ? 'Matched' : rawStatus, kind: 'matched');
 }
 
-/// Single quote line item: "Requested: ... ● <status>" header, product
-/// details (or the friendly no-match row), delete button and qty stepper.
-/// Mirrors the web's MagicQuote/QuoteItemRow.jsx (swap/replace is
-/// intentionally not ported — see project notes).
+/// Single quote line item: "Requested: ... [status]" header, product
+/// details (or the friendly no-match row), delete/change buttons and qty
+/// stepper. Mirrors the web's MagicQuote/QuoteItemRow.jsx.
 class QuoteItemRow extends StatelessWidget {
   const QuoteItemRow({
     super.key,
@@ -50,6 +59,7 @@ class QuoteItemRow extends StatelessWidget {
     required this.quantity,
     required this.onQuantityChange,
     required this.onDelete,
+    required this.onChange,
   });
 
   final Map<String, dynamic> item;
@@ -57,6 +67,7 @@ class QuoteItemRow extends StatelessWidget {
   final num quantity;
   final void Function(Map<String, dynamic> item, bool increase) onQuantityChange;
   final void Function(Map<String, dynamic> item) onDelete;
+  final void Function(Map<String, dynamic> item) onChange;
 
   @override
   Widget build(BuildContext context) {
@@ -178,6 +189,26 @@ class QuoteItemRow extends StatelessWidget {
                   side: const BorderSide(color: MagicQuoteColors.border),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   minimumSize: const Size(36, 36),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: () => onChange(item),
+                icon: const Icon(Icons.swap_horiz, size: 16, color: MagicQuoteColors.navy),
+                label: Text(
+                  'Change',
+                  style: GoogleFonts.inter(
+                    color: MagicQuoteColors.navy,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: MagicQuoteColors.border),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  minimumSize: const Size(0, 36),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const Spacer(),
