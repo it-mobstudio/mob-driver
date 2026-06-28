@@ -53,7 +53,7 @@ class MagicQuoteSectionTitle extends StatelessWidget {
       title,
       style: GoogleFonts.inter(
         color: MagicQuoteColors.navy,
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: FontWeight.w800,
       ),
     );
@@ -94,7 +94,7 @@ class MagicQuoteSummaryRow extends StatelessWidget {
             formatInr(value),
             style: GoogleFonts.inter(
               color: valueColor ?? MagicQuoteColors.navy,
-              fontSize: strong ? 18 : 14,
+              fontSize: strong ? 16 : 14,
               fontWeight: strong ? FontWeight.w900 : FontWeight.w800,
             ),
           ),
@@ -198,7 +198,8 @@ class MagicQuoteUploadsSummaryRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.attachment, color: MagicQuoteColors.navy, size: 16),
+            const Icon(Icons.attachment,
+                color: MagicQuoteColors.navy, size: 16),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -218,7 +219,8 @@ class MagicQuoteUploadsSummaryRow extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const Icon(Icons.chevron_right, size: 16, color: MagicQuoteColors.blue),
+            const Icon(Icons.chevron_right,
+                size: 16, color: MagicQuoteColors.blue),
           ],
         ),
       ),
@@ -271,7 +273,8 @@ class MagicQuoteTopCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: status == 'Under review'
                       ? const Color(0xFFFFF4E4)
@@ -295,13 +298,15 @@ class MagicQuoteTopCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               rfqNumber,
-              style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 13),
+              style: GoogleFonts.inter(
+                  color: MagicQuoteColors.muted, fontSize: 13),
             ),
           ],
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.location_on_outlined, color: MagicQuoteColors.muted, size: 18),
+              const Icon(Icons.location_on_outlined,
+                  color: MagicQuoteColors.muted, size: 18),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(

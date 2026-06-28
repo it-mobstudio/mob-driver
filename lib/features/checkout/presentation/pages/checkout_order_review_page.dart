@@ -36,6 +36,15 @@ class CheckoutOrderReviewPage extends StatefulWidget {
 
 class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
   late final CheckoutBloc _checkoutBloc;
+  late GoRouter _router;
+  ScaffoldMessengerState? _scaffoldMessenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _router = GoRouter.of(context);
+    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+  }
 
   @override
   void initState() {
@@ -53,7 +62,7 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go('/checkout/address');
+      _router.go('/checkout/address');
     }
   }
 
@@ -122,11 +131,11 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
           // Guard against navigating on a context whose element has already
           // been deactivated (e.g. user pressed back while the address
           // update request was still in flight).
-          if (!context.mounted) return;
+          if (!mounted) return;
           if (checkoutState is CheckoutAddressUpdated) {
-            GoRouter.of(context).push(CheckoutPaymentPage.routePath);
+            _router.push(CheckoutPaymentPage.routePath);
           } else if (checkoutState is CheckoutError) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            _scaffoldMessenger?.showSnackBar(
               SnackBar(
                 content: Text(checkoutState.message),
                 backgroundColor: Colors.red.shade700,

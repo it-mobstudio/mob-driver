@@ -37,10 +37,23 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   int _paymentOption = -1;
   RazorpayOrderEntity? _razorpayEntity; // populated when radio is selected
   RupifiOrderEntity? _rupifiEntity; // populated when mobCREDIT radio is selected
+  int? _requestedPaymentOption;
+  String? _requestedPaymentCartId;
+  double? _requestedPaymentTotal;
+  bool _isPaymentOrderRequestInFlight = false;
 
   late final CheckoutBloc _checkoutBloc;
   late final CartBloc _cartBloc;
   late final Razorpay _razorpay;
+  late GoRouter _router;
+  ScaffoldMessengerState? _scaffoldMessenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _router = GoRouter.of(context);
+    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+  }
 
   @override
   void initState() {
@@ -72,13 +85,65 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    final paymentId = _razorpayValue(
+      response.paymentId,
+      response.data?['razorpay_payment_id'],
+      response.data?['payment_id'],
+    );
+    final orderId = _razorpayValue(
+      response.orderId,
+      response.data?['razorpay_order_id'],
+      response.data?['order_id'],
+      _razorpayEntity?.razorpayOrderId,
+    );
+    final signature = _razorpayValue(
+      response.signature,
+      response.data?['razorpay_signature'],
+      response.data?['signature'],
+    );
+
+    if (paymentId.isEmpty || orderId.isEmpty || signature.isEmpty) {
+      final platformOrderId = _razorpayEntity?.platformOrderId ?? '';
+      if (platformOrderId.isNotEmpty && orderId.isNotEmpty) {
+        _checkoutBloc.add(
+          CheckoutRazorpayStatusCheckRequested(
+            platformOrderId: platformOrderId,
+            merchantPaymentRefId: orderId,
+            paymentId: paymentId,
+            transactionId: signature,
+          ),
+        );
+        return;
+      }
+
+      _checkoutBloc.add(
+        CheckoutRazorpayPaymentFailed(
+          'Payment completed, but confirmation details were missing. Please contact support.',
+        ),
+      );
+      return;
+    }
+
     _checkoutBloc.add(
       CheckoutRazorpayVerifyRequested(
-        paymentId: response.paymentId ?? '',
-        orderId: response.orderId ?? '',
-        signature: response.signature ?? '',
+        paymentId: paymentId,
+        orderId: orderId,
+        signature: signature,
       ),
     );
+  }
+
+  String _razorpayValue(
+    Object? primary, [
+    Object? fallback1,
+    Object? fallback2,
+    Object? fallback3,
+  ]) {
+    for (final value in [primary, fallback1, fallback2, fallback3]) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) return text;
+    }
+    return '';
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
@@ -95,14 +160,14 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   static const _razorpayKey = 'rzp_test_fjQ8CCi7188hME';
 
   // Called when mobCREDIT radio is tapped — triggers Rupifi order creation immediately
-  void _onMobCreditSelected(String cartId) {
+  void _onMobCreditSelected(String cartId, double total) {
     if (_isRupifiHandoffInProgress) return;
     setState(() {
       _paymentOption = 0;
       _rupifiEntity = null;
       _razorpayEntity = null;
     });
-    _checkoutBloc.add(CheckoutRupifiOrderRequested(cartId: cartId));
+    _requestRupifiOrder(cartId: cartId, total: total);
   }
 
   Future<void> _openRupifiGateway(RupifiOrderEntity entity) async {
@@ -111,7 +176,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       final uri = Uri.tryParse(entity.paymentUrl);
       if (uri == null) {
         setState(() => _isRupifiHandoffInProgress = false);
-        GoRouter.of(context).go(
+        _router.go(
           PaymentFailedPage.routePath,
           extra: 'Invalid mobCREDIT payment URL. Please try again.',
         );
@@ -125,7 +190,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       if (!mounted) return;
       if (!opened) {
         setState(() => _isRupifiHandoffInProgress = false);
-        GoRouter.of(context).go(
+        _router.go(
           PaymentFailedPage.routePath,
           extra: 'Unable to open mobCREDIT payment. Please try again.',
         );
@@ -140,33 +205,93 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     if (!mounted) return;
     if (result == null || result.isCancelled) return;
     if (!result.isCompleted) {
-      GoRouter.of(context).go(
+      _router.go(
         PaymentFailedPage.routePath,
         extra: 'mobCREDIT payment was not completed. Please try again.',
       );
       return;
     }
-    GoRouter.of(context).go(
+    _router.go(
       OrderPlacedPage.routePath,
       extra: result.merchantPaymentRefId ?? '',
     );
   }
 
   // Called when Razorpay radio is tapped — triggers order creation immediately
-  void _onRazorpaySelected(String cartId) {
+  void _onRazorpaySelected(String cartId, double total) {
     if (_isRupifiHandoffInProgress) return;
     setState(() {
       _paymentOption = 1;
       _razorpayEntity = null; // clear stale entity while new one loads
     });
+    _requestRazorpayOrder(cartId: cartId, total: total);
+  }
+
+  void _requestRazorpayOrder({
+    required String cartId,
+    required double? total,
+  }) {
+    _requestedPaymentOption = 1;
+    _requestedPaymentCartId = cartId;
+    _requestedPaymentTotal = total;
+    _isPaymentOrderRequestInFlight = true;
     _checkoutBloc.add(
       CheckoutRazorpayOrderRequested(cartId: int.tryParse(cartId) ?? 0),
     );
   }
 
+  void _requestRupifiOrder({
+    required String cartId,
+    required double? total,
+  }) {
+    _requestedPaymentOption = 0;
+    _requestedPaymentCartId = cartId;
+    _requestedPaymentTotal = total;
+    _isPaymentOrderRequestInFlight = true;
+    _checkoutBloc.add(CheckoutRupifiOrderRequested(cartId: cartId));
+  }
+
+  void _syncPaymentDetailsForSummary(CartSummaryEntity summary) {
+    if (!mounted || _isRupifiHandoffInProgress) return;
+    if (_isPaymentOrderRequestInFlight) return;
+
+    if (summary.total <= 0) {
+      if (_paymentOption != -1 ||
+          _razorpayEntity != null ||
+          _rupifiEntity != null) {
+        setState(() {
+          _paymentOption = -1;
+          _razorpayEntity = null;
+          _rupifiEntity = null;
+          _requestedPaymentOption = null;
+          _requestedPaymentCartId = null;
+          _requestedPaymentTotal = null;
+          _isPaymentOrderRequestInFlight = false;
+        });
+      }
+      return;
+    }
+
+    final requestMatches = _requestedPaymentCartId == summary.cartId &&
+        _requestedPaymentTotal == summary.total &&
+        _requestedPaymentOption == _paymentOption;
+
+    if (_paymentOption == 1) {
+      final hasFreshOrder = _razorpayEntity != null && requestMatches;
+      if (hasFreshOrder) return;
+      setState(() => _razorpayEntity = null);
+      _requestRazorpayOrder(cartId: summary.cartId, total: summary.total);
+    } else if (_paymentOption == 0) {
+      final hasFreshOrder = _rupifiEntity != null && requestMatches;
+      if (hasFreshOrder) return;
+      setState(() => _rupifiEntity = null);
+      _requestRupifiOrder(cartId: summary.cartId, total: summary.total);
+    }
+  }
+
   void _openRazorpayGateway(RazorpayOrderEntity entity) {
     final options = <String, dynamic>{
-      'key': _razorpayKey,
+      'key': entity.key.isNotEmpty ? entity.key : _razorpayKey,
       'amount': entity.amount,
       'currency': entity.currency,
       'name': entity.name.isNotEmpty ? entity.name : 'MOB',
@@ -198,7 +323,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     }
 
     if (_paymentOption == -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _scaffoldMessenger?.showSnackBar(
         const SnackBar(content: Text('Please select a payment method to continue.')),
       );
       return;
@@ -208,7 +333,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       if (entity != null) {
         _openRupifiGateway(entity);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _scaffoldMessenger?.showSnackBar(
           const SnackBar(content: Text('Loading payment details, please try again.')),
         );
       }
@@ -228,7 +353,12 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
         backgroundColor: Colors.white,
         body: SafeArea(
           bottom: false,
-          child: BlocBuilder<CartBloc, CartState>(
+          child: BlocConsumer<CartBloc, CartState>(
+            listener: (context, cartState) {
+              if (cartState is CartLoaded && !cartState.isRedeemUpdating) {
+                _syncPaymentDetailsForSummary(cartState.summary);
+              }
+            },
             builder: (context, cartState) {
               return switch (cartState) {
                 CartInitial() || CartLoading() => const Center(
@@ -268,24 +398,31 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                       // state arrives, bail out instead of looking up an
                       // ancestor on a deactivated context (causes "Duplicate
                       // GlobalKey" / element-lifecycle crashes).
-                      if (!context.mounted) return;
+                      if (!mounted) return;
                       if (checkoutState is CheckoutRupifiOrderCreated) {
-                        setState(() => _rupifiEntity = checkoutState.entity);
+                        setState(() {
+                          _isPaymentOrderRequestInFlight = false;
+                          _rupifiEntity = checkoutState.entity;
+                        });
                       } else if (checkoutState is CheckoutRazorpayOrderCreated) {
                         // Store the entity — gateway opens when user taps "Place order"
-                        setState(() => _razorpayEntity = checkoutState.entity);
+                        setState(() {
+                          _isPaymentOrderRequestInFlight = false;
+                          _razorpayEntity = checkoutState.entity;
+                        });
                       } else if (checkoutState is CheckoutOrderPlaced) {
-                        GoRouter.of(context).go(
+                        _router.go(
                           OrderPlacedPage.routePath,
                           extra: checkoutState.order,
                         );
                       } else if (checkoutState is CheckoutPaymentFailed) {
-                        GoRouter.of(context).go(
+                        _router.go(
                           PaymentFailedPage.routePath,
                           extra: checkoutState.message,
                         );
                       } else if (checkoutState is CheckoutError) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        _isPaymentOrderRequestInFlight = false;
+                        _scaffoldMessenger?.showSnackBar(
                           SnackBar(
                             content: Text(checkoutState.message),
                             backgroundColor: Colors.red.shade700,
@@ -297,6 +434,9 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                       final isLoading = checkoutState is CheckoutLoading;
                       final isPaymentBlocked =
                           isLoading || _isRupifiHandoffInProgress;
+                      final isPaymentMethodReady = summary.total <= 0 ||
+                          (_paymentOption == 1 && _razorpayEntity != null) ||
+                          (_paymentOption == 0 && _rupifiEntity != null);
                       return Column(
                         children: [
                           _PaymentHeader(onBack: () => _goBack(context)),
@@ -320,6 +460,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                         mobstarBalanceAmount: summary.mobstarAmount,
                                         walletBalance: summary.walletBalance,
                                         applicableWalletAmount: summary.applicableWalletAmount,
+                                        isReferralOnlyWallet:
+                                            summary.isReferralOnlyWallet,
+                                        isWalletUsageLimited:
+                                            summary.isWalletUsageLimited,
                                         walletNote: summary.walletNote,
                                         isUpdating:
                                             isRedeemUpdating || isPaymentBlocked,
@@ -364,14 +508,19 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                         _MobCreditPaymentCard(
                                           selected: summary.total > 0 &&
                                               summary.mobCreditAccountStatus == 'ACTIVE' &&
+                                              summary.total <= summary.mobCreditBalance &&
                                               _paymentOption == 0,
                                           total: summary.total,
                                           mobCreditBalance: summary.mobCreditBalance,
                                           status: summary.mobCreditAccountStatus,
                                           isDisabled: summary.total <= 0 ||
                                               isPaymentBlocked ||
-                                              summary.mobCreditAccountStatus != 'ACTIVE',
-                                          onTap: () => _onMobCreditSelected(summary.cartId),
+                                              summary.mobCreditAccountStatus != 'ACTIVE' ||
+                                              summary.total > summary.mobCreditBalance,
+                                          onTap: () => _onMobCreditSelected(
+                                            summary.cartId,
+                                            summary.total,
+                                          ),
                                         ),
                                         const SizedBox(height: 12),
                                       ],
@@ -380,7 +529,9 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                         isDisabled:
                                             summary.total <= 0 || isPaymentBlocked,
                                         onTap: () => _onRazorpaySelected(
-                                            summary.cartId),
+                                          summary.cartId,
+                                          summary.total,
+                                        ),
                                       ),
                                       const SizedBox(height: 20),
                                       OrderDetailsCard(
@@ -400,7 +551,8 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                         ? 'Place order'
                                         : 'Place your order and pay',
                                     isLoading: isPaymentBlocked,
-                                    isDisabled: _isRupifiHandoffInProgress,
+                                    isDisabled: _isRupifiHandoffInProgress ||
+                                        !isPaymentMethodReady,
                                     onProceed: () => _onProceed(
                                         context, summary.cartId, summary.total, summary),
                                   ),
@@ -431,7 +583,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go('/checkout/review');
+      _router.go('/checkout/review');
     }
   }
 
@@ -527,6 +679,8 @@ class _RedeemOptionsCard extends StatelessWidget {
     required this.mobstarBalanceAmount,
     required this.walletBalance,
     required this.applicableWalletAmount,
+    required this.isReferralOnlyWallet,
+    required this.isWalletUsageLimited,
     required this.onMobstarChanged,
     required this.onMobwalletChanged,
     this.walletNote = '',
@@ -540,12 +694,15 @@ class _RedeemOptionsCard extends StatelessWidget {
   final double mobstarBalanceAmount;
   final double walletBalance;
   final double applicableWalletAmount;
+  final bool isReferralOnlyWallet;
+  final bool isWalletUsageLimited;
   final String walletNote;
   final bool isUpdating;
   final VoidCallback? onMobstarChanged;
   final VoidCallback? onMobwalletChanged;
 
   String get _walletNoteText {
+    if (!isReferralOnlyWallet || !isWalletUsageLimited) return '';
     if (walletNote.isNotEmpty) return walletNote;
     if (applicableWalletAmount > 0 && applicableWalletAmount < walletBalance) {
       return 'Only a portion of your wallet balance can be used for this order. You can apply ₹${applicableWalletAmount.toStringAsFixed(2)}.';
@@ -723,6 +880,10 @@ class _MobCreditPaymentCard extends StatelessWidget {
   String get _disabledMessage {
     if (total <= 0) return 'No payable amount for mobCREDIT.';
     if (status == 'AMOUNT_DUE') return 'Clear your outstanding due to use mobCREDIT.';
+    if (status != 'ACTIVE') return 'mobCREDIT is not active for this account.';
+    if (total > mobCreditBalance) {
+      return 'Order amount exceeds your mobCREDIT balance.';
+    }
     return 'mobCREDIT is not active for this account.';
   }
 

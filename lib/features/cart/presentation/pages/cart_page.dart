@@ -164,7 +164,7 @@ class _CartPageState extends State<CartPage> {
           label: 'Place order',
           total: _effectiveTotal(summary),
           onProceed: () =>
-              GoRouter.of(context).go(CheckoutAddressPage.routePath),
+              GoRouter.of(context).push(CheckoutAddressPage.routePath),
         ),
       ],
     );

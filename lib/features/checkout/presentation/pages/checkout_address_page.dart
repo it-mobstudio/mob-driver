@@ -24,6 +24,7 @@ class CheckoutAddressPage extends StatefulWidget {
 
 class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
   late final AddressBloc _addressBloc;
+  late final CartBloc _cartBloc;
   bool _sameAddress = false;
   CartAddressEntity? _selectedDelivery;
   CartAddressEntity? _selectedBilling;
@@ -36,10 +37,11 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
   @override
   void initState() {
     super.initState();
+    _cartBloc = context.read<CartBloc>();
     _addressBloc = sl<AddressBloc>()..add(AddressLoadRequested());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<CartBloc>().add(CartLoadRequested(outOfStock: true));
+      _cartBloc.add(CartLoadRequested(outOfStock: true));
     });
   }
 
@@ -190,7 +192,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
       AddressSelectionWidget.routePath,
     );
     if (!context.mounted || savedAddress == null) return;
-    context.read<CartBloc>().add(CartLoadRequested());
+    _cartBloc.add(CartLoadRequested());
   }
 
   @override

@@ -124,9 +124,8 @@ class CartRepositoryImpl implements CartRepository {
       mobCreditObj,
       const ['available', 'available_balance', 'balance', 'current_limit'],
     ).toDouble();
-    // null → no Rupifi details at all. Otherwise normalize from rupifiDetails.
-    // A usable mobCREDIT account needs both account_status and primary_status
-    // active; incomplete/null statuses should keep the option visible but disabled.
+    // null → hide mobCREDIT. This matches web checkout: inactive or incomplete
+    // credit accounts should not render as a disabled payment method.
     final mobCreditExists = mobCreditObj.isNotEmpty &&
         (mobCreditObj['exists'] == null || mobCreditObj['exists'] == true);
     String? mobCreditAccountStatus;
@@ -142,11 +141,11 @@ class CartRepositoryImpl implements CartRepository {
       final hasDue = accountStatus == 'AMOUNT_DUE' || primaryStatus == 'AMOUNT_DUE';
       final isAccountActive = accountStatus == 'ACTIVE';
       final isPrimaryActive = primaryStatus == 'ACTIVE';
-      mobCreditAccountStatus = hasDue
-          ? 'AMOUNT_DUE'
-          : isActivated && isAccountActive && isPrimaryActive
-              ? 'ACTIVE'
-              : 'INACTIVE';
+      if (hasDue) {
+        mobCreditAccountStatus = 'AMOUNT_DUE';
+      } else if (isActivated && isAccountActive && isPrimaryActive) {
+        mobCreditAccountStatus = 'ACTIVE';
+      }
     }
 
     // Wallet nested object (e.g. mob_wallet, wallet, wallet_info)
@@ -194,6 +193,8 @@ class CartRepositoryImpl implements CartRepository {
       savedAddresses: savedAddresses,
       mobCreditBalance: mobCreditBalance,
       mobCreditAccountStatus: mobCreditAccountStatus,
+      isReferralOnlyWallet: walletObj['is_referral_only_wallet'] == true,
+      isWalletUsageLimited: walletObj['is_wallet_usage_limited'] == true,
       walletNote: _str(walletObj, const ['note', 'message', 'info', 'wallet_note', 'restriction_note']),
     );
   }

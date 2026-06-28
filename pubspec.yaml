@@ -107,6 +107,7 @@ flutter:
     - assets/rive_animations/
     - assets/pdfs/
     - assets/jsons/
+    - assets/lottiejson/
     - assets/icons/
     - assets/environment_values/
 

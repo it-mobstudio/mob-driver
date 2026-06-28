@@ -60,6 +60,8 @@ class CartSummaryEntity {
     required this.billingGstNumber,
     required this.savedAddresses,
     required this.mobCreditBalance,
+    this.isReferralOnlyWallet = false,
+    this.isWalletUsageLimited = false,
     this.walletNote = '',
     this.mobCreditAccountStatus,
   });
@@ -121,6 +123,11 @@ class CartSummaryEntity {
   /// mobCREDIT balance available for the user (from user_details in cart API).
   final double mobCreditBalance;
 
+  /// Wallet restriction flags from API. The referral-limit note should only
+  /// show when both are true, matching web checkout.
+  final bool isReferralOnlyWallet;
+  final bool isWalletUsageLimited;
+
   /// Info note from wallet object (e.g. "Only 20% of cart value can be used from referral money").
   final String walletNote;
 
@@ -170,5 +177,7 @@ class CartSummaryEntity {
     billingGstNumber: '',
     savedAddresses: <CartAddressEntity>[],
     mobCreditBalance: 0,
+    isReferralOnlyWallet: false,
+    isWalletUsageLimited: false,
   );
 }

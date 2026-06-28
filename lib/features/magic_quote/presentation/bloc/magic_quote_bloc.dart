@@ -104,7 +104,8 @@ class MagicQuoteBloc extends Bloc<MagicQuoteEvent, MagicQuoteState> {
     }
 
     final accepted = response ?? const <String, dynamic>{};
-    if (magicQuoteHasGeneratedItems(accepted)) {
+    if (magicQuoteHasGeneratedItems(accepted) ||
+        magicQuoteUploadedFileCountOf(accepted) == 0) {
       emit(MagicQuoteSubmitted(accepted));
       return;
     }
@@ -125,7 +126,8 @@ class MagicQuoteBloc extends Bloc<MagicQuoteEvent, MagicQuoteState> {
       onData: (message) {
         final status = magicQuoteStatusOf(message);
         if (status.isNotEmpty && !steps.contains(status)) steps.add(status);
-        if (magicQuoteIsProcessingOf(message) == false) {
+        if (magicQuoteIsProcessingOf(message) == false ||
+            magicQuoteIsTerminalStatus(status)) {
           return MagicQuoteSubmitted(message);
         }
         return MagicQuoteProgress(

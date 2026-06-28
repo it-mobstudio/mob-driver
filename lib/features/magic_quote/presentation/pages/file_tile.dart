@@ -16,7 +16,7 @@ class PickedMagicQuoteFile {
   final FFUploadedFile file;
 }
 
-const _imageExtensions = ['jpg', 'jpeg', 'png'];
+const _imageExtensions = ['avif', 'gif', 'jpg', 'jpeg', 'png', 'svg', 'webp'];
 
 bool isMagicQuoteImageFile(String name) {
   final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';

@@ -40,10 +40,6 @@ class MagicQuoteRemoteDatasourceImpl implements MagicQuoteRemoteDatasource {
     required Map<String, dynamic> payload,
     required List<FFUploadedFile> images,
   }) async {
-    if (images.isEmpty) {
-      throw ArgumentError('Magic Quote image is required.');
-    }
-
     final formData = FormData();
     formData.fields.addAll(
       payload.entries.map(
@@ -62,9 +58,6 @@ class MagicQuoteRemoteDatasourceImpl implements MagicQuoteRemoteDatasource {
           ),
         ),
       );
-    }
-    if (formData.files.isEmpty) {
-      throw ArgumentError('Unable to read the selected Magic Quote files.');
     }
     final response = await _dio.post<dynamic>(
       '/quote-builder/magic-quote/',
@@ -186,7 +179,9 @@ class MagicQuoteRemoteDatasourceImpl implements MagicQuoteRemoteDatasource {
             return;
           }
           controller.add(message);
-          if (magicQuoteIsProcessingOf(message) == false) {
+          final status = magicQuoteStatusOf(message);
+          if (magicQuoteIsProcessingOf(message) == false ||
+              magicQuoteIsTerminalStatus(status)) {
             finish();
           }
         },
