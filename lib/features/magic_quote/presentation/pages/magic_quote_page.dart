@@ -218,8 +218,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
         ),
       _MagicQuoteScreen.results => ResultsScreen(
           payload: _currentPayload(),
-          city: _cityController.text.trim(),
-          pincode: _pincodeController.text.trim(),
+          city: _payloadCity(),
+          pincode: _payloadPincode(),
           hasUploadsContext: _hasUploadsContext,
           addingProductSku: _addingProductSku,
           quantityOf: _itemQuantity,
@@ -248,10 +248,13 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     final quote = mapValueOf(payload, 'quote');
     final rfqOrder = mapValueOf(payload, 'rfq_order');
     return UnreadScreen(
-      quoteId: stringValueOf(quote, const ['id', 'quote_id']),
+      quoteId: firstNonEmptyOf([
+        stringValueOf(quote, const ['id', 'quote_id']),
+        stringValueOf(rfqOrder, const ['last_quote_index']),
+      ]),
       rfqNumber: stringValueOf(rfqOrder, const ['rfq_id', 'id']),
-      city: _cityController.text.trim(),
-      pincode: _pincodeController.text.trim(),
+      city: _payloadCity(),
+      pincode: _payloadPincode(),
       hasUploadsContext: _hasUploadsContext,
       onShowUploadsViewer: _showUploadsViewer,
       onOpenWhatsApp: _openWhatsApp,
@@ -326,7 +329,9 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   bool get _hasUploadsContext =>
-      _files.isNotEmpty || _noteController.text.trim().isNotEmpty;
+      _files.isNotEmpty ||
+      _noteController.text.trim().isNotEmpty ||
+      _apiUploadedFileUrl().isNotEmpty;
 
   // ── "Submit for review" / "Add more items" sheets ──────────────────
 
@@ -497,8 +502,19 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     );
   }
 
+  Future<void> _openApiUploadedFile(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      _showMessage('Unable to open this file.');
+      return;
+    }
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok) _showMessage('Unable to open this file.');
+  }
+
   Future<void> _showUploadsViewer() async {
     final note = _noteController.text.trim();
+    final apiUploadedFile = _apiUploadedFileUrl();
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -536,15 +552,31 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
-                    children: _files
-                        .map(
-                          (file) => MagicQuoteFileTile(
-                            file: file,
-                            removable: false,
-                            onPreview: () => _previewPickedFile(file),
-                          ),
-                        )
-                        .toList(),
+                    children: [
+                      ..._files.map(
+                        (file) => MagicQuoteFileTile(
+                          file: file,
+                          removable: false,
+                          onPreview: () => _previewPickedFile(file),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (_files.isEmpty && apiUploadedFile.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Files (1)',
+                    style: GoogleFonts.inter(
+                      color: _muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _ApiUploadedFileTile(
+                    url: apiUploadedFile,
+                    onTap: () => _openApiUploadedFile(apiUploadedFile),
                   ),
                 ],
                 if (note.isNotEmpty) ...[
@@ -576,7 +608,40 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   /// The current quote payload, preferring any live edits
   /// ([_quotePayloadOverride]) over the original create/socket response.
   Map<String, dynamic> _currentPayload() =>
-      _quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse);
+      _withoutRemovedItems(_quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse));
+
+  Map<String, dynamic> _withoutRemovedItems(Map<String, dynamic> payload) {
+    if (_removedItemIds.isEmpty) return payload;
+    final items = itemsOf(payload)
+        .where((item) => !_removedItemIds.contains(_itemId(item)))
+        .toList(growable: false);
+    return {...payload, 'items': items};
+  }
+
+  String _payloadCity() {
+    final rfqOrder = mapValueOf(_currentPayload(), 'rfq_order');
+    return firstNonEmptyOf([
+      stringValueOf(rfqOrder, const ['city', 'delivery_city']),
+      _cityController.text,
+    ]);
+  }
+
+  String _payloadPincode() {
+    final rfqOrder = mapValueOf(_currentPayload(), 'rfq_order');
+    return firstNonEmptyOf([
+      stringValueOf(rfqOrder, const ['delivery_pincode', 'pincode']),
+      _pincodeController.text,
+    ]);
+  }
+
+  String _apiUploadedFileUrl() {
+    final payload = _quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse);
+    final rfqOrder = mapValueOf(payload, 'rfq_order');
+    return firstNonEmptyOf([
+      stringValueOf(payload, const ['uploaded_file', 'rfq_file']),
+      stringValueOf(rfqOrder, const ['rfq_file', 'uploaded_file']),
+    ]);
+  }
 
   String _itemId(Map<String, dynamic> item) => item['id']?.toString() ?? '';
 
@@ -1114,10 +1179,6 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
       _showMessage('Please add a file or type your material list in notes.');
       return;
     }
-    if (_files.isEmpty) {
-      _showMessage('Please upload your BOQ or material list.');
-      return;
-    }
 
     setState(() {
       _screen = _MagicQuoteScreen.generating;
@@ -1152,9 +1213,13 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
       setState(() {
         _quoteResponse = state.response;
         _resetQuoteEditingState();
-        _screen = magicQuoteHasGeneratedItems(state.response)
-            ? _MagicQuoteScreen.results
-            : _MagicQuoteScreen.unread;
+        if (magicQuoteUploadedFileCountOf(state.response) == 0) {
+          _screen = _MagicQuoteScreen.reviewSuccess;
+        } else {
+          _screen = magicQuoteHasGeneratedItems(state.response)
+              ? _MagicQuoteScreen.results
+              : _MagicQuoteScreen.unread;
+        }
       });
       return;
     }
@@ -1202,6 +1267,96 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _ApiUploadedFileTile extends StatelessWidget {
+  const _ApiUploadedFileTile({required this.url, required this.onTap});
+
+  final String url;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = _displayName(url);
+    final ext = _extension(name).toUpperCase();
+    const tileSize = 84.0;
+    return SizedBox(
+      width: tileSize,
+      height: tileSize,
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Material(
+              color: const Color(0xFFF7F9FC),
+              child: InkWell(
+                onTap: onTap,
+                child: SizedBox(
+                  width: tileSize,
+                  height: tileSize,
+                  child: Center(
+                    child: Text(
+                      ext.isEmpty ? 'FILE' : ext,
+                      style: GoogleFonts.inter(
+                        color: MagicQuoteColors.navy,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00000000), Color(0xCC000000)],
+                ),
+              ),
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _displayName(String url) {
+    final path = url.split(RegExp(r'[?#]')).first;
+    final name = path.split('/').last;
+    if (name.isEmpty) return 'uploaded-file';
+    try {
+      return Uri.decodeComponent(name);
+    } catch (_) {
+      return name;
+    }
+  }
+
+  static String _extension(String name) {
+    if (!name.contains('.')) return '';
+    return name.split('.').last;
   }
 }
 

@@ -215,8 +215,8 @@ class MyAppState extends State<MyApp> {
           primaryColor: theme.primary,
           pageTransitionsTheme: const PageTransitionsTheme(
             builders: {
-              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.iOS: _MobPageTransitionsBuilder(),
+              TargetPlatform.android: _MobPageTransitionsBuilder(),
             },
           ),
         ),
@@ -231,8 +231,8 @@ class MyAppState extends State<MyApp> {
           primaryColor: theme.primary,
           pageTransitionsTheme: const PageTransitionsTheme(
             builders: {
-              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.iOS: _MobPageTransitionsBuilder(),
+              TargetPlatform.android: _MobPageTransitionsBuilder(),
             },
           ),
         ),
@@ -249,6 +249,32 @@ class MyAppState extends State<MyApp> {
                 )
             : null,
       ),
+    );
+  }
+}
+
+class _MobPageTransitionsBuilder extends PageTransitionsBuilder {
+  const _MobPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeOutCubic,
+    );
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(1, 0),
+        end: Offset.zero,
+      ).animate(curvedAnimation),
+      child: child,
     );
   }
 }

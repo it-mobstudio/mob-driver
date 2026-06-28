@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/file_tile.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
@@ -69,10 +72,24 @@ class UploadScreen extends StatelessWidget {
               bottomLeft: Radius.circular(14),
               bottomRight: Radius.circular(14),
             ),
-            child: Image.asset(
-              'assets/images/magicquote.jpeg',
-              width: double.infinity,
-              fit: BoxFit.contain,
+            child: Stack(
+              alignment: Alignment.topLeft,
+              children: [
+                Image.asset(
+                  'assets/images/magicquote.jpeg',
+                  width: double.infinity,
+                  fit: BoxFit.contain,
+                ),
+                Positioned(
+                  top: 18,
+                  left: 20,
+                  child: SvgPicture.asset(
+                    'assets/images/banner-spark.svg',
+                    width: 28,
+                    height: 28,
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(
@@ -270,58 +287,11 @@ class UploadScreen extends StatelessWidget {
   }
 
   Widget _dropZone() {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: submitting ? null : onTapDropzone,
-      child: CustomPaint(
-        painter: const _DashedBorderPainter(color: Color(0xFFC5CCD5)),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: MagicQuoteColors.navy,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      files.isEmpty ? 'Add your list/ BOQ' : 'Add more files',
-                      style: GoogleFonts.inter(
-                        color: MagicQuoteColors.navy,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Photo, PDF, Excel or paste text\nMax $maxFiles files · 20 MB',
-                      style: GoogleFonts.inter(
-                        color: MagicQuoteColors.muted,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return _UploadDropZone(
+      submitting: submitting,
+      files: files,
+      maxFiles: maxFiles,
+      onTap: onTapDropzone,
     );
   }
 
@@ -337,7 +307,12 @@ class UploadScreen extends StatelessWidget {
               color: const Color(0xFFFFF4E4),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.auto_awesome, color: Color(0xFFD47B00)),
+            alignment: Alignment.center,
+            child: SvgPicture.asset(
+              'assets/images/rfq_truck_timer.svg',
+              width: 30,
+              height: 30,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -441,6 +416,95 @@ class UploadScreen extends StatelessWidget {
 
   String? _required(String? value, String message) {
     return value == null || value.trim().isEmpty ? message : null;
+  }
+}
+
+class _UploadDropZone extends StatefulWidget {
+  const _UploadDropZone({
+    required this.submitting,
+    required this.files,
+    required this.maxFiles,
+    required this.onTap,
+  });
+
+  final bool submitting;
+  final List<PickedMagicQuoteFile> files;
+  final int maxFiles;
+  final VoidCallback onTap;
+
+  @override
+  State<_UploadDropZone> createState() => _UploadDropZoneState();
+}
+
+class _UploadDropZoneState extends State<_UploadDropZone> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  bool get _active => !widget.submitting && (_hovered || _pressed);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: widget.submitting ? null : widget.onTap,
+      onHover: (value) => setState(() => _hovered = value),
+      onHighlightChanged: (value) => setState(() => _pressed = value),
+      child: CustomPaint(
+        painter: const _DashedBorderPainter(color: Color(0xFFC5CCD5)),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                width: 54,
+                height: 54,
+                transformAlignment: Alignment.center,
+                transform: Matrix4.identity()
+                  ..scale(_active ? 1.05 : 1.0)
+                  ..rotateZ(_active ? math.pi / 2 : 0),
+                decoration: BoxDecoration(
+                  color: _active
+                      ? const Color(0xFF0A243F)
+                      : MagicQuoteColors.navy,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 32),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.files.isEmpty
+                          ? 'Add your list/ BOQ'
+                          : 'Add more files',
+                      style: GoogleFonts.inter(
+                        color: MagicQuoteColors.navy,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Photo, PDF, Excel or paste text\nMax ${widget.maxFiles} files · 20 MB',
+                      style: GoogleFonts.inter(
+                        color: MagicQuoteColors.muted,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

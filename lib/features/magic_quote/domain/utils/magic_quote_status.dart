@@ -81,12 +81,23 @@ String magicQuoteStatusOf(Map<String, dynamic>? message) {
     message['current_status'],
     _stringStatusOf(message),
     message['status_text'],
+    message['step'],
+    message['stage'],
     payload?['current_status'],
     _stringStatusOf(payload),
     payload?['status_text'],
+    payload?['step'],
+    payload?['stage'],
     data?['current_status'],
     _stringStatusOf(data),
     data?['status_text'],
+    data?['step'],
+    data?['stage'],
+    _asMap(data?['data'])?['current_status'],
+    _asMap(data?['data'])?['status'],
+    _asMap(data?['data'])?['status_text'],
+    _asMap(data?['data'])?['step'],
+    _asMap(data?['data'])?['stage'],
   ];
   for (final candidate in candidates) {
     if (candidate is String && candidate.trim().isNotEmpty) {
@@ -94,6 +105,27 @@ String magicQuoteStatusOf(Map<String, dynamic>? message) {
     }
   }
   return '';
+}
+
+bool magicQuoteIsTerminalStatus(String status) {
+  final normalized = status.trim().toLowerCase();
+  return const {
+    'completed',
+    'complete',
+    'success',
+    'succeeded',
+    'quote generated',
+    'generated',
+    'failed',
+    'error',
+    'manual review',
+    'manual_review',
+    'under review',
+    'under_review',
+    'review',
+    'sent for review',
+    'unreadable',
+  }.contains(normalized);
 }
 
 /// The request id used to filter out unrelated broadcasts on a shared socket.
@@ -110,6 +142,8 @@ String magicQuoteRequestIdOf(Map<String, dynamic>? message) {
     _asMap(payload?['data'])?['websocket_key'],
     data?['request_id'],
     data?['websocket_key'],
+    _asMap(data?['data'])?['request_id'],
+    _asMap(data?['data'])?['websocket_key'],
   ];
   for (final candidate in candidates) {
     final text = candidate?.toString().trim() ?? '';
@@ -130,9 +164,28 @@ bool? magicQuoteIsProcessingOf(Map<String, dynamic>? message) {
     payload?['is_processing'],
     _asMap(payload?['data'])?['is_processing'],
     data?['is_processing'],
+    _asMap(data?['data'])?['is_processing'],
   ];
   for (final candidate in candidates) {
     if (candidate is bool) return candidate;
+  }
+  return null;
+}
+
+int? magicQuoteUploadedFileCountOf(Map<String, dynamic>? response) {
+  if (response == null) return null;
+  final payload = magicQuotePayloadOf(response);
+  final data = _asMap(response['data']);
+  final candidates = <dynamic>[
+    payload['uploaded_file_count'],
+    response['uploaded_file_count'],
+    data?['uploaded_file_count'],
+    _asMap(data?['data'])?['uploaded_file_count'],
+  ];
+  for (final candidate in candidates) {
+    if (candidate is int) return candidate;
+    final parsed = int.tryParse(candidate?.toString() ?? '');
+    if (parsed != null) return parsed;
   }
   return null;
 }
