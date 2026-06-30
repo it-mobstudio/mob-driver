@@ -4,10 +4,6 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/bloc/magic_quote_bloc.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 
-/// "Submit for review" bottom sheet: fetches the dynamic questionnaire via
-/// [MagicQuoteQuestionsRequested] and submits answers + a free-text note via
-/// [MagicQuoteReviewSubmitRequested]. Mirrors the web app's
-/// MagicQuote/ReviewQuestionsModal.jsx.
 class ReviewQuestionsSheet extends StatefulWidget {
   const ReviewQuestionsSheet({
     super.key,
@@ -117,15 +113,16 @@ class _ReviewQuestionsSheetState extends State<ReviewQuestionsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final notePlaceholder = (_noteQuestion?['placeholder']?.toString() ?? '')
-        .trim();
+    final notePlaceholder =
+        (_noteQuestion?['placeholder']?.toString() ?? '').trim();
     final noteSubtitle = (_noteQuestion?['question']?.toString() ?? '').trim();
 
     return BlocListener<MagicQuoteBloc, MagicQuoteState>(
       bloc: widget.magicQuoteBloc,
       listener: _onBlocState,
       child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: SafeArea(
           top: false,
           child: ConstrainedBox(
@@ -190,29 +187,32 @@ class _ReviewQuestionsSheetState extends State<ReviewQuestionsSheet> {
                           controller: _noteController,
                           minLines: 3,
                           maxLines: 4,
-                          style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontSize: 14),
+                          style: GoogleFonts.inter(
+                              color: MagicQuoteColors.navy, fontSize: 14),
                           decoration: InputDecoration(
                             hintText: notePlaceholder.isNotEmpty
                                 ? notePlaceholder
                                 : 'e.g. need a specific brand, flagged a missing '
                                     'item, delivery preferences...',
-                            hintStyle:
-                                GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 13),
+                            hintStyle: GoogleFonts.inter(
+                                color: MagicQuoteColors.muted, fontSize: 13),
                             filled: true,
                             fillColor: const Color(0xFFF7F9FC),
                             contentPadding: const EdgeInsets.all(14),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: MagicQuoteColors.border),
+                              borderSide: const BorderSide(
+                                  color: MagicQuoteColors.border),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: MagicQuoteColors.border),
+                              borderSide: const BorderSide(
+                                  color: MagicQuoteColors.border),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide:
-                                  const BorderSide(color: MagicQuoteColors.blue, width: 1.6),
+                              borderSide: const BorderSide(
+                                  color: MagicQuoteColors.blue, width: 1.6),
                             ),
                           ),
                         ),
@@ -272,7 +272,8 @@ class _ReviewQuestionsSheetState extends State<ReviewQuestionsSheet> {
                   elevation: 0,
                   backgroundColor: MagicQuoteColors.blue,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: MagicQuoteColors.blue.withValues(alpha: 0.45),
+                  disabledBackgroundColor:
+                      MagicQuoteColors.blue.withValues(alpha: 0.45),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -328,7 +329,8 @@ class _ReviewQuestionsSheetState extends State<ReviewQuestionsSheet> {
             style: GoogleFonts.inter(color: const Color(0xFFE14040)),
           ),
           const SizedBox(height: 8),
-          OutlinedButton(onPressed: _fetchQuestions, child: const Text('Retry')),
+          OutlinedButton(
+              onPressed: _fetchQuestions, child: const Text('Retry')),
         ],
       );
     }
@@ -406,7 +408,8 @@ class _ReviewQuestionsSheetState extends State<ReviewQuestionsSheet> {
     Map<String, dynamic> option,
     String? selected,
   ) {
-    final value = option['value']?.toString() ?? option['label']?.toString() ?? '';
+    final value =
+        option['value']?.toString() ?? option['label']?.toString() ?? '';
     final label = option['label']?.toString() ?? value;
     return _OptionButton(
       label: label,
@@ -441,7 +444,10 @@ class _OptionButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected ? MagicQuoteColors.blue : Colors.white,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: isSelected ? MagicQuoteColors.blue : MagicQuoteColors.border),
+            border: Border.all(
+                color: isSelected
+                    ? MagicQuoteColors.blue
+                    : MagicQuoteColors.border),
           ),
           child: Text(
             label,

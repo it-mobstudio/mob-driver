@@ -27,6 +27,21 @@ class MagicQuoteRepositoryImpl implements MagicQuoteRepository {
       }
       return (body, null);
     } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      if (statusCode == 429 || statusCode == 503) {
+        final data = e.response?.data;
+        final message = data is Map
+            ? (data['message'] ?? data['detail'])?.toString()
+            : null;
+        return (
+          null,
+          ServerFailure(
+            message ??
+                'To ensure fair usage and prevent robotic activity, Magic Quote is limited to 3 requests every 30 minutes. Please try again in sometime.',
+            statusCode: statusCode,
+          ),
+        );
+      }
       return (null, e.toAppFailure());
     } catch (e) {
       return (null, UnknownFailure(e.toString()));

@@ -149,7 +149,7 @@ class ResultsScreen extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF123524), Color(0xFF1EAD66)],
+          colors: [Color(0xFF012D0E), Color(0xFF007937)],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -161,9 +161,10 @@ class ResultsScreen extends StatelessWidget {
               "Check for wrong or missing SKU's & Qty",
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
-                color: const Color(0xFFFFD76A),
+                color: const Color(0xFFFFE600),
                 fontSize: 13,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.1,
               ),
             ),
           ),
@@ -179,9 +180,9 @@ class ResultsScreen extends StatelessWidget {
                       'ESTIMATED TOTAL',
                       style: GoogleFonts.inter(
                         color: Colors.white.withValues(alpha: 0.75),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -192,8 +193,8 @@ class ResultsScreen extends StatelessWidget {
                           formatInr(total),
                           style: GoogleFonts.inter(
                             color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -202,8 +203,9 @@ class ResultsScreen extends StatelessWidget {
                           child: Text(
                             'Incl. GST',
                             style: GoogleFonts.inter(
-                              color: Colors.white.withValues(alpha: 0.75),
-                              fontSize: 11,
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -215,15 +217,16 @@ class ResultsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                 ),
                 child: Text(
                   '$itemCount items',
                   style: GoogleFonts.inter(
                     color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -235,32 +238,37 @@ class ResultsScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 28,
-                    height: 28,
+                    width: 30,
+                    height: 30,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFFFD76A),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFFFE600), Color(0xFFFFB800)],
+                      ),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.sell, size: 15, color: Color(0xFF123524)),
+                    child: const Icon(Icons.sell, size: 16, color: MagicQuoteColors.navy),
                   ),
                   const SizedBox(width: 10),
                   Text.rich(
                     TextSpan(
                       text: "You're saving ",
-                      style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 12),
                       children: [
                         TextSpan(
                           text: formatInr(savings),
                           style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 13,
+                            color: const Color(0xFFFFE600),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
                           ),
                         ),
                       ],
@@ -349,7 +357,11 @@ class ResultsScreen extends StatelessWidget {
                     color: Color(0xFFEAF2FF),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.support_agent, color: MagicQuoteColors.blue),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.asset(
+                    'assets/images/mob_team.webp',
+                    fit: BoxFit.cover,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -464,7 +476,7 @@ class ResultsScreen extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.auto_awesome, size: 16, color: MagicQuoteColors.navy),
+            const Icon(Icons.auto_awesome, size: 16, color: Color(0xFFB8893A)),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -474,13 +486,13 @@ class ResultsScreen extends StatelessWidget {
                     'Would you also like to add this?',
                     style: GoogleFonts.inter(
                       color: MagicQuoteColors.navy,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
                     ),
                   ),
                   Text(
                     'Common items others added with this list',
-                    style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 12),
+                    style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 11),
                   ),
                 ],
               ),
@@ -545,17 +557,22 @@ class ResultsScreen extends StatelessWidget {
                 child: GestureDetector(
                   onTap: isAdded || isAdding ? null : () => onAddRecommended(sku),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
-                      color: isAdded ? const Color(0xFF169B58) : MagicQuoteColors.blue,
-                      borderRadius: BorderRadius.circular(999),
+                      color: isAdded ? const Color(0xFF01A685) : Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isAdded ? const Color(0xFF01A685) : MagicQuoteColors.blue,
+                        width: 1.5,
+                      ),
                     ),
                     child: Text(
                       isAdded ? '✓ Added' : (isAdding ? '...' : '+ Add'),
                       style: GoogleFonts.inter(
-                        color: Colors.white,
+                        color: isAdded ? Colors.white : MagicQuoteColors.blue,
                         fontSize: 11,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
                       ),
                     ),
                   ),
@@ -661,16 +678,25 @@ class ResultsScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.bookmark_outline, color: MagicQuoteColors.navy, size: 20),
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE6F0FE),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.bookmark_outline, color: MagicQuoteColors.blue, size: 16),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 13, height: 1.4),
+                style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 12, height: 1.4),
                 children: [
                   TextSpan(
                     text: 'Not ready to order? ',
-                    style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontWeight: FontWeight.w800),
+                    style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontWeight: FontWeight.w600),
                   ),
                   const TextSpan(text: 'No worries. Find this quote anytime in '),
                   TextSpan(

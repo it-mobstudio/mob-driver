@@ -9,8 +9,8 @@ import 'package:m_o_b_demand_side/features/address/domain/repositories/address_r
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/home/domain/entities/home_entity.dart';
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
-import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 
 class HomeHeader extends StatefulWidget {
   const HomeHeader({super.key});
@@ -45,8 +45,8 @@ class _HomeHeaderState extends State<HomeHeader> {
         ? 'Tap to set your delivery address'
         : _selectedAddressText(selectedAddress);
     final deliveryText = storeStatus?.message.trim().isNotEmpty == true
-        ? storeStatus!.message.trim()
-        : '1-4 hrs delivery';
+        ? '${storeStatus!.message.trim()} delivery'
+        : '';
     final deliveryIcon = storeStatus?.isOpen == false
         ? 'assets/images/timer-delivery.svg'
         : 'assets/images/thunder.svg';
@@ -104,11 +104,6 @@ class _HomeHeaderState extends State<HomeHeader> {
                               height: 18 / 12,
                             ),
                           ),
-                          const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Colors.white,
-                            size: 14,
-                          ),
                           Expanded(
                             child: Text(
                               ' - $addressText',
@@ -122,28 +117,28 @@ class _HomeHeaderState extends State<HomeHeader> {
                               ),
                             ),
                           ),
+                          // const Icon(
+                          //   Icons.keyboard_arrow_down,
+                          //   color: Colors.white,
+                          //   size: 14,
+                          // ),
                         ],
                       ),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
               InkWell(
-                onTap: () => context.push(ReferralPage.routePath),
-                borderRadius: BorderRadius.circular(18),
+                onTap: () => context.push(MobstarPage.routePath),
                 child: Container(
-                  width: 36,
+                  width: 72,
                   height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFD0D4DC)),
-                  ),
                   alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.card_giftcard_outlined,
-                    size: 19,
-                    color: Color(0xFF0A243F),
+                  child: SvgPicture.asset(
+                    'assets/images/mobstaricon.svg',
+                    width: 72,
+                    height: 36,
                   ),
                 ),
               ),

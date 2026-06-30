@@ -32,6 +32,7 @@ class UploadScreen extends StatelessWidget {
     required this.emailController,
     required this.noteFocusNode,
     required this.pincodeServiceable,
+    required this.itemListError,
     required this.onTapDropzone,
     required this.onRemoveFile,
     required this.onPreviewFile,
@@ -53,6 +54,7 @@ class UploadScreen extends StatelessWidget {
   final TextEditingController emailController;
   final FocusNode noteFocusNode;
   final bool? pincodeServiceable;
+  final String itemListError;
   final VoidCallback onTapDropzone;
   final void Function(PickedMagicQuoteFile file) onRemoveFile;
   final void Function(PickedMagicQuoteFile file) onPreviewFile;
@@ -80,15 +82,15 @@ class UploadScreen extends StatelessWidget {
                   width: double.infinity,
                   fit: BoxFit.contain,
                 ),
-                Positioned(
-                  top: 18,
-                  left: 20,
-                  child: SvgPicture.asset(
-                    'assets/images/banner-spark.svg',
-                    width: 28,
-                    height: 28,
-                  ),
-                ),
+                // Positioned(
+                //   top: 18,
+                //   left: 20,
+                //   child: SvgPicture.asset(
+                //     'assets/images/banner-spark.svg',
+                //     width: 28,
+                //     height: 28,
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -109,7 +111,17 @@ class UploadScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const MagicQuoteSectionTitle('Send us your BOQ or material list'),
+              const MagicQuoteSectionTitle('Upload or type item list'),
+              const SizedBox(height: 12),
+              Text(
+                'Use at least one option. Photo, PDF, Excel or text - up to 20 MB',
+                style: GoogleFonts.inter(
+                  color: MagicQuoteColors.muted,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ),
               const SizedBox(height: 12),
               _dropZone(),
               if (files.isNotEmpty) ...[
@@ -130,14 +142,26 @@ class UploadScreen extends StatelessWidget {
               ],
               const SizedBox(height: 16),
               _field(
-                'Add note',
+                'Type item list',
                 noteController,
-                optional: true,
-                hint: 'Mention brands, sizes or delivery notes',
+                hint:
+                    'Add product details, quantities, sizes, or special requirements',
                 focusNode: noteFocusNode,
                 minLines: 3,
                 maxLines: 4,
+                hasError: itemListError.isNotEmpty,
               ),
+              if (itemListError.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  itemListError,
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFFE14040),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               _field(
                 'Preferred brands',
@@ -357,6 +381,7 @@ class UploadScreen extends StatelessWidget {
     int minLines = 1,
     int maxLines = 1,
     FocusNode? focusNode,
+    bool hasError = false,
   }) {
     final labelText = required
         ? '$label *'
@@ -390,16 +415,21 @@ class UploadScreen extends StatelessWidget {
           fontSize: 13,
           fontWeight: FontWeight.w700,
         ),
-        hintStyle: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 14),
+        hintStyle:
+            GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 14),
         filled: true,
         fillColor: enabled ? Colors.white : const Color(0xFFF5F7FA),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
         border: _inputBorder(),
-        enabledBorder: _inputBorder(),
+        enabledBorder: _inputBorder(
+          color: hasError ? const Color(0xFFE14040) : MagicQuoteColors.border,
+        ),
         disabledBorder: _inputBorder(),
         focusedBorder: _inputBorder(color: MagicQuoteColors.blue, width: 1.6),
         errorBorder: _inputBorder(color: const Color(0xFFE14040)),
-        focusedErrorBorder: _inputBorder(color: const Color(0xFFE14040), width: 1.6),
+        focusedErrorBorder:
+            _inputBorder(color: const Color(0xFFE14040), width: 1.6),
       ),
     );
   }
@@ -466,9 +496,8 @@ class _UploadDropZoneState extends State<_UploadDropZone> {
                   ..scale(_active ? 1.05 : 1.0)
                   ..rotateZ(_active ? math.pi / 2 : 0),
                 decoration: BoxDecoration(
-                  color: _active
-                      ? const Color(0xFF0A243F)
-                      : MagicQuoteColors.navy,
+                  color:
+                      _active ? const Color(0xFF0A243F) : MagicQuoteColors.navy,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(Icons.add, color: Colors.white, size: 32),

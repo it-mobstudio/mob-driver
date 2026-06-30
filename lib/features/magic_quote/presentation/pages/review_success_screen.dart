@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 
-/// "RFQ submitted for review" screen shown after a Magic Quote is sent for
-/// manual review. Mirrors the web's MagicQuote/ReviewSuccessScreen.jsx.
 class ReviewSuccessScreen extends StatelessWidget {
   const ReviewSuccessScreen({
     super.key,
@@ -69,12 +67,18 @@ class ReviewSuccessScreen extends StatelessWidget {
               children: [
                 Text(
                   'Your RFQ number',
-                  style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.inter(
+                      color: MagicQuoteColors.muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   rfqNumber,
-                  style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontSize: 17, fontWeight: FontWeight.w900),
+                  style: GoogleFonts.inter(
+                      color: MagicQuoteColors.navy,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900),
                 ),
               ],
             ),
@@ -94,9 +98,11 @@ class ReviewSuccessScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              _infoRow('The MOB team will review your details to find the best price'),
+              _infoRow(
+                  'The MOB team will review your details to find the best price'),
               _infoRow('Final quote will be shared via WhatsApp & email'),
-              _infoRow('Accept quote and pay to place your order', isLast: true),
+              _infoRow('Accept quote and pay to place your order',
+                  isLast: true),
             ],
           ),
         ),
@@ -110,11 +116,13 @@ class ReviewSuccessScreen extends StatelessWidget {
               elevation: 0,
               backgroundColor: MagicQuoteColors.blue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: Text(
               'Back to homepage',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15),
+              style:
+                  GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15),
             ),
           ),
         ),
@@ -126,11 +134,15 @@ class ReviewSuccessScreen extends StatelessWidget {
             onPressed: onViewRfqs,
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: MagicQuoteColors.border),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: Text(
               'View my RFQs',
-              style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontWeight: FontWeight.w800, fontSize: 15),
+              style: GoogleFonts.inter(
+                  color: MagicQuoteColors.navy,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15),
             ),
           ),
         ),
@@ -149,7 +161,8 @@ class ReviewSuccessScreen extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontSize: 13, height: 1.35),
+              style: GoogleFonts.inter(
+                  color: MagicQuoteColors.navy, fontSize: 13, height: 1.35),
             ),
           ),
         ],

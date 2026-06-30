@@ -6,12 +6,6 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_
 import 'package:m_o_b_demand_side/features/product/domain/entities/product_entity.dart';
 import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
 
-/// "Pick a replacement" bottom sheet: filter chips + a horizontal carousel
-/// of alternative products for the current item's SKU, with a REPLACE
-/// action per card. Mirrors the web's swap section in QuoteItemRow.jsx +
-/// useSwapProducts.js (the chip-dropdown filter UI is implemented here as
-/// a stacked filter-options sheet instead of an absolutely-positioned
-/// dropdown, since that's the natural mobile equivalent).
 class SwapProductSheet extends StatefulWidget {
   const SwapProductSheet({
     super.key,
@@ -142,7 +136,8 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
   Future<void> _replace(ProductEntity product) async {
     if (_replacingSku.isNotEmpty) return;
     setState(() => _replacingSku = product.mobSku);
-    final (payload, failure) = await widget.magicQuoteRepository.replaceMagicQuoteItem(
+    final (payload, failure) =
+        await widget.magicQuoteRepository.replaceMagicQuoteItem(
       itemId: widget.itemId,
       mobSku: product.mobSku,
     );
@@ -208,7 +203,8 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
                                     }
                                   });
                                 },
-                                controlAffinity: ListTileControlAffinity.leading,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
                                 contentPadding: EdgeInsets.zero,
                                 dense: true,
                                 title: Text(
@@ -241,7 +237,8 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
                           ),
                           child: Text(
                             'Apply',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w800),
+                            style:
+                                GoogleFonts.inter(fontWeight: FontWeight.w800),
                           ),
                         ),
                       ),
@@ -337,12 +334,15 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
           return OutlinedButton(
             onPressed: () => _openFilterOptions(filter),
             style: OutlinedButton.styleFrom(
-              backgroundColor: count > 0 ? const Color(0xFFEAF2FF) : Colors.white,
+              backgroundColor:
+                  count > 0 ? const Color(0xFFEAF2FF) : Colors.white,
               side: BorderSide(
-                color: count > 0 ? MagicQuoteColors.blue : MagicQuoteColors.border,
+                color:
+                    count > 0 ? MagicQuoteColors.blue : MagicQuoteColors.border,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -350,7 +350,9 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
                 Text(
                   filter.label,
                   style: GoogleFonts.inter(
-                    color: count > 0 ? MagicQuoteColors.blue : MagicQuoteColors.navy,
+                    color: count > 0
+                        ? MagicQuoteColors.blue
+                        : MagicQuoteColors.navy,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
@@ -358,7 +360,8 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
                 if (count > 0) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: const BoxDecoration(
                       color: MagicQuoteColors.blue,
                       shape: BoxShape.circle,
@@ -374,7 +377,8 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
                   ),
                 ],
                 const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down, size: 16, color: MagicQuoteColors.muted),
+                const Icon(Icons.keyboard_arrow_down,
+                    size: 16, color: MagicQuoteColors.muted),
               ],
             ),
           );
@@ -394,7 +398,8 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Center(
-          child: Text('No products found', style: GoogleFonts.inter(color: MagicQuoteColors.muted)),
+          child: Text('No products found',
+              style: GoogleFonts.inter(color: MagicQuoteColors.muted)),
         ),
       );
     }
@@ -442,12 +447,14 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
               width: double.infinity,
               color: const Color(0xFFF7F9FC),
               child: product.primaryImageUrl.isEmpty
-                  ? const Icon(Icons.inventory_2_outlined, color: MagicQuoteColors.navy)
+                  ? const Icon(Icons.inventory_2_outlined,
+                      color: MagicQuoteColors.navy)
                   : Image.network(
                       product.primaryImageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.inventory_2_outlined, color: MagicQuoteColors.navy),
+                      errorBuilder: (_, __, ___) => const Icon(
+                          Icons.inventory_2_outlined,
+                          color: MagicQuoteColors.navy),
                     ),
             ),
           ),
@@ -508,17 +515,20 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
                 padding: EdgeInsets.zero,
                 backgroundColor: MagicQuoteColors.blue,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               child: isReplacing
                   ? const SizedBox(
                       width: 14,
                       height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : Text(
                       'REPLACE',
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800),
+                      style: GoogleFonts.inter(
+                          fontSize: 11, fontWeight: FontWeight.w800),
                     ),
             ),
           ),

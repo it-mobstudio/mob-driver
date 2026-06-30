@@ -3,9 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 
-/// "Uh oh, our AI hit a snag" screen, shown when the Magic Quote backend
-/// couldn't auto-generate a quote and the request needs manual review.
-/// Mirrors the web's MagicQuote/UnreadScreen.jsx.
 class UnreadScreen extends StatelessWidget {
   const UnreadScreen({
     super.key,
