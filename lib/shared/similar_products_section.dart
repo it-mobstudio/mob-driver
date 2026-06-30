@@ -30,42 +30,45 @@ class SimilarProductsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (products.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
-          child: Text(
-            title,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF0A243F),
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              height: 24 / 17,
+    return ColoredBox(
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+            child: Text(
+              title,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                height: 24 / 17,
+              ),
             ),
           ),
-        ),
-        SizedBox(
-          height: 282,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: ItemCard(
-                  product: products[index],
-                  quantityResolver: quantityResolver,
-                  isUpdatingResolver: isUpdatingResolver,
-                  onCartQuantityChanged: onCartQuantityChanged,
-                  onNotifyTap: onNotifyTap,
-                ),
-              );
-            },
+          SizedBox(
+            height: 282,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: ItemCard(
+                    product: products[index],
+                    quantityResolver: quantityResolver,
+                    isUpdatingResolver: isUpdatingResolver,
+                    onCartQuantityChanged: onCartQuantityChanged,
+                    onNotifyTap: onNotifyTap,
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

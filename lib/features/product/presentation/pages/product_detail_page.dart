@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +38,7 @@ class ProductDetailPage extends StatefulWidget {
 class _ProductDetailPageState extends State<ProductDetailPage> {
   final Map<String, String?> _selectedVariants = <String, String?>{};
   ProductSellerOffer? _selectedSeller;
+  static const double _bottomBarBaseReservedHeight = 88;
 
   Future<void> _changeProductQuantity(
     ProductModel product,
@@ -274,13 +277,20 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     builder: (context) {
                       _syncSelectedSeller(product);
                       final displayProduct = _productForSeller(product);
+                      final cartItemCount = cartQtyByProductId.values
+                          .fold<int>(0, (sum, qty) => sum + qty);
+                      final bottomBarReservedHeight =
+                          _bottomBarBaseReservedHeight +
+                              MediaQuery.paddingOf(context).bottom;
                       return Stack(
                         children: [
                           Column(
                             children: [
                               Expanded(
                                 child: ListView(
-                                  padding: const EdgeInsets.only(bottom: 108),
+                                  padding: EdgeInsets.only(
+                                    bottom: bottomBarReservedHeight,
+                                  ),
                                   children: [
                                     ProductImagesCarousel(
                                         images: product.images),
@@ -351,6 +361,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             bottom: 0,
                             child: ProductDetailBottomBar(
                               product: displayProduct,
+                              cartItemCount: cartItemCount,
                               quantity: cartQtyByProductId[
                                       displayProduct.addToCartProductId] ??
                                   0,
@@ -393,26 +404,32 @@ class _ProductDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 48,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          _HeaderIconButton(
-            icon: _HeaderActionIcon.back,
-            onTap: onBack,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          color: Colors.white.withValues(alpha: 0.10),
+          child: Row(
+            children: [
+              _HeaderIconButton(
+                icon: _HeaderActionIcon.back,
+                onTap: onBack,
+              ),
+              const Spacer(),
+              _HeaderIconButton(
+                icon: _HeaderActionIcon.favorite,
+                onTap: () {},
+              ),
+              const SizedBox(width: 12),
+              _HeaderIconButton(
+                icon: _HeaderActionIcon.share,
+                onTap: onShare ?? () {},
+              ),
+            ],
           ),
-          const Spacer(),
-          _HeaderIconButton(
-            icon: _HeaderActionIcon.favorite,
-            onTap: () {},
-          ),
-          const SizedBox(width: 12),
-          _HeaderIconButton(
-            icon: _HeaderActionIcon.share,
-            onTap: onShare ?? () {},
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -805,6 +822,7 @@ class ProductDetailBottomBar extends StatelessWidget {
   const ProductDetailBottomBar({
     super.key,
     required this.product,
+    required this.cartItemCount,
     required this.quantity,
     required this.isUpdating,
     required this.onCartQuantityChanged,
@@ -813,6 +831,7 @@ class ProductDetailBottomBar extends StatelessWidget {
   });
 
   final ProductEntity product;
+  final int cartItemCount;
   final int quantity;
   final bool isUpdating;
   final Future<void> Function(ProductModel product, int quantity)
@@ -823,26 +842,22 @@ class ProductDetailBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inCart = !product.shouldShowNotify && quantity > 0;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: const Border(
-            top: BorderSide(color: Color(0xFFE7EAF0)),
+    return Container(
+      padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomInset),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, -4),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 14,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: inCart ? _buildInCartRow(context) : _buildAddRow(context),
+        ],
       ),
+      child: inCart ? _buildInCartRow(context) : _buildAddRow(context),
     );
   }
 
@@ -853,19 +868,14 @@ class ProductDetailBottomBar extends StatelessWidget {
           child: GestureDetector(
             onTap: () {
               AppHaptics.lightTap();
-              // push (not go) — keeps the StatefulShellRoute/Home tab
-              // underneath in the stack so the cart's back button can pop
-              // back to it normally instead of tearing down and recreating
-              // the shell, which raced and threw duplicate-GlobalKey /
-              // deactivated-element errors.
               context.push('/cart');
             },
             child: Container(
-              height: 48,
+              height: 44,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(11),
                 border: Border.all(color: const Color(0xFFE1E6ED)),
               ),
               child: Row(
@@ -883,8 +893,8 @@ class ProductDetailBottomBar extends StatelessWidget {
                         top: -8,
                         right: -8,
                         child: Container(
-                          constraints: const BoxConstraints(minWidth: 17),
-                          height: 17,
+                          constraints: const BoxConstraints(minWidth: 18),
+                          height: 18,
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
@@ -893,10 +903,10 @@ class ProductDetailBottomBar extends StatelessWidget {
                             border: Border.all(color: Colors.white, width: 1),
                           ),
                           child: Text(
-                            '$quantity',
+                            '$cartItemCount',
                             style: GoogleFonts.inter(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 9.5,
                               fontWeight: FontWeight.w700,
                               height: 1,
                             ),
@@ -910,9 +920,9 @@ class ProductDetailBottomBar extends StatelessWidget {
                     'View cart',
                     style: GoogleFonts.inter(
                       color: const Color(0xFF0A243F),
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      height: 22 / 15,
+                      height: 20 / 14,
                     ),
                   ),
                 ],
@@ -922,17 +932,20 @@ class ProductDetailBottomBar extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: ProductCartActionButton(
-            product: product,
-            style: ProductCartActionButtonStyle.rail,
-            showCounter: true,
-            quantity: quantity,
-            isFetchingCart: isUpdating,
-            openVariantsOnAdd: false,
-            onQuantityChanged: (nextQuantity) =>
-                onCartQuantityChanged(product, nextQuantity),
-            onNotify: () => onNotifyTap(product),
-            onVariantsTap: onVariantsTap,
+          child: SizedBox(
+            height: 44,
+            child: ProductCartActionButton(
+              product: product,
+              style: ProductCartActionButtonStyle.rail,
+              showCounter: true,
+              quantity: quantity,
+              isFetchingCart: isUpdating,
+              openVariantsOnAdd: false,
+              onQuantityChanged: (nextQuantity) =>
+                  onCartQuantityChanged(product, nextQuantity),
+              onNotify: () => onNotifyTap(product),
+              onVariantsTap: onVariantsTap,
+            ),
           ),
         ),
       ],
@@ -942,23 +955,118 @@ class ProductDetailBottomBar extends StatelessWidget {
   Widget _buildAddRow(BuildContext context) {
     return Row(
       children: [
+        SizedBox(
+          width: 84,
+          height: 48,
+          child: GestureDetector(
+            onTap: () {
+              AppHaptics.lightTap();
+              context.push('/cart');
+            },
+            child: Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: const Color(0xFFE1E6ED)),
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: Color(0xFF0A243F),
+                    size: 24,
+                  ),
+                  if (cartItemCount > 0)
+                    Positioned(
+                      top: -9,
+                      right: -9,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 18),
+                        height: 18,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE53935),
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: Colors.white, width: 1),
+                        ),
+                        child: Text(
+                          '$cartItemCount',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 18),
         Expanded(
-          child: ProductCartActionButton(
-            product: product,
-            showCounter: false,
-            quantity: 1,
-            isFetchingCart: isUpdating,
-            showAddText: true,
-            openVariantsOnAdd: false,
-            onAdd: (nextQuantity) =>
-                onCartQuantityChanged(product, nextQuantity),
-            onAddForQuote: (nextQuantity) =>
-                onCartQuantityChanged(product, nextQuantity),
-            onNotify: () => onNotifyTap(product),
-            onVariantsTap: onVariantsTap,
+          child: SizedBox(
+            height: 48,
+            child: _buildPrimaryActionButton(),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPrimaryActionButton() {
+    final shouldNotify = product.shouldShowNotify;
+    final canAddToCart =
+        product.hasVariants || product.vendorPricing.vendorSellingPrice > 0;
+    final label = shouldNotify
+        ? 'Notify'
+        : canAddToCart
+            ? 'Add to cart'
+            : 'Add for quote';
+
+    return ElevatedButton(
+      onPressed: isUpdating
+          ? null
+          : () {
+              if (shouldNotify) {
+                onNotifyTap(product);
+                return;
+              }
+              onCartQuantityChanged(product, 1);
+            },
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        backgroundColor: const Color(0xFF0360E5),
+        disabledBackgroundColor: const Color(0xFF8EB8F6),
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(11),
+        ),
+      ),
+      child: isUpdating
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Text(
+              label,
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                height: 20 / 14,
+              ),
+            ),
     );
   }
 }
