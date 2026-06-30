@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 
-/// "Putting your quote together" loading screen, shown while the backend
-/// reads/matches the uploaded list. Mirrors the web's
-/// MagicQuote/GeneratingScreen.jsx.
 class GeneratingScreen extends StatelessWidget {
   const GeneratingScreen({
     super.key,

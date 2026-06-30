@@ -3,9 +3,6 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 
-/// "Remove this item?" confirmation sheet. Mirrors the web's
-/// deleteConfirmationContent in ResultsScreen.jsx — manages its own
-/// in-flight state so the caller doesn't need to track it.
 class DeleteConfirmSheet extends StatefulWidget {
   const DeleteConfirmSheet({
     super.key,
@@ -59,7 +56,8 @@ class _DeleteConfirmSheetState extends State<DeleteConfirmSheet> {
             const SizedBox(height: 6),
             Text(
               'You can always add it back from the catalog below.',
-              style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 13),
+              style: GoogleFonts.inter(
+                  color: MagicQuoteColors.muted, fontSize: 13),
             ),
             const SizedBox(height: 14),
             Container(
@@ -77,7 +75,8 @@ class _DeleteConfirmSheetState extends State<DeleteConfirmSheet> {
                       height: 48,
                       color: Colors.white,
                       child: widget.imageUrl.isEmpty
-                          ? const Icon(Icons.inventory_2_outlined, color: MagicQuoteColors.navy)
+                          ? const Icon(Icons.inventory_2_outlined,
+                              color: MagicQuoteColors.navy)
                           : Image.network(
                               widget.imageUrl,
                               fit: BoxFit.cover,
@@ -106,7 +105,8 @@ class _DeleteConfirmSheetState extends State<DeleteConfirmSheet> {
                         if (widget.price > 0)
                           Text(
                             '${formatInr(widget.price)} /unit',
-                            style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 12),
+                            style: GoogleFonts.inter(
+                                color: MagicQuoteColors.muted, fontSize: 12),
                           ),
                       ],
                     ),
@@ -119,15 +119,19 @@ class _DeleteConfirmSheetState extends State<DeleteConfirmSheet> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _isDeleting ? null : () => Navigator.of(context).pop(),
+                    onPressed:
+                        _isDeleting ? null : () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       side: const BorderSide(color: MagicQuoteColors.border),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(
                       'Cancel',
-                      style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontWeight: FontWeight.w700),
+                      style: GoogleFonts.inter(
+                          color: MagicQuoteColors.navy,
+                          fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -140,7 +144,8 @@ class _DeleteConfirmSheetState extends State<DeleteConfirmSheet> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       backgroundColor: const Color(0xFFE14040),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _isDeleting
                         ? const SizedBox(
@@ -153,7 +158,8 @@ class _DeleteConfirmSheetState extends State<DeleteConfirmSheet> {
                           )
                         : Text(
                             'Remove',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w800),
+                            style:
+                                GoogleFonts.inter(fontWeight: FontWeight.w800),
                           ),
                   ),
                 ),

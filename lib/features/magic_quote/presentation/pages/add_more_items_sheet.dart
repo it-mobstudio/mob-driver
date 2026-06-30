@@ -8,10 +8,6 @@ import 'package:m_o_b_demand_side/features/magic_quote/domain/repositories/magic
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 
-/// "Add more items" bottom sheet: debounced product search (reusing the
-/// same catalog search the brand/product search pages already use) with
-/// infinite scroll, and a tap-to-add action per result. Mirrors the web's
-/// MagicQuote/AddMorePicker.jsx.
 class AddMoreItemsSheet extends StatefulWidget {
   const AddMoreItemsSheet({
     super.key,
@@ -116,7 +112,8 @@ class _AddMoreItemsSheetState extends State<AddMoreItemsSheet> {
   Future<void> _addProduct(ProductEntity product) async {
     if (_addingSku.isNotEmpty) return;
     setState(() => _addingSku = product.mobSku);
-    final (payload, addedItem, failure) = await widget.magicQuoteRepository.addMagicQuoteItem(
+    final (payload, addedItem, failure) =
+        await widget.magicQuoteRepository.addMagicQuoteItem(
       quoteId: widget.quoteId,
       mobSku: product.mobSku,
     );
@@ -171,25 +168,31 @@ class _AddMoreItemsSheetState extends State<AddMoreItemsSheet> {
                   TextField(
                     controller: _searchController,
                     onChanged: _onQueryChanged,
-                    style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontSize: 14),
+                    style: GoogleFonts.inter(
+                        color: MagicQuoteColors.navy, fontSize: 14),
                     decoration: InputDecoration(
                       hintText: 'Search products by name, brand, type',
-                      hintStyle: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search, size: 18, color: MagicQuoteColors.muted),
+                      hintStyle: GoogleFonts.inter(
+                          color: MagicQuoteColors.muted, fontSize: 13),
+                      prefixIcon: const Icon(Icons.search,
+                          size: 18, color: MagicQuoteColors.muted),
                       filled: true,
                       fillColor: const Color(0xFFF7F9FC),
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: MagicQuoteColors.border),
+                        borderSide:
+                            const BorderSide(color: MagicQuoteColors.border),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: MagicQuoteColors.border),
+                        borderSide:
+                            const BorderSide(color: MagicQuoteColors.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: MagicQuoteColors.blue, width: 1.6),
+                        borderSide: const BorderSide(
+                            color: MagicQuoteColors.blue, width: 1.6),
                       ),
                     ),
                   ),
@@ -214,7 +217,8 @@ class _AddMoreItemsSheetState extends State<AddMoreItemsSheet> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 30),
         child: Center(
-          child: Text('No products found', style: GoogleFonts.inter(color: MagicQuoteColors.muted)),
+          child: Text('No products found',
+              style: GoogleFonts.inter(color: MagicQuoteColors.muted)),
         ),
       );
     }
@@ -222,7 +226,8 @@ class _AddMoreItemsSheetState extends State<AddMoreItemsSheet> {
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       itemCount: _products.length + (_isLoadingMore ? 1 : 0),
-      separatorBuilder: (_, __) => const Divider(height: 1, color: MagicQuoteColors.border),
+      separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: MagicQuoteColors.border),
       itemBuilder: (context, index) {
         if (index >= _products.length) {
           return const Padding(
@@ -255,12 +260,14 @@ class _AddMoreItemsSheetState extends State<AddMoreItemsSheet> {
               height: 44,
               color: const Color(0xFFF7F9FC),
               child: img.isEmpty
-                  ? const Icon(Icons.inventory_2_outlined, color: MagicQuoteColors.navy)
+                  ? const Icon(Icons.inventory_2_outlined,
+                      color: MagicQuoteColors.navy)
                   : Image.network(
                       img,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.inventory_2_outlined, color: MagicQuoteColors.navy),
+                      errorBuilder: (_, __, ___) => const Icon(
+                          Icons.inventory_2_outlined,
+                          color: MagicQuoteColors.navy),
                     ),
             ),
           ),
@@ -283,7 +290,8 @@ class _AddMoreItemsSheetState extends State<AddMoreItemsSheet> {
                   const SizedBox(height: 2),
                   Text(
                     product.brandName,
-                    style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 11),
+                    style: GoogleFonts.inter(
+                        color: MagicQuoteColors.muted, fontSize: 11),
                   ),
                 ],
               ],

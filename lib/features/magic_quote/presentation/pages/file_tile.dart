@@ -3,7 +3,6 @@ import 'package:m_o_b_demand_side/core/app_runtime/uploaded_file.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 
-/// A file picked for the Magic Quote upload (camera/gallery/document).
 class PickedMagicQuoteFile {
   const PickedMagicQuoteFile({
     required this.name,
@@ -45,7 +44,8 @@ class MagicQuoteFileTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bytes = file.file.bytes;
-    final isImage = isMagicQuoteImageFile(file.name) && bytes != null && bytes.isNotEmpty;
+    final isImage =
+        isMagicQuoteImageFile(file.name) && bytes != null && bytes.isNotEmpty;
     const tileSize = 84.0;
     return SizedBox(
       width: tileSize,

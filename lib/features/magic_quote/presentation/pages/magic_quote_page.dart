@@ -59,7 +59,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
 
   final _formKey = GlobalKey<FormState>();
   late final MagicQuoteBloc _magicQuoteBloc;
-  late final MagicQuoteRepository _magicQuoteRepository = sl<MagicQuoteRepository>();
+  late final MagicQuoteRepository _magicQuoteRepository =
+      sl<MagicQuoteRepository>();
   late final ProductRepository _productRepository = sl<ProductRepository>();
   final _noteFocusNode = FocusNode();
   final _noteController = TextEditingController();
@@ -77,6 +78,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   _MagicQuoteScreen _screen = _MagicQuoteScreen.upload;
   Map<String, dynamic>? _quoteResponse;
   String _generatingStatus = 'Uploading your list';
+  String _itemListError = '';
 
   // ── Live quote-editing state (results screen) ─────────────────────
   // Mirrors the web's ResultsScreen quotePayloadState/itemQuantities/
@@ -97,6 +99,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     super.initState();
     _magicQuoteBloc = sl<MagicQuoteBloc>();
     _pincodeController.addListener(_onPincodeChanged);
+    _noteController.addListener(_onNoteChanged);
     _prefillForm();
   }
 
@@ -104,6 +107,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   void dispose() {
     _magicQuoteBloc.close();
     _pincodeController.removeListener(_onPincodeChanged);
+    _noteController.removeListener(_onNoteChanged);
     _noteFocusNode.dispose();
     _noteController.dispose();
     _brandsController.dispose();
@@ -151,7 +155,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   Widget _header() {
-    if (_screen == _MagicQuoteScreen.reviewSuccess) return const SizedBox.shrink();
+    if (_screen == _MagicQuoteScreen.reviewSuccess)
+      return const SizedBox.shrink();
     final title = switch (_screen) {
       _MagicQuoteScreen.upload => 'Magic AI Quote',
       _MagicQuoteScreen.generating => 'Reading your list...',
@@ -208,6 +213,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
           emailController: _emailController,
           noteFocusNode: _noteFocusNode,
           pincodeServiceable: _pincodeServiceable,
+          itemListError: _itemListError,
           onTapDropzone: _showUploadOptionsSheet,
           onRemoveFile: (file) => setState(() => _files.remove(file)),
           onPreviewFile: _previewPickedFile,
@@ -264,13 +270,13 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   Widget? _bottomBar(bool submitting) {
     final action = switch (_screen) {
       _MagicQuoteScreen.upload => _BottomAction(
-          label: 'Generate quote',
+          label: 'Get Magic AI Quote',
           icon: Icons.auto_awesome,
           onPressed:
               submitting || _pincodeServiceable == false ? null : _submit,
         ),
       _MagicQuoteScreen.results => _BottomAction(
-          label: 'Submit for review',
+          label: 'Add note & submit',
           icon: Icons.check_circle_outline,
           onPressed: _showReviewQuestionsSheet,
         ),
@@ -380,7 +386,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
           productRepository: _productRepository,
           magicQuoteRepository: _magicQuoteRepository,
           quoteId: quoteId,
-          onAdded: (Map<String, dynamic>? payload, Map<String, dynamic>? addedItem) {
+          onAdded:
+              (Map<String, dynamic>? payload, Map<String, dynamic>? addedItem) {
             setState(() {
               if (payload != null) {
                 _quotePayloadOverride = payload;
@@ -607,8 +614,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
 
   /// The current quote payload, preferring any live edits
   /// ([_quotePayloadOverride]) over the original create/socket response.
-  Map<String, dynamic> _currentPayload() =>
-      _withoutRemovedItems(_quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse));
+  Map<String, dynamic> _currentPayload() => _withoutRemovedItems(
+      _quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse));
 
   Map<String, dynamic> _withoutRemovedItems(Map<String, dynamic> payload) {
     if (_removedItemIds.isEmpty) return payload;
@@ -635,7 +642,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   String _apiUploadedFileUrl() {
-    final payload = _quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse);
+    final payload =
+        _quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse);
     final rfqOrder = mapValueOf(payload, 'rfq_order');
     return firstNonEmptyOf([
       stringValueOf(payload, const ['uploaded_file', 'rfq_file']),
@@ -709,7 +717,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   Future<bool> _deleteItem(String itemId) async {
-    final (payload, failure) = await _magicQuoteRepository.deleteMagicQuoteItem(itemId);
+    final (payload, failure) =
+        await _magicQuoteRepository.deleteMagicQuoteItem(itemId);
     if (!mounted) return false;
     if (failure != null) {
       _showMessage(failure.message);
@@ -762,7 +771,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     if (quoteId.isEmpty || sku.isEmpty || _addingProductSku.isNotEmpty) return;
 
     setState(() => _addingProductSku = sku);
-    final (payload, addedItem, failure) = await _magicQuoteRepository.addMagicQuoteItem(
+    final (payload, addedItem, failure) =
+        await _magicQuoteRepository.addMagicQuoteItem(
       quoteId: quoteId,
       mobSku: sku,
     );
@@ -785,6 +795,12 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   // ── Pincode serviceability ───────────────────────────────────────────
+
+  void _onNoteChanged() {
+    if (_itemListError.isNotEmpty && _noteController.text.trim().isNotEmpty) {
+      setState(() => _itemListError = '');
+    }
+  }
 
   void _onPincodeChanged() {
     final digits = _pincodeController.text.trim();
@@ -823,9 +839,16 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
       );
       final serviceableFlag = _firstBoolFromCandidates(
         candidates,
-        const ['serviceable', 'is_serviceable', 'isServiceable', 'deliverable', 'status'],
+        const [
+          'serviceable',
+          'is_serviceable',
+          'isServiceable',
+          'deliverable',
+          'status'
+        ],
       );
-      final isServiceable = serviceableFlag ?? (state.isNotEmpty && city.isNotEmpty);
+      final isServiceable =
+          serviceableFlag ?? (state.isNotEmpty && city.isNotEmpty);
       if (!mounted) return;
       setState(() {
         _pincodeServiceable = isServiceable;
@@ -850,7 +873,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     if (data is Map) {
       final nested = Map<String, dynamic>.from(data);
       final nestedData = nested['data'];
-      if (nestedData is Map) candidates.add(Map<String, dynamic>.from(nestedData));
+      if (nestedData is Map)
+        candidates.add(Map<String, dynamic>.from(nestedData));
       candidates.add(nested);
     }
     candidates.add(flat);
@@ -891,7 +915,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
         final value = map[key];
         if (value is bool) return value;
         if (value is String) {
-          return value.toLowerCase() == 'serviceable' || value.toLowerCase() == 'true';
+          return value.toLowerCase() == 'serviceable' ||
+              value.toLowerCase() == 'true';
         }
       }
     }
@@ -1167,6 +1192,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
       _files
         ..clear()
         ..addAll(next.take(_maxFiles));
+      _itemListError = '';
     });
   }
 
@@ -1176,7 +1202,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_files.isEmpty && _noteController.text.trim().isEmpty) {
-      _showMessage('Please add a file or type your material list in notes.');
+      setState(() => _itemListError = 'Upload a file or type your item list.');
+      _noteFocusNode.requestFocus();
       return;
     }
 
@@ -1226,7 +1253,95 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     if (state is MagicQuoteError) {
       setState(() => _screen = _MagicQuoteScreen.upload);
       _showMessage(state.message);
+      return;
     }
+    if (state is MagicQuoteRateLimited) {
+      setState(() => _screen = _MagicQuoteScreen.upload);
+      _showRateLimitSheet(state.message);
+    }
+  }
+
+  Future<void> _showRateLimitSheet(String message) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 26),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFCDACC),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Image.asset(
+                    'assets/images/ratelimit.png',
+                    width: 72,
+                    height: 72,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Request limit reached',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: _navy,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message.isNotEmpty
+                      ? message
+                      : 'To ensure fair usage and prevent robotic activity, Magic Quote is limited to 3 requests every 30 minutes. Please try again in sometime.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: _muted,
+                    fontSize: 14,
+                    height: 1.45,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: _blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Okay',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _handleBack() {

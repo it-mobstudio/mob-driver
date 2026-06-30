@@ -3,8 +3,6 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 
-/// Shared colour palette for the Magic Quote screens, equivalent to the
-/// CSS custom properties the web app's MagicQuote stylesheet defines.
 abstract final class MagicQuoteColors {
   static const navy = AppColors.primaryText;
   static const blue = Color(0xFF0968E8);

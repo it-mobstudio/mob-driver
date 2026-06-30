@@ -13,13 +13,13 @@ String magicQuoteItemSku(Map<String, dynamic> item) {
   ]);
 }
 
-/// Mirrors the web's `getQuoteItemStatus`: derives a (label, colour-kind)
-/// pair from `status_label` / `status` / match-status fields so each item
-/// can show a "Matched" / "Similar" / "No match found" badge.
 ({String label, String kind}) _quoteItemStatus(Map<String, dynamic> item) {
   if (item['is_product_available'] == false) {
     final label = stringValueOf(item, const ['status_label']);
-    return (label: label.isEmpty ? 'No match found' : label, kind: 'not-matched');
+    return (
+      label: label.isEmpty ? 'No match found' : label,
+      kind: 'not-matched'
+    );
   }
 
   final product = mapValueOf(item, 'product');
@@ -37,7 +37,10 @@ String magicQuoteItemSku(Map<String, dynamic> item) {
   if (normalized.contains('no match') ||
       normalized.contains('not matched') ||
       normalized.contains('unavailable')) {
-    return (label: rawStatus.isEmpty ? 'No match found' : rawStatus, kind: 'not-matched');
+    return (
+      label: rawStatus.isEmpty ? 'No match found' : rawStatus,
+      kind: 'not-matched'
+    );
   }
   if (normalized.contains('similar') ||
       normalized.contains('alternative') ||
@@ -48,9 +51,6 @@ String magicQuoteItemSku(Map<String, dynamic> item) {
   return (label: rawStatus.isEmpty ? 'Matched' : rawStatus, kind: 'matched');
 }
 
-/// Single quote line item: "Requested: ... [status]" header, product
-/// details (or the friendly no-match row), delete/change buttons and qty
-/// stepper. Mirrors the web's MagicQuote/QuoteItemRow.jsx.
 class QuoteItemRow extends StatelessWidget {
   const QuoteItemRow({
     super.key,
@@ -65,7 +65,8 @@ class QuoteItemRow extends StatelessWidget {
   final Map<String, dynamic> item;
   final int idx;
   final num quantity;
-  final void Function(Map<String, dynamic> item, bool increase) onQuantityChange;
+  final void Function(Map<String, dynamic> item, bool increase)
+      onQuantityChange;
   final void Function(Map<String, dynamic> item) onDelete;
   final void Function(Map<String, dynamic> item) onChange;
 
@@ -79,13 +80,21 @@ class QuoteItemRow extends StatelessWidget {
     ]);
 
     if (item['is_product_available'] == false) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _requestedStatusRow(requestedText, status),
-          const SizedBox(height: 8),
-          _noMatchItemRow(idx),
-        ],
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFFFF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MagicQuoteColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _requestedStatusRow(requestedText, status),
+            const SizedBox(height: 8),
+            _noMatchItemRow(idx),
+          ],
+        ),
       );
     }
 
@@ -99,7 +108,8 @@ class QuoteItemRow extends StatelessWidget {
       stringValueOf(product, const ['product_image', 'image']),
       stringValueOf(item, const ['product_image', 'image']),
     ]);
-    final lineTotal = moneyValueOf(item, const ['total', 'line_total', 'amount']);
+    final lineTotal =
+        moneyValueOf(item, const ['total', 'line_total', 'amount']);
     final price = moneyValueOf(
       item,
       const ['price_after_tax', 'price', 'selling_price', 'rate'],
@@ -108,7 +118,7 @@ class QuoteItemRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F9FC),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: MagicQuoteColors.border),
       ),
@@ -130,12 +140,14 @@ class QuoteItemRow extends StatelessWidget {
                     border: Border.all(color: MagicQuoteColors.border),
                   ),
                   child: imageUrl.isEmpty
-                      ? const Icon(Icons.inventory_2_outlined, color: MagicQuoteColors.navy)
+                      ? const Icon(Icons.inventory_2_outlined,
+                          color: MagicQuoteColors.navy)
                       : Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.inventory_2_outlined, color: MagicQuoteColors.navy),
+                          errorBuilder: (_, __, ___) => const Icon(
+                              Icons.inventory_2_outlined,
+                              color: MagicQuoteColors.navy),
                         ),
                 ),
               ),
@@ -183,18 +195,21 @@ class QuoteItemRow extends StatelessWidget {
             children: [
               IconButton(
                 onPressed: () => onDelete(item),
-                icon: const Icon(Icons.delete_outline, size: 19, color: MagicQuoteColors.muted),
+                icon: const Icon(Icons.delete_outline,
+                    size: 19, color: MagicQuoteColors.muted),
                 style: IconButton.styleFrom(
                   backgroundColor: Colors.white,
                   side: const BorderSide(color: MagicQuoteColors.border),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                   minimumSize: const Size(36, 36),
                 ),
               ),
               const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: () => onChange(item),
-                icon: const Icon(Icons.swap_horiz, size: 16, color: MagicQuoteColors.navy),
+                icon: const Icon(Icons.swap_horiz,
+                    size: 16, color: MagicQuoteColors.navy),
                 label: Text(
                   'Change',
                   style: GoogleFonts.inter(
@@ -208,7 +223,8 @@ class QuoteItemRow extends StatelessWidget {
                   side: const BorderSide(color: MagicQuoteColors.border),
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   minimumSize: const Size(0, 36),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const Spacer(),
@@ -231,7 +247,8 @@ class QuoteItemRow extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            onPressed: quantity <= 1 ? null : () => onQuantityChange(item, false),
+            onPressed:
+                quantity <= 1 ? null : () => onQuantityChange(item, false),
             icon: const Icon(Icons.remove, size: 16),
             color: MagicQuoteColors.navy,
             style: IconButton.styleFrom(minimumSize: const Size(34, 34)),
@@ -239,9 +256,14 @@ class QuoteItemRow extends StatelessWidget {
           SizedBox(
             width: 32,
             child: Text(
-              quantity % 1 == 0 ? quantity.toInt().toString() : quantity.toString(),
+              quantity % 1 == 0
+                  ? quantity.toInt().toString()
+                  : quantity.toString(),
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontWeight: FontWeight.w800, fontSize: 13),
+              style: GoogleFonts.inter(
+                  color: MagicQuoteColors.navy,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13),
             ),
           ),
           IconButton(
@@ -272,7 +294,7 @@ class QuoteItemRow extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: 'Requested: ',
+                  text: 'Asked: ',
                   style: GoogleFonts.inter(
                     color: MagicQuoteColors.muted,
                     fontSize: 12,
@@ -312,50 +334,42 @@ class QuoteItemRow extends StatelessWidget {
   }
 
   Widget _noMatchItemRow(int idx) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF6F6),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFAD7D7)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFAD7D7),
-              shape: BoxShape.circle,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Color(0xFFFAD7D7),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '${idx + 1}',
+            style: GoogleFonts.inter(
+              color: const Color(0xFFB3261E),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
             ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
             child: Text(
-              '${idx + 1}',
+              "Don't worry! Please submit and our team will be in touch",
               style: GoogleFonts.inter(
-                color: const Color(0xFFB3261E),
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
+                color: const Color(0x8A8A8A8A),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                "Don't worry! Please submit and our team will be in touch",
-                style: GoogleFonts.inter(
-                  color: const Color(0xFFB3261E),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  height: 1.35,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

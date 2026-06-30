@@ -44,7 +44,7 @@ class RfqRemoteDatasourceImpl implements RfqRemoteDatasource {
     Map<String, dynamic> payload,
   ) async {
     final response = await _dio.post<dynamic>(
-      '/orders/rfq_quotecreate_offline/',
+      '/orders/cart/create_quote_request/',
       data: payload,
     );
     final raw = response.data;

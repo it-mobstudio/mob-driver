@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/uploaded_file.dart';
+import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/domain/repositories/magic_quote_repository.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/domain/utils/magic_quote_status.dart';
 
@@ -56,6 +57,11 @@ final class MagicQuoteError extends MagicQuoteState {
   final String message;
 }
 
+final class MagicQuoteRateLimited extends MagicQuoteState {
+  MagicQuoteRateLimited(this.message);
+  final String message;
+}
+
 final class MagicQuoteQuestionsLoading extends MagicQuoteState {}
 
 final class MagicQuoteQuestionsLoaded extends MagicQuoteState {
@@ -99,6 +105,11 @@ class MagicQuoteBloc extends Bloc<MagicQuoteEvent, MagicQuoteState> {
     );
     if (failure != null) {
       AppHaptics.error();
+      if (failure is ServerFailure &&
+          (failure.statusCode == 429 || failure.statusCode == 503)) {
+        emit(MagicQuoteRateLimited(failure.message));
+        return;
+      }
       emit(MagicQuoteError(failure.message));
       return;
     }
