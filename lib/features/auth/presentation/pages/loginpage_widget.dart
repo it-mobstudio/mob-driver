@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/shared/login_top_banner.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
-import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -22,19 +21,6 @@ class LoginpageWidget extends StatefulWidget {
 class _LoginpageWidgetState extends State<LoginpageWidget> {
   final _mobileController = TextEditingController();
   final _mobileFocusNode = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (AuthSession.instance.isAuthenticated) {
-        context.go(AuthSession.instance.needsRegistration
-            ? SignupWidget.routePath
-            : HomepageWidget.routePath);
-      }
-    });
-  }
 
   @override
   void dispose() {

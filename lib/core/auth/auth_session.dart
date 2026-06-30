@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '/backend/api_requests/api_manager.dart';
 import '/core/config/app_config.dart';
 
-class AuthSession {
+class AuthSession extends ChangeNotifier {
   AuthSession._();
 
   static final AuthSession instance = AuthSession._();
@@ -25,9 +26,7 @@ class AuthSession {
     defaultValue: '/accounts/mob_user/auth/refresh/',
   );
 
-  static const FlutterSecureStorage _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   String? _accessToken;
   String? _refreshToken;
@@ -131,6 +130,7 @@ class AuthSession {
     }
 
     ApiManager.setAccessToken(_accessToken);
+    notifyListeners();
   }
 
   Future<void> saveSession({
@@ -140,18 +140,45 @@ class AuthSession {
     bool? isProFirstTime,
     bool needsRegistration = false,
   }) async {
-    await saveTokens(accessToken: accessToken, refreshToken: refreshToken);
-    await saveUserDetails(userDetails);
+    final prefs = await SharedPreferences.getInstance();
+    _accessToken = accessToken.trim();
+    _refreshToken = _normalizeString(refreshToken);
+    _userDetails =
+        userDetails == null ? null : Map<String, dynamic>.from(userDetails);
+    _needsRegistration = needsRegistration;
+
+    await _storage.write(key: _accessTokenKey, value: _accessToken);
+    await prefs.setString(_prefsAccessTokenKey, _accessToken!);
+    if (_refreshToken != null && _refreshToken!.isNotEmpty) {
+      await _storage.write(key: _refreshTokenKey, value: _refreshToken);
+      await prefs.setString(_prefsRefreshTokenKey, _refreshToken!);
+    } else {
+      await _storage.delete(key: _refreshTokenKey);
+      await prefs.remove(_prefsRefreshTokenKey);
+    }
+
+    if (_userDetails != null && _userDetails!.isNotEmpty) {
+      final encoded = jsonEncode(_userDetails);
+      await _storage.write(key: _userDetailsKey, value: encoded);
+      await prefs.setString(_prefsUserDetailsKey, encoded);
+    } else {
+      await _storage.delete(key: _userDetailsKey);
+      await prefs.remove(_prefsUserDetailsKey);
+    }
+
     if (isProFirstTime != null) {
       await setIsProFirstTime(isProFirstTime);
     }
-    await setNeedsRegistration(needsRegistration);
+    await prefs.setBool(_needsRegistrationKey, needsRegistration);
+    ApiManager.setAccessToken(_accessToken);
+    notifyListeners();
   }
 
   Future<void> setNeedsRegistration(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     _needsRegistration = value;
     await prefs.setBool(_needsRegistrationKey, value);
+    notifyListeners();
   }
 
   Future<void> saveUserDetails(Map<String, dynamic>? userDetails) async {
@@ -194,6 +221,7 @@ class AuthSession {
     ApiManager.clearCache('homeData');
     ApiManager.clearCache('browseProducts');
     ApiManager.clearCache('productDetails');
+    notifyListeners();
   }
 
   Future<String?> refreshAccessToken() async {

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_apply_sheet.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_documents_sheet.dart';
-import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page_widgets.dart';
-import 'package:m_o_b_demand_side/shared/tab_header.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 
 const _creditWhatsappNumber = '918970415365';
 
@@ -18,140 +16,136 @@ class CreditPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
+      body: Stack(
         children: [
-          const TabHeader(showTopSearchBar: false, showLocationheader: false),
-          Expanded(
-            child: Stack(
-              children: [
-                ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              const SliverToBoxAdapter(
+                child: MobCreditHero(showBackButton: false),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 28, 16, 112),
+                sliver: SliverList.list(
                   children: [
-                    const CreditHeroBanner(),
-                    const SizedBox(height: 24),
-                    Text.rich(
+                    const MobCreditSectionTitle.rich(
                       TextSpan(
                         children: [
+                          TextSpan(text: 'mobCREDIT is for'),
                           TextSpan(
-                            text: 'mobCREDIT is for ',
-                            style: AppTextStyles.body14Bold.copyWith(
-                              fontSize: 16,
-                            ),
-                          ),
-                          TextSpan(
-                            text: '(with GSTIN)',
-                            style: AppTextStyles.body14.copyWith(
-                              color: AppColors.inputHint,
-                              fontSize: 13,
+                            text: ' (with GSTIN)',
+                            style: TextStyle(
+                              color: Color(0xFF767C8F),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              height: 20 / 14,
                             ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const CreditSegmentPills(
-                      labels: ['Architects', 'Contractors', 'Builders'],
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'mobCREDIT terms',
-                      style: AppTextStyles.body14Bold.copyWith(fontSize: 16),
-                    ),
+                    const MobCreditAudiencePills(),
+                    const SizedBox(height: 36),
+                    MobCreditSectionTitle('mobCREDIT terms'),
                     const SizedBox(height: 12),
-                    const CreditTermCard(
-                      icon: Icons.currency_rupee_rounded,
+                    const MobCreditTermCard(
+                      icon: 'assets/images/getcreditterm.svg',
                       title: 'Get credit upto 25 lakhs',
                       description:
                           'Credit amount is based on your CIBIL score and tax filings',
                     ),
-                    const SizedBox(height: 12),
-                    const CreditTermCard(
-                      icon: Icons.home_outlined,
+                    const SizedBox(height: 16),
+                    const MobCreditTermCard(
+                      icon: 'assets/images/nocollateralterm.svg',
                       title: 'No collateral required',
                       description:
                           'Enjoy collateral-free mobCREDIT! Just note that E-NACH is mandatory',
                     ),
-                    const SizedBox(height: 12),
-                    const CreditTermCard(
-                      icon: Icons.calendar_month_outlined,
+                    const SizedBox(height: 16),
+                    const MobCreditTermCard(
+                      icon: 'assets/images/repaymentterm.svg',
                       title: 'Upto 90 days repayment',
                       description:
                           'Repay anytime within 90 days. The first 21 days post-delivery are interest-free, with daily interest applied thereafter.',
+                      height: 116,
                     ),
-                    const SizedBox(height: 28),
-                    Text(
-                      'How does mobCREDIT work?',
-                      style: AppTextStyles.body14Bold.copyWith(fontSize: 16),
-                    ),
-                    const SizedBox(height: 16),
-                    const CreditHowItWorksMockup(),
-                    const SizedBox(height: 24),
-                    CreditDocumentsCard(
+                    const SizedBox(height: 36),
+                    MobCreditSectionTitle('How does mobCREDIT work?'),
+                    const SizedBox(height: 12),
+                    const MobCreditHowItWorksCard(),
+                    const SizedBox(height: 40),
+                    MobCreditDocumentsCard(
                       onViewDocuments: () => showCreditDocumentsSheet(context),
                     ),
                     const SizedBox(height: 16),
-                    const CreditIndiaCard(),
-                    const SizedBox(height: 28),
-                    Text(
-                      'What our members say',
-                      style: AppTextStyles.body14Bold.copyWith(fontSize: 16),
-                    ),
+                    const MobCreditIndiaCard(),
+                    const SizedBox(height: 40),
+                    MobCreditSectionTitle('What our members say'),
                     const SizedBox(height: 12),
-                    const CreditTestimonialsCarousel(
-                      testimonials: [
-                        CreditTestimonial(
-                          quote:
-                              'mobCREDIT has simplified the process, eliminating the hassle of constantly requesting credit from suppliers. Now, we focus on what matters most—building! Highly recommend it!',
-                          name: 'Sankalp Solanki',
-                          role: 'Architect',
-                        ),
-                      ],
+                    const MobCreditTestimonialCard(),
+                    const SizedBox(height: 30),
+                    MobCreditSupportCard(
+                      onChatTap: () => _chatWithUs(context),
                     ),
-                    const SizedBox(height: 24),
-                    CreditSupportCard(onChatTap: () => _chatWithUs(context)),
-                    const SizedBox(height: 16),
-                    CreditFaqRow(
-                      onTap: () =>
-                          ScaffoldMessenger.of(context).showSnackBar(
+                    const SizedBox(height: 40),
+                    MobCreditFaqRow(
+                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Coming soon')),
                       ),
                     ),
+                    const SizedBox(height: 28),
                   ],
                 ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: SafeArea(
-                    top: false,
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0x14000000),
-                            blurRadius: 12,
-                            offset: Offset(0, -4),
-                          ),
-                        ],
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: AppComponentStyles.buttonHeight,
-                        child: ElevatedButton(
-                          onPressed: () => showCreditApplySheet(context),
-                          style: AppComponentStyles.primaryButton,
-                          child: Text(
-                            'Apply for mobCREDIT',
-                            style: AppTextStyles.buttonLabel,
-                          ),
-                        ),
-                      ),
+              ),
+            ],
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              ignoring: true,
+              child: Container(
+                height: 80,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x00FFFFFF), Colors.white],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => showCreditApplySheet(context),
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: const Color(0xFF0360E5),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Apply for mobCREDIT',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 21 / 14,
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ],

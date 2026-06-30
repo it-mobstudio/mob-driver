@@ -144,13 +144,14 @@ class _SignupWidgetState extends State<SignupWidget> {
     return valid;
   }
 
-  Future<void> _onAgreeAndContinue(BuildContext context) async {
+  Future<void> _onAgreeAndContinue() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final referralCode = _normalizeReferralCode(_referralCodeController.text);
     if (referralCode.isNotEmpty) {
       final isValid = await _checkReferralCode(force: true);
       if (!isValid) return;
     }
+    if (!mounted) return;
     _lastSubmittedReferralCode = referralCode;
     context.read<AuthBloc>().add(AuthRegisterRequested(
           name: _nameController.text.trim(),
@@ -276,7 +277,7 @@ class _SignupWidgetState extends State<SignupWidget> {
                                 child: ElevatedButton(
                                   onPressed: isLoading
                                       ? null
-                                      : () => _onAgreeAndContinue(context),
+                                      : _onAgreeAndContinue,
                                   style: AppComponentStyles.primaryButton,
                                   child: isLoading
                                       ? const SizedBox(

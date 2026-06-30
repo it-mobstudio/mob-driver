@@ -63,19 +63,27 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Widget build(BuildContext context) {
     return BlocProvider<OrdersBloc>.value(
       value: _ordersBloc,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          bottom: false,
-          child: BlocBuilder<OrdersBloc, OrdersState>(
-            builder: (context, state) {
-              final order = switch (state) {
-                OrderDetailLoaded(:final order) => order,
-                _ => null,
-              };
-              final shipments = _shipmentsFor(order);
+      child: BlocBuilder<OrdersBloc, OrdersState>(
+        builder: (context, state) {
+          final order = switch (state) {
+            OrderDetailLoaded(:final order) => order,
+            _ => null,
+          };
+          final shipments = _shipmentsFor(order);
+          final trackingShipment = _trackingShipment(order, shipments);
 
-              return Column(
+          if (order != null && trackingShipment != null) {
+            return OrderTrackingPage(
+              order: order,
+              shipment: trackingShipment,
+            );
+          }
+
+          return Scaffold(
+            backgroundColor: Colors.white,
+            body: SafeArea(
+              bottom: false,
+              child: Column(
                 children: [
                   _OrderDetailHeader(order: order),
                   Expanded(
@@ -108,8 +116,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                     index: i + 1,
                                     title: _shipmentTitle(shipments[i], i),
                                     icon: _shipmentIcon(shipments[i], i),
-                                    iconBackground:
-                                        _shipmentIconBackground(shipments[i], i),
+                                    iconBackground: _shipmentIconBackground(
+                                        shipments[i], i),
                                     iconColor: _shipmentIconColor(shipments[i]),
                                     items: shipments[i].items,
                                   ),
@@ -134,10 +142,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     },
                   ),
                 ],
-              );
-            },
-          ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -190,7 +198,53 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   bool _isDelivered(OrderShipmentEntity shipment) {
-    return shipment.status.trim().toLowerCase().contains('deliver');
+    return _isDeliveredStatus(shipment.status);
+  }
+
+  OrderShipmentEntity? _trackingShipment(
+    OrderEntity? order,
+    List<OrderShipmentEntity> shipments,
+  ) {
+    for (final shipment in shipments) {
+      if (_isDelivered(shipment) || _isOutForDeliveryStatus(shipment.status)) {
+        return shipment;
+      }
+    }
+    if (order != null &&
+        (_isDeliveredStatus(order.status) ||
+            _isOutForDeliveryStatus(order.status))) {
+      return OrderShipmentEntity(
+        id: shipments.isNotEmpty ? shipments.first.id : order.id,
+        status: order.status,
+        deliveryDate: shipments.isNotEmpty
+            ? shipments.first.deliveryDate
+            : order.createdAt,
+        items: shipments.isNotEmpty ? shipments.first.items : order.items,
+      );
+    }
+    return null;
+  }
+
+  bool _isOutForDeliveryStatus(String status) {
+    final normalized =
+        status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    final compact = normalized.replaceAll(' ', '');
+    return normalized.contains('out for delivery') ||
+        compact.contains('outfordelivery') ||
+        normalized.contains('out for shipment') ||
+        normalized.contains('on the way');
+  }
+
+  bool _isDeliveredStatus(String status) {
+    final normalized =
+        status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    if (_isOutForDeliveryStatus(status)) {
+      return false;
+    }
+    return normalized.contains('deliver') ||
+        normalized.contains('completed') ||
+        normalized.contains('received') ||
+        normalized.contains('fulfilled');
   }
 }
 

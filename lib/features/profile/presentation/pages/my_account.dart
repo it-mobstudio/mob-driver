@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
-import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
-import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
@@ -75,7 +75,7 @@ class _ProfileBody extends StatelessWidget {
               sliver: SliverList.list(
                 children: [
                   _MobCreditCard(
-                    onTap: () => context.push(CreditPage.routePath),
+                    onTap: () => context.push(MobCreditProfilePage.routePath),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -113,13 +113,15 @@ class _ProfileBody extends StatelessWidget {
                       ),
                       _MenuItem(
                         iconAsset: 'assets/images/addresses.svg',
-                        label: 'Address',
-                        onTap: () => _comingSoon(context, 'Address'),
+                        label: 'Addresses',
+                        onTap: () =>
+                            context.push(AddressSelectionWidget.routePath),
                       ),
                       _MenuItem(
                         iconAsset: 'assets/images/mobcreditprofile.svg',
                         label: 'mob Credit',
-                        onTap: () => context.push(CreditPage.routePath),
+                        onTap: () =>
+                            context.push(MobCreditProfilePage.routePath),
                       ),
                       _MenuItem(
                         iconAsset: 'assets/images/myprojects.svg',
@@ -166,11 +168,11 @@ class _ProfileBody extends StatelessWidget {
                         label: 'Become a partner',
                         onTap: () => _comingSoon(context, 'Become a partner'),
                       ),
-                      _MenuItem(
+                      const _MenuItem(
                         iconAsset: 'assets/images/logout.svg',
                         label: 'Logout',
                         showChevron: false,
-                        onTap: () => _logout(context),
+                        onTap: _logout,
                       ),
                     ],
                   ),
@@ -190,9 +192,8 @@ class _ProfileBody extends StatelessWidget {
     );
   }
 
-  static Future<void> _logout(BuildContext context) async {
+  static Future<void> _logout() async {
     await AuthSession.instance.signOut();
-    if (context.mounted) context.go(LoginpageWidget.routePath);
   }
 }
 
@@ -225,7 +226,7 @@ class _ProfileHeader extends StatelessWidget {
                     customBorder: const CircleBorder(),
                     onTap: () => context.canPop()
                         ? context.pop()
-                        : context.go('/homepage'),
+                        : context.pushReplacement('/homepage'),
                     child: const Icon(
                       Icons.arrow_back,
                       size: 19,
@@ -314,7 +315,7 @@ class _MembershipBar extends StatelessWidget {
             child: Row(
               children: [
                 SvgPicture.asset(
-                  'assets/images/goldstar.svg',
+                  'assets/images/bronze.svg',
                   width: 24,
                   height: 23,
                 ),
@@ -636,7 +637,14 @@ class _MenuRow extends StatelessWidget {
                   height: 24,
                 ),
                 const SizedBox(width: 16),
-                Expanded(child: Text(item.label, style: _labelStyle)),
+                Expanded(
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _labelStyle,
+                  ),
+                ),
                 if (item.showChevron)
                   const Icon(
                     Icons.chevron_right,

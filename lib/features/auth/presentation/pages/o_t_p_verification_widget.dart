@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
-import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '/index.dart';
@@ -40,14 +39,6 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
         if (mounted) setState(() {});
       });
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (AuthSession.instance.isAuthenticated) {
-        context.go(AuthSession.instance.needsRegistration
-            ? SignupWidget.routePath
-            : HomepageWidget.routePath);
-      }
-    });
     _startResendTimer();
   }
 
@@ -101,16 +92,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthVerified) {
-          if (state.isNewAccount) {
-            context.go(
-              SignupWidget.routePath,
-              extra: {'phoneNumber': widget.phoneNumber},
-            );
-          } else {
-            context.go(HomepageWidget.routePath);
-          }
-        } else if (state is AuthOtpSent) {
+        if (state is AuthOtpSent) {
           _startResendTimer();
         } else if (state is AuthError) {
           _showDialog(context, 'OTP Failed', state.message);

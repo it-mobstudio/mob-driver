@@ -68,19 +68,22 @@ class AuthRepositoryImpl implements AuthRepository {
       final userDetailsRaw = payload['data'] is Map
           ? Map<String, dynamic>.from(payload['data'] as Map)
           : <String, dynamic>{};
+      final userDetails = userDetailsRaw.isNotEmpty
+          ? userDetailsRaw
+          : <String, dynamic>{'phone': emailOrPhone};
 
       final result = AuthVerifyResult(
         accessToken: accessToken,
         refreshToken: refreshToken,
         isNewAccount: payload['newAccount'] == true,
-        userDetails: userDetailsRaw,
+        userDetails: userDetails,
       );
 
       // Persist session via AuthSession (source of truth for tokens)
       await AuthSession.instance.saveSession(
         accessToken: accessToken,
         refreshToken: refreshToken,
-        userDetails: userDetailsRaw.isNotEmpty ? userDetailsRaw : null,
+        userDetails: userDetails,
         needsRegistration: result.isNewAccount,
       );
 
