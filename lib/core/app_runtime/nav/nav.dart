@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_page.dar
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_rfq_request_page.dart';
 import 'package:m_o_b_demand_side/features/categories/presentation/pages/categories_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_order_review_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_payment_page.dart';
@@ -65,26 +66,73 @@ final _authRoutePaths = {
   SignupWidget.routePath,
 };
 
-GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
-      initialLocation: '/',
-      debugLogDiagnostics: kDebugMode,
-      refreshListenable: appStateNotifier,
-      navigatorKey: appNavigatorKey,
-      observers: <NavigatorObserver>[AnalyticsService.instance.observer],
-      redirect: (context, state) {
-        if (appStateNotifier.showSplashImage) return null;
-        if (!AuthSession.instance.isAuthenticated) return null;
-        final loc = state.matchedLocation;
-        if (AuthSession.instance.needsRegistration) {
-          return loc == SignupWidget.routePath ? null : SignupWidget.routePath;
-        }
-        return _authRoutePaths.contains(loc) ? HomepageWidget.routePath : null;
-      },
-      errorBuilder: (context, state) => appStateNotifier.showSplashImage
-          ? const SplashScreen()
-          : (AuthSession.instance.isAuthenticated
-              ? const HomepageWidget()
-              : const LoginpageWidget()),
+String _labelFromSlug(String slug) {
+  return slug
+      .split('-')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
+}
+
+/// Combined notifier that listens to both app state and auth changes
+class _CombinedStateNotifier extends ChangeNotifier {
+  _CombinedStateNotifier(
+    AppStateNotifier appNotifier,
+    AuthSession authSession,
+  )   : _appNotifier = appNotifier,
+        _authSession = authSession {
+    _appNotifier.addListener(_onStateChanged);
+    _authSession.addListener(_onStateChanged);
+  }
+
+  final AppStateNotifier _appNotifier;
+  final AuthSession _authSession;
+
+  void _onStateChanged() {
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _appNotifier.removeListener(_onStateChanged);
+    _authSession.removeListener(_onStateChanged);
+    super.dispose();
+  }
+}
+
+GoRouter createRouter(AppStateNotifier appStateNotifier) {
+  final combinedNotifier = _CombinedStateNotifier(
+    appStateNotifier,
+    AuthSession.instance,
+  );
+
+  return GoRouter(
+    initialLocation: '/',
+    debugLogDiagnostics: kDebugMode,
+    refreshListenable: combinedNotifier,
+    navigatorKey: appNavigatorKey,
+    observers: <NavigatorObserver>[AnalyticsService.instance.observer],
+    redirect: (context, state) {
+      if (appStateNotifier.showSplashImage) return null;
+      final loc = state.matchedLocation;
+      final isAuthRoute = _authRoutePaths.contains(loc);
+      if (!AuthSession.instance.isAuthenticated) {
+        return isAuthRoute ? null : LoginpageWidget.routePath;
+      }
+      if (AuthSession.instance.needsRegistration) {
+        return loc == SignupWidget.routePath ? null : SignupWidget.routePath;
+      }
+      // Existing/logged-in users should not remain on splash, login, or OTP.
+      // The signup page is allowed here so the registration success listener can
+      // finish its address-selection navigation without a router race.
+      if (loc == SignupWidget.routePath) return null;
+      return isAuthRoute ? HomepageWidget.routePath : null;
+    },
+    errorBuilder: (context, state) => appStateNotifier.showSplashImage
+        ? const SplashScreen()
+        : (AuthSession.instance.isAuthenticated
+            ? const HomepageWidget()
+            : const LoginpageWidget()),
       routes: [
         GoRoute(
           name: '_initialize',
@@ -388,6 +436,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, state) => const MyAccountWidget(),
         ),
         GoRoute(
+          name: MobCreditProfilePage.routeName,
+          path: MobCreditProfilePage.routePath,
+          parentNavigatorKey: appNavigatorKey,
+          builder: (context, state) => const MobCreditProfilePage(),
+        ),
+        GoRoute(
           name: PersonalInfoPage.routeName,
           path: PersonalInfoPage.routePath,
           parentNavigatorKey: appNavigatorKey,
@@ -449,6 +503,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         ),
       ],
     );
+}
 
 extension NavigationExtensions on BuildContext {
   void safePop() {
@@ -468,12 +523,4 @@ extension GoRouterLocationExtension on GoRouter {
         : routerDelegate.currentConfiguration;
     return matchList.uri.toString();
   }
-}
-
-String _labelFromSlug(String slug) {
-  return slug
-      .split('-')
-      .where((part) => part.isNotEmpty)
-      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-      .join(' ');
 }

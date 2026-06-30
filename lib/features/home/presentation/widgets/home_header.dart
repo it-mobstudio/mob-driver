@@ -131,14 +131,20 @@ class _HomeHeaderState extends State<HomeHeader> {
               const SizedBox(width: 8),
               InkWell(
                 onTap: () => context.push(MobstarPage.routePath),
+                borderRadius: BorderRadius.circular(18),
                 child: Container(
                   width: 72,
                   height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFD0D4DC)),
+                  ),
                   alignment: Alignment.center,
-                  child: SvgPicture.asset(
-                    'assets/images/mobstaricon.svg',
-                    width: 72,
-                    height: 36,
+                  child: const Icon(
+                    Icons.card_giftcard_outlined,
+                    size: 19,
+                    color: Color(0xFF0A243F),
                   ),
                 ),
               ),

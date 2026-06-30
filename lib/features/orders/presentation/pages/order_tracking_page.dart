@@ -35,6 +35,9 @@ class OrderTrackingPage extends StatelessWidget {
     final trackingStatus =
         shipmentStatus.isNotEmpty ? shipmentStatus : orderStatus;
     final trackingState = _TrackingState.fromStatus(trackingStatus);
+    final deliveryDate = shipment?.deliveryDate.trim().isNotEmpty == true
+        ? shipment!.deliveryDate.trim()
+        : '15 Jan 2026 at 01:30 PM';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F1F2),
@@ -42,7 +45,7 @@ class OrderTrackingPage extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            const _TrackingHeader(),
+            _TrackingHeader(title: trackingState.headerTitle),
             Expanded(
               child: SingleChildScrollView(
                 child: DecoratedBox(
@@ -51,25 +54,32 @@ class OrderTrackingPage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      _TrackingHeroSection(state: trackingState),
+                      _TrackingHeroSection(
+                        state: trackingState,
+                        deliveryDate: deliveryDate,
+                      ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
                         child: Column(
                           children: [
-                            const _DeliveryPartnerCard(),
-                            const SizedBox(height: 12),
-                            _DeliveryAddressCard(address: address),
-                            const SizedBox(height: 12),
+                            if (!trackingState.isDelivered) ...[
+                              const _DeliveryPartnerCard(),
+                              const SizedBox(height: 12),
+                              _DeliveryAddressCard(address: address),
+                              const SizedBox(height: 12),
+                            ],
+                            if (trackingState.canDownloadInvoice) ...[
+                              const _DownloadInvoiceButton(),
+                              const SizedBox(height: 12),
+                            ],
                             _TrackingItemsCard(
                               items: items,
                               orderNumber: orderNumber,
                             ),
                             const SizedBox(height: 12),
-                            if (trackingState.isOutForDelivery) ...[
-                              const _DownloadInvoiceButton(),
-                              const SizedBox(height: 12),
-                            ],
                             const _TrackingHelpCard(),
+                            const SizedBox(height: 12),
+                            const _TrackingRatingCard(),
                             const SizedBox(height: 32),
                           ],
                         ),
@@ -87,7 +97,9 @@ class OrderTrackingPage extends StatelessWidget {
 }
 
 class _TrackingHeader extends StatelessWidget {
-  const _TrackingHeader();
+  const _TrackingHeader({required this.title});
+
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +133,7 @@ class _TrackingHeader extends StatelessWidget {
             right: 56,
             child: Center(
               child: Text(
-                'Track order',
+                title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
@@ -141,9 +153,13 @@ class _TrackingHeader extends StatelessWidget {
 }
 
 class _TrackingHeroSection extends StatelessWidget {
-  const _TrackingHeroSection({required this.state});
+  const _TrackingHeroSection({
+    required this.state,
+    required this.deliveryDate,
+  });
 
   final _TrackingState state;
+  final String deliveryDate;
 
   @override
   Widget build(BuildContext context) {
@@ -151,8 +167,8 @@ class _TrackingHeroSection extends StatelessWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final scale = width / 375;
-        final sectionHeight = 390 * scale;
-        final etaTop = 300 * scale;
+        final sectionHeight = state.isDelivered ? 430 * scale : 390 * scale;
+        final etaTop = state.isDelivered ? 344 * scale : 300 * scale;
 
         return SizedBox(
           height: sectionHeight,
@@ -165,7 +181,7 @@ class _TrackingHeroSection extends StatelessWidget {
                 top: 0,
                 child: _TrackingHero(
                   state: state,
-                  height: 404 * scale,
+                  height: state.isDelivered ? 448 * scale : 404 * scale,
                   gradientHeight: 120 * scale,
                 ),
               ),
@@ -173,7 +189,10 @@ class _TrackingHeroSection extends StatelessWidget {
                 left: 16,
                 right: 16,
                 top: etaTop,
-                child: _EtaCard(state: state),
+                child: _EtaCard(
+                  state: state,
+                  deliveryDate: deliveryDate,
+                ),
               ),
             ],
           ),
@@ -205,40 +224,79 @@ class _TrackingHero extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: Colors.white),
-              ),
-            ),
             Positioned.fill(
-              child: Image.asset(
-                state.heroAsset,
-                fit: BoxFit.cover,
-                alignment: Alignment.bottomCenter,
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: double.infinity,
-                height: gradientHeight,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment(0.5, 0),
-                    end: Alignment(0.5, 1),
-                    colors: [
-                      Color(0x00F1F1F2),
-                      Color(0xFF828282),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(24),
-                  ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: state.isDelivered
+                      ? const Color(0xFF05060A)
+                      : Colors.white,
+                  gradient: state.isDelivered
+                      ? const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xFF05060A), Color(0xFF373E52)],
+                        )
+                      : null,
                 ),
               ),
             ),
+            if (state.isOutForDelivery)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: height * 0.077,
+                height: height * 0.696,
+                child: Image.asset(
+                  state.heroAsset,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  filterQuality: FilterQuality.high,
+                ),
+              )
+            else if (state.isDelivered)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: height * 0.02,
+                bottom: height * 0.17,
+                child: Image.asset(
+                  state.heroAsset,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomCenter,
+                  filterQuality: FilterQuality.high,
+                ),
+              )
+            else
+              Positioned.fill(
+                child: Image.asset(
+                  state.heroAsset,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.bottomCenter,
+                ),
+              ),
+            if (!state.isDelivered)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: double.infinity,
+                  height: gradientHeight,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment(0.5, 0),
+                      end: Alignment(0.5, 1),
+                      colors: [
+                        Color(0x00F1F1F2),
+                        Color(0xFF828282),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(24),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -247,9 +305,13 @@ class _TrackingHero extends StatelessWidget {
 }
 
 class _EtaCard extends StatelessWidget {
-  const _EtaCard({required this.state});
+  const _EtaCard({
+    required this.state,
+    required this.deliveryDate,
+  });
 
   final _TrackingState state;
+  final String deliveryDate;
 
   @override
   Widget build(BuildContext context) {
@@ -276,23 +338,33 @@ class _EtaCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    SvgPicture.asset(
-                      'assets/images/thunder.svg',
-                      width: 24,
-                      height: 24,
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFF329537),
-                        BlendMode.srcIn,
-                      ),
-                    ),
+                    state.isDelivered
+                        ? const Icon(
+                            Icons.check_circle,
+                            color: Color(0xFF10B320),
+                            size: 24,
+                          )
+                        : SvgPicture.asset(
+                            'assets/images/thunder.svg',
+                            width: 24,
+                            height: 24,
+                            colorFilter: const ColorFilter.mode(
+                              Color(0xFF329537),
+                              BlendMode.srcIn,
+                            ),
+                          ),
                     const SizedBox(width: 10),
-                    Text(
-                      '3h 30mins',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF010101),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        height: 30 / 24,
+                    Flexible(
+                      child: Text(
+                        state.isDelivered ? 'Delivered' : '3h 30mins',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF010101),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          height: 30 / 24,
+                        ),
                       ),
                     ),
                   ],
@@ -301,7 +373,7 @@ class _EtaCard extends StatelessWidget {
                 SizedBox(
                   width: 188,
                   child: Text(
-                    state.subtitle,
+                    state.isDelivered ? deliveryDate : state.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
@@ -693,6 +765,64 @@ class _TrackingHelpCard extends StatelessWidget {
   }
 }
 
+class _TrackingRatingCard extends StatelessWidget {
+  const _TrackingRatingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _TrackingCard(
+      height: 80,
+      child: Row(
+        children: [
+          const _RoundIcon(
+            background: Color(0xFFFFF2A7),
+            icon: Icons.sentiment_satisfied_alt_rounded,
+            iconColor: Color(0xFF0A243F),
+            size: 48,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'How likely are you to recommend us?',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                color: _TrackingColors.navy,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                height: 20 / 14,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          TextButton(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Rating coming soon')),
+              );
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF0360E5),
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(36, 32),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Rate',
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0360E5),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                height: 18 / 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TrackingCard extends StatelessWidget {
   const _TrackingCard({
     required this.height,
@@ -802,7 +932,8 @@ class _ProductThumb extends StatelessWidget {
 enum _TrackingState {
   packing,
   packed,
-  outForDelivery;
+  outForDelivery,
+  delivered;
 
   factory _TrackingState.fromStatus(String status) {
     final value =
@@ -813,6 +944,13 @@ enum _TrackingState {
         value.contains('out for shipment') ||
         value.contains('on the way')) {
       return _TrackingState.outForDelivery;
+    }
+    if (value.contains('delivered') ||
+        value.contains('completed') ||
+        value.contains('received') ||
+        value.contains('fulfilled') ||
+        compactValue == 'deliver') {
+      return _TrackingState.delivered;
     }
     if (value.contains('order is packed') ||
         value.contains('your order is packed') ||
@@ -826,6 +964,7 @@ enum _TrackingState {
 
   String get subtitle {
     return switch (this) {
+      _TrackingState.delivered => 'Delivered',
       _TrackingState.outForDelivery => 'Out for delivery',
       _TrackingState.packed => 'Your order is packed',
       _TrackingState.packing => 'Packing your order',
@@ -834,13 +973,27 @@ enum _TrackingState {
 
   String get heroAsset {
     return switch (this) {
-      _TrackingState.outForDelivery => 'assets/images/Deliveredintacking.webp',
+      _TrackingState.delivered => 'assets/images/Deliveredintacking.webp',
+      _TrackingState.outForDelivery =>
+        'assets/images/out_for_delivery_tracking.png',
       _TrackingState.packed => 'assets/images/Your order is packed.webp',
       _TrackingState.packing => 'assets/images/Packing your order.webp',
     };
   }
 
+  String get headerTitle {
+    return switch (this) {
+      _TrackingState.delivered => 'Shipment 1',
+      _ => 'Track order',
+    };
+  }
+
+  bool get isDelivered => this == _TrackingState.delivered;
+
   bool get isOutForDelivery => this == _TrackingState.outForDelivery;
+
+  bool get canDownloadInvoice =>
+      this == _TrackingState.outForDelivery || this == _TrackingState.delivered;
 }
 
 class _TrackingColors {

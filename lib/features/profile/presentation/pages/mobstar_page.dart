@@ -137,10 +137,8 @@ class _MobstarView extends StatelessWidget {
                                     Text(mobstar.membership,
                                         style: _text(
                                             14, Colors.white, FontWeight.w500)),
-                                    SvgPicture.asset(
-                                        'assets/images/goldstar.svg',
-                                        width: 24,
-                                        height: 23),
+                                    SvgPicture.asset('assets/images/bronze.svg',
+                                        width: 24, height: 23),
                                   ]),
                             ),
                           ),
@@ -227,23 +225,26 @@ class _MobstarView extends StatelessWidget {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Row(children: [
-                      Expanded(
-                          child: _BenefitCard(
-                              asset: 'assets/images/Xpoints.svg',
-                              title: '1X points',
-                              subtitle: 'on every purchase')),
-                      SizedBox(width: 15),
-                      Expanded(
-                          child: _BenefitCard(
-                              asset: 'assets/images/freeimg.svg',
-                              title: 'FREE',
-                              subtitle: 'deliveries')),
-                    ]),
+                        Expanded(
+                            child: _BenefitCard(
+                                asset: 'assets/images/Xpoints.svg',
+                                title: '1X points',
+                                subtitle: 'on every purchase')),
+                        SizedBox(width: 15),
+                        Expanded(
+                            child: _BenefitCard(
+                                asset: 'assets/images/freeimg.svg',
+                                title: 'FREE',
+                                subtitle: 'deliveries')),
+                      ]),
                   ),
                   const SizedBox(height: 40),
                   const _SectionLabel('LEVEL UPGRADE'),
                   const SizedBox(height: 16),
-                  _LevelCard(mobstar: mobstar),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _LevelCard(mobstar: mobstar),
+                  ),
                   const SizedBox(height: 12),
                   Center(
                     child: Material(
@@ -333,7 +334,7 @@ class _SectionLabel extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) =>
-      Row(mainAxisSize: MainAxisSize.min, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         SvgPicture.asset('assets/images/leftdot.svg', width: 43, height: 6),
         const SizedBox(width: 10),
         Text(text,
@@ -395,7 +396,6 @@ class _LevelCard extends StatelessWidget {
         );
 
     return Container(
-      width: 343,
       height: 130,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: .03),
@@ -463,7 +463,7 @@ class _LevelCard extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 20,
                       backgroundColor: const Color(0xFF161722),
-                      child: SvgPicture.asset('assets/images/goldstar.svg',
+                      child: SvgPicture.asset('assets/images/bronze.svg',
                           width: 24, height: 23),
                     ),
                   ),

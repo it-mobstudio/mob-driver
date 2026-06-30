@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -148,6 +147,7 @@ class MyAppState extends State<MyApp> {
 
   late AppStateNotifier _appStateNotifier;
   late GoRouter _router;
+  bool _isAuthenticated = false;
 
   String getRoute([RouteMatch? routeMatch]) {
     final RouteMatch lastMatch =
@@ -168,7 +168,27 @@ class MyAppState extends State<MyApp> {
     super.initState();
 
     _appStateNotifier = AppStateNotifier.instance;
+    _isAuthenticated = AuthSession.instance.isAuthenticated;
     _router = createRouter(_appStateNotifier);
+    AuthSession.instance.addListener(_handleAuthSessionChanged);
+  }
+
+  void _handleAuthSessionChanged() {
+    final nextIsAuthenticated = AuthSession.instance.isAuthenticated;
+    if (nextIsAuthenticated == _isAuthenticated || !mounted) return;
+    _isAuthenticated = nextIsAuthenticated;
+    setState(() {
+      _router.dispose();
+      appNavigatorKey = GlobalKey<NavigatorState>();
+      _router = createRouter(_appStateNotifier);
+    });
+  }
+
+  @override
+  void dispose() {
+    AuthSession.instance.removeListener(_handleAuthSessionChanged);
+    _router.dispose();
+    super.dispose();
   }
 
   void setThemeMode(ThemeMode mode) {
