@@ -130,7 +130,7 @@ class _HomeHeaderState extends State<HomeHeader> {
               ),
               const SizedBox(width: 8),
               InkWell(
-                onTap: () => context.push(ReferralPage.routePath),
+                onTap: () => context.push(MobstarPage.routePath),
                 borderRadius: BorderRadius.circular(18),
                 child: Container(
                   width: 72,
