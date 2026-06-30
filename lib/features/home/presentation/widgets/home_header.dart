@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
@@ -26,8 +28,15 @@ class _HomeHeaderState extends State<HomeHeader> {
   @override
   void initState() {
     super.initState();
+    AuthSession.instance.addListener(_onAuthSessionChanged);
     _loadSelectedAddress();
     _loadStoreStatus();
+  }
+
+  @override
+  void dispose() {
+    AuthSession.instance.removeListener(_onAuthSessionChanged);
+    super.dispose();
   }
 
   @override
@@ -45,11 +54,14 @@ class _HomeHeaderState extends State<HomeHeader> {
         ? 'Tap to set your delivery address'
         : _selectedAddressText(selectedAddress);
     final deliveryText = storeStatus?.message.trim().isNotEmpty == true
-        ? '${storeStatus!.message.trim()} delivery'
+        ? storeStatus?.isOpen == true
+            ? '${storeStatus!.message.trim()} delivery'
+            : storeStatus!.message.trim()
         : '';
     final deliveryIcon = storeStatus?.isOpen == false
         ? 'assets/images/timer-delivery.svg'
         : 'assets/images/thunder.svg';
+    final profilePictureUrl = _profilePictureUrl();
 
     return Container(
       color: const Color(0xFF121212),
@@ -135,16 +147,11 @@ class _HomeHeaderState extends State<HomeHeader> {
                 child: Container(
                   width: 72,
                   height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFD0D4DC)),
-                  ),
                   alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.card_giftcard_outlined,
-                    size: 19,
-                    color: Color(0xFF0A243F),
+                  child: SvgPicture.asset(
+                    'assets/images/mobstaricon.svg',
+                    width: 72,
+                    height: 36,
                   ),
                 ),
               ),
@@ -161,10 +168,9 @@ class _HomeHeaderState extends State<HomeHeader> {
                     border: Border.all(color: const Color(0xFFD0D4DC)),
                   ),
                   alignment: Alignment.center,
-                  child: SvgPicture.asset(
-                    'assets/icons/profile.svg',
-                    width: 18,
-                    height: 18,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: _ProfileAvatar(profilePictureUrl: profilePictureUrl),
                   ),
                 ),
               ),
@@ -173,6 +179,29 @@ class _HomeHeaderState extends State<HomeHeader> {
         ],
       ),
     );
+  }
+
+  void _onAuthSessionChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  String _profilePictureUrl() {
+    final raw =
+        AuthSession.instance.userDetails?['profile_picture']?.toString().trim();
+    if (raw == null || raw.isEmpty || raw == 'null') return '';
+
+    final uri = Uri.tryParse(raw);
+    if (uri != null && uri.hasScheme) return raw;
+    if (raw.startsWith('//')) {
+      final scheme = Uri.parse(AppConfig.apiBaseUrl).scheme;
+      return '$scheme:$raw';
+    }
+    if (raw.startsWith('/')) {
+      final apiUri = Uri.parse(AppConfig.apiBaseUrl);
+      return '${apiUri.scheme}://${apiUri.authority}$raw';
+    }
+    return Uri.parse(AppConfig.apiBaseUrl).resolve(raw).toString();
   }
 
   Future<void> _selectAddress() async {
@@ -221,5 +250,41 @@ class _HomeHeaderState extends State<HomeHeader> {
       return address.formattedAddress.trim();
     }
     return address.locationName.trim();
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.profilePictureUrl});
+
+  final String profilePictureUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (profilePictureUrl.isEmpty || profilePictureUrl == 'null') {
+      return const _ProfileIconFallback();
+    }
+
+    return Image.network(
+      profilePictureUrl,
+      width: 36,
+      height: 36,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => const _ProfileIconFallback(),
+    );
+  }
+}
+
+class _ProfileIconFallback extends StatelessWidget {
+  const _ProfileIconFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SvgPicture.asset(
+        'assets/icons/profile.svg',
+        width: 18,
+        height: 18,
+      ),
+    );
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
 
 class HomeSavingsCard extends StatelessWidget {
   const HomeSavingsCard({super.key});
@@ -94,21 +96,25 @@ class HomeSavingsCard extends StatelessWidget {
                 Positioned(
                   left: 16,
                   top: 133,
-                  child: Container(
-                    height: 32,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Get started',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF053961),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        height: 18 / 12,
+                  child: InkWell(
+                    onTap: () => context.push(CreditPage.routePath),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Get started',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF053961),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          height: 18 / 12,
+                        ),
                       ),
                     ),
                   ),
