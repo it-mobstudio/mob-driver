@@ -349,7 +349,8 @@ class _OrderActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextButton(
-      onPressed: () {},
+      onPressed:
+          label == 'Rate order' ? () => showOrderRatingSheet(context) : () {},
       style: TextButton.styleFrom(
         minimumSize: const Size.fromHeight(36),
         padding: EdgeInsets.zero,

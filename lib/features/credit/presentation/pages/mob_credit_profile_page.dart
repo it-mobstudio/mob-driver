@@ -1134,8 +1134,8 @@ class MobCreditSupportCard extends StatelessWidget {
             right: 0,
             top: 12,
             child: IgnorePointer(
-              child: Image.asset(
-                'assets/images/chatwithus.webp',
+              child: SvgPicture.asset(
+                'assets/images/chatwithus.svg',
                 width: 118,
                 height: 120,
                 fit: BoxFit.contain,
