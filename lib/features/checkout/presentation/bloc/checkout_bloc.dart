@@ -54,8 +54,12 @@ final class CheckoutRazorpayStatusCheckRequested extends CheckoutEvent {
 }
 
 final class CheckoutRupifiOrderRequested extends CheckoutEvent {
-  CheckoutRupifiOrderRequested({required this.cartId});
+  CheckoutRupifiOrderRequested({
+    required this.cartId,
+    this.paymentOrigin,
+  });
   final String cartId;
+  final String? paymentOrigin;
 }
 
 final class CheckoutOrderConfirmationRequested extends CheckoutEvent {
@@ -234,7 +238,10 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     Emitter<CheckoutState> emit,
   ) async {
     emit(CheckoutLoading());
-    final (entity, failure) = await _repository.createRupifiOrder(event.cartId);
+    final (entity, failure) = await _repository.createRupifiOrder(
+      event.cartId,
+      paymentOrigin: event.paymentOrigin,
+    );
     if (failure != null) {
       AppHaptics.error();
       emit(CheckoutError(failure.message));

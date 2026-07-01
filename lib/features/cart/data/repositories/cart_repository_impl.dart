@@ -103,6 +103,7 @@ class CartRepositoryImpl implements CartRepository {
 
     final ud = data['user_details'];
     final udMap = ud is Map ? Map<String, dynamic>.from(ud) : <String, dynamic>{};
+    final account = CartAccountEntity.fromMap({...data, ...udMap});
 
     // Mob star tier nested inside user_details. The real field is
     // `mobStarPoints` (e.g. {points, actual_money, name, percentage,
@@ -192,6 +193,7 @@ class CartRepositoryImpl implements CartRepository {
       billingGstNumber: billingGst,
       savedAddresses: savedAddresses,
       mobCreditBalance: mobCreditBalance,
+      account: account,
       mobCreditAccountStatus: mobCreditAccountStatus,
       isReferralOnlyWallet: walletObj['is_referral_only_wallet'] == true,
       isWalletUsageLimited: walletObj['is_wallet_usage_limited'] == true,

@@ -7,6 +7,8 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
+import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
@@ -33,6 +35,10 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
   void initState() {
     super.initState();
     _profileBloc = sl<ProfileBloc>()..add(ProfileLoadRequested());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<CartBloc>().add(CartLoadRequested());
+    });
   }
 
   @override
@@ -59,128 +65,140 @@ class _ProfileBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProfileBloc, ProfileState>(
-      builder: (context, state) {
-        final profile = switch (state) {
-          ProfileLoaded(:final profile) => profile,
-          ProfileUpdated(:final profile) => profile,
-          _ => ProfileEntity.empty,
-        };
+      builder: (context, profileState) {
+        return BlocBuilder<CartBloc, CartState>(
+          builder: (context, cartState) {
+            final profile = switch (profileState) {
+              ProfileLoaded(:final profile) => profile,
+              ProfileUpdated(:final profile) => profile,
+              _ => ProfileEntity.empty,
+            };
+            final cartSummary = cartState is CartLoaded
+                ? cartState.summary
+                : CartSummaryEntity.empty;
+            final account = cartSummary.account;
 
-        return CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(child: _ProfileHeader(profile: profile)),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              sliver: SliverList.list(
-                children: [
-                  _MobCreditCard(
-                    onTap: () => context.push(MobCreditProfilePage.routePath),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _ProfileHeader(profile: profile, account: account),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  sliver: SliverList.list(
                     children: [
-                      Expanded(
-                        child: _SummaryCard(
-                          iconAsset: 'assets/images/ordersprofile.svg',
-                          title: 'Orders',
-                          subtitle: 'View all orders',
-                          onTap: () => context.push(OrdersPage.routePath),
+                      _MobCreditCard(
+                        account: account,
+                        onTap: () => context.push(MobCreditProfilePage.routePath),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SummaryCard(
+                              iconAsset: 'assets/images/ordersprofile.svg',
+                              title: 'Orders',
+                              subtitle: 'View all orders',
+                              onTap: () => context.push(OrdersPage.routePath),
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: _SummaryCard(
+                              iconAsset: 'assets/images/walletprofile.svg',
+                              title: 'Wallet',
+                              subtitle: _formatRupees(account.wallet),
+                              onTap: () => context.push(WalletPointsPage.routePath),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _ReferralCard(
+                        onTap: () => context.push(ReferralPage.routePath),
+                      ),
+                      const SizedBox(height: 16),
+                      _MenuCard(
+                        items: [
+                          _MenuItem(
+                            iconAsset: 'assets/images/quotationreq.svg',
+                            label: 'Quotation request',
+                            onTap: () => context.push(RfqPage.routePath),
+                          ),
+                          _MenuItem(
+                            iconAsset: 'assets/images/addresses.svg',
+                            label: 'Addresses',
+                            onTap: () =>
+                                context.push(AddressSelectionWidget.routePath),
+                          ),
+                          _MenuItem(
+                            iconAsset: 'assets/images/mobcreditprofile.svg',
+                            label: 'mob Credit',
+                            onTap: () =>
+                                context.push(MobCreditProfilePage.routePath),
+                          ),
+                          _MenuItem(
+                            iconAsset: 'assets/images/myprojects.svg',
+                            label: 'My projects',
+                            onTap: () => _comingSoon(context, 'My projects'),
+                          ),
+                          _MenuItem(
+                            iconAsset: 'assets/images/mobsupport.svg',
+                            label: 'mob support',
+                            onTap: () => _comingSoon(context, 'mob support'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'OTHER INFORMATION',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF717A84),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: _SummaryCard(
-                          iconAsset: 'assets/images/walletprofile.svg',
-                          title: 'Wallet',
-                          subtitle: '₹1500',
-                          onTap: () => context.push(WalletPointsPage.routePath),
-                        ),
+                      const SizedBox(height: 20),
+                      _MenuCard(
+                        items: [
+                          _MenuItem(
+                            iconAsset: 'assets/images/notifications.svg',
+                            label: 'Notification preferences',
+                            onTap: () =>
+                                _comingSoon(context, 'Notification preferences'),
+                          ),
+                          _MenuItem(
+                            iconAsset: 'assets/images/aboutus.svg',
+                            label: 'About us',
+                            onTap: () => _comingSoon(context, 'About us'),
+                          ),
+                          _MenuItem(
+                            iconAsset: 'assets/images/faqs.svg',
+                            label: 'FAQs',
+                            onTap: () => _comingSoon(context, 'FAQs'),
+                          ),
+                          _MenuItem(
+                            iconAsset: 'assets/images/becomepartner.svg',
+                            label: 'Become a partner',
+                            onTap: () =>
+                                _comingSoon(context, 'Become a partner'),
+                          ),
+                          const _MenuItem(
+                            iconAsset: 'assets/images/logout.svg',
+                            label: 'Logout',
+                            showChevron: false,
+                            onTap: _logout,
+                          ),
+                        ],
                       ),
+                      const _VersionFooter(),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  _ReferralCard(
-                    onTap: () => context.push(ReferralPage.routePath),
-                  ),
-                  const SizedBox(height: 16),
-                  _MenuCard(
-                    items: [
-                      _MenuItem(
-                        iconAsset: 'assets/images/quotationreq.svg',
-                        label: 'Quotation request',
-                        onTap: () => context.push(RfqPage.routePath),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/addresses.svg',
-                        label: 'Addresses',
-                        onTap: () =>
-                            context.push(AddressSelectionWidget.routePath),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/mobcreditprofile.svg',
-                        label: 'mob Credit',
-                        onTap: () =>
-                            context.push(MobCreditProfilePage.routePath),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/myprojects.svg',
-                        label: 'My projects',
-                        onTap: () => _comingSoon(context, 'My projects'),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/mobsupport.svg',
-                        label: 'mob support',
-                        onTap: () => _comingSoon(context, 'mob support'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'OTHER INFORMATION',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF717A84),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _MenuCard(
-                    items: [
-                      _MenuItem(
-                        iconAsset: 'assets/images/notifications.svg',
-                        label: 'Notification preferences',
-                        onTap: () =>
-                            _comingSoon(context, 'Notification preferences'),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/aboutus.svg',
-                        label: 'About us',
-                        onTap: () => _comingSoon(context, 'About us'),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/faqs.svg',
-                        label: 'FAQs',
-                        onTap: () => _comingSoon(context, 'FAQs'),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/becomepartner.svg',
-                        label: 'Become a partner',
-                        onTap: () => _comingSoon(context, 'Become a partner'),
-                      ),
-                      const _MenuItem(
-                        iconAsset: 'assets/images/logout.svg',
-                        label: 'Logout',
-                        showChevron: false,
-                        onTap: _logout,
-                      ),
-                    ],
-                  ),
-                  const _VersionFooter(),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -198,14 +216,24 @@ class _ProfileBody extends StatelessWidget {
 }
 
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({required this.profile});
+  const _ProfileHeader({required this.profile, required this.account});
 
   final ProfileEntity profile;
+  final CartAccountEntity account;
 
   @override
   Widget build(BuildContext context) {
-    final name = profile.name.trim().isEmpty ? 'Welcome back' : profile.name;
-    final phone = profile.phone.trim().isEmpty ? 'Your profile' : profile.phone;
+    final name = account.fullName.trim().isNotEmpty
+        ? account.fullName
+        : (profile.name.trim().isEmpty ? 'Welcome back' : profile.name);
+    final phone = account.phoneNumber.trim().isNotEmpty
+        ? account.phoneNumber
+        : (profile.phone.trim().isEmpty ? 'Your profile' : profile.phone);
+    final profileImage = account.profileImage.trim();
+    final points = account.mobStarPoints != 0
+        ? account.mobStarPoints
+        : profile.rewardPoints;
+    final membership = account.membership;
 
     return ColoredBox(
       color: _ProfileColors.navy,
@@ -238,14 +266,18 @@ class _ProfileHeader extends StatelessWidget {
               const SizedBox(height: 34),
               Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 28,
                     backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      size: 31,
-                      color: Colors.black,
-                    ),
+                    backgroundImage:
+                        profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
+                    child: profileImage.isEmpty
+                        ? SvgPicture.asset(
+                            'assets/icons/profile.svg',
+                            width: 31,
+                            height: 31,
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -280,7 +312,8 @@ class _ProfileHeader extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               _MembershipBar(
-                points: profile.rewardPoints,
+                points: points,
+                membership: membership,
                 onTap: () => context.push(MobstarPage.routePath),
               ),
             ],
@@ -294,10 +327,12 @@ class _ProfileHeader extends StatelessWidget {
 class _MembershipBar extends StatelessWidget {
   const _MembershipBar({
     required this.points,
+    required this.membership,
     required this.onTap,
   });
 
   final int points;
+  final String membership;
   final VoidCallback onTap;
 
   @override
@@ -315,7 +350,7 @@ class _MembershipBar extends StatelessWidget {
             child: Row(
               children: [
                 SvgPicture.asset(
-                  'assets/images/bronze.svg',
+                  _mobStarAsset(membership),
                   width: 24,
                   height: 23,
                 ),
@@ -331,7 +366,9 @@ class _MembershipBar extends StatelessWidget {
                         height: 11,
                       ),
                       Text(
-                        'Bronze member',
+                        '$membership member',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
                           color: Colors.white,
                           fontSize: 14,
@@ -343,6 +380,8 @@ class _MembershipBar extends StatelessWidget {
                 ),
                 Text(
                   '$points Points',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 14,
@@ -419,12 +458,20 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _MobCreditCard extends StatelessWidget {
-  const _MobCreditCard({required this.onTap});
+  const _MobCreditCard({required this.account, required this.onTap});
 
+  final CartAccountEntity account;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final creditLimit = account.rupifiCurrentLimit != 0
+        ? account.rupifiCurrentLimit
+        : account.mobCreditSanctioned;
+    final available = account.mobCreditAvailable != 0
+        ? account.mobCreditAvailable
+        : creditLimit - account.rupifiBalance;
+
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
@@ -459,7 +506,7 @@ class _MobCreditCard extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Credit limit: ₹100000.00',
+                          'Credit limit: ${_formatRupees(creditLimit)}',
                           textAlign: TextAlign.right,
                           softWrap: true,
                           style: GoogleFonts.inter(
@@ -500,7 +547,7 @@ class _MobCreditCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '₹800000.00',
+                        _formatRupees(available),
                         textAlign: TextAlign.right,
                         style: GoogleFonts.inter(
                           color: Colors.white,
@@ -705,6 +752,23 @@ final TextStyle _subtleStyle = GoogleFonts.inter(
   fontWeight: FontWeight.w400,
   height: 20 / 13,
 );
+
+String _formatRupees(double value) {
+  final text =
+      value % 1 == 0 ? value.toStringAsFixed(0) : value.toStringAsFixed(2);
+  return '₹$text';
+}
+
+String _mobStarAsset(String level) {
+  final lower = level.toLowerCase();
+  if (lower.contains('diamond') || lower.contains('dimond')) {
+    return 'assets/images/mobStar/dimond.svg';
+  }
+  if (lower.contains('platinum')) return 'assets/images/mobStar/platinum.svg';
+  if (lower.contains('gold')) return 'assets/images/mobStar/gold.svg';
+  if (lower.contains('silver')) return 'assets/images/mobStar/silver.svg';
+  return 'assets/images/mobStar/bronze.svg';
+}
 
 abstract final class _ProfileColors {
   static const navy = Color(0xFF0A243F);

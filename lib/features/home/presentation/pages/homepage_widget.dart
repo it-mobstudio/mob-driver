@@ -207,7 +207,7 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
       );
     }
     return Container(
-      color: const Color(0xFF121212),
+      color: const Color(0xFF0A3C35),
       padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 8),
       child: searchBox,
     );

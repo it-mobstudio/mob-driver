@@ -2,9 +2,21 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
+
+Future<void> showOrderRatingSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: false,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.6),
+    builder: (context) => const _OrderRatingSheet(),
+  );
+}
 
 class OrderTrackingPage extends StatelessWidget {
   static const String routeName = 'OrderTrackingPage';
@@ -774,11 +786,13 @@ class _TrackingRatingCard extends StatelessWidget {
       height: 80,
       child: Row(
         children: [
-          const _RoundIcon(
-            background: Color(0xFFFFF2A7),
-            icon: Icons.sentiment_satisfied_alt_rounded,
-            iconColor: Color(0xFF0A243F),
-            size: 48,
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: SvgPicture.asset(
+              'assets/images/smiley.svg',
+              fit: BoxFit.contain,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -796,11 +810,7 @@ class _TrackingRatingCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           TextButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Rating coming soon')),
-              );
-            },
+            onPressed: () => showOrderRatingSheet(context),
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF0360E5),
               padding: EdgeInsets.zero,
@@ -820,6 +830,329 @@ class _TrackingRatingCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _OrderRatingSheet extends StatefulWidget {
+  const _OrderRatingSheet();
+
+  @override
+  State<_OrderRatingSheet> createState() => _OrderRatingSheetState();
+}
+
+class _OrderRatingSheetState extends State<_OrderRatingSheet> {
+  double _rating = 1;
+  bool _isSubmitted = false;
+
+  String get _emoji {
+    final value = _rating.round();
+    return switch (value) {
+      0 => '😡',
+      1 => '😠',
+      2 => '😞',
+      3 => '🙁',
+      4 => '😕',
+      5 => '😐',
+      6 => '🙂',
+      7 => '😊',
+      8 => '😃',
+      9 => '😁',
+      _ => '🤩',
+    };
+  }
+
+  String? get _emojiLottieAsset {
+    return switch (_rating.round()) {
+      0 => 'assets/lottiejson/rating_0_1_symbols_angry.json',
+      1 => 'assets/lottiejson/rating_0_1_symbols_angry.json',
+      2 => 'assets/lottiejson/rating_2_3_angry.json',
+      3 => 'assets/lottiejson/rating_2_3_angry.json',
+      4 => 'assets/lottiejson/rating_4_frown.json',
+      5 => 'assets/lottiejson/rating_5_neutral.json',
+      6 => 'assets/lottiejson/rating_6_slight_smile.json',
+      7 => 'assets/lottiejson/rating_7_8_smiley.json',
+      8 => 'assets/lottiejson/rating_7_8_smiley.json',
+      9 => 'assets/lottiejson/rating_10_heart_eyes.json',
+      10 => 'assets/lottiejson/rating_10_heart_eyes.json',
+      _ => null,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final sheetHeight = 456.0 + bottomInset;
+
+    return SizedBox(
+      height: sheetHeight + 60,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned(
+            top: 0,
+            child: Material(
+              color: Colors.white,
+              shape: const CircleBorder(),
+              elevation: 0,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => Navigator.of(context).pop(),
+                child: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(
+                    Icons.close_rounded,
+                    color: _TrackingColors.navy,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              height: sheetHeight,
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + bottomInset),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_isSubmitted) ...[
+                    const SizedBox(height: 40),
+                    Center(
+                      child: SizedBox(
+                        width: 144,
+                        height: 144,
+                        child: Image.asset(
+                          'assets/images/Thank you.webp',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: Text(
+                        'Thank you for the feedback!',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          color: _TrackingColors.navy,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          height: 26 / 18,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                  ] else ...[
+                    Text(
+                      'How likely are you to recommend Mad over buildings to family & friends?',
+                      style: GoogleFonts.inter(
+                        color: _TrackingColors.navy,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        height: 26 / 18,
+                      ),
+                    ),
+                    const SizedBox(height: 36),
+                    Center(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        transitionBuilder: (child, animation) {
+                          return ScaleTransition(
+                              scale: animation, child: child);
+                        },
+                        child: _emojiLottieAsset == null
+                            ? Text(
+                                _emoji,
+                                key: ValueKey('emoji-$_emoji'),
+                                style: const TextStyle(fontSize: 78, height: 1),
+                              )
+                            : Lottie.asset(
+                                _emojiLottieAsset!,
+                                key: ValueKey(_emojiLottieAsset),
+                                width: 88,
+                                height: 88,
+                                repeat: true,
+                                fit: BoxFit.contain,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 31),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Not likely',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF767C8F),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              height: 20 / 14,
+                            ),
+                          ),
+                          Text(
+                            'Extremely likely',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF767C8F),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              height: 20 / 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 25),
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 12,
+                          activeTrackColor: const Color(0xFF20C677),
+                          inactiveTrackColor: const Color(0xFFDADADA),
+                          tickMarkShape: const RoundSliderTickMarkShape(
+                            tickMarkRadius: 4,
+                          ),
+                          activeTickMarkColor:
+                              Colors.white.withValues(alpha: 0.4),
+                          inactiveTickMarkColor:
+                              Colors.white.withValues(alpha: 0.4),
+                          thumbShape: const _RatingSliderThumbShape(),
+                          overlayShape: SliderComponentShape.noOverlay,
+                          trackShape: const RoundedRectSliderTrackShape(),
+                        ),
+                        child: Slider(
+                          min: 0,
+                          max: 10,
+                          divisions: 10,
+                          value: _rating,
+                          onChanged: (value) => setState(() => _rating = value),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 31),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          for (var i = 0; i <= 10; i++)
+                            SizedBox(
+                              width: 20,
+                              child: Text(
+                                '$i',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  color: i == _rating.round()
+                                      ? _TrackingColors.navy
+                                      : const Color(0xFF767C8F),
+                                  fontSize: 14,
+                                  fontWeight: i == _rating.round()
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  height: 20 / 14,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    SizedBox(
+                      height: 48,
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => setState(() => _isSubmitted = true),
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          backgroundColor: const Color(0xFF0360E5),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        child: Text(
+                          'Submit',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            height: 21 / 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RatingSliderThumbShape extends SliderComponentShape {
+  const _RatingSliderThumbShape();
+
+  @override
+  Size getPreferredSize(bool isEnabled, bool isDiscrete) {
+    return const Size(40, 40);
+  }
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset center, {
+    required Animation<double> activationAnimation,
+    required Animation<double> enableAnimation,
+    required bool isDiscrete,
+    required TextPainter labelPainter,
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required TextDirection textDirection,
+    required double value,
+    required double textScaleFactor,
+    required Size sizeWithOverflow,
+  }) {
+    final canvas = context.canvas;
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.16)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final fillPaint = Paint()..color = Colors.white;
+    final iconPaint = Paint()
+      ..color = const Color(0xFFB8B8B8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.3
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    canvas.drawCircle(center.translate(0, 2), 20, shadowPaint);
+    canvas.drawCircle(center, 20, fillPaint);
+
+    final leftPath = Path()
+      ..moveTo(center.dx - 5, center.dy - 5)
+      ..lineTo(center.dx - 10, center.dy)
+      ..lineTo(center.dx - 5, center.dy + 5);
+    final rightPath = Path()
+      ..moveTo(center.dx + 5, center.dy - 5)
+      ..lineTo(center.dx + 10, center.dy)
+      ..lineTo(center.dx + 5, center.dy + 5);
+    canvas.drawPath(leftPath, iconPaint);
+    canvas.drawPath(rightPath, iconPaint);
   }
 }
 

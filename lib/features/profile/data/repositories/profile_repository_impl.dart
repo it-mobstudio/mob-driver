@@ -13,19 +13,12 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<(ProfileEntity?, AppFailure?)> getProfile() async {
     try {
-      final body = await _datasource.getProfile();
-      final responseData = body['data'] is Map
-          ? Map<String, dynamic>.from(body['data'] as Map)
-          : body;
       final data = <String, dynamic>{};
       final sessionData = AuthSession.instance.userDetails;
       if (sessionData != null) {
         data.addAll(_flattenProfileData(sessionData));
       }
-      data.addAll(_flattenProfileData(responseData));
       return (ProfileEntity.fromMap(data), null);
-    } on DioException catch (e) {
-      return (null, e.toAppFailure());
     } catch (e) {
       return (null, UnknownFailure(e.toString()));
     }
@@ -104,15 +97,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<(MobstarEntity?, AppFailure?)> getMobstar() async {
     try {
       final body = await _datasource.getMobstar();
-      final results = body['results'] is List ? body['results'] as List : const <dynamic>[];
-      if (results.isEmpty) return (MobstarEntity.empty, null);
-      final first = results.first is Map
-          ? Map<String, dynamic>.from(results.first as Map)
-          : <String, dynamic>{};
-      final raw = first['mobStarPoints'] is Map
-          ? Map<String, dynamic>.from(first['mobStarPoints'] as Map)
-          : <String, dynamic>{};
-      return (MobstarEntity.fromMap(raw), null);
+      return (MobstarEntity.fromMap(body), null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {

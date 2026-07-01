@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:m_o_b_demand_side/shared/why_choose_mob.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 
 class HomeRewardCard extends StatelessWidget {
   const HomeRewardCard({super.key});
@@ -11,14 +12,7 @@ class HomeRewardCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: GestureDetector(
-        onTap: () => showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          barrierColor: Colors.transparent,
-          useSafeArea: true,
-          builder: (_) => const PromiseSheet(),
-        ),
+        onTap: () => context.push(MobstarPage.routePath),
         child: Container(
           height: 76,
           decoration: BoxDecoration(

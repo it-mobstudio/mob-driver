@@ -43,6 +43,9 @@ class _MobstarView extends StatelessWidget {
     final valueText = mobstar.actualMoney % 1 == 0
         ? mobstar.actualMoney.toStringAsFixed(0)
         : mobstar.actualMoney.toStringAsFixed(2);
+    final rewardPercent = mobstar.percentage * 100;
+    final rewardText =
+        rewardPercent == 0 ? '0%' : '${_trimNumber(rewardPercent)}%';
 
     return Scaffold(
       backgroundColor: const Color(0xFF090A15),
@@ -137,8 +140,10 @@ class _MobstarView extends StatelessWidget {
                                     Text(mobstar.membership,
                                         style: _text(
                                             14, Colors.white, FontWeight.w500)),
-                                    SvgPicture.asset('assets/images/bronze.svg',
-                                        width: 24, height: 23),
+                                    SvgPicture.asset(
+                                        _levelAsset(mobstar.membership),
+                                        width: 24,
+                                        height: 23),
                                   ]),
                             ),
                           ),
@@ -164,7 +169,10 @@ class _MobstarView extends StatelessWidget {
                                       color:
                                           Colors.white.withValues(alpha: .15)),
                                 ),
-                                child: Row(children: [
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
                                   Expanded(
                                       child: Column(
                                           crossAxisAlignment:
@@ -175,42 +183,53 @@ class _MobstarView extends StatelessWidget {
                                         Text('mobSTAR points',
                                             style: _text(
                                                 13, muted, FontWeight.w500)),
-                                        Row(children: [
-                                          const Icon(Icons.stars_rounded,
-                                              color: Color(0xFFFFC928),
-                                              size: 22),
-                                          const SizedBox(width: 7),
-                                          Text('$points',
-                                              style: _text(28, Colors.white,
-                                                  FontWeight.w900,
-                                                  height: 42 / 28)),
-                                          const SizedBox(width: 9),
-                                          Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
+                                        const SizedBox(height: 4),
+                                        Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              const Icon(Icons.stars_rounded,
+                                                  color: Color(0xFFFFC928),
+                                                  size: 22),
+                                              const SizedBox(width: 7),
+                                              Text('$points',
+                                                  style: _text(28, Colors.white,
+                                                      FontWeight.w900,
+                                                      height: 42 / 28)),
+                                              const SizedBox(width: 9),
+                                              Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
                                                       horizontal: 10,
                                                       vertical: 2),
-                                              decoration: BoxDecoration(
-                                                  color: Colors.white
-                                                      .withValues(alpha: .2),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          16)),
-                                              child: Text('₹$valueText',
-                                                  style: _text(
-                                                      13,
-                                                      Colors.white70,
-                                                      FontWeight.w500))),
-                                        ]),
+                                                  decoration: BoxDecoration(
+                                                      color: Colors.white
+                                                          .withValues(
+                                                              alpha: .2),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16)),
+                                                  child: Text('₹$valueText',
+                                                      style: _text(
+                                                          13,
+                                                          Colors.white70,
+                                                          FontWeight.w500))),
+                                            ]),
+                                        const SizedBox(height: 4),
                                         Text('4 points = ₹1',
                                             style: _text(
                                                 13, muted, FontWeight.w500)),
                                       ])),
-                                  const CircleAvatar(
-                                      radius: 12,
-                                      backgroundColor: Color(0xFFF0F3F5),
-                                      child: Icon(Icons.chevron_right,
-                                          size: 20, color: Color(0xFF273A6A))),
+                                  const Center(
+                                    child: CircleAvatar(
+                                        radius: 12,
+                                        backgroundColor: Color(0xFFF0F3F5),
+                                        child: Icon(Icons.chevron_right,
+                                            size: 20,
+                                            color: Color(0xFF273A6A))),
+                                  ),
                                 ]),
                               ),
                             ),
@@ -222,21 +241,21 @@ class _MobstarView extends StatelessWidget {
                   const SizedBox(height: 40),
                   const _SectionLabel('YOUR BENEFITS'),
                   const SizedBox(height: 16),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(children: [
-                        Expanded(
-                            child: _BenefitCard(
-                                asset: 'assets/images/Xpoints.svg',
-                                title: '1X points',
-                                subtitle: 'on every purchase')),
-                        SizedBox(width: 15),
-                        Expanded(
-                            child: _BenefitCard(
-                                asset: 'assets/images/freeimg.svg',
-                                title: 'FREE',
-                                subtitle: 'deliveries')),
-                      ]),
+                      Expanded(
+                          child: _BenefitCard(
+                              asset: 'assets/images/Xpoints.svg',
+                              title: '$rewardText rewards',
+                              subtitle: 'on every purchase')),
+                      const SizedBox(width: 15),
+                      Expanded(
+                          child: _BenefitCard(
+                              asset: 'assets/images/freeimg.svg',
+                              title: '${mobstar.freeDelivery} FREE',
+                              subtitle: 'deliveries')),
+                    ]),
                   ),
                   const SizedBox(height: 40),
                   const _SectionLabel('LEVEL UPGRADE'),
@@ -251,7 +270,7 @@ class _MobstarView extends StatelessWidget {
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(18),
-                        onTap: () => _showAllLevelsSheet(context),
+                        onTap: () => _showAllLevelsSheet(context, mobstar),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 6),
@@ -309,14 +328,33 @@ class _MobstarView extends StatelessWidget {
       GoogleFonts.inter(
           color: color, fontSize: size, fontWeight: weight, height: height);
 
-  static Future<void> _showAllLevelsSheet(BuildContext context) {
+  static Future<void> _showAllLevelsSheet(
+    BuildContext context,
+    MobstarEntity mobstar,
+  ) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withValues(alpha: .6),
-      builder: (context) => const _AllLevelsSheet(),
+      builder: (context) => _AllLevelsSheet(mobstar: mobstar),
     );
+  }
+
+  static String _trimNumber(double value) {
+    if (value % 1 == 0) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+  }
+
+  static String _levelAsset(String level) {
+    final lower = level.toLowerCase();
+    if (lower.contains('diamond') || lower.contains('dimond')) {
+      return 'assets/images/mobStar/dimond.svg';
+    }
+    if (lower.contains('platinum')) return 'assets/images/mobStar/platinum.svg';
+    if (lower.contains('gold')) return 'assets/images/mobStar/gold.svg';
+    if (lower.contains('silver')) return 'assets/images/mobStar/silver.svg';
+    return 'assets/images/mobStar/bronze.svg';
   }
 }
 
@@ -382,18 +420,19 @@ class _LevelCard extends StatelessWidget {
   final MobstarEntity mobstar;
 
   double get progress {
-    final raw = mobstar.percentage;
-    return (raw > 1 ? raw / 100 : raw).clamp(0.0, 1.0);
+    if (mobstar.purchaseLimit <= 0) return 0;
+    return (mobstar.points / mobstar.purchaseLimit).clamp(0.0, 1.0).toDouble();
   }
 
   @override
   Widget build(BuildContext context) {
-    const target = 250000.0;
-    final remaining = (target * (1 - progress)).round();
-    final remainingText = remaining.toString().replaceAllMapped(
+    final remaining =
+        (mobstar.purchaseLimit - mobstar.points).clamp(0, double.infinity);
+    final remainingText = remaining.round().toString().replaceAllMapped(
           RegExp(r'\B(?=(\d{3})+(?!\d))'),
           (_) => ',',
         );
+    final nextMembership = mobstar.nextMembership;
 
     return Container(
       height: 130,
@@ -414,7 +453,7 @@ class _LevelCard extends StatelessWidget {
                         color: Colors.white70,
                         fontSize: 12,
                         fontWeight: FontWeight.w500)),
-                Text('Silver',
+                Text(nextMembership,
                     style: GoogleFonts.inter(
                         color: Colors.white70,
                         fontSize: 12,
@@ -463,8 +502,10 @@ class _LevelCard extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 20,
                       backgroundColor: const Color(0xFF161722),
-                      child: SvgPicture.asset('assets/images/bronze.svg',
-                          width: 24, height: 23),
+                      child: SvgPicture.asset(
+                          _MobstarView._levelAsset(mobstar.membership),
+                          width: 24,
+                          height: 23),
                     ),
                   ),
                   Positioned(
@@ -472,8 +513,10 @@ class _LevelCard extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 20,
                       backgroundColor: const Color(0xFF161722),
-                      child: SvgPicture.asset('assets/images/silverstar.svg',
-                          width: 24, height: 24),
+                      child: SvgPicture.asset(
+                          _MobstarView._levelAsset(nextMembership),
+                          width: 24,
+                          height: 24),
                     ),
                   ),
                 ],
@@ -492,7 +535,7 @@ class _LevelCard extends StatelessWidget {
               ),
             ),
             child: Text(
-              'Shop for ₹$remainingText before 16 Oct to reach Silver level',
+              'Shop for ₹$remainingText to reach $nextMembership level',
               style: GoogleFonts.inter(color: _MobstarView.muted, fontSize: 11),
             ),
           ),
@@ -503,7 +546,9 @@ class _LevelCard extends StatelessWidget {
 }
 
 class _AllLevelsSheet extends StatelessWidget {
-  const _AllLevelsSheet();
+  const _AllLevelsSheet({required this.mobstar});
+
+  final MobstarEntity mobstar;
 
   static const _levels = [
     _LevelInfo(
@@ -511,32 +556,35 @@ class _AllLevelsSheet extends StatelessWidget {
       points: '1.0 x',
       spend: 'Free',
       color: Color(0xFFC9792C),
-      current: true,
+      asset: 'assets/images/mobStar/bronze.svg',
     ),
     _LevelInfo(
       name: 'Silver',
       points: '1.25 x',
       spend: '₹250,000',
       color: Color(0xFFC9C9C9),
+      asset: 'assets/images/mobStar/silver.svg',
     ),
     _LevelInfo(
       name: 'Gold',
       points: '1.50 x',
       spend: '₹1,200,000',
       color: Color(0xFFFFC400),
+      asset: 'assets/images/mobStar/gold.svg',
     ),
     _LevelInfo(
       name: 'Platinum',
       points: '1.75 x',
       spend: '₹2,500,000',
       color: Color(0xFF9F9F9F),
+      asset: 'assets/images/mobStar/platinum.svg',
     ),
     _LevelInfo(
       name: 'Diamond',
       points: '2.0 x',
       spend: '₹4,857,143',
       color: Color(0xFF22C7F2),
-      diamond: true,
+      asset: 'assets/images/mobStar/dimond.svg',
     ),
   ];
 
@@ -549,52 +597,45 @@ class _AllLevelsSheet extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.topCenter,
         children: [
-          Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: ColoredBox(
               color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF0F0F0),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  children: [
+                    Container(
+                      height: 56,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF0F0F0),
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 44,
+                            child: Text('LEVEL', style: _levelHeaderStyle),
+                          ),
+                          Expanded(
+                            flex: 28,
+                            child: Text('POINTS', style: _levelHeaderStyle),
+                          ),
+                          Expanded(
+                            flex: 36,
+                            child: Text(
+                              'MIN SPEND IN\nA YEAR',
+                              textAlign: TextAlign.right,
+                              style: _levelHeaderStyle,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 44,
-                        child: Text('LEVEL', style: _levelHeaderStyle),
-                      ),
-                      Expanded(
-                        flex: 28,
-                        child: Text('POINTS', style: _levelHeaderStyle),
-                      ),
-                      Expanded(
-                        flex: 36,
-                        child: Text(
-                          'MIN SPEND IN\nA YEAR',
-                          textAlign: TextAlign.right,
-                          style: _levelHeaderStyle,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      ListView.separated(
+                    Expanded(
+                      child: ListView.separated(
                         padding: EdgeInsets.zero,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _levels.length,
@@ -603,42 +644,15 @@ class _AllLevelsSheet extends StatelessWidget {
                           thickness: 1,
                           color: Color(0xFFE2E2E2),
                         ),
-                        itemBuilder: (context, index) =>
-                            _LevelSheetRow(level: _levels[index]),
-                      ),
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        child: Container(
-                          height: 24,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                              colors: [Color(0xFF313A78), Color(0xFF424B97)],
-                            ),
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(12),
-                              bottomRight: Radius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            'You are here',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              height: 20 / 13,
-                            ),
-                          ),
+                        itemBuilder: (context, index) => _LevelSheetRow(
+                          level: _levels[index],
+                          current: _isCurrentLevel(_levels[index].name),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
           Positioned(
@@ -668,6 +682,9 @@ class _AllLevelsSheet extends StatelessWidget {
         fontWeight: FontWeight.w600,
         height: 18 / 12,
       );
+
+  bool _isCurrentLevel(String name) =>
+      mobstar.membership.toLowerCase().contains(name.toLowerCase());
 }
 
 class _LevelInfo {
@@ -676,22 +693,21 @@ class _LevelInfo {
     required this.points,
     required this.spend,
     required this.color,
-    this.current = false,
-    this.diamond = false,
+    required this.asset,
   });
 
   final String name;
   final String points;
   final String spend;
   final Color color;
-  final bool current;
-  final bool diamond;
+  final String asset;
 }
 
 class _LevelSheetRow extends StatelessWidget {
-  const _LevelSheetRow({required this.level});
+  const _LevelSheetRow({required this.level, required this.current});
 
   final _LevelInfo level;
+  final bool current;
 
   @override
   Widget build(BuildContext context) {
@@ -703,25 +719,14 @@ class _LevelSheetRow extends StatelessWidget {
           children: [
             Expanded(
               flex: 44,
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    level.diamond ? Icons.auto_awesome : Icons.star_rounded,
-                    size: 28,
-                    color: level.color,
-                  ),
-                  const SizedBox(width: 10),
+                  if (current) const _CurrentLevelBadge(),
                   Expanded(
-                    child: Text(
-                      level.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        height: 20 / 14,
-                      ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _LevelName(level: level, current: current),
                     ),
                   ),
                 ],
@@ -755,6 +760,77 @@ class _LevelSheetRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CurrentLevelBadge extends StatelessWidget {
+  const _CurrentLevelBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: const Offset(-16, 0),
+      child: Container(
+        height: 24,
+        padding: const EdgeInsets.fromLTRB(10, 0, 12, 0),
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFF313A78), Color(0xFF424B97)],
+          ),
+          borderRadius: BorderRadius.only(
+            topRight: Radius.circular(12),
+            bottomRight: Radius.circular(12),
+          ),
+        ),
+        child: Text(
+          'You are here',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            height: 18 / 12,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LevelName extends StatelessWidget {
+  const _LevelName({required this.level, required this.current});
+
+  final _LevelInfo level;
+  final bool current;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SvgPicture.asset(
+          level.asset,
+          width: 28,
+          height: 28,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            level.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              color:
+                  current ? const Color(0xFF0360E5) : const Color(0xFF0A243F),
+              fontSize: 14,
+              fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+              height: 20 / 14,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
