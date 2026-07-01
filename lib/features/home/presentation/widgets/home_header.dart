@@ -64,7 +64,7 @@ class _HomeHeaderState extends State<HomeHeader> {
     final profilePictureUrl = _profilePictureUrl();
 
     return Container(
-      color: const Color(0xFF121212),
+      color: const Color(0xFF0A3C35),
       padding: EdgeInsets.fromLTRB(
         16,
         MediaQuery.paddingOf(context).top + 14,

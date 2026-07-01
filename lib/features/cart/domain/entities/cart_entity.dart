@@ -29,6 +29,171 @@ class CartAddressEntity {
   bool get hasAddress => address.trim().isNotEmpty;
 }
 
+class CartAccountEntity {
+  const CartAccountEntity({
+    required this.id,
+    required this.email,
+    required this.fullName,
+    required this.phoneNumber,
+    required this.profileImage,
+    required this.wallet,
+    required this.mobStarPoints,
+    required this.mobStarAmount,
+    required this.mobStarLevel,
+    required this.mobStarPercentage,
+    required this.freeDelivery,
+    required this.gstNumber,
+    required this.mobCreditActivated,
+    required this.mobCreditStatus,
+    required this.mobCreditSanctioned,
+    required this.mobCreditUtilized,
+    required this.mobCreditPending,
+    required this.mobCreditAvailable,
+    required this.mobCreditDays,
+    required this.mobCreditExists,
+    required this.rupifiPrimaryStatus,
+    required this.rupifiAccountStatus,
+    required this.rupifiCurrentLimit,
+    required this.rupifiBalance,
+    required this.isBlocked,
+    required this.isProfessional,
+    required this.businessSegmentName,
+  });
+
+  final String id;
+  final String email;
+  final String fullName;
+  final String phoneNumber;
+  final String profileImage;
+  final double wallet;
+  final int mobStarPoints;
+  final double mobStarAmount;
+  final String mobStarLevel;
+  final double mobStarPercentage;
+  final int freeDelivery;
+  final String gstNumber;
+  final bool mobCreditActivated;
+  final String mobCreditStatus;
+  final double mobCreditSanctioned;
+  final double mobCreditUtilized;
+  final double mobCreditPending;
+  final double mobCreditAvailable;
+  final int mobCreditDays;
+  final bool mobCreditExists;
+  final String rupifiPrimaryStatus;
+  final String rupifiAccountStatus;
+  final double rupifiCurrentLimit;
+  final double rupifiBalance;
+  final bool isBlocked;
+  final bool isProfessional;
+  final String businessSegmentName;
+
+  bool get hasData =>
+      fullName.isNotEmpty ||
+      phoneNumber.isNotEmpty ||
+      email.isNotEmpty ||
+      profileImage.isNotEmpty;
+
+  String get membership {
+    final match = RegExp(r'\(([^)]+)\)').firstMatch(mobStarLevel);
+    return match?.group(1) ?? (mobStarLevel.isEmpty ? 'Bronze' : mobStarLevel);
+  }
+
+  factory CartAccountEntity.fromMap(Map<String, dynamic> map) {
+    final mobStar = map['mobStarPoints'] is Map
+        ? Map<String, dynamic>.from(map['mobStarPoints'] as Map)
+        : <String, dynamic>{};
+    final mobCreditSource = map['mobCredit'] ?? map['mob_credit'];
+    final mobCredit = mobCreditSource is Map
+        ? Map<String, dynamic>.from(mobCreditSource)
+        : <String, dynamic>{};
+    final rupifi = map['rupifiDetails'] is Map
+        ? Map<String, dynamic>.from(map['rupifiDetails'] as Map)
+        : <String, dynamic>{};
+    final walletSource = map['wallet'];
+    final wallet = walletSource is Map
+        ? Map<String, dynamic>.from(walletSource)
+        : <String, dynamic>{};
+    final businessSource = map['business_segment'] ?? map['businessSegment'];
+    final businessSegment = businessSource is Map
+        ? Map<String, dynamic>.from(businessSource)
+        : <String, dynamic>{};
+    final walletAmount = wallet.isNotEmpty
+        ? _entityNum(wallet, const ['wallet_balance', 'balance', 'amount'])
+        : _entityNum(
+            map,
+            const ['wallet', 'wallet_balance', 'mob_wallet_balance'],
+          );
+
+    return CartAccountEntity(
+      id: _entityStr(map, const ['id']),
+      email: _entityStr(map, const ['email']),
+      fullName: _entityStr(map, const ['full_name', 'name', 'username']),
+      phoneNumber: _entityStr(
+        map,
+        const ['phone_number', 'phone', 'mobile', 'email_or_phone'],
+      ),
+      profileImage:
+          _entityStr(map, const ['profile_image', 'profile_picture', 'image']),
+      wallet: walletAmount.toDouble(),
+      mobStarPoints: _entityInt(mobStar, const ['points']),
+      mobStarAmount: _entityNum(mobStar, const ['actual_money']).toDouble(),
+      mobStarLevel: _entityStr(mobStar, const ['name']),
+      mobStarPercentage: _entityNum(mobStar, const ['percentage']).toDouble(),
+      freeDelivery: _entityInt(mobStar, const ['free_delivery']),
+      gstNumber: _entityStr(map, const ['gst_number', 'gstin', 'gst_no']),
+      mobCreditActivated: mobCredit['is_activated'] == true,
+      mobCreditStatus: _entityStr(mobCredit, const ['status']),
+      mobCreditSanctioned:
+          _entityNum(mobCredit, const ['sanctioned']).toDouble(),
+      mobCreditUtilized: _entityNum(mobCredit, const ['utilized']).toDouble(),
+      mobCreditPending: _entityNum(mobCredit, const ['pending']).toDouble(),
+      mobCreditAvailable: _entityNum(mobCredit, const ['available']).toDouble(),
+      mobCreditDays: _entityInt(mobCredit, const ['days']),
+      mobCreditExists: mobCredit['exists'] == true,
+      rupifiPrimaryStatus: _entityStr(rupifi, const ['primary_status']),
+      rupifiAccountStatus: _entityStr(rupifi, const ['account_status']),
+      rupifiCurrentLimit:
+          _entityNum(rupifi, const ['current_limit']).toDouble(),
+      rupifiBalance: _entityNum(rupifi, const ['balance']).toDouble(),
+      isBlocked: map['is_blocked'] == true,
+      isProfessional: map['is_professional'] == true,
+      businessSegmentName:
+          _entityStr(businessSegment, const ['category_name', 'category']),
+    );
+  }
+
+  static const empty = CartAccountEntity(
+    id: '',
+    email: '',
+    fullName: '',
+    phoneNumber: '',
+    profileImage: '',
+    wallet: 0,
+    mobStarPoints: 0,
+    mobStarAmount: 0,
+    mobStarLevel: 'Level 01 (Bronze)',
+    mobStarPercentage: 0,
+    freeDelivery: 0,
+    gstNumber: '',
+    mobCreditActivated: false,
+    mobCreditStatus: '',
+    mobCreditSanctioned: 0,
+    mobCreditUtilized: 0,
+    mobCreditPending: 0,
+    mobCreditAvailable: 0,
+    mobCreditDays: 0,
+    mobCreditExists: false,
+    rupifiPrimaryStatus: '',
+    rupifiAccountStatus: '',
+    rupifiCurrentLimit: 0,
+    rupifiBalance: 0,
+    isBlocked: false,
+    isProfessional: false,
+    businessSegmentName: '',
+  );
+}
+
 class CartSummaryEntity {
   const CartSummaryEntity({
     required this.items,
@@ -60,6 +225,7 @@ class CartSummaryEntity {
     required this.billingGstNumber,
     required this.savedAddresses,
     required this.mobCreditBalance,
+    required this.account,
     this.isReferralOnlyWallet = false,
     this.isWalletUsageLimited = false,
     this.walletNote = '',
@@ -122,6 +288,7 @@ class CartSummaryEntity {
 
   /// mobCREDIT balance available for the user (from user_details in cart API).
   final double mobCreditBalance;
+  final CartAccountEntity account;
 
   /// Wallet restriction flags from API. The referral-limit note should only
   /// show when both are true, matching web checkout.
@@ -177,7 +344,42 @@ class CartSummaryEntity {
     billingGstNumber: '',
     savedAddresses: <CartAddressEntity>[],
     mobCreditBalance: 0,
+    account: CartAccountEntity.empty,
     isReferralOnlyWallet: false,
     isWalletUsageLimited: false,
   );
+}
+
+String _entityStr(
+  Map<String, dynamic> map,
+  List<String> keys, {
+  String fallback = '',
+}) {
+  for (final key in keys) {
+    final value = map[key];
+    if (value == null) continue;
+    final text = value.toString().trim();
+    if (text.isNotEmpty && text != 'null') return text;
+  }
+  return fallback;
+}
+
+int _entityInt(Map<String, dynamic> map, List<String> keys, {int fallback = 0}) {
+  for (final key in keys) {
+    final value = map[key];
+    if (value is int) return value;
+    final parsed = int.tryParse(value?.toString() ?? '');
+    if (parsed != null) return parsed;
+  }
+  return fallback;
+}
+
+num _entityNum(Map<String, dynamic> map, List<String> keys, {num fallback = 0}) {
+  for (final key in keys) {
+    final value = map[key];
+    if (value is num) return value;
+    final parsed = num.tryParse(value?.toString() ?? '');
+    if (parsed != null) return parsed;
+  }
+  return fallback;
 }

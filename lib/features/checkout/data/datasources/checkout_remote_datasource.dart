@@ -21,7 +21,10 @@ abstract interface class CheckoutRemoteDatasource {
     String currency,
     String paymentFor,
   });
-  Future<Map<String, dynamic>> createRupifiOrder(String cartId);
+  Future<Map<String, dynamic>> createRupifiOrder(
+    String cartId, {
+    String? paymentOrigin,
+  });
 }
 
 class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
@@ -113,10 +116,17 @@ class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
   }
 
   @override
-  Future<Map<String, dynamic>> createRupifiOrder(String cartId) async {
+  Future<Map<String, dynamic>> createRupifiOrder(
+    String cartId, {
+    String? paymentOrigin,
+  }) async {
     final response = await _dio.post<dynamic>(
       '/order/rupifi_order/',
-      data: {'cart_id': cartId},
+      data: {
+        'cart_id': cartId,
+        if (paymentOrigin != null && paymentOrigin.isNotEmpty)
+          'payment_origin': paymentOrigin,
+      },
     );
     return _toMap(response.data);
   }

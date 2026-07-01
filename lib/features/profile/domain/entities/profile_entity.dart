@@ -242,6 +242,9 @@ class MobstarEntity {
     required this.levelName,
     required this.percentage,
     required this.freeDelivery,
+    required this.nextLevelName,
+    required this.purchaseLimit,
+    required this.transactions,
   });
 
   final int points;
@@ -249,22 +252,66 @@ class MobstarEntity {
   final String levelName;
   final double percentage;
   final int freeDelivery;
+  final String nextLevelName;
+  final double purchaseLimit;
+  final List<MobstarTransactionEntity> transactions;
 
   String get membership {
     final match = RegExp(r'\(([^)]+)\)').firstMatch(levelName);
     return match?.group(1) ?? (levelName.isEmpty ? 'Bronze' : levelName);
   }
 
-  factory MobstarEntity.fromMap(Map<String, dynamic> map) => MobstarEntity(
-        points: int.tryParse((map['points'] ?? '0').toString()) ?? 0,
-        actualMoney:
-            double.tryParse((map['actual_money'] ?? '0').toString()) ?? 0,
-        levelName: (map['name'] ?? '').toString(),
-        percentage:
-            double.tryParse((map['percentage'] ?? '0').toString()) ?? 0,
-        freeDelivery:
-            int.tryParse((map['free_delivery'] ?? '0').toString()) ?? 0,
-      );
+  String get nextMembership {
+    final match = RegExp(r'\(([^)]+)\)').firstMatch(nextLevelName);
+    return match?.group(1) ?? (nextLevelName.isEmpty ? 'Silver' : nextLevelName);
+  }
+
+  factory MobstarEntity.fromMap(Map<String, dynamic> map) {
+    final source = map['data'] is Map
+        ? Map<String, dynamic>.from(map['data'] as Map)
+        : map;
+    final program = source['program_details'] is Map
+        ? Map<String, dynamic>.from(source['program_details'] as Map)
+        : <String, dynamic>{};
+    final results = source['results'] is List
+        ? source['results'] as List
+        : const <dynamic>[];
+    final first = results.whereType<Map>().isNotEmpty
+        ? Map<String, dynamic>.from(results.whereType<Map>().first)
+        : <String, dynamic>{};
+    final pointsMap = first['mobStarPoints'] is Map
+        ? Map<String, dynamic>.from(first['mobStarPoints'] as Map)
+        : <String, dynamic>{};
+    final points = int.tryParse(
+          (program['current_points'] ?? pointsMap['points'] ?? '0').toString(),
+        ) ??
+        0;
+    final moneyFromApi =
+        double.tryParse((pointsMap['actual_money'] ?? '').toString());
+
+    return MobstarEntity(
+      points: points,
+      actualMoney: moneyFromApi ?? points / 4,
+      levelName: (program['current_loyalty_program'] ??
+              pointsMap['name'] ??
+              'Level 01 (Bronze)')
+          .toString(),
+      percentage:
+          double.tryParse((pointsMap['percentage'] ?? '0').toString()) ?? 0,
+      freeDelivery:
+          int.tryParse((pointsMap['free_delivery'] ?? '0').toString()) ?? 0,
+      nextLevelName:
+          (program['next_loyalty_program'] ?? 'Level 02 (Silver)').toString(),
+      purchaseLimit:
+          double.tryParse((program['purchase_limit'] ?? '0').toString()) ?? 0,
+      transactions: results
+          .whereType<Map>()
+          .map((item) => MobstarTransactionEntity.fromMap(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList(),
+    );
+  }
 
   static const empty = MobstarEntity(
     points: 0,
@@ -272,5 +319,52 @@ class MobstarEntity {
     levelName: 'Level 01 (Bronze)',
     percentage: 0,
     freeDelivery: 0,
+    nextLevelName: 'Level 02 (Silver)',
+    purchaseLimit: 250000,
+    transactions: [],
   );
+}
+
+class MobstarTransactionEntity {
+  const MobstarTransactionEntity({
+    required this.points,
+    required this.currentBalance,
+    required this.txType,
+    required this.status,
+    required this.createdAt,
+    required this.validTill,
+    required this.notes,
+    required this.orderId,
+    required this.amount,
+  });
+
+  final int points;
+  final int currentBalance;
+  final String txType;
+  final String status;
+  final DateTime? createdAt;
+  final String validTill;
+  final String notes;
+  final String orderId;
+  final double amount;
+
+  bool get credited => txType.toUpperCase() == 'EARN' || points > 0;
+
+  factory MobstarTransactionEntity.fromMap(Map<String, dynamic> map) {
+    final details = map['details'] is Map
+        ? Map<String, dynamic>.from(map['details'] as Map)
+        : <String, dynamic>{};
+    return MobstarTransactionEntity(
+      points: int.tryParse((map['points'] ?? '0').toString()) ?? 0,
+      currentBalance:
+          int.tryParse((map['current_balance'] ?? '0').toString()) ?? 0,
+      txType: (map['tx_type'] ?? '').toString(),
+      status: (map['status'] ?? '').toString(),
+      createdAt: DateTime.tryParse((map['created_at'] ?? '').toString()),
+      validTill: (map['valid_till'] ?? map['expires_on'] ?? '').toString(),
+      notes: (map['notes'] ?? '').toString(),
+      orderId: (details['order_id'] ?? details['id'] ?? '').toString(),
+      amount: double.tryParse((details['amount'] ?? '0').toString()) ?? 0,
+    );
+  }
 }

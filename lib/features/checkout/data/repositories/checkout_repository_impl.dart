@@ -137,9 +137,15 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   }
 
   @override
-  Future<(RupifiOrderEntity?, AppFailure?)> createRupifiOrder(String cartId) async {
+  Future<(RupifiOrderEntity?, AppFailure?)> createRupifiOrder(
+    String cartId, {
+    String? paymentOrigin,
+  }) async {
     try {
-      final body = await _datasource.createRupifiOrder(cartId);
+      final body = await _datasource.createRupifiOrder(
+        cartId,
+        paymentOrigin: paymentOrigin,
+      );
       final data = body['data'] is Map
           ? Map<String, dynamic>.from(body['data'] as Map)
           : body;

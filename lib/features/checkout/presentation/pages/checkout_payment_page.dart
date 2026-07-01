@@ -248,7 +248,21 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     _requestedPaymentCartId = cartId;
     _requestedPaymentTotal = total;
     _isPaymentOrderRequestInFlight = true;
-    _checkoutBloc.add(CheckoutRupifiOrderRequested(cartId: cartId));
+    _checkoutBloc.add(
+      CheckoutRupifiOrderRequested(
+        cartId: cartId,
+        paymentOrigin: _rupifiPaymentOrigin,
+      ),
+    );
+  }
+
+  String? get _rupifiPaymentOrigin {
+    if (kIsWeb) return null;
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.iOS => 'IOS_APP',
+      TargetPlatform.android => 'ANDROID_APP',
+      _ => null,
+    };
   }
 
   void _syncPaymentDetailsForSummary(CartSummaryEntity summary) {

@@ -39,6 +39,7 @@ class _MobstarPointsView extends StatelessWidget {
     final valueText = mobstar.actualMoney % 1 == 0
         ? mobstar.actualMoney.toStringAsFixed(0)
         : mobstar.actualMoney.toStringAsFixed(2);
+    final transactions = mobstar.transactions;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F0F0),
@@ -107,50 +108,21 @@ class _MobstarPointsView extends StatelessWidget {
                         topRight: Radius.circular(20),
                       ),
                     ),
-                    child: const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, 40),
-                      child: Column(
-                        children: [
-                          _TransactionRow(
-                            credited: true,
-                            points: '2000P',
-                            amount: '₹500.00',
-                            details:
-                                'Credited on 22 Jan 2024 | Valid till 31 Jan 2025',
-                          ),
-                          _TransactionDivider(),
-                          _TransactionRow(
-                            credited: false,
-                            points: '2000P',
-                            amount: '₹500.00',
-                            details: 'Debited on 18 Nov',
-                          ),
-                          _TransactionDivider(),
-                          _TransactionRow(
-                            credited: true,
-                            points: '2000P',
-                            amount: '₹500.00',
-                            details:
-                                'Credited on 22 Jan 2024 | Valid till 31 Jan 2025',
-                          ),
-                          _TransactionDivider(),
-                          _TransactionRow(
-                            credited: true,
-                            points: '2000P',
-                            amount: '₹500.00',
-                            details:
-                                'Credited on 22 Jan 2024 | Valid till 31 Jan 2025',
-                          ),
-                          _TransactionDivider(),
-                          _TransactionRow(
-                            credited: true,
-                            points: '2000P',
-                            amount: '₹500.00',
-                            details:
-                                'Credited on 22 Jan 2024 | Valid till 31 Jan 2025',
-                          ),
-                        ],
-                      ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                      child: transactions.isEmpty
+                          ? const _EmptyTransactions()
+                          : Column(
+                              children: [
+                                for (var i = 0;
+                                    i < transactions.length;
+                                    i++) ...[
+                                  _TransactionRow(transaction: transactions[i]),
+                                  if (i != transactions.length - 1)
+                                    const _TransactionDivider(),
+                                ],
+                              ],
+                            ),
                     ),
                   ),
                 ),
@@ -298,21 +270,19 @@ class _PointsInfoNote extends StatelessWidget {
 }
 
 class _TransactionRow extends StatelessWidget {
-  const _TransactionRow({
-    required this.credited,
-    required this.points,
-    required this.amount,
-    required this.details,
-  });
+  const _TransactionRow({required this.transaction});
 
-  final bool credited;
-  final String points;
-  final String amount;
-  final String details;
+  final MobstarTransactionEntity transaction;
 
   @override
   Widget build(BuildContext context) {
+    final credited = transaction.credited;
     final sign = credited ? '+' : '-';
+    final absolutePoints = transaction.points.abs();
+    final amount = transaction.amount == 0
+        ? '₹0'
+        : '₹${transaction.amount.toStringAsFixed(2)}';
+    final details = _detailsText(transaction);
     final pointsColor =
         credited ? const Color(0xFF07AD61) : _MobstarPointsView._primary;
 
@@ -334,11 +304,13 @@ class _TransactionRow extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       height: 20 / 14,
                     ),
-                    children: const [
-                      TextSpan(text: 'Order ID: '),
+                    children: [
+                      const TextSpan(text: 'Order ID: '),
                       TextSpan(
-                        text: 'OD20250910004507',
-                        style: TextStyle(color: Color(0xFF0360E5)),
+                        text: transaction.orderId.isEmpty
+                            ? transaction.notes
+                            : transaction.orderId,
+                        style: const TextStyle(color: Color(0xFF0360E5)),
                       ),
                     ],
                   ),
@@ -346,7 +318,7 @@ class _TransactionRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                '$sign$points',
+                '$sign${absolutePoints}P',
                 textAlign: TextAlign.right,
                 style: GoogleFonts.inter(
                   color: pointsColor,
@@ -391,6 +363,33 @@ class _TransactionRow extends StatelessWidget {
       ),
     );
   }
+
+  static String _detailsText(MobstarTransactionEntity transaction) {
+    final action = transaction.credited ? 'Credited' : 'Debited';
+    final date = _formatDate(transaction.createdAt);
+    final validTill = transaction.validTill.trim();
+    if (validTill.isEmpty) return '$action on $date';
+    return '$action on $date | Valid till $validTill';
+  }
+
+  static String _formatDate(DateTime? date) {
+    if (date == null) return '-';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
 }
 
 class _TransactionDivider extends StatelessWidget {
@@ -401,6 +400,27 @@ class _TransactionDivider extends StatelessWidget {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 10),
       child: Divider(height: 1, thickness: 1, color: Color(0xFFE2E2E2)),
+    );
+  }
+}
+
+class _EmptyTransactions extends StatelessWidget {
+  const _EmptyTransactions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Text(
+        'No mobSTAR transactions yet',
+        textAlign: TextAlign.center,
+        style: GoogleFonts.inter(
+          color: _MobstarPointsView._muted,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          height: 20 / 13,
+        ),
+      ),
     );
   }
 }
