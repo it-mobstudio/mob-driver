@@ -17,6 +17,7 @@ import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_why_ch
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/product_rail_section.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/section_title.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/widgets/referral_success_dialog.dart';
+import 'package:m_o_b_demand_side/shared/back_to_top_button.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 
@@ -33,15 +34,40 @@ class HomepageWidget extends StatefulWidget {
 }
 
 class _HomepageWidgetState extends State<HomepageWidget> {
+  final ScrollController _scrollController = ScrollController();
+  bool _showBackToTop = false;
+
+  static const double _scrollThreshold = 400;
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     if (widget.showReferralBonus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ReferralSuccessDialog.show(context, amount: 1000, walletBalance: 1000);
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final show = _scrollController.offset > _scrollThreshold;
+    if (show != _showBackToTop) setState(() => _showBackToTop = show);
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -59,6 +85,7 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                     onRefresh: () async =>
                         context.read<HomeBloc>().add(HomeRefreshRequested()),
                     child: CustomScrollView(
+                      controller: _scrollController,
                       slivers: [
                         const SliverToBoxAdapter(child: HomeHeader()),
                         SliverPersistentHeader(
@@ -143,6 +170,17 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                   ),
               };
             },
+          ),
+          Positioned(
+            bottom: 80,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: BackToTopButton(
+                visible: _showBackToTop,
+                onTap: _scrollToTop,
+              ),
+            ),
           ),
           const ViewCartBar(),
         ],

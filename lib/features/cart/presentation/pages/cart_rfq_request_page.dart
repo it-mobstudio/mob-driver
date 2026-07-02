@@ -145,22 +145,34 @@ class _CartRfqRequestPageState extends State<CartRfqRequestPage> {
               value: SystemUiOverlayStyle.dark,
               child: SafeArea(
                 bottom: false,
-                child: Stack(
-                  children: [
-                    _dimmedCartChrome(),
-                    DraggableScrollableSheet(
-                      initialChildSize: _submittedRfqId.isEmpty ? 0.84 : 0.78,
-                      minChildSize: 0.56,
-                      maxChildSize: 0.96,
-                      snap: true,
-                      snapSizes: const [0.56, 0.78, 0.84, 0.96],
-                      builder: (context, scrollController) {
-                        return _submittedRfqId.isEmpty
-                            ? _requestSheet(submitting, scrollController)
-                            : _successSheet(scrollController);
-                      },
-                    ),
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final childSize = _submittedRfqId.isEmpty ? 0.84 : 0.78;
+                    final sheetTop = constraints.maxHeight * (1 - childSize);
+                    return Stack(
+                      children: [
+                        _dimmedCartChrome(),
+                        DraggableScrollableSheet(
+                          initialChildSize: childSize,
+                          minChildSize: 0.56,
+                          maxChildSize: 0.96,
+                          snap: true,
+                          snapSizes: const [0.56, 0.78, 0.84, 0.96],
+                          builder: (context, scrollController) {
+                            return _submittedRfqId.isEmpty
+                                ? _requestSheet(submitting, scrollController)
+                                : _successSheet(scrollController);
+                          },
+                        ),
+                        Positioned(
+                          top: sheetTop - 38,
+                          left: 0,
+                          right: 0,
+                          child: _closeButton(size: 44),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -235,114 +247,101 @@ class _CartRfqRequestPageState extends State<CartRfqRequestPage> {
   }
 
   Widget _requestSheet(bool submitting, ScrollController scrollController) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned.fill(
-          top: 22,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
+    return Container(
+      margin: const EdgeInsets.only(top: 22),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 28, 16, 28),
               children: [
-                Expanded(
-                  child: ListView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 28, 16, 28),
+                Text(
+                  'Quote request (RFQ)',
+                  style: GoogleFonts.inter(
+                    color: _navy,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 34),
+                if (widget.summary.items.isNotEmpty) ...[
+                  _cartSummaryBanner(),
+                  const SizedBox(height: 26),
+                ],
+                Form(
+                  key: _formKey,
+                  child: Column(
                     children: [
-                      Text(
-                        'Quote request (RFQ)',
-                        style: GoogleFonts.inter(
-                          color: _navy,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                      if (_hasAddress) ...[
+                        _field(
+                          'Business name*',
+                          _nameController,
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                                  ? 'Business name is required'
+                                  : null,
                         ),
-                      ),
-                      const SizedBox(height: 34),
-                      if (widget.summary.items.isNotEmpty) ...[
-                        _cartSummaryBanner(),
-                        const SizedBox(height: 26),
+                        const SizedBox(height: 20),
                       ],
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            if (_hasAddress) ...[
-                              _field(
-                                'Business name*',
-                                _nameController,
-                                validator: (value) =>
-                                    value == null || value.trim().isEmpty
-                                        ? 'Business name is required'
-                                        : null,
-                              ),
-                              const SizedBox(height: 20),
-                            ],
-                            _field(
-                              'Business mobile (for OTP)*',
-                              _phoneController,
-                              keyboardType: TextInputType.phone,
-                              readOnly: _phoneIsLocked,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(10),
-                              ],
-                              validator: (value) =>
-                                  value == null || value.trim().length != 10
-                                      ? 'Enter a valid 10-digit number'
-                                      : null,
-                            ),
-                            const SizedBox(height: 20),
-                            _field(
-                              'Delivery pincode*',
-                              _pincodeController,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(6),
-                              ],
-                              validator: (value) =>
-                                  value == null || value.trim().length != 6
-                                      ? 'Enter a valid pincode'
-                                      : null,
-                            ),
-                            const SizedBox(height: 20),
-                            _field(
-                              'Email id',
-                              _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
-                                final text = value?.trim() ?? '';
-                                if (text.isEmpty) return null;
-                                return text.contains('@')
-                                    ? null
-                                    : 'Enter a valid email';
-                              },
-                            ),
-                          ],
-                        ),
+                      _field(
+                        'Business mobile (for OTP)*',
+                        _phoneController,
+                        keyboardType: TextInputType.phone,
+                        readOnly: _phoneIsLocked,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
+                        validator: (value) =>
+                            value == null || value.trim().length != 10
+                                ? 'Enter a valid 10-digit number'
+                                : null,
                       ),
-                      const SizedBox(height: 32),
-                      _hasAddress ? _addressCard() : _addAddressTile(),
                       const SizedBox(height: 20),
-                      _howRfqWorks(),
+                      _field(
+                        'Delivery pincode*',
+                        _pincodeController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(6),
+                        ],
+                        validator: (value) =>
+                            value == null || value.trim().length != 6
+                                ? 'Enter a valid pincode'
+                                : null,
+                      ),
+                      const SizedBox(height: 20),
+                      _field(
+                        'Email id',
+                        _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          if (text.isEmpty) return null;
+                          return text.contains('@')
+                              ? null
+                              : 'Enter a valid email';
+                        },
+                      ),
                     ],
                   ),
                 ),
-                _footer(submitting),
+                const SizedBox(height: 32),
+                _hasAddress ? _addressCard() : _addAddressTile(),
+                const SizedBox(height: 20),
+                _howRfqWorks(),
               ],
             ),
           ),
-        ),
-        Positioned(
-          top: -38,
-          left: 0,
-          right: 0,
-          child: _closeButton(size: 44),
-        ),
-      ],
+          _footer(submitting),
+        ],
+      ),
     );
   }
 
@@ -757,112 +756,99 @@ class _CartRfqRequestPageState extends State<CartRfqRequestPage> {
   }
 
   Widget _successSheet(ScrollController scrollController) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned.fill(
-          top: 22,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
+    return Container(
+      margin: const EdgeInsets.only(top: 22),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
               children: [
-                Expanded(
-                  child: ListView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
-                    children: [
-                      const SizedBox(height: 24),
-                      Lottie.asset(
-                        'assets/lottiejson/paymentsuccess.json',
-                        width: 210,
-                        height: 210,
-                        fit: BoxFit.contain,
-                        repeat: false,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Quote requested',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          color: _navy,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      if (_submittedRfqId.isNotEmpty)
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF4F6F8),
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: Text(
-                              'RFQ No: $_submittedRfqId',
-                              style: GoogleFonts.inter(
-                                color: _navy,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Thanks! Our team will get back to you shortly with the final quote.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          color: _navy,
-                          fontSize: 14,
-                          height: 21 / 14,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 24),
+                Lottie.asset(
+                  'assets/lottiejson/paymentsuccess.json',
+                  width: 210,
+                  height: 210,
+                  fit: BoxFit.contain,
+                  repeat: false,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Quote requested',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: _navy,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-                  child: SafeArea(
-                    top: false,
-                    child: OutlinedButton(
-                      onPressed: () => context.goNamed(RfqPage.routeName),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _blue,
-                        side: const BorderSide(color: _blue),
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                const SizedBox(height: 20),
+                if (_submittedRfqId.isNotEmpty)
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F6F8),
+                        borderRadius: BorderRadius.circular(18),
                       ),
                       child: Text(
-                        'View RFQ',
+                        'RFQ No: $_submittedRfqId',
                         style: GoogleFonts.inter(
-                          color: _blue,
-                          fontSize: 14,
+                          color: _navy,
+                          fontSize: 13,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
                   ),
+                const SizedBox(height: 18),
+                Text(
+                  'Thanks! Our team will get back to you shortly with the final quote.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: _navy,
+                    fontSize: 14,
+                    height: 21 / 14,
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-        Positioned(
-          top: -38,
-          left: 0,
-          right: 0,
-          child: _closeButton(size: 44),
-        ),
-      ],
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+            child: SafeArea(
+              top: false,
+              child: OutlinedButton(
+                onPressed: () => context.goNamed(RfqPage.routeName),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _blue,
+                  side: const BorderSide(color: _blue),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  'View RFQ',
+                  style: GoogleFonts.inter(
+                    color: _blue,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

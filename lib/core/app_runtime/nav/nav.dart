@@ -26,6 +26,7 @@ import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_prod
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_listing_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
@@ -133,376 +134,380 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         : (AuthSession.instance.isAuthenticated
             ? const HomepageWidget()
             : const LoginpageWidget()),
-      routes: [
-        GoRoute(
-          name: '_initialize',
-          path: '/',
-          builder: (context, state) => appStateNotifier.showSplashImage
-              ? const SplashScreen()
-              : const LoginpageWidget(),
+    routes: [
+      GoRoute(
+        name: '_initialize',
+        path: '/',
+        builder: (context, state) => appStateNotifier.showSplashImage
+            ? const SplashScreen()
+            : const LoginpageWidget(),
+      ),
+      GoRoute(
+        name: LoginpageWidget.routeName,
+        path: LoginpageWidget.routePath,
+        builder: (context, state) => const LoginpageWidget(),
+      ),
+      GoRoute(
+        name: OTPVerificationWidget.routeName,
+        path: OTPVerificationWidget.routePath,
+        builder: (context, state) {
+          final extra = state.extra is Map<String, dynamic>
+              ? state.extra as Map<String, dynamic>
+              : <String, dynamic>{};
+          return OTPVerificationWidget(
+            phoneNumber: extra['phoneNumber']?.toString() ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        name: SignupWidget.routeName,
+        path: SignupWidget.routePath,
+        builder: (context, state) {
+          final extra = state.extra is Map<String, dynamic>
+              ? state.extra as Map<String, dynamic>
+              : <String, dynamic>{};
+          return SignupWidget(
+            phoneNumber: extra['phoneNumber']?.toString() ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        name: AddressSelectionWidget.routeName,
+        path: AddressSelectionWidget.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra is Map<String, dynamic>
+              ? state.extra as Map<String, dynamic>
+              : <String, dynamic>{};
+          return AddressSelectionWidget(
+            returnToHome: extra['returnToHome'] == true,
+            showReferralBonus: extra['showReferralBonus'] == true,
+          );
+        },
+      ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            ScaffoldWithNavBar(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(
+              name: HomepageWidget.routeName,
+              path: HomepageWidget.routePath,
+              builder: (context, state) {
+                final extra = state.extra is Map<String, dynamic>
+                    ? state.extra as Map<String, dynamic>
+                    : <String, dynamic>{};
+                return HomepageWidget(
+                  showReferralBonus: extra['showReferralBonus'] == true,
+                );
+              },
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              name: CategoriesPage.routeName,
+              path: CategoriesPage.routePath,
+              builder: (context, state) => const CategoriesPage(),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              name: OrdersPage.routeName,
+              path: OrdersPage.routePath,
+              builder: (context, state) => const OrdersPage(),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              name: CreditPage.routeName,
+              path: CreditPage.routePath,
+              builder: (context, state) => const CreditPage(),
+            ),
+          ]),
+        ],
+      ),
+      GoRoute(
+        name: ProductListingPage.routeName,
+        path: ProductListingPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra is Map
+              ? Map<String, dynamic>.from(state.extra as Map)
+              : <String, dynamic>{};
+          final category = extra['category']?.toString() ??
+              state.uri.queryParameters['category'] ??
+              '';
+          final slug = extra['slug']?.toString() ??
+              state.uri.queryParameters['slug'] ??
+              '';
+          final subCategorySlug = extra['subCategorySlug']?.toString() ??
+              state.uri.queryParameters['sub_category'];
+          final subCategoryName = extra['subCategoryName']?.toString();
+          return ProductListingPage(
+            category: category,
+            slug: slug,
+            initialSubCategorySlug: subCategorySlug,
+            initialSubCategoryName: subCategoryName,
+          );
+        },
+      ),
+      GoRoute(
+        name: ProductDetailPage.routeName,
+        path: '${ProductDetailPage.routePath}/:slug',
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => ProductDetailPage(
+          slug: state.pathParameters['slug'] ?? '',
         ),
-        GoRoute(
-          name: LoginpageWidget.routeName,
-          path: LoginpageWidget.routePath,
-          builder: (context, state) => const LoginpageWidget(),
+      ),
+      GoRoute(
+        name: 'CategoryWebAlias',
+        path: '/home/:slug',
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) {
+          final categorySlug = state.pathParameters['slug'] ?? '';
+          return ProductListingPage(
+            category: _labelFromSlug(categorySlug),
+            slug: categorySlug,
+          );
+        },
+      ),
+      GoRoute(
+        name: 'ProductDetailHomeWebAlias',
+        path: '/home/product-details/:slug',
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => ProductDetailPage(
+          slug: state.pathParameters['slug'] ?? '',
         ),
-        GoRoute(
-          name: OTPVerificationWidget.routeName,
-          path: OTPVerificationWidget.routePath,
-          builder: (context, state) {
-            final extra = state.extra is Map<String, dynamic>
-                ? state.extra as Map<String, dynamic>
-                : <String, dynamic>{};
-            return OTPVerificationWidget(
-              phoneNumber: extra['phoneNumber']?.toString() ?? '',
-            );
-          },
+      ),
+      GoRoute(
+        name: 'ProductDetailWebAlias',
+        path: '/products/:slug',
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => ProductDetailPage(
+          slug: state.pathParameters['slug'] ?? '',
         ),
-        GoRoute(
-          name: SignupWidget.routeName,
-          path: SignupWidget.routePath,
-          builder: (context, state) {
-            final extra = state.extra is Map<String, dynamic>
-                ? state.extra as Map<String, dynamic>
-                : <String, dynamic>{};
-            return SignupWidget(
-              phoneNumber: extra['phoneNumber']?.toString() ?? '',
-            );
-          },
+      ),
+      GoRoute(
+        name: BrandProductSearchPage.routeName,
+        path: '${BrandProductSearchPage.routePath}/:slug',
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra is Map
+              ? Map<String, dynamic>.from(state.extra as Map)
+              : <String, dynamic>{};
+          final slug = state.pathParameters['slug'] ?? '';
+          final brandName = extra['brandName']?.toString() ??
+              state.uri.queryParameters['brand'];
+          final searchTerm = extra['searchTerm']?.toString() ??
+              brandName ??
+              state.uri.queryParameters['search'] ??
+              _labelFromSlug(slug);
+          return BrandProductSearchPage(
+            searchTerm: searchTerm,
+            brandName: brandName,
+          );
+        },
+      ),
+      GoRoute(
+        name: SearchPage.routeName,
+        path: SearchPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const SearchPage(),
+      ),
+      GoRoute(
+        name: CartPage.routeName,
+        path: CartPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const CartPage(),
+      ),
+      GoRoute(
+        name: CartRfqRequestPage.routeName,
+        path: CartRfqRequestPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => CartRfqRequestPage(
+          summary: state.extra is CartSummaryEntity
+              ? state.extra as CartSummaryEntity
+              : CartSummaryEntity.empty,
         ),
-        GoRoute(
-          name: AddressSelectionWidget.routeName,
-          path: AddressSelectionWidget.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) {
-            final extra = state.extra is Map<String, dynamic>
-                ? state.extra as Map<String, dynamic>
-                : <String, dynamic>{};
-            return AddressSelectionWidget(
-              returnToHome: extra['returnToHome'] == true,
-              showReferralBonus: extra['showReferralBonus'] == true,
-            );
-          },
+      ),
+      GoRoute(
+        name: CheckoutAddressPage.routeName,
+        path: CheckoutAddressPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const CheckoutAddressPage(),
+      ),
+      GoRoute(
+        name: CheckoutOrderReviewPage.routeName,
+        path: CheckoutOrderReviewPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return CheckoutOrderReviewPage(
+            cartId: extra['cart_id'] as int? ?? 0,
+            deliveryAddressId: extra['delivery_address_id'] as int? ?? 0,
+            billingAddressId: extra['billing_address_id'] as int? ?? 0,
+          );
+        },
+      ),
+      GoRoute(
+        name: CheckoutPaymentPage.routeName,
+        path: CheckoutPaymentPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const CheckoutPaymentPage(),
+      ),
+      GoRoute(
+        name: OrderPlacedPage.routeName,
+        path: OrderPlacedPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is PlacedOrderEntity) {
+            return OrderPlacedPage(order: extra);
+          }
+          return OrderPlacedPage(
+            orderId:
+                extra as String? ?? state.uri.queryParameters['order_id'] ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        name: 'OrderPlacedDeepLinkAlias',
+        path: '/success',
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => OrderPlacedPage(
+          orderId: state.uri.queryParameters['order_id'] ?? '',
         ),
-        StatefulShellRoute.indexedStack(
-          builder: (context, state, navigationShell) =>
-              ScaffoldWithNavBar(navigationShell: navigationShell),
-          branches: [
-            StatefulShellBranch(routes: [
-              GoRoute(
-                name: HomepageWidget.routeName,
-                path: HomepageWidget.routePath,
-                builder: (context, state) {
-                  final extra = state.extra is Map<String, dynamic>
-                      ? state.extra as Map<String, dynamic>
-                      : <String, dynamic>{};
-                  return HomepageWidget(
-                    showReferralBonus: extra['showReferralBonus'] == true,
-                  );
-                },
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                name: CategoriesPage.routeName,
-                path: CategoriesPage.routePath,
-                builder: (context, state) => const CategoriesPage(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                name: OrdersPage.routeName,
-                path: OrdersPage.routePath,
-                builder: (context, state) => const OrdersPage(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                name: CreditPage.routeName,
-                path: CreditPage.routePath,
-                builder: (context, state) => const CreditPage(),
-              ),
-            ]),
-          ],
+      ),
+      GoRoute(
+        name: PaymentFailedPage.routeName,
+        path: PaymentFailedPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) =>
+            PaymentFailedPage(message: state.extra as String? ?? ''),
+      ),
+      GoRoute(
+        name: MapLocationWidget.routeName,
+        path: MapLocationWidget.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => MapLocationWidget(
+          initialLocation: state.extra is AddressLocationEntity
+              ? state.extra as AddressLocationEntity
+              : null,
         ),
-        GoRoute(
-          name: ProductListingPage.routeName,
-          path: ProductListingPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) {
-            final extra = state.extra is Map
-                ? Map<String, dynamic>.from(state.extra as Map)
-                : <String, dynamic>{};
-            final category = extra['category']?.toString() ??
-                state.uri.queryParameters['category'] ??
-                '';
-            final slug = extra['slug']?.toString() ??
-                state.uri.queryParameters['slug'] ??
-                '';
-            final subCategorySlug = extra['subCategorySlug']?.toString() ??
-                state.uri.queryParameters['sub_category'];
-            final subCategoryName = extra['subCategoryName']?.toString();
-            return ProductListingPage(
-              category: category,
-              slug: slug,
-              initialSubCategorySlug: subCategorySlug,
-              initialSubCategoryName: subCategoryName,
-            );
-          },
+      ),
+      GoRoute(
+        name: MagicAiQuotePage.routeName,
+        path: MagicAiQuotePage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const MagicAiQuotePage(),
+      ),
+      GoRoute(
+        name: RfqFormPage.routeName,
+        path: RfqFormPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const RfqFormPage(),
+      ),
+      GoRoute(
+        name: RfqSuccessPage.routeName,
+        path: RfqSuccessPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const RfqSuccessPage(),
+      ),
+      GoRoute(
+        name: RfqPage.routeName,
+        path: RfqPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const RfqPage(),
+      ),
+      GoRoute(
+        name: RfqDetailsPage.routeName,
+        path: RfqDetailsPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => RfqDetailsPage(
+          rfqId:
+              state.extra?.toString() ?? state.uri.queryParameters['id'] ?? '',
         ),
-        GoRoute(
-          name: ProductDetailPage.routeName,
-          path: '${ProductDetailPage.routePath}/:slug',
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => ProductDetailPage(
-            slug: state.pathParameters['slug'] ?? '',
-          ),
-        ),
-        GoRoute(
-          name: 'CategoryWebAlias',
-          path: '/home/:slug',
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) {
-            final categorySlug = state.pathParameters['slug'] ?? '';
-            return ProductListingPage(
-              category: _labelFromSlug(categorySlug),
-              slug: categorySlug,
-            );
-          },
-        ),
-        GoRoute(
-          name: 'ProductDetailHomeWebAlias',
-          path: '/home/product-details/:slug',
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => ProductDetailPage(
-            slug: state.pathParameters['slug'] ?? '',
-          ),
-        ),
-        GoRoute(
-          name: 'ProductDetailWebAlias',
-          path: '/products/:slug',
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => ProductDetailPage(
-            slug: state.pathParameters['slug'] ?? '',
-          ),
-        ),
-        GoRoute(
-          name: BrandProductSearchPage.routeName,
-          path: '${BrandProductSearchPage.routePath}/:slug',
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) {
-            final extra = state.extra is Map
-                ? Map<String, dynamic>.from(state.extra as Map)
-                : <String, dynamic>{};
-            final slug = state.pathParameters['slug'] ?? '';
-            final brandName = extra['brandName']?.toString() ??
-                state.uri.queryParameters['brand'];
-            final searchTerm = extra['searchTerm']?.toString() ??
-                brandName ??
-                state.uri.queryParameters['search'] ??
-                _labelFromSlug(slug);
-            return BrandProductSearchPage(
-              searchTerm: searchTerm,
-              brandName: brandName,
-            );
-          },
-        ),
-        GoRoute(
-          name: SearchPage.routeName,
-          path: SearchPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const SearchPage(),
-        ),
-        GoRoute(
-          name: CartPage.routeName,
-          path: CartPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const CartPage(),
-        ),
-        GoRoute(
-          name: CartRfqRequestPage.routeName,
-          path: CartRfqRequestPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => CartRfqRequestPage(
-            summary: state.extra is CartSummaryEntity
-                ? state.extra as CartSummaryEntity
-                : CartSummaryEntity.empty,
-          ),
-        ),
-        GoRoute(
-          name: CheckoutAddressPage.routeName,
-          path: CheckoutAddressPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const CheckoutAddressPage(),
-        ),
-        GoRoute(
-          name: CheckoutOrderReviewPage.routeName,
-          path: CheckoutOrderReviewPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) {
-            final extra = state.extra as Map<String, dynamic>? ?? {};
-            return CheckoutOrderReviewPage(
-              cartId: extra['cart_id'] as int? ?? 0,
-              deliveryAddressId: extra['delivery_address_id'] as int? ?? 0,
-              billingAddressId: extra['billing_address_id'] as int? ?? 0,
-            );
-          },
-        ),
-        GoRoute(
-          name: CheckoutPaymentPage.routeName,
-          path: CheckoutPaymentPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const CheckoutPaymentPage(),
-        ),
-        GoRoute(
-          name: OrderPlacedPage.routeName,
-          path: OrderPlacedPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) {
-            final extra = state.extra;
-            if (extra is PlacedOrderEntity) {
-              return OrderPlacedPage(order: extra);
-            }
-            return OrderPlacedPage(
-              orderId: extra as String? ??
-                  state.uri.queryParameters['order_id'] ??
-                  '',
-            );
-          },
-        ),
-        GoRoute(
-          name: 'OrderPlacedDeepLinkAlias',
-          path: '/success',
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => OrderPlacedPage(
-            orderId: state.uri.queryParameters['order_id'] ?? '',
-          ),
-        ),
-        GoRoute(
-          name: PaymentFailedPage.routeName,
-          path: PaymentFailedPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) =>
-              PaymentFailedPage(message: state.extra as String? ?? ''),
-        ),
-        GoRoute(
-          name: MapLocationWidget.routeName,
-          path: MapLocationWidget.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => MapLocationWidget(
-            initialLocation: state.extra is AddressLocationEntity
-                ? state.extra as AddressLocationEntity
+      ),
+      GoRoute(
+        name: MyAccountWidget.routeName,
+        path: MyAccountWidget.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const MyAccountWidget(),
+      ),
+      GoRoute(
+        name: MyProjectsPage.routeName,
+        path: MyProjectsPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const MyProjectsPage(),
+      ),
+      GoRoute(
+        name: MobCreditProfilePage.routeName,
+        path: MobCreditProfilePage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const MobCreditProfilePage(),
+      ),
+      GoRoute(
+        name: PersonalInfoPage.routeName,
+        path: PersonalInfoPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const PersonalInfoPage(),
+      ),
+      GoRoute(
+        name: ReferralPage.routeName,
+        path: ReferralPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const ReferralPage(),
+      ),
+      GoRoute(
+        name: ReferralHistoryPage.routeName,
+        path: ReferralHistoryPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const ReferralHistoryPage(),
+      ),
+      GoRoute(
+        name: WalletPointsPage.routeName,
+        path: WalletPointsPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const WalletPointsPage(),
+      ),
+      GoRoute(
+        name: MobstarPage.routeName,
+        path: MobstarPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const MobstarPage(),
+      ),
+      GoRoute(
+        name: MobstarPointsPage.routeName,
+        path: MobstarPointsPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const MobstarPointsPage(),
+      ),
+      GoRoute(
+        name: OrderDetailPage.routeName,
+        path: OrderDetailPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const OrderDetailPage(),
+      ),
+      GoRoute(
+        name: OrderTrackingPage.routeName,
+        path: OrderTrackingPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra is Map
+              ? Map<String, dynamic>.from(state.extra as Map)
+              : <String, dynamic>{};
+          return OrderTrackingPage(
+            order: extra['order'] is OrderEntity
+                ? extra['order'] as OrderEntity
                 : null,
-          ),
-        ),
-        GoRoute(
-          name: MagicAiQuotePage.routeName,
-          path: MagicAiQuotePage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const MagicAiQuotePage(),
-        ),
-        GoRoute(
-          name: RfqFormPage.routeName,
-          path: RfqFormPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const RfqFormPage(),
-        ),
-        GoRoute(
-          name: RfqSuccessPage.routeName,
-          path: RfqSuccessPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const RfqSuccessPage(),
-        ),
-        GoRoute(
-          name: RfqPage.routeName,
-          path: RfqPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const RfqPage(),
-        ),
-        GoRoute(
-          name: RfqDetailsPage.routeName,
-          path: RfqDetailsPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => RfqDetailsPage(
-            rfqId: state.extra?.toString() ??
-                state.uri.queryParameters['id'] ??
-                '',
-          ),
-        ),
-        GoRoute(
-          name: MyAccountWidget.routeName,
-          path: MyAccountWidget.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const MyAccountWidget(),
-        ),
-        GoRoute(
-          name: MobCreditProfilePage.routeName,
-          path: MobCreditProfilePage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const MobCreditProfilePage(),
-        ),
-        GoRoute(
-          name: PersonalInfoPage.routeName,
-          path: PersonalInfoPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const PersonalInfoPage(),
-        ),
-        GoRoute(
-          name: ReferralPage.routeName,
-          path: ReferralPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const ReferralPage(),
-        ),
-        GoRoute(
-          name: ReferralHistoryPage.routeName,
-          path: ReferralHistoryPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const ReferralHistoryPage(),
-        ),
-        GoRoute(
-          name: WalletPointsPage.routeName,
-          path: WalletPointsPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const WalletPointsPage(),
-        ),
-        GoRoute(
-          name: MobstarPage.routeName,
-          path: MobstarPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const MobstarPage(),
-        ),
-        GoRoute(
-          name: MobstarPointsPage.routeName,
-          path: MobstarPointsPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const MobstarPointsPage(),
-        ),
-        GoRoute(
-          name: OrderDetailPage.routeName,
-          path: OrderDetailPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) => const OrderDetailPage(),
-        ),
-        GoRoute(
-          name: OrderTrackingPage.routeName,
-          path: OrderTrackingPage.routePath,
-          parentNavigatorKey: appNavigatorKey,
-          builder: (context, state) {
-            final extra = state.extra is Map
-                ? Map<String, dynamic>.from(state.extra as Map)
-                : <String, dynamic>{};
-            return OrderTrackingPage(
-              order: extra['order'] is OrderEntity
-                  ? extra['order'] as OrderEntity
-                  : null,
-              shipment: extra['shipment'] is OrderShipmentEntity
-                  ? extra['shipment'] as OrderShipmentEntity
-                  : null,
-            );
-          },
-        ),
-      ],
-    );
+            shipment: extra['shipment'] is OrderShipmentEntity
+                ? extra['shipment'] as OrderShipmentEntity
+                : null,
+          );
+        },
+      ),
+    ],
+  );
 }
 
 extension NavigationExtensions on BuildContext {

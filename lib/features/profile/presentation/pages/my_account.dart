@@ -14,6 +14,7 @@ import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
@@ -90,7 +91,8 @@ class _ProfileBody extends StatelessWidget {
                     children: [
                       _MobCreditCard(
                         account: account,
-                        onTap: () => context.push(MobCreditProfilePage.routePath),
+                        onTap: () =>
+                            context.push(MobCreditProfilePage.routePath),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -109,7 +111,8 @@ class _ProfileBody extends StatelessWidget {
                               iconAsset: 'assets/images/walletprofile.svg',
                               title: 'Wallet',
                               subtitle: _formatRupees(account.wallet),
-                              onTap: () => context.push(WalletPointsPage.routePath),
+                              onTap: () =>
+                                  context.push(WalletPointsPage.routePath),
                             ),
                           ),
                         ],
@@ -165,8 +168,8 @@ class _ProfileBody extends StatelessWidget {
                           _MenuItem(
                             iconAsset: 'assets/images/notifications.svg',
                             label: 'Notification preferences',
-                            onTap: () =>
-                                _comingSoon(context, 'Notification preferences'),
+                            onTap: () => _comingSoon(
+                                context, 'Notification preferences'),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/aboutus.svg',
@@ -269,8 +272,9 @@ class _ProfileHeader extends StatelessWidget {
                   CircleAvatar(
                     radius: 28,
                     backgroundColor: Colors.white,
-                    backgroundImage:
-                        profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
+                    backgroundImage: profileImage.isNotEmpty
+                        ? NetworkImage(profileImage)
+                        : null,
                     child: profileImage.isEmpty
                         ? SvgPicture.asset(
                             'assets/icons/profile.svg',

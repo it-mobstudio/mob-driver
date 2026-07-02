@@ -14,6 +14,7 @@ import 'package:m_o_b_demand_side/features/product/presentation/pages/filter_bot
 import 'package:m_o_b_demand_side/features/product/presentation/pages/sort_bottom_sheet.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/widgets/browse_products_components.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_page.dart';
+import 'package:m_o_b_demand_side/shared/back_to_top_button.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
@@ -52,6 +53,9 @@ class _ProductListingPageState extends State<ProductListingPage> {
   String? _selectedSubCategoryName;
   ProductSortOption _selectedSortOption = ProductSortOption.priceLowToHigh;
   bool _hasExplicitSortSelection = false;
+  bool _showBackToTop = false;
+
+  static const double _scrollThreshold = 400;
 
   @override
   void initState() {
@@ -75,14 +79,26 @@ class _ProductListingPageState extends State<ProductListingPage> {
   }
 
   void _onScroll() {
+    final pixels = _scrollController.position.pixels;
+
+    final show = pixels > _scrollThreshold;
+    if (show != _showBackToTop) setState(() => _showBackToTop = show);
+
     final state = _productBloc.state;
-    if (_scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent - 200 &&
+    if (pixels >= _scrollController.position.maxScrollExtent - 200 &&
         state is ProductListLoaded &&
         !state.isLoadingMore &&
         state.pagination.isNextPage) {
       _productBloc.add(ProductListNextPageRequested());
     }
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _selectSubCategory(int index, SubCategoryModel subCategory) {
@@ -554,6 +570,17 @@ class _ProductListingPageState extends State<ProductListingPage> {
                         ),
                       ),
                     ],
+                  ),
+                  Positioned(
+                    bottom: 80,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: BackToTopButton(
+                        visible: _showBackToTop,
+                        onTap: _scrollToTop,
+                      ),
+                    ),
                   ),
                   const ViewCartBar(),
                 ],
