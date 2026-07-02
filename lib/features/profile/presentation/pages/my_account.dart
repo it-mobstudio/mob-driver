@@ -12,6 +12,7 @@ import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
@@ -126,7 +127,7 @@ class _ProfileBody extends StatelessWidget {
                       _MenuItem(
                         iconAsset: 'assets/images/myprojects.svg',
                         label: 'My projects',
-                        onTap: () => _comingSoon(context, 'My projects'),
+                        onTap: () => context.push(MyProjectsPage.routePath),
                       ),
                       _MenuItem(
                         iconAsset: 'assets/images/mobsupport.svg',

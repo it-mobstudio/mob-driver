@@ -87,7 +87,11 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try {
       final body = await _datasource.getWalletHistory();
       if (body['status'] == false) {
-        return (null, BusinessFailure(body['message']?.toString() ?? 'Unable to load wallet.'));
+        return (
+          null,
+          BusinessFailure(
+              body['message']?.toString() ?? 'Unable to load wallet.')
+        );
       }
       final data = body['data'] is Map
           ? Map<String, dynamic>.from(body['data'] as Map)
@@ -104,7 +108,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<(MobstarEntity?, AppFailure?)> getMobstar() async {
     try {
       final body = await _datasource.getMobstar();
-      final results = body['results'] is List ? body['results'] as List : const <dynamic>[];
+      final results =
+          body['results'] is List ? body['results'] as List : const <dynamic>[];
       if (results.isEmpty) return (MobstarEntity.empty, null);
       final first = results.first is Map
           ? Map<String, dynamic>.from(results.first as Map)
@@ -113,6 +118,25 @@ class ProfileRepositoryImpl implements ProfileRepository {
           ? Map<String, dynamic>.from(first['mobStarPoints'] as Map)
           : <String, dynamic>{};
       return (MobstarEntity.fromMap(raw), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(ProjectListEntity?, AppFailure?)> getProjects({int page = 1}) async {
+    try {
+      final body = await _datasource.getProjects(page: page);
+      if (body['status'] == false) {
+        return (
+          null,
+          BusinessFailure(
+              body['message']?.toString() ?? 'Unable to load projects.'),
+        );
+      }
+      return (ProjectListEntity.fromMap(body, page: page), null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {

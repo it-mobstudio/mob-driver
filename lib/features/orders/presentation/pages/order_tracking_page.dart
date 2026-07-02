@@ -789,8 +789,8 @@ class _TrackingRatingCard extends StatelessWidget {
           SizedBox(
             width: 48,
             height: 48,
-            child: SvgPicture.asset(
-              'assets/images/smiley.svg',
+            child: Lottie.asset(
+              'assets/lottiejson/rating_6_slight_smile.json',
               fit: BoxFit.contain,
             ),
           ),

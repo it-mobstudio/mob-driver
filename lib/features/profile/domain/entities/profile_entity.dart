@@ -25,7 +25,8 @@ class ReferralInviteEntity {
         ? Map<String, dynamic>.from(inviteeRaw)
         : <String, dynamic>{};
     return ReferralInviteEntity(
-      inviteId: int.tryParse((map['invite_id'] ?? map['id'] ?? '0').toString()) ?? 0,
+      inviteId:
+          int.tryParse((map['invite_id'] ?? map['id'] ?? '0').toString()) ?? 0,
       inviteeName: (inviteeMap['name'] ??
               inviteeMap['full_name'] ??
               map['invitee_name'] ??
@@ -74,7 +75,8 @@ class ReferralSummaryEntity {
   final List<ReferralInviteEntity> invites;
 
   factory ReferralSummaryEntity.fromMap(Map<String, dynamic> map) {
-    final invitesRaw = map['invites'] is List ? map['invites'] as List : <dynamic>[];
+    final invitesRaw =
+        map['invites'] is List ? map['invites'] as List : <dynamic>[];
     return ReferralSummaryEntity(
       referralCode: (map['referral_code'] ?? '').toString(),
       referralLink: (map['referral_link'] ?? '').toString(),
@@ -82,7 +84,8 @@ class ReferralSummaryEntity {
       orderedCount: int.tryParse((map['ordered_count'] ?? '0').toString()) ?? 0,
       notOrderedCount:
           int.tryParse((map['not_ordered_count'] ?? '0').toString()) ?? 0,
-      rewardedCount: int.tryParse((map['rewarded_count'] ?? '0').toString()) ?? 0,
+      rewardedCount:
+          int.tryParse((map['rewarded_count'] ?? '0').toString()) ?? 0,
       walletCreditedAmount: double.tryParse(
             (map['wallet_credited_amount'] ?? '0').toString(),
           ) ??
@@ -93,7 +96,8 @@ class ReferralSummaryEntity {
           0,
       invites: invitesRaw
           .whereType<Map>()
-          .map((e) => ReferralInviteEntity.fromMap(Map<String, dynamic>.from(e)))
+          .map(
+              (e) => ReferralInviteEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
     );
   }
@@ -214,15 +218,15 @@ class WalletTransactionEntity {
 }
 
 class WalletHistoryEntity {
-  const WalletHistoryEntity({required this.balance, required this.transactions});
+  const WalletHistoryEntity(
+      {required this.balance, required this.transactions});
 
   final double balance;
   final List<WalletTransactionEntity> transactions;
 
   factory WalletHistoryEntity.fromMap(Map<String, dynamic> map) {
-    final results = map['results'] is List
-        ? map['results'] as List
-        : const <dynamic>[];
+    final results =
+        map['results'] is List ? map['results'] as List : const <dynamic>[];
     return WalletHistoryEntity(
       balance: double.tryParse((map['wallet'] ?? '0').toString()) ?? 0,
       transactions: results
@@ -260,8 +264,7 @@ class MobstarEntity {
         actualMoney:
             double.tryParse((map['actual_money'] ?? '0').toString()) ?? 0,
         levelName: (map['name'] ?? '').toString(),
-        percentage:
-            double.tryParse((map['percentage'] ?? '0').toString()) ?? 0,
+        percentage: double.tryParse((map['percentage'] ?? '0').toString()) ?? 0,
         freeDelivery:
             int.tryParse((map['free_delivery'] ?? '0').toString()) ?? 0,
       );
@@ -272,5 +275,228 @@ class MobstarEntity {
     levelName: 'Level 01 (Bronze)',
     percentage: 0,
     freeDelivery: 0,
+  );
+}
+
+class ProjectEntity {
+  const ProjectEntity({
+    required this.id,
+    required this.projectId,
+    required this.name,
+    required this.address,
+    required this.city,
+    required this.sitePersonName,
+    required this.phone,
+    required this.rfqCount,
+    required this.orderCount,
+    required this.imageUrl,
+  });
+
+  final int id;
+  final String projectId;
+  final String name;
+  final String address;
+  final String city;
+  final String sitePersonName;
+  final String phone;
+  final int rfqCount;
+  final int orderCount;
+  final String imageUrl;
+
+  String get initials {
+    final words = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+    if (words.isEmpty) return 'PR';
+    if (words.length == 1) return words.first.substring(0, 1).toUpperCase();
+    return '${words.first[0]}${words[1][0]}'.toUpperCase();
+  }
+
+  bool matches(String query) {
+    final normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) return true;
+    return name.toLowerCase().contains(normalized) ||
+        projectId.toLowerCase().contains(normalized) ||
+        address.toLowerCase().contains(normalized) ||
+        city.toLowerCase().contains(normalized);
+  }
+
+  factory ProjectEntity.fromMap(Map<String, dynamic> map) {
+    final project = _asMap(map['project']);
+    final addressMap = _asMap(
+      map['delivery_address'] ??
+          map['address'] ??
+          map['project_address'] ??
+          project['address'],
+    );
+    final manager = _asMap(
+      map['site_person'] ??
+          map['site_manager'] ??
+          map['project_manager'] ??
+          addressMap['site_person'],
+    );
+
+    final id = _asInt(map['id'] ?? project['id']);
+    final projectCode = _firstString([
+      map['project_id'],
+      map['projectId'],
+      map['project_code'],
+      map['code'],
+      project['project_id'],
+      project['project_code'],
+      id == 0 ? null : id,
+    ]);
+    final name = _firstString([
+      map['project_name'],
+      map['name'],
+      map['title'],
+      project['project_name'],
+      project['name'],
+      'Project',
+    ]);
+
+    return ProjectEntity(
+      id: id,
+      projectId: projectCode,
+      name: name,
+      address: _addressFrom(addressMap, map),
+      city: _firstString([
+        map['city'],
+        addressMap['city'],
+        addressMap['district'],
+        addressMap['state'],
+      ]),
+      sitePersonName: _firstString([
+        map['site_person_name'],
+        map['site_manager_name'],
+        map['project_manager_name'],
+        manager['name'],
+        addressMap['name'],
+        addressMap['contact_person'],
+      ]),
+      phone: _firstString([
+        map['phone'],
+        map['phone_number'],
+        map['site_person_phone'],
+        map['site_manager_phone'],
+        manager['phone'],
+        manager['phone_number'],
+        addressMap['phone'],
+        addressMap['phone_number'],
+      ]),
+      rfqCount: _countFrom(map, const [
+        'rfq_count',
+        'rfqs_count',
+        'rfqCount',
+        'rfq',
+        'rfqs',
+      ]),
+      orderCount: _countFrom(map, const [
+        'order_count',
+        'orders_count',
+        'orderCount',
+        'orders',
+      ]),
+      imageUrl: _firstString([
+        map['image'],
+        map['image_url'],
+        map['project_image'],
+        map['thumbnail'],
+        project['image'],
+        project['image_url'],
+      ]),
+    );
+  }
+
+  static Map<String, dynamic> _asMap(dynamic value) =>
+      value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
+
+  static int _asInt(dynamic value) =>
+      int.tryParse((value ?? '0').toString()) ?? 0;
+
+  static int _countFrom(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value is List) return value.length;
+      if (value != null) return _asInt(value);
+    }
+    return 0;
+  }
+
+  static String _firstString(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty && text != 'null') return text;
+    }
+    return '';
+  }
+
+  static String _addressFrom(
+    Map<String, dynamic> addressMap,
+    Map<String, dynamic> fallback,
+  ) {
+    final direct = _firstString([
+      fallback['delivery_address'],
+      fallback['full_address'],
+      fallback['address'],
+      fallback['project_address'],
+      addressMap['full_address'],
+      addressMap['address'],
+      addressMap['formatted_address'],
+    ]);
+    if (direct.isNotEmpty && !direct.startsWith('{')) return direct;
+
+    return [
+      addressMap['address_line1'],
+      addressMap['address_line2'],
+      addressMap['landmark'],
+      addressMap['city'],
+      addressMap['state'],
+      addressMap['pincode'] ?? addressMap['postal_code'],
+    ]
+        .map((part) => part?.toString().trim() ?? '')
+        .where((part) => part.isNotEmpty && part != 'null')
+        .join(', ');
+  }
+}
+
+class ProjectListEntity {
+  const ProjectListEntity({
+    required this.projects,
+    required this.page,
+    required this.totalCount,
+  });
+
+  final List<ProjectEntity> projects;
+  final int page;
+  final int totalCount;
+
+  factory ProjectListEntity.fromMap(Map<String, dynamic> map, {int page = 1}) {
+    final data = map['data'];
+    final dataMap = data is Map ? Map<String, dynamic>.from(data) : map;
+    final raw = dataMap['results'] ??
+        dataMap['projects'] ??
+        dataMap['data'] ??
+        map['results'] ??
+        const <dynamic>[];
+    final list = raw is List ? raw : const <dynamic>[];
+    return ProjectListEntity(
+      projects: list
+          .whereType<Map>()
+          .map((item) => ProjectEntity.fromMap(Map<String, dynamic>.from(item)))
+          .toList(),
+      page: page,
+      totalCount: ProjectEntity._asInt(
+        dataMap['count'] ?? dataMap['total'] ?? dataMap['total_count'],
+      ),
+    );
+  }
+
+  static const empty = ProjectListEntity(
+    projects: [],
+    page: 1,
+    totalCount: 0,
   );
 }
