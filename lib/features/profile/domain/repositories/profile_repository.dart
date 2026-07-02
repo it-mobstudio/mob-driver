@@ -7,4 +7,5 @@ abstract interface class ProfileRepository {
   Future<(ReferralSummaryEntity?, AppFailure?)> getReferralSummary();
   Future<(WalletHistoryEntity?, AppFailure?)> getWalletHistory();
   Future<(MobstarEntity?, AppFailure?)> getMobstar();
+  Future<(ProjectListEntity?, AppFailure?)> getProjects({int page = 1});
 }

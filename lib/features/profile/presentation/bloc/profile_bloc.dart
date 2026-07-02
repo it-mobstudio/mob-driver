@@ -15,8 +15,15 @@ final class ProfileUpdateRequested extends ProfileEvent {
 }
 
 final class ReferralSummaryLoadRequested extends ProfileEvent {}
+
 final class WalletHistoryLoadRequested extends ProfileEvent {}
+
 final class MobstarLoadRequested extends ProfileEvent {}
+
+final class ProjectsLoadRequested extends ProfileEvent {
+  ProjectsLoadRequested({this.page = 1});
+  final int page;
+}
 
 // ── States ───────────────────────────────────────────────────────────────────
 
@@ -71,6 +78,16 @@ final class MobstarError extends ProfileState {
   final String message;
 }
 
+final class ProjectsLoaded extends ProfileState {
+  ProjectsLoaded(this.projects);
+  final ProjectListEntity projects;
+}
+
+final class ProjectsError extends ProfileState {
+  ProjectsError(this.message);
+  final String message;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
@@ -80,11 +97,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<ReferralSummaryLoadRequested>(_onLoadReferralSummary);
     on<WalletHistoryLoadRequested>(_onLoadWalletHistory);
     on<MobstarLoadRequested>(_onLoadMobstar);
+    on<ProjectsLoadRequested>(_onLoadProjects);
   }
 
   final ProfileRepository _repository;
 
-  Future<void> _onLoad(ProfileLoadRequested event, Emitter<ProfileState> emit) async {
+  Future<void> _onLoad(
+      ProfileLoadRequested event, Emitter<ProfileState> emit) async {
     emit(ProfileLoading());
     final (profile, failure) = await _repository.getProfile();
     if (failure != null) {
@@ -152,6 +171,20 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(MobstarError(failure.message));
     } else {
       emit(MobstarLoaded(mobstar!));
+    }
+  }
+
+  Future<void> _onLoadProjects(
+    ProjectsLoadRequested event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(ProfileLoading());
+    final (projects, failure) = await _repository.getProjects(page: event.page);
+    if (failure != null) {
+      AppHaptics.error();
+      emit(ProjectsError(failure.message));
+    } else {
+      emit(ProjectsLoaded(projects!));
     }
   }
 }
