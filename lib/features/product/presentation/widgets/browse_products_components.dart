@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/shared/item_card.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
@@ -229,7 +230,8 @@ class BrowseProductFeed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rowCount = (products.length / crossAxisCount).ceil();
+    final tileCount = products.length + 1;
+    final rowCount = (tileCount / crossAxisCount).ceil();
     final productTypeLabels = _productTypeLabels();
     final brands = brandOptions
         .where((option) => option.trim().isNotEmpty)
@@ -238,13 +240,12 @@ class BrowseProductFeed extends StatelessWidget {
     final showProductType = productTypeLabels.isNotEmpty;
     final showBrands = brands.isNotEmpty;
     final extraSections = (showProductType ? 1 : 0) + (showBrands ? 1 : 0);
-    final itemCount = rowCount + extraSections + (hasMore ? 1 : 0) + 1;
+    final itemCount = rowCount + extraSections + (hasMore ? 1 : 0);
     final productTypeSectionIndex =
         showProductType ? (rowCount >= 2 ? 2 : rowCount) : -1;
     final brandSectionIndex =
         showBrands ? rowCount + (showProductType ? 1 : 0) : -1;
     final loadMoreIndex = rowCount + extraSections;
-    final requestCardIndex = loadMoreIndex + (hasMore ? 1 : 0);
 
     return ListView.builder(
       controller: scrollController,
@@ -282,6 +283,7 @@ class BrowseProductFeed extends StatelessWidget {
             onProductTap: onProductTap,
             onCartQuantityChanged: onCartQuantityChanged,
             onNotifyTap: onNotifyTap,
+            onRequestTap: onRequestTap,
           );
         }
 
@@ -307,10 +309,6 @@ class BrowseProductFeed extends StatelessWidget {
             );
           }
           return const SizedBox.shrink();
-        }
-
-        if (index == requestCardIndex) {
-          return BrowseRequestCard(onTap: onRequestTap);
         }
 
         return const SizedBox.shrink();
@@ -434,66 +432,77 @@ class BrowseRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      height: 138,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8E6B6),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        decoration: BoxDecoration(
+          color: const Color(0xFF005B24),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "Can't find what you're looking for?",
+                  "Can't find the\nBrand/ Product?",
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: const Color(0xFF0A243F),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Suggest the item you want and we will try to add it.',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF0A243F).withOpacity(0.7),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    height: 24 / 14,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: onTap,
-                  child: Container(
-                    height: 32,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: const Color(0xFF0A243F)),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Send a request',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF0A243F),
-                        ),
-                      ),
+                Text(
+                  "Don't worry! Tell us\nwhat you need, and\nwe'll be in touch!",
+                  maxLines: 3,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    height: 20 / 11,
+                    color: Colors.white.withOpacity(0.72),
+                  ),
+                ),
+                const Spacer(),
+                SvgPicture.asset(
+                  'assets/images/cantfind.svg',
+                  width: 88,
+                  height: 88,
+                  fit: BoxFit.contain,
+                ),
+                const Spacer(),
+                Container(
+                  height: 42,
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE500),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'Quote request',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0A243F),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -508,6 +517,7 @@ class _ProductGridRow extends StatelessWidget {
     required this.onProductTap,
     required this.onCartQuantityChanged,
     required this.onNotifyTap,
+    required this.onRequestTap,
     this.crossAxisCount = 2,
   });
 
@@ -522,6 +532,7 @@ class _ProductGridRow extends StatelessWidget {
   final Future<void> Function(ProductModel product, int quantity)
       onCartQuantityChanged;
   final Future<void> Function(ProductModel product) onNotifyTap;
+  final VoidCallback onRequestTap;
 
   @override
   Widget build(BuildContext context) {
@@ -530,8 +541,7 @@ class _ProductGridRow extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final totalGap = _columnGap * (crossAxisCount - 1);
-          final cardWidth =
-              (constraints.maxWidth - totalGap) / crossAxisCount;
+          final cardWidth = (constraints.maxWidth - totalGap) / crossAxisCount;
 
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,12 +550,7 @@ class _ProductGridRow extends StatelessWidget {
                 if (column > 0) const SizedBox(width: _columnGap),
                 SizedBox(
                   width: cardWidth,
-                  child: startIndex + column < products.length
-                      ? _cardForProduct(
-                          products[startIndex + column],
-                          cardWidth,
-                        )
-                      : SizedBox(height: cardWidth + 140),
+                  child: _tileForIndex(startIndex + column, cardWidth),
                 ),
               ],
             ],
@@ -553,6 +558,19 @@ class _ProductGridRow extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Widget _tileForIndex(int index, double width) {
+    if (index < products.length) {
+      return _cardForProduct(products[index], width);
+    }
+    if (index == products.length) {
+      return SizedBox(
+        height: width + 140,
+        child: BrowseRequestCard(onTap: onRequestTap),
+      );
+    }
+    return SizedBox(height: width + 140);
   }
 
   Widget _cardForProduct(ProductModel product, double width) {

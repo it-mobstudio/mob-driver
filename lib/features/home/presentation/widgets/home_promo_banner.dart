@@ -13,7 +13,7 @@ class HomePromoBanner extends StatelessWidget {
       ),
       child: Container(
         width: double.infinity,
-        height: 138,
+        // height: 148,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
