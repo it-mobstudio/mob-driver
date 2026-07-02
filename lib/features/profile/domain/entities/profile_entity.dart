@@ -267,7 +267,8 @@ class MobstarEntity {
 
   String get nextMembership {
     final match = RegExp(r'\(([^)]+)\)').firstMatch(nextLevelName);
-    return match?.group(1) ?? (nextLevelName.isEmpty ? 'Silver' : nextLevelName);
+    return match?.group(1) ??
+        (nextLevelName.isEmpty ? 'Silver' : nextLevelName);
   }
 
   factory MobstarEntity.fromMap(Map<String, dynamic> map) {
