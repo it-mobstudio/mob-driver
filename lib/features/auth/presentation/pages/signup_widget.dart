@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class SignupWidget extends StatefulWidget {
@@ -120,7 +121,7 @@ class _SignupWidgetState extends State<SignupWidget> {
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF0A243F),
               leading: IconButton(
-                onPressed: () => context.pop(),
+                onPressed: _handleBack,
                 icon: const AppBackIcon(),
               ),
               centerTitle: true,
@@ -247,6 +248,12 @@ class _SignupWidgetState extends State<SignupWidget> {
                 : _emailController.text.trim(),
           ),
         );
+  }
+
+  Future<void> _handleBack() async {
+    await AuthSession.instance.signOut();
+    if (!mounted) return;
+    context.go(LoginpageWidget.routePath);
   }
 }
 
