@@ -6,6 +6,7 @@ import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 Future<void> showOrderRatingSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -132,11 +133,7 @@ class _TrackingHeader extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints.expand(),
                 onPressed: () => context.pop(),
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  size: 22,
-                  color: _TrackingColors.navy,
-                ),
+                icon: const AppBackIcon(),
               ),
             ),
           ),

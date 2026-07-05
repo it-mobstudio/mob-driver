@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class CheckoutAddressPage extends StatefulWidget {
   static const routeName = 'CheckoutAddressPage';
@@ -392,11 +393,7 @@ class _CheckoutHeader extends StatelessWidget {
                 height: 50,
                 child: Align(
                   alignment: Alignment.center,
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: Color(0xFF0A243F),
-                    size: 24,
-                  ),
+                  child: AppBackIcon(),
                 ),
               ),
             ),

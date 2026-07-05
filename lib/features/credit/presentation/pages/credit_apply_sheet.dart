@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/entities/business_segment_entity.dart';
@@ -68,7 +69,7 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final sheetHeight = screenHeight * .75;
+    final sheetHeight = screenHeight * .60;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return BlocConsumer<CreditBloc, CreditState>(
@@ -150,13 +151,14 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
+                                        const Text(
                                           'Apply for mobCREDIT',
-                                          style: _sheetTextStyle(
-                                            color: const Color(0xFF0A243F),
-                                            size: 18,
-                                            weight: FontWeight.w600,
-                                            height: 26 / 18,
+                                          style: TextStyle(
+                                            color: Color(0xFF0A243F),
+                                            fontSize: 18,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w600,
+                                            height: 1.44,
                                           ),
                                         ),
                                         const SizedBox(height: 32),
@@ -266,20 +268,15 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                 ),
                 Positioned(
                   bottom: sheetHeight + 16,
-                  child: Material(
-                    color: Colors.white,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: Icon(
-                          Icons.close,
-                          color: Color(0xFF0A243F),
-                          size: 22,
-                        ),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: SvgPicture.asset(
+                        'assets/images/close.svg',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
@@ -334,6 +331,19 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
       hint: _segmentsLoading
           ? Text('Loading...', style: _inputTextStyle)
           : Text('Select business segment', style: _inputTextStyle),
+      selectedItemBuilder: (context) => _segments
+          .map(
+            (segment) => Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                segment.categoryName,
+                style: _inputTextStyle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
       items: _segments
           .map(
             (segment) => DropdownMenuItem(
@@ -391,13 +401,13 @@ InputDecoration _applyInputDecoration(String label) {
       color: const Color(0xFF767C8F),
       size: 11,
       weight: FontWeight.w500,
-      height: 14 / 11,
+      height: 1.27,
     ),
     floatingLabelStyle: _sheetTextStyle(
       color: const Color(0xFF767C8F),
       size: 11,
       weight: FontWeight.w500,
-      height: 14 / 11,
+      height: 1.27,
     ),
     contentPadding: const EdgeInsets.fromLTRB(15, 12, 15, 12),
     filled: true,
@@ -423,7 +433,7 @@ TextStyle get _inputTextStyle => _sheetTextStyle(
       color: const Color(0xFF0A243F),
       size: 14,
       weight: FontWeight.w500,
-      height: 20 / 14,
+      height: 1.43,
     );
 
 TextStyle _sheetTextStyle({

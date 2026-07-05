@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_rfq_request_page.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
 import 'package:m_o_b_demand_side/index.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class CartTopBar extends StatelessWidget {
   const CartTopBar({super.key});
@@ -28,11 +29,7 @@ class CartTopBar extends StatelessWidget {
               height: 60,
               child: Align(
                 alignment: Alignment.center,
-                child: Icon(
-                  Icons.arrow_back,
-                  color: Color(0xFF0A243F),
-                  size: 22,
-                ),
+                child: AppBackIcon(),
               ),
             ),
           ),
@@ -1012,8 +1009,7 @@ class OrderDetailsCard extends StatelessWidget {
                 _kvRow(
                   'Shipping',
                   shipping == 0 ? 'Free Delivery' : money(shipping),
-                  valueColor:
-                      shipping == 0 ? const Color(0xFF01A685) : null,
+                  valueColor: shipping == 0 ? const Color(0xFF01A685) : null,
                 ),
                 _kvRow(
                   'Total tax',
@@ -1510,7 +1506,6 @@ class BottomCheckoutBar extends StatelessWidget {
     );
   }
 }
-
 
 class FloatingAiMic extends StatelessWidget {
   const FloatingAiMic({

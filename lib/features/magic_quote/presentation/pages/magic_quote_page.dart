@@ -22,6 +22,7 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/file_t
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/generating_screen.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/quote_item_row.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/results_screen.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/review_questions_sheet.dart';
@@ -59,7 +60,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
 
   final _formKey = GlobalKey<FormState>();
   late final MagicQuoteBloc _magicQuoteBloc;
-  late final MagicQuoteRepository _magicQuoteRepository = sl<MagicQuoteRepository>();
+  late final MagicQuoteRepository _magicQuoteRepository =
+      sl<MagicQuoteRepository>();
   late final ProductRepository _productRepository = sl<ProductRepository>();
   final _noteFocusNode = FocusNode();
   final _noteController = TextEditingController();
@@ -151,7 +153,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   Widget _header() {
-    if (_screen == _MagicQuoteScreen.reviewSuccess) return const SizedBox.shrink();
+    if (_screen == _MagicQuoteScreen.reviewSuccess)
+      return const SizedBox.shrink();
     final title = switch (_screen) {
       _MagicQuoteScreen.upload => 'Magic AI Quote',
       _MagicQuoteScreen.generating => 'Reading your list...',
@@ -170,8 +173,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
         children: [
           IconButton(
             onPressed: _handleBack,
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-            color: _navy,
+            icon: const AppBackIcon(),
           ),
           Expanded(
             child: Text(
@@ -380,7 +382,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
           productRepository: _productRepository,
           magicQuoteRepository: _magicQuoteRepository,
           quoteId: quoteId,
-          onAdded: (Map<String, dynamic>? payload, Map<String, dynamic>? addedItem) {
+          onAdded:
+              (Map<String, dynamic>? payload, Map<String, dynamic>? addedItem) {
             setState(() {
               if (payload != null) {
                 _quotePayloadOverride = payload;
@@ -607,8 +610,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
 
   /// The current quote payload, preferring any live edits
   /// ([_quotePayloadOverride]) over the original create/socket response.
-  Map<String, dynamic> _currentPayload() =>
-      _withoutRemovedItems(_quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse));
+  Map<String, dynamic> _currentPayload() => _withoutRemovedItems(
+      _quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse));
 
   Map<String, dynamic> _withoutRemovedItems(Map<String, dynamic> payload) {
     if (_removedItemIds.isEmpty) return payload;
@@ -635,7 +638,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   String _apiUploadedFileUrl() {
-    final payload = _quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse);
+    final payload =
+        _quotePayloadOverride ?? magicQuotePayloadOf(_quoteResponse);
     final rfqOrder = mapValueOf(payload, 'rfq_order');
     return firstNonEmptyOf([
       stringValueOf(payload, const ['uploaded_file', 'rfq_file']),
@@ -709,7 +713,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   Future<bool> _deleteItem(String itemId) async {
-    final (payload, failure) = await _magicQuoteRepository.deleteMagicQuoteItem(itemId);
+    final (payload, failure) =
+        await _magicQuoteRepository.deleteMagicQuoteItem(itemId);
     if (!mounted) return false;
     if (failure != null) {
       _showMessage(failure.message);
@@ -762,7 +767,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     if (quoteId.isEmpty || sku.isEmpty || _addingProductSku.isNotEmpty) return;
 
     setState(() => _addingProductSku = sku);
-    final (payload, addedItem, failure) = await _magicQuoteRepository.addMagicQuoteItem(
+    final (payload, addedItem, failure) =
+        await _magicQuoteRepository.addMagicQuoteItem(
       quoteId: quoteId,
       mobSku: sku,
     );
@@ -823,9 +829,16 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
       );
       final serviceableFlag = _firstBoolFromCandidates(
         candidates,
-        const ['serviceable', 'is_serviceable', 'isServiceable', 'deliverable', 'status'],
+        const [
+          'serviceable',
+          'is_serviceable',
+          'isServiceable',
+          'deliverable',
+          'status'
+        ],
       );
-      final isServiceable = serviceableFlag ?? (state.isNotEmpty && city.isNotEmpty);
+      final isServiceable =
+          serviceableFlag ?? (state.isNotEmpty && city.isNotEmpty);
       if (!mounted) return;
       setState(() {
         _pincodeServiceable = isServiceable;
@@ -850,7 +863,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     if (data is Map) {
       final nested = Map<String, dynamic>.from(data);
       final nestedData = nested['data'];
-      if (nestedData is Map) candidates.add(Map<String, dynamic>.from(nestedData));
+      if (nestedData is Map)
+        candidates.add(Map<String, dynamic>.from(nestedData));
       candidates.add(nested);
     }
     candidates.add(flat);
@@ -891,7 +905,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
         final value = map[key];
         if (value is bool) return value;
         if (value is String) {
-          return value.toLowerCase() == 'serviceable' || value.toLowerCase() == 'true';
+          return value.toLowerCase() == 'serviceable' ||
+              value.toLowerCase() == 'true';
         }
       }
     }

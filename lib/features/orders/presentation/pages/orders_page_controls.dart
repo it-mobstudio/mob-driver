@@ -21,11 +21,7 @@ class _OrdersHeader extends StatelessWidget {
                 height: 48,
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: Color(0xFF0A243F),
-                    size: 20,
-                  ),
+                  child: AppBackIcon(),
                 ),
               ),
             ),

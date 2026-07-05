@@ -160,9 +160,9 @@ class _HomeHeaderState extends State<HomeHeader> {
                   ),
                   alignment: Alignment.center,
                   child: SvgPicture.asset(
-                    'assets/icons/profile.svg',
-                    width: 18,
-                    height: 18,
+                    'assets/images/profile.svg',
+                    width: 24,
+                    height: 24,
                   ),
                 ),
               ),

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'rfq_success_page.dart';
 
 class RfqFormPage extends StatefulWidget {
@@ -45,96 +46,96 @@ class _RfqFormPageState extends State<RfqFormPage> {
       body: SafeArea(
         bottom: false,
         child: Stack(
-        children: [
-          // Content
-          ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-            children: [
-              GestureDetector(
-                onTap: () => GoRouter.of(context).pop(),
-                child: const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: Icon(Icons.arrow_back, color: Color(0xFF0A243F)),
+          children: [
+            // Content
+            ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+              children: [
+                GestureDetector(
+                  onTap: () => GoRouter.of(context).pop(),
+                  child: const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: AppBackIcon(),
+                  ),
                 ),
-              ),
-              Text('Request for quotation',
-                  style: GoogleFonts.inter(
-                      fontSize: 22, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text('Tell us about your requirement',
-                  style: GoogleFonts.inter(
-                      fontSize: 13, color: const Color(0xFF6C7C8C))),
-              const SizedBox(height: 16),
-              _sectionHeader('Customer details',
-                  leading: Icons.person_2_outlined),
-              const SizedBox(height: 8),
-              _formCard(context),
-              const SizedBox(height: 16),
-              _sectionHeader('Select photos or files',
-                  leading: Icons.insert_drive_file_outlined),
-              const SizedBox(height: 8),
-              _uploadCard(),
-              const SizedBox(height: 12),
-              if (_fileAttached)
-                _attachedFileTile(onRemove: () {
-                  setState(() => _fileAttached = false);
-                }),
-              const SizedBox(height: 16),
-              _howItWorksCard(),
-            ],
-          ),
+                Text('Request for quotation',
+                    style: GoogleFonts.inter(
+                        fontSize: 22, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text('Tell us about your requirement',
+                    style: GoogleFonts.inter(
+                        fontSize: 13, color: const Color(0xFF6C7C8C))),
+                const SizedBox(height: 16),
+                _sectionHeader('Customer details',
+                    leading: Icons.person_2_outlined),
+                const SizedBox(height: 8),
+                _formCard(context),
+                const SizedBox(height: 16),
+                _sectionHeader('Select photos or files',
+                    leading: Icons.insert_drive_file_outlined),
+                const SizedBox(height: 8),
+                _uploadCard(),
+                const SizedBox(height: 12),
+                if (_fileAttached)
+                  _attachedFileTile(onRemove: () {
+                    setState(() => _fileAttached = false);
+                  }),
+                const SizedBox(height: 16),
+                _howItWorksCard(),
+              ],
+            ),
 
-          // Fixed footer CTA (mockup 1 & 2)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                        color: Color(0x14000000),
-                        blurRadius: 12,
-                        offset: Offset(0, -4))
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => GoRouter.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+            // Fixed footer CTA (mockup 1 & 2)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 12,
+                          offset: Offset(0, -4))
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => GoRouter.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: const Text('Cancel'),
                         ),
-                        child: const Text('Cancel'),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(48),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(48),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: const Text('Submit RFQ'),
                         ),
-                        child: const Text('Submit RFQ'),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );

@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class MyProjectsPage extends StatelessWidget {
   const MyProjectsPage({super.key});
@@ -181,11 +182,7 @@ class _ProjectsHeader extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     onPressed: context.pop,
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: _ProjectColors.navy,
-                      size: 20,
-                    ),
+                    icon: const AppBackIcon(),
                   ),
                 ),
                 Text(

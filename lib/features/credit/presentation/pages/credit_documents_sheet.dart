@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 
 Future<void> showCreditDocumentsSheet(BuildContext context) {
@@ -66,7 +67,7 @@ class _CreditDocumentsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final sheetHeight = screenHeight - 161;
+    final sheetHeight = screenHeight * .60;
 
     return SizedBox(
       height: screenHeight,
@@ -91,20 +92,21 @@ class _CreditDocumentsSheet extends StatelessWidget {
                       physics: const BouncingScrollPhysics(),
                       slivers: [
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                           sliver: SliverList.separated(
                             itemCount: _documents.length + 1,
-                            separatorBuilder: (_, index) =>
-                                SizedBox(height: index == 0 ? 26 : 16),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 16),
                             itemBuilder: (context, index) {
                               if (index == 0) {
-                                return Text(
+                                return const Text(
                                   'Documents required',
-                                  style: _docTextStyle(
-                                    color: const Color(0xFF0A243F),
-                                    size: 18,
-                                    weight: FontWeight.w600,
-                                    height: 26 / 18,
+                                  style: TextStyle(
+                                    color: Color(0xFF0A243F),
+                                    fontSize: 18,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.44,
                                   ),
                                 );
                               }
@@ -124,20 +126,15 @@ class _CreditDocumentsSheet extends StatelessWidget {
           ),
           Positioned(
             bottom: sheetHeight + 16,
-            child: Material(
-              color: Colors.white,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context).pop(),
-                child: const SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Icon(
-                    Icons.close,
-                    color: Color(0xFF0A243F),
-                    size: 22,
-                  ),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => Navigator.of(context).pop(),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: SvgPicture.asset(
+                  'assets/images/close.svg',
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
@@ -171,23 +168,25 @@ class _DocumentRow extends StatelessWidget {
             children: [
               Text(
                 '$index. ${document.title}',
-                style: _docTextStyle(
-                  color: const Color(0xFF0A243F),
-                  size: 14,
-                  weight: FontWeight.w600,
-                  height: 20 / 14,
+                style: const TextStyle(
+                  color: Color(0xFF0A243F),
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                  height: 1.43,
                 ),
               ),
               if (document.subtitle.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   document.subtitle,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF767C8F),
+                  style: const TextStyle(
+                    color: Color(0xFF767C8F),
                     fontSize: 12,
-                    fontWeight: FontWeight.w400,
                     fontStyle: FontStyle.italic,
-                    height: 18 / 12,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                    height: 1.50,
                   ),
                 ),
               ],

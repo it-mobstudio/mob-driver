@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class ProductDetailTopHeader extends StatelessWidget {
   const ProductDetailTopHeader({
@@ -22,7 +23,7 @@ class ProductDetailTopHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const AppBackIcon(),
             onPressed: onBack,
           ),
           const Spacer(),
@@ -581,9 +582,8 @@ class _DynamicDetailRow extends StatelessWidget {
       height: item.emphasized ? 40 : 42,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: item.emphasized
-            ? const Color(0xFFFFEFCE)
-            : const Color(0xFFF8F8F8),
+        color:
+            item.emphasized ? const Color(0xFFFFEFCE) : const Color(0xFFF8F8F8),
         borderRadius: BorderRadius.vertical(
           top: item.emphasized ? const Radius.circular(12) : Radius.zero,
           bottom: item.emphasized ? Radius.zero : const Radius.circular(12),
@@ -1171,11 +1171,12 @@ class VariantOptionsSection extends StatelessWidget {
               Builder(builder: (context) {
                 final options =
                     groupedVariants[key] ?? const <ProductVariantOption>[];
-                final activeValue =
-                    selectedVariants[key] ?? product.activeVariantSelections[key];
+                final activeValue = selectedVariants[key] ??
+                    product.activeVariantSelections[key];
                 final shouldSplitRows = options.length > 4;
                 final topRow = <({ProductVariantOption option, int index})>[];
-                final bottomRow = <({ProductVariantOption option, int index})>[];
+                final bottomRow =
+                    <({ProductVariantOption option, int index})>[];
                 for (var i = 0; i < options.length; i++) {
                   final record = (option: options[i], index: i);
                   if (!shouldSplitRows || i.isEven) {
@@ -1194,6 +1195,7 @@ class VariantOptionsSection extends StatelessWidget {
                     onTap: () => onSelect(key, opt),
                   );
                 }
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1520,7 +1522,8 @@ class _VariantChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF0A243F) : Colors.white,
           border: Border.all(
-            color: isSelected ? const Color(0xFF0A243F) : const Color(0xFFDFE4EC),
+            color:
+                isSelected ? const Color(0xFF0A243F) : const Color(0xFFDFE4EC),
           ),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -1714,7 +1717,8 @@ class _InlineExpandableSection extends StatefulWidget {
   final bool initiallyExpanded;
 
   @override
-  State<_InlineExpandableSection> createState() => _InlineExpandableSectionState();
+  State<_InlineExpandableSection> createState() =>
+      _InlineExpandableSectionState();
 }
 
 class _InlineExpandableSectionState extends State<_InlineExpandableSection> {
@@ -1758,8 +1762,9 @@ class _InlineExpandableSectionState extends State<_InlineExpandableSection> {
             padding: const EdgeInsets.only(bottom: 16),
             child: widget.child,
           ),
-          crossFadeState:
-              _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: _isExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 180),
           sizeCurve: Curves.easeOut,
         ),
@@ -1776,7 +1781,8 @@ class _FeatureTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final entries = features.entries
-        .where((entry) => entry.key.trim().isNotEmpty || entry.value.trim().isNotEmpty)
+        .where((entry) =>
+            entry.key.trim().isNotEmpty || entry.value.trim().isNotEmpty)
         .toList();
 
     if (entries.isEmpty) {

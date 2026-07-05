@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ReferralHistoryPage extends StatelessWidget {
@@ -37,7 +38,7 @@ class _ReferralHistoryView extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0A243F), size: 22),
+          icon: const AppBackIcon(),
         ),
         title: Text(
           'Referrals',
@@ -107,12 +108,12 @@ class _HeroCard extends StatelessWidget {
     final link = referralLink.isNotEmpty
         ? referralLink
         : '${AppConfig.webAppBaseUrl}/?ref=$referralCode';
-    final message =
-        'Hey! Need construction or interior materials in a flash? '
+    final message = 'Hey! Need construction or interior materials in a flash? '
         "I've been using Mad over Buildings, and their QWIK 1-4 hour delivery is an absolute lifesaver. "
         'No more waiting around for supplies! Try it out for yourself: '
         'sign up with my code $referralCode to get ₹1,000 off your first order. $link';
-    final uri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(message)}');
+    final uri =
+        Uri.parse('https://wa.me/?text=${Uri.encodeComponent(message)}');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
@@ -195,9 +196,8 @@ class _HeroCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         InkWell(
-                          onTap: isLoading
-                              ? null
-                              : () => _shareWhatsApp(context),
+                          onTap:
+                              isLoading ? null : () => _shareWhatsApp(context),
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
                             padding: const EdgeInsets.symmetric(

@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class WalletPointsPage extends StatelessWidget {
   const WalletPointsPage({super.key});
@@ -163,11 +164,7 @@ class _WalletHeader extends StatelessWidget {
                     left: 3,
                     child: IconButton(
                       onPressed: () => context.canPop() ? context.pop() : null,
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 22,
-                      ),
+                      icon: const AppBackIcon(color: Colors.white),
                     ),
                   ),
                   Text(

@@ -25,20 +25,30 @@ class CreditPage extends StatelessWidget {
                 child: MobCreditHero(showBackButton: false),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 28, 16, 112),
+                padding: const EdgeInsets.fromLTRB(16, 40, 16, 112),
                 sliver: SliverList.list(
                   children: [
                     const MobCreditSectionTitle.rich(
                       TextSpan(
                         children: [
-                          TextSpan(text: 'mobCREDIT is for'),
+                          TextSpan(
+                            text: 'mobCREDIT is for',
+                            style: TextStyle(
+                              color: Color(0xFF0A243F),
+                              fontSize: 16,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              height: 1.50,
+                            ),
+                          ),
                           TextSpan(
                             text: ' (with GSTIN)',
                             style: TextStyle(
-                              color: Color(0xFF767C8F),
+                              color: Color(0xFF0A243F),
                               fontSize: 14,
+                              fontFamily: 'Inter',
                               fontWeight: FontWeight.w400,
-                              height: 20 / 14,
+                              height: 1.43,
                             ),
                           ),
                         ],
@@ -46,7 +56,7 @@ class CreditPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     const MobCreditAudiencePills(),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 40),
                     MobCreditSectionTitle('mobCREDIT terms'),
                     const SizedBox(height: 12),
                     const MobCreditTermCard(
@@ -68,9 +78,8 @@ class CreditPage extends StatelessWidget {
                       title: 'Upto 90 days repayment',
                       description:
                           'Repay anytime within 90 days. The first 21 days post-delivery are interest-free, with daily interest applied thereafter.',
-                      height: 116,
                     ),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 40),
                     MobCreditSectionTitle('How does mobCREDIT work?'),
                     const SizedBox(height: 12),
                     const MobCreditHowItWorksCard(),
@@ -83,8 +92,8 @@ class CreditPage extends StatelessWidget {
                     const SizedBox(height: 40),
                     MobCreditSectionTitle('What our members say'),
                     const SizedBox(height: 12),
-                    const MobCreditTestimonialCard(),
-                    const SizedBox(height: 30),
+                    const MobCreditTestimonialsCarousel(),
+                    const SizedBox(height: 40),
                     MobCreditSupportCard(
                       onChatTap: () => _chatWithUs(context),
                     ),

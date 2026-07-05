@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/shared/item_card.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class BrowseProductsHeader extends StatelessWidget {
   const BrowseProductsHeader({
@@ -30,11 +31,7 @@ class BrowseProductsHeader extends StatelessWidget {
             child: const SizedBox(
               width: 28,
               height: 44,
-              child: Icon(
-                Icons.arrow_back,
-                size: 20,
-                color: Color(0xFF0A243F),
-              ),
+              child: Center(child: AppBackIcon()),
             ),
           ),
           const SizedBox(width: 2),
@@ -530,8 +527,7 @@ class _ProductGridRow extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final totalGap = _columnGap * (crossAxisCount - 1);
-          final cardWidth =
-              (constraints.maxWidth - totalGap) / crossAxisCount;
+          final cardWidth = (constraints.maxWidth - totalGap) / crossAxisCount;
 
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,

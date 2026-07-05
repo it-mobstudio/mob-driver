@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_points_page.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class MobstarPage extends StatelessWidget {
   const MobstarPage({super.key});
@@ -87,8 +88,7 @@ class _MobstarView extends StatelessWidget {
                               child: const SizedBox(
                                 width: 36,
                                 height: 36,
-                                child: Icon(Icons.arrow_back,
-                                    size: 20, color: Color(0xFF0A243F)),
+                                child: Center(child: AppBackIcon()),
                               ),
                             ),
                           ),
@@ -225,18 +225,18 @@ class _MobstarView extends StatelessWidget {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Row(children: [
-                        Expanded(
-                            child: _BenefitCard(
-                                asset: 'assets/images/Xpoints.svg',
-                                title: '1X points',
-                                subtitle: 'on every purchase')),
-                        SizedBox(width: 15),
-                        Expanded(
-                            child: _BenefitCard(
-                                asset: 'assets/images/freeimg.svg',
-                                title: 'FREE',
-                                subtitle: 'deliveries')),
-                      ]),
+                      Expanded(
+                          child: _BenefitCard(
+                              asset: 'assets/images/Xpoints.svg',
+                              title: '1X points',
+                              subtitle: 'on every purchase')),
+                      SizedBox(width: 15),
+                      Expanded(
+                          child: _BenefitCard(
+                              asset: 'assets/images/freeimg.svg',
+                              title: 'FREE',
+                              subtitle: 'deliveries')),
+                    ]),
                   ),
                   const SizedBox(height: 40),
                   const _SectionLabel('LEVEL UPGRADE'),

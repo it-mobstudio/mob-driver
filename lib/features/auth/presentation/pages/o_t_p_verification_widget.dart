@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:go_router/go_router.dart';
 import '/index.dart';
 
@@ -26,10 +27,8 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
   int _resendSeconds = 40;
   Timer? _timer;
 
-  String get _rawPhone => widget.phoneNumber
-      .replaceAll('+91', '')
-      .replaceAll(' ', '')
-      .trim();
+  String get _rawPhone =>
+      widget.phoneNumber.replaceAll('+91', '').replaceAll(' ', '').trim();
 
   @override
   void initState() {
@@ -44,8 +43,12 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
 
   @override
   void dispose() {
-    for (final c in _otpControllers) { c.dispose(); }
-    for (final f in _otpFocusNodes) { f.dispose(); }
+    for (final c in _otpControllers) {
+      c.dispose();
+    }
+    for (final f in _otpFocusNodes) {
+      f.dispose();
+    }
     _timer?.cancel();
     super.dispose();
   }
@@ -65,7 +68,9 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
   }
 
   void _resendOtp() {
-    for (final c in _otpControllers) { c.clear(); }
+    for (final c in _otpControllers) {
+      c.clear();
+    }
     _otpFocusNodes.first.requestFocus();
     context.read<AuthBloc>().add(
           AuthOtpSendRequested(emailOrPhone: _rawPhone, isPhone: true),
@@ -111,11 +116,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
               backgroundColor: Colors.white,
               automaticallyImplyLeading: false,
               leading: IconButton(
-                icon: Image.asset(
-                  'assets/images/back-arrow.png',
-                  width: 24,
-                  height: 24,
-                ),
+                icon: const AppBackIcon(),
                 onPressed: () => context.go(LoginpageWidget.routePath),
               ),
               elevation: 0.0,
@@ -175,8 +176,9 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                                       color: _otpFocusNodes[i].hasFocus
                                           ? const Color(0xFF0A243F)
                                           : const Color(0xFFB5B5B5),
-                                      width:
-                                          _otpFocusNodes[i].hasFocus ? 1.5 : 1.0,
+                                      width: _otpFocusNodes[i].hasFocus
+                                          ? 1.5
+                                          : 1.0,
                                     ),
                                   ),
                                   child: Center(

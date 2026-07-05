@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/entities/rfq_entity.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 import 'rfq_details_page.dart';
 
@@ -135,11 +136,7 @@ class _RfqHeader extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Color(0xFF0A243F),
-                        size: 22,
-                      ),
+                      icon: const AppBackIcon(),
                       onPressed: () {
                         if (context.canPop()) {
                           context.pop();

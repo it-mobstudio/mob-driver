@@ -7,9 +7,8 @@ class _OrderDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final orderLabel = order != null
-        ? 'Order #${order!.orderNumber}'
-        : 'Order details';
+    final orderLabel =
+        order != null ? 'Order #${order!.orderNumber}' : 'Order details';
     final itemCount = order?.items.length ?? 0;
 
     return Container(
@@ -28,11 +27,7 @@ class _OrderDetailHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => context.pop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Color(0xFF0A243F),
-            ),
+            icon: const AppBackIcon(),
           ),
           Expanded(
             child: Column(

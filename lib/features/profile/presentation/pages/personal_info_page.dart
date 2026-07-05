@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class PersonalInfoPage extends StatelessWidget {
   const PersonalInfoPage({super.key});
@@ -78,7 +79,7 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
             foregroundColor: const Color(0xFF0A243F),
             leading: IconButton(
               onPressed: () => context.pop(),
-              icon: const Icon(Icons.arrow_back, size: 22),
+              icon: const AppBackIcon(),
             ),
             centerTitle: true,
             title: Text(
