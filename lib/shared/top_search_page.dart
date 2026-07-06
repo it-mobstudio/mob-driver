@@ -10,6 +10,7 @@ import 'package:m_o_b_demand_side/features/product/domain/repositories/product_r
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SearchPage extends StatefulWidget {
@@ -188,7 +189,7 @@ class _SearchPageState extends State<SearchPage> {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const AppBackIcon(),
             onPressed: () => Navigator.of(context).pop(),
           ),
           Expanded(

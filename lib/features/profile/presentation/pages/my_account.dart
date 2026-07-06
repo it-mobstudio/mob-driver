@@ -20,6 +20,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_project
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/shared/mob_credit.dart';
 
 class MyAccountWidget extends StatefulWidget {
@@ -206,6 +207,118 @@ class _ProfileBody extends StatelessWidget {
               ],
             );
           },
+        return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: _ProfileHeader(profile: profile)),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              sliver: SliverList.list(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SummaryCard(
+                          iconAsset: 'assets/images/ordersprofile.svg',
+                          title: 'Orders',
+                          subtitle: 'View all orders',
+                          onTap: () => context.push(OrdersPage.routePath),
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: _SummaryCard(
+                          iconAsset: 'assets/images/walletprofile.svg',
+                          title: 'Wallet',
+                          subtitle: '₹1500',
+                          onTap: () => context.push(WalletPointsPage.routePath),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _ReferralCard(
+                    onTap: () => context.push(ReferralPage.routePath),
+                  ),
+                  const SizedBox(height: 16),
+                  _MenuCard(
+                    items: [
+                      _MenuItem(
+                        iconAsset: 'assets/images/quotationreq.svg',
+                        label: 'Quotation request',
+                        onTap: () => context.push(RfqPage.routePath),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/addresses.svg',
+                        label: 'Address',
+                        onTap: () =>
+                            context.push(AddressSelectionWidget.routePath),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/mobcreditprofile.svg',
+                        label: 'mob Credit',
+                        onTap: () =>
+                            context.push(MobCreditProfilePage.routePath),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/myprojects.svg',
+                        label: 'My projects',
+                        onTap: () => context.push(MyProjectsPage.routePath),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/mobsupport.svg',
+                        label: 'mob support',
+                        onTap: () => _comingSoon(context, 'mob support'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'OTHER INFORMATION',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF67696D),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      height: 20 / 13,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _MenuCard(
+                    items: [
+                      _MenuItem(
+                        iconAsset: 'assets/images/notifications.svg',
+                        label: 'Notification preferences',
+                        onTap: () =>
+                            _comingSoon(context, 'Notification preferences'),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/aboutus.svg',
+                        label: 'About us',
+                        onTap: () => _comingSoon(context, 'About us'),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/faqs.svg',
+                        label: 'FAQs',
+                        onTap: () => _comingSoon(context, 'FAQs'),
+                      ),
+                      _MenuItem(
+                        iconAsset: 'assets/images/becomepartner.svg',
+                        label: 'Become a partner',
+                        onTap: () => _comingSoon(context, 'Become a partner'),
+                      ),
+                      const _MenuItem(
+                        iconAsset: 'assets/images/logout.svg',
+                        label: 'Logout',
+                        showChevron: false,
+                        onTap: _logout,
+                      ),
+                    ],
+                  ),
+                  const _VersionFooter(),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -256,7 +369,9 @@ class _ProfileHeader extends StatelessWidget {
                 height: 36,
                 child: Material(
                   color: Colors.white,
-                  shape: const CircleBorder(),
+                  shape: const CircleBorder(
+                    side: BorderSide(color: Color(0xFFD0D4DC)),
+                  ),
                   child: InkWell(
                     customBorder: const CircleBorder(),
                     // Fall back to Home *inside* the tab shell (not a bare
@@ -266,10 +381,10 @@ class _ProfileHeader extends StatelessWidget {
                     onTap: () => context.canPop()
                         ? context.pop()
                         : context.go(HomepageWidget.routePath),
-                    child: const Icon(
-                      Icons.arrow_back,
-                      size: 19,
-                      color: _ProfileColors.navy,
+                    child: const SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: Center(child: AppBackIcon()),
                     ),
                   ),
                 ),
@@ -304,17 +419,17 @@ class _ProfileHeader extends StatelessWidget {
                             color: Colors.white,
                             fontSize: 21,
                             fontWeight: FontWeight.w700,
-                            height: 31 / 21,
+                            height: 1.48,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           phone,
                           style: GoogleFonts.inter(
-                            color: const Color(0xFFB8C4D0),
+                            color: Colors.white.withValues(alpha: .60),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            height: 20 / 13,
+                            height: 1.54,
                           ),
                         ),
                       ],
@@ -350,59 +465,69 @@ class _MembershipBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: SizedBox(
-          height: 58,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                SvgPicture.asset(
-                  _mobStarAsset(membership),
-                  width: 24,
-                  height: 23,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/images/mobstar logo.svg',
-                        width: 64,
-                        height: 11,
-                      ),
-                      Text(
-                        '$membership member',
+        child: Ink(
+          decoration: ShapeDecoration(
+            color: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: SizedBox(
+            height: 58,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  SvgPicture.asset(
+                    _mobStarAsset(membership),
+                    width: 24,
+                    height: 23,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/images/mobstar logo.svg',
+                          width: 64,
+                          height: 11,
+                        ),
+                        Text(
+                          '$membership member',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            height: 1.43,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  '$points Points',
+                  Text(
+                    '$points Points',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 1.43,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 7),
-                const Icon(Icons.chevron_right, color: Colors.white, size: 12),
-              ],
+                  const SizedBox(width: 7),
+                  const _Chevron(color: Colors.white),
+                ],
+              ),
             ),
           ),
         ),
@@ -427,13 +552,47 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: SizedBox(
+        child: Ink(
           height: 112,
+          padding: const EdgeInsets.all(16),
+          decoration: ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SvgPicture.asset(iconAsset, width: 24, height: 24),
+              const SizedBox(height: 12),
+              Text(title, style: _labelStyle),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _subtleStyle,
+                    ),
+                  ),
+                  const _Chevron(),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -502,11 +661,7 @@ class _ReferralCard extends StatelessWidget {
                   height: 24,
                 ),
                 const Spacer(),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 12,
-                  color: Color(0xFF78838F),
-                ),
+                const _Chevron(),
               ],
             ),
           ),
@@ -548,15 +703,46 @@ class _MenuCard extends StatelessWidget {
               if (index != items.length - 1)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(
-                    height: 0,
-                    thickness: 1,
-                    color: Color(0xFFE7EAEE),
-                  ),
+                  child: _DottedDivider(),
                 ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DottedDivider extends StatelessWidget {
+  const _DottedDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 1,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const dashWidth = 4.0;
+          const dashGap = 4.0;
+          final dashCount =
+              (constraints.maxWidth / (dashWidth + dashGap)).floor();
+
+          return Row(
+            children: List.generate(dashCount, (index) {
+              return Padding(
+                padding: EdgeInsets.only(
+                    right: index == dashCount - 1 ? 0 : dashGap),
+                child: const SizedBox(
+                  width: dashWidth,
+                  height: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(color: Color(0xFFE7EAEE)),
+                  ),
+                ),
+              );
+            }),
+          );
+        },
       ),
     );
   }
@@ -593,12 +779,7 @@ class _MenuRow extends StatelessWidget {
                     style: _labelStyle,
                   ),
                 ),
-                if (item.showChevron)
-                  const Icon(
-                    Icons.chevron_right,
-                    size: 12,
-                    color: Color(0xFF78838F),
-                  ),
+                if (item.showChevron) const _Chevron(),
               ],
             ),
           ),
@@ -617,12 +798,13 @@ class _VersionFooter extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(0, 26, 0, 16),
       child: Column(
         children: [
-          Text(
-            'mob∷',
-            style: GoogleFonts.inter(
-              color: const Color(0xFFC5C8CC),
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
+          SvgPicture.asset(
+            'assets/images/moblogo.svg',
+            width: 88,
+            height: 24,
+            colorFilter: const ColorFilter.mode(
+              Color(0xFFD2D4D8),
+              BlendMode.srcIn,
             ),
           ),
           const SizedBox(height: 2),
@@ -630,12 +812,30 @@ class _VersionFooter extends StatelessWidget {
             'APP VERSION 0.2.456',
             style: GoogleFonts.inter(
               color: const Color(0xFF9FA4AA),
-              fontSize: 8,
+              fontSize: 11,
               fontWeight: FontWeight.w400,
+              height: 16 / 11,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Chevron extends StatelessWidget {
+  const _Chevron({this.color = const Color(0xFF78838F)});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      'assets/images/arrow.svg',
+      width: 12,
+      height: 12,
+      fit: BoxFit.contain,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
     );
   }
 }
@@ -648,7 +848,7 @@ final TextStyle _labelStyle = GoogleFonts.inter(
 );
 
 final TextStyle _subtleStyle = GoogleFonts.inter(
-  color: const Color(0xFF747D87),
+  color: const Color(0xFF67696D),
   fontSize: 13,
   fontWeight: FontWeight.w400,
   height: 20 / 13,

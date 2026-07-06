@@ -15,6 +15,7 @@ import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_wid
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class BrandProductSearchPage extends StatefulWidget {
   const BrandProductSearchPage({
@@ -108,9 +109,11 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
     );
   }
 
-  Future<void> _changeProductQuantity(ProductModel product, int quantity) async {
+  Future<void> _changeProductQuantity(
+      ProductModel product, int quantity) async {
     if (product.hasVariants && product.mobSku.isEmpty) {
-      if (mounted) context.push('${ProductDetailPage.routePath}/${product.slug}');
+      if (mounted)
+        context.push('${ProductDetailPage.routePath}/${product.slug}');
       return;
     }
     if (quantity < 0) return;
@@ -130,8 +133,8 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
       vendorProductId: product.addToCartProductId,
     );
     context.read<CartBloc>().add(
-      CartQuantityUpdateRequested(item: cartItem, newQty: quantity),
-    );
+          CartQuantityUpdateRequested(item: cartItem, newQty: quantity),
+        );
   }
 
   Future<void> _handleNotifyTap(ProductModel product) async {
@@ -253,7 +256,8 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
     if (targetSection == null) return;
 
     final matchingOption = targetSection.options.firstWhere(
-      (option) => option.label.trim().toLowerCase() == normalizedLabel.toLowerCase(),
+      (option) =>
+          option.label.trim().toLowerCase() == normalizedLabel.toLowerCase(),
       orElse: () => BrowseFilterOption(
         value: normalizedLabel,
         label: normalizedLabel,
@@ -413,7 +417,8 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
                       ),
                       if (!isInitialLoading && !hasError)
                         _ResultsCountHeader(
-                          count: totalEntries > 0 ? totalEntries : products.length,
+                          count:
+                              totalEntries > 0 ? totalEntries : products.length,
                           query: _query,
                         ),
                       if (!isInitialLoading && !hasError)
@@ -450,7 +455,8 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
                                         products: products,
                                         subCategories: const [],
                                         crossAxisCount: 3,
-                                        brandOptions: _filterOptionLabels('brand'),
+                                        brandOptions:
+                                            _filterOptionLabels('brand'),
                                         productTypeOptions:
                                             _filterOptionLabelsForKeys(
                                                 const ['brand_segment']),
@@ -464,14 +470,15 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
                                         loadMoreFailed: false,
                                         cartQtyByProductId: cartQtyByProductId,
                                         cartUpdatingProductId: cartUpdatingKey,
-                                        onRetryLoadMore: () => _productBloc
-                                            .add(ProductListNextPageRequested()),
+                                        onRetryLoadMore: () => _productBloc.add(
+                                            ProductListNextPageRequested()),
                                         onProductTap: (product) => context.push(
                                             '${ProductDetailPage.routePath}/${product.slug}'),
                                         onCartQuantityChanged:
                                             _changeProductQuantity,
                                         onNotifyTap: _handleNotifyTap,
-                                        onProductTypeTap: _toggleInlineProductType,
+                                        onProductTypeTap:
+                                            _toggleInlineProductType,
                                         onRequestTap: () {},
                                       ),
                       ),
@@ -508,7 +515,7 @@ class _SearchHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onBack,
-            icon: const Icon(Icons.arrow_back),
+            icon: const AppBackIcon(),
           ),
           Expanded(
             child: TextField(

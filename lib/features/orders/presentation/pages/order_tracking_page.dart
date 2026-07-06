@@ -13,6 +13,7 @@ import 'package:m_o_b_demand_side/features/orders/domain/repositories/orders_rep
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_suborder_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 Future<void> showOrderRatingSheet(
   BuildContext context, {
@@ -174,11 +175,7 @@ class _TrackingHeader extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints.expand(),
                 onPressed: () => context.pop(),
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  size: 22,
-                  color: _TrackingColors.navy,
-                ),
+                icon: const AppBackIcon(),
               ),
             ),
           ),

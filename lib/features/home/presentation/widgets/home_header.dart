@@ -170,9 +170,10 @@ class _HomeHeaderState extends State<HomeHeader> {
                     border: Border.all(color: const Color(0xFFD0D4DC)),
                   ),
                   alignment: Alignment.center,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: _ProfileAvatar(profilePictureUrl: profilePictureUrl),
+                  child: SvgPicture.asset(
+                    'assets/images/profile.svg',
+                    width: 24,
+                    height: 24,
                   ),
                 ),
               ),

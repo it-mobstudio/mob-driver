@@ -5,6 +5,7 @@ import 'package:m_o_b_demand_side/features/home/data/models/home_models.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_category_grid.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class CategoriesPage extends StatefulWidget {
   static const String routeName = 'Categories';
@@ -67,13 +68,17 @@ class _CategoriesHeader extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Categories is a bottom-nav tab root — reached only via the
-            // tab bar, never pushed — so there's never real back history
-            // here. A back arrow that fell through to `go(Home)` on every
-            // tap (since canPop() is always false in that case) is what
-            // made "back" feel broken; the tab bar is the way to navigate
-            // away, so no back affordance is shown, matching a tab root.
-            const SizedBox(width: 48),
+            IconButton(
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(HomepageWidget.routePath);
+                }
+              },
+              icon: const AppBackIcon(),
+              tooltip: 'Back',
+            ),
             Expanded(
               child: Text(
                 'Categories',

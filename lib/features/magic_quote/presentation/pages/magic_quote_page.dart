@@ -22,6 +22,7 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/file_t
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/generating_screen.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/quote_item_row.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/results_screen.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/review_questions_sheet.dart';
@@ -175,8 +176,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
         children: [
           IconButton(
             onPressed: _handleBack,
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-            color: _navy,
+            icon: const AppBackIcon(),
           ),
           Expanded(
             child: Text(

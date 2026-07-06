@@ -1,7 +1,9 @@
 // lib/shared/tab_header.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:go_router/go_router.dart';
 
 /// Gradient location + search header shared by the top-level tab pages
@@ -95,7 +97,11 @@ class TabHeader extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundColor: Colors.white,
-            child: const Icon(Icons.person, color: Color(0xFF0A243F)),
+            child: SvgPicture.asset(
+              'assets/images/profile.svg',
+              width: 24,
+              height: 24,
+            ),
           ),
         ],
       ),
@@ -118,7 +124,7 @@ class TabHeader extends StatelessWidget {
               },
               child: Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Icon(Icons.arrow_back, color: backIconColor, size: 24),
+                child: AppBackIcon(color: backIconColor),
               ),
             ),
           Expanded(

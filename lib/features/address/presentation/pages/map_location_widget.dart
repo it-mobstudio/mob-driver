@@ -10,6 +10,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class MapLocationWidget extends StatefulWidget {
   const MapLocationWidget({super.key, this.initialLocation});
@@ -162,7 +163,7 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
                 child: const SizedBox(
                   width: 40,
                   height: 40,
-                  child: Icon(Icons.arrow_back, size: 20),
+                  child: Center(child: AppBackIcon()),
                 ),
               ),
             ),
@@ -667,10 +668,7 @@ class _MapLocationWidgetState extends State<MapLocationWidget> {
     final direct = postalCode?.trim() ?? '';
     if (RegExp(r'^[1-9][0-9]{5}$').hasMatch(direct)) return direct;
 
-    return RegExp(r'\b[1-9][0-9]{5}\b')
-            .firstMatch(address)
-            ?.group(0) ??
-        '';
+    return RegExp(r'\b[1-9][0-9]{5}\b').firstMatch(address)?.group(0) ?? '';
   }
 
   void _onAddressStateChanged(BuildContext context, AddressState state) {

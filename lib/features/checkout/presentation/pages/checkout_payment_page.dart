@@ -16,6 +16,7 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class CheckoutPaymentPage extends StatefulWidget {
   static const routeName = 'CheckoutPaymentPage';
@@ -36,7 +37,8 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   // -1 = none selected, 0 = mobCredit, 1 = Razorpay
   int _paymentOption = -1;
   RazorpayOrderEntity? _razorpayEntity; // populated when radio is selected
-  RupifiOrderEntity? _rupifiEntity; // populated when mobCREDIT radio is selected
+  RupifiOrderEntity?
+      _rupifiEntity; // populated when mobCREDIT radio is selected
   int? _requestedPaymentOption;
   String? _requestedPaymentCartId;
   double? _requestedPaymentTotal;
@@ -323,7 +325,8 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     }
   }
 
-  void _onProceed(BuildContext context, String cartId, double total, CartSummaryEntity summary) {
+  void _onProceed(BuildContext context, String cartId, double total,
+      CartSummaryEntity summary) {
     if (_isRupifiHandoffInProgress) return;
     // Zero total — wallet/points covered the full amount, place order directly
     if (total == 0) {
@@ -341,7 +344,8 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
 
     if (_paymentOption == -1) {
       _scaffoldMessenger?.showSnackBar(
-        const SnackBar(content: Text('Please select a payment method to continue.')),
+        const SnackBar(
+            content: Text('Please select a payment method to continue.')),
       );
       return;
     }
@@ -351,7 +355,8 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
         _openRupifiGateway(entity);
       } else {
         _scaffoldMessenger?.showSnackBar(
-          const SnackBar(content: Text('Loading payment details, please try again.')),
+          const SnackBar(
+              content: Text('Loading payment details, please try again.')),
         );
       }
     } else if (_paymentOption == 1) {
@@ -407,186 +412,227 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                       });
                     }
                     return BlocConsumer<CheckoutBloc, CheckoutState>(
-                    listener: (context, checkoutState) {
-                      // The bloc's async work (Razorpay verify, place_direct_order
-                      // + suborder-details fetch, etc.) can still be in flight
-                      // when the user navigates away (e.g. back button). If this
-                      // page's element is no longer in the tree by the time the
-                      // state arrives, bail out instead of looking up an
-                      // ancestor on a deactivated context (causes "Duplicate
-                      // GlobalKey" / element-lifecycle crashes).
-                      if (!mounted) return;
-                      if (checkoutState is CheckoutRupifiOrderCreated) {
-                        setState(() {
+                      listener: (context, checkoutState) {
+                        // The bloc's async work (Razorpay verify, place_direct_order
+                        // + suborder-details fetch, etc.) can still be in flight
+                        // when the user navigates away (e.g. back button). If this
+                        // page's element is no longer in the tree by the time the
+                        // state arrives, bail out instead of looking up an
+                        // ancestor on a deactivated context (causes "Duplicate
+                        // GlobalKey" / element-lifecycle crashes).
+                        if (!mounted) return;
+                        if (checkoutState is CheckoutRupifiOrderCreated) {
+                          setState(() {
+                            _isPaymentOrderRequestInFlight = false;
+                            _rupifiEntity = checkoutState.entity;
+                          });
+                        } else if (checkoutState
+                            is CheckoutRazorpayOrderCreated) {
+                          // Store the entity — gateway opens when user taps "Place order"
+                          setState(() {
+                            _isPaymentOrderRequestInFlight = false;
+                            _razorpayEntity = checkoutState.entity;
+                          });
+                        } else if (checkoutState is CheckoutOrderPlaced) {
+                          _router.go(
+                            OrderPlacedPage.routePath,
+                            extra: checkoutState.order,
+                          );
+                        } else if (checkoutState is CheckoutPaymentFailed) {
+                          _router.go(
+                            PaymentFailedPage.routePath,
+                            extra: checkoutState.message,
+                          );
+                        } else if (checkoutState is CheckoutError) {
                           _isPaymentOrderRequestInFlight = false;
-                          _rupifiEntity = checkoutState.entity;
-                        });
-                      } else if (checkoutState is CheckoutRazorpayOrderCreated) {
-                        // Store the entity — gateway opens when user taps "Place order"
-                        setState(() {
-                          _isPaymentOrderRequestInFlight = false;
-                          _razorpayEntity = checkoutState.entity;
-                        });
-                      } else if (checkoutState is CheckoutOrderPlaced) {
-                        _router.go(
-                          OrderPlacedPage.routePath,
-                          extra: checkoutState.order,
-                        );
-                      } else if (checkoutState is CheckoutPaymentFailed) {
-                        _router.go(
-                          PaymentFailedPage.routePath,
-                          extra: checkoutState.message,
-                        );
-                      } else if (checkoutState is CheckoutError) {
-                        _isPaymentOrderRequestInFlight = false;
-                        _scaffoldMessenger?.showSnackBar(
-                          SnackBar(
-                            content: Text(checkoutState.message),
-                            backgroundColor: Colors.red.shade700,
-                          ),
-                        );
-                      }
-                    },
-                    builder: (context, checkoutState) {
-                      final isLoading = checkoutState is CheckoutLoading;
-                      final isPaymentBlocked =
-                          isLoading || _isRupifiHandoffInProgress;
-                      final isPaymentMethodReady = summary.total <= 0 ||
-                          (_paymentOption == 1 && _razorpayEntity != null) ||
-                          (_paymentOption == 0 && _rupifiEntity != null);
-                      return Column(
-                        children: [
-                          _PaymentHeader(onBack: () => _goBack(context)),
-                          Expanded(
-                            child: Container(
-                              color: const Color(0xFFF0F0F0),
-                              child: Stack(
-                                children: [
-                                  ListView(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        16, 20, 16, 118),
-                                    children: [
-                                      const _SectionTitle(
-                                          'Select redeem option'),
-                                      const SizedBox(height: 16),
-                                      _RedeemOptionsCard(
-                                        useMobstar: _useMobstar,
-                                        useMobwallet: _useMobwallet,
-                                        mobstarPoints: summary.rewardPoints,
-                                        mobstarAmount: mobstarApplicableAmount,
-                                        mobstarBalanceAmount: summary.mobstarAmount,
-                                        walletBalance: summary.walletBalance,
-                                        applicableWalletAmount: summary.applicableWalletAmount,
-                                        isReferralOnlyWallet:
-                                            summary.isReferralOnlyWallet,
-                                        isWalletUsageLimited:
-                                            summary.isWalletUsageLimited,
-                                        walletNote: summary.walletNote,
-                                        isUpdating:
-                                            isRedeemUpdating || isPaymentBlocked,
-                                        onMobstarChanged: summary.rewardPoints > 0
-                                            ? () {
-                                                final next = !_useMobstar;
-                                                setState(() => _useMobstar = next);
-                                                context.read<CartBloc>().add(
-                                                  CartRedeemUpdateRequested(
-                                                    cartId: summary.cartId,
-                                                    useWallet: _useMobwallet,
-                                                    walletAmount: summary.applicableWalletAmount,
-                                                    usePoints: next,
-                                                    points: next ? summary.rewardPoints : 0,
-                                                  ),
-                                                );
-                                              }
-                                            : null,
-                                        onMobwalletChanged: summary.walletBalance > 0
-                                            ? () {
-                                                final next = !_useMobwallet;
-                                                setState(() => _useMobwallet = next);
-                                                context.read<CartBloc>().add(
-                                                  CartRedeemUpdateRequested(
-                                                    cartId: summary.cartId,
-                                                    useWallet: next,
-                                                    walletAmount: next ? summary.applicableWalletAmount : 0,
-                                                    usePoints: _useMobstar,
-                                                    points: _useMobstar ? summary.rewardPoints : 0,
-                                                  ),
-                                                );
-                                              }
-                                            : null,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      const _SectionTitle(
-                                          'Please select payment option'),
-                                      const SizedBox(height: 12),
-                                      if (summary.mobCreditAccountStatus != null) ...[
-                                        if (summary.mobCreditAccountStatus == 'AMOUNT_DUE')
-                                          const _MobCreditOverlimitBanner(),
-                                        _MobCreditPaymentCard(
+                          _scaffoldMessenger?.showSnackBar(
+                            SnackBar(
+                              content: Text(checkoutState.message),
+                              backgroundColor: Colors.red.shade700,
+                            ),
+                          );
+                        }
+                      },
+                      builder: (context, checkoutState) {
+                        final isLoading = checkoutState is CheckoutLoading;
+                        final isPaymentBlocked =
+                            isLoading || _isRupifiHandoffInProgress;
+                        final isPaymentMethodReady = summary.total <= 0 ||
+                            (_paymentOption == 1 && _razorpayEntity != null) ||
+                            (_paymentOption == 0 && _rupifiEntity != null);
+                        return Column(
+                          children: [
+                            _PaymentHeader(onBack: () => _goBack(context)),
+                            Expanded(
+                              child: Container(
+                                color: const Color(0xFFF0F0F0),
+                                child: Stack(
+                                  children: [
+                                    ListView(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          16, 20, 16, 118),
+                                      children: [
+                                        const _SectionTitle(
+                                            'Select redeem option'),
+                                        const SizedBox(height: 16),
+                                        _RedeemOptionsCard(
+                                          useMobstar: _useMobstar,
+                                          useMobwallet: _useMobwallet,
+                                          mobstarPoints: summary.rewardPoints,
+                                          mobstarAmount:
+                                              mobstarApplicableAmount,
+                                          mobstarBalanceAmount:
+                                              summary.mobstarAmount,
+                                          walletBalance: summary.walletBalance,
+                                          applicableWalletAmount:
+                                              summary.applicableWalletAmount,
+                                          isReferralOnlyWallet:
+                                              summary.isReferralOnlyWallet,
+                                          isWalletUsageLimited:
+                                              summary.isWalletUsageLimited,
+                                          walletNote: summary.walletNote,
+                                          isUpdating: isRedeemUpdating ||
+                                              isPaymentBlocked,
+                                          onMobstarChanged: summary
+                                                      .rewardPoints >
+                                                  0
+                                              ? () {
+                                                  final next = !_useMobstar;
+                                                  setState(
+                                                      () => _useMobstar = next);
+                                                  context.read<CartBloc>().add(
+                                                        CartRedeemUpdateRequested(
+                                                          cartId:
+                                                              summary.cartId,
+                                                          useWallet:
+                                                              _useMobwallet,
+                                                          walletAmount: summary
+                                                              .applicableWalletAmount,
+                                                          usePoints: next,
+                                                          points: next
+                                                              ? summary
+                                                                  .rewardPoints
+                                                              : 0,
+                                                        ),
+                                                      );
+                                                }
+                                              : null,
+                                          onMobwalletChanged: summary
+                                                      .walletBalance >
+                                                  0
+                                              ? () {
+                                                  final next = !_useMobwallet;
+                                                  setState(() =>
+                                                      _useMobwallet = next);
+                                                  context.read<CartBloc>().add(
+                                                        CartRedeemUpdateRequested(
+                                                          cartId:
+                                                              summary.cartId,
+                                                          useWallet: next,
+                                                          walletAmount: next
+                                                              ? summary
+                                                                  .applicableWalletAmount
+                                                              : 0,
+                                                          usePoints:
+                                                              _useMobstar,
+                                                          points: _useMobstar
+                                                              ? summary
+                                                                  .rewardPoints
+                                                              : 0,
+                                                        ),
+                                                      );
+                                                }
+                                              : null,
+                                        ),
+                                        const SizedBox(height: 20),
+                                        const _SectionTitle(
+                                            'Please select payment option'),
+                                        const SizedBox(height: 12),
+                                        if (summary.mobCreditAccountStatus !=
+                                            null) ...[
+                                          if (summary.mobCreditAccountStatus ==
+                                              'AMOUNT_DUE')
+                                            const _MobCreditOverlimitBanner(),
+                                          _MobCreditPaymentCard(
+                                            selected: summary.total > 0 &&
+                                                summary.mobCreditAccountStatus ==
+                                                    'ACTIVE' &&
+                                                summary.total <=
+                                                    summary.mobCreditBalance &&
+                                                _paymentOption == 0,
+                                            total: summary.total,
+                                            mobCreditBalance:
+                                                summary.mobCreditBalance,
+                                            status:
+                                                summary.mobCreditAccountStatus,
+                                            isDisabled: summary.total <= 0 ||
+                                                isPaymentBlocked ||
+                                                summary.mobCreditAccountStatus !=
+                                                    'ACTIVE' ||
+                                                summary.total >
+                                                    summary.mobCreditBalance,
+                                            onTap: () => _onMobCreditSelected(
+                                              summary.cartId,
+                                              summary.total,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                        ],
+                                        _RazorpayTile(
                                           selected: summary.total > 0 &&
-                                              summary.mobCreditAccountStatus == 'ACTIVE' &&
-                                              summary.total <= summary.mobCreditBalance &&
-                                              _paymentOption == 0,
-                                          total: summary.total,
-                                          mobCreditBalance: summary.mobCreditBalance,
-                                          status: summary.mobCreditAccountStatus,
+                                              _paymentOption == 1,
                                           isDisabled: summary.total <= 0 ||
-                                              isPaymentBlocked ||
-                                              summary.mobCreditAccountStatus != 'ACTIVE' ||
-                                              summary.total > summary.mobCreditBalance,
-                                          onTap: () => _onMobCreditSelected(
+                                              isPaymentBlocked,
+                                          onTap: () => _onRazorpaySelected(
                                             summary.cartId,
                                             summary.total,
                                           ),
                                         ),
-                                        const SizedBox(height: 12),
+                                        const SizedBox(height: 20),
+                                        OrderDetailsCard(
+                                          subtotal: summary.subtotal,
+                                          shipping: summary.shipping,
+                                          tax: summary.tax,
+                                          savings: summary.savings,
+                                          total: summary.total,
+                                          earningPoints: summary.earningPoints,
+                                          mobstarApplied: _useMobstar
+                                              ? mobstarApplicableAmount
+                                              : null,
+                                          walletApplied: _useMobwallet
+                                              ? summary.applicableWalletAmount
+                                              : null,
+                                        ),
                                       ],
-                                      _RazorpayTile(
-                                        selected: summary.total > 0 && _paymentOption == 1,
-                                        isDisabled:
-                                            summary.total <= 0 || isPaymentBlocked,
-                                        onTap: () => _onRazorpaySelected(
+                                    ),
+                                    BottomCheckoutBar(
+                                      label: summary.total == 0
+                                          ? 'Place order'
+                                          : 'Place your order and pay',
+                                      isLoading: isPaymentBlocked,
+                                      isDisabled: _isRupifiHandoffInProgress ||
+                                          !isPaymentMethodReady,
+                                      onProceed: () => _onProceed(
+                                          context,
                                           summary.cartId,
                                           summary.total,
+                                          summary),
+                                    ),
+                                    if (_isRupifiHandoffInProgress)
+                                      _RupifiHandoffOverlay(
+                                        onClose: () => setState(
+                                          () => _isRupifiHandoffInProgress =
+                                              false,
                                         ),
                                       ),
-                                      const SizedBox(height: 20),
-                                      OrderDetailsCard(
-                                        subtotal: summary.subtotal,
-                                        shipping: summary.shipping,
-                                        tax: summary.tax,
-                                        savings: summary.savings,
-                                        total: summary.total,
-                                        earningPoints: summary.earningPoints,
-                                        mobstarApplied: _useMobstar ? mobstarApplicableAmount : null,
-                                        walletApplied: _useMobwallet ? summary.applicableWalletAmount : null,
-                                      ),
-                                    ],
-                                  ),
-                                  BottomCheckoutBar(
-                                    label: summary.total == 0
-                                        ? 'Place order'
-                                        : 'Place your order and pay',
-                                    isLoading: isPaymentBlocked,
-                                    isDisabled: _isRupifiHandoffInProgress ||
-                                        !isPaymentMethodReady,
-                                    onProceed: () => _onProceed(
-                                        context, summary.cartId, summary.total, summary),
-                                  ),
-                                  if (_isRupifiHandoffInProgress)
-                                    _RupifiHandoffOverlay(
-                                      onClose: () => setState(
-                                        () => _isRupifiHandoffInProgress = false,
-                                      ),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                  );
+                          ],
+                        );
+                      },
+                    );
                   }),
               };
             },
@@ -611,9 +657,8 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
         ? summary.subtotal
         : summary.total + summary.savings - summary.shipping - summary.tax;
     final payableCap = summary.total > 0 ? summary.total : preRedeemPayable;
-    final applicable = summary.mobstarAmount > payableCap
-        ? payableCap
-        : summary.mobstarAmount;
+    final applicable =
+        summary.mobstarAmount > payableCap ? payableCap : summary.mobstarAmount;
 
     if (applicable > 0) {
       _lastMobstarApplicableAmount = applicable;
@@ -654,11 +699,7 @@ class _PaymentHeader extends StatelessWidget {
               child: const SizedBox(
                 width: 48,
                 height: 50,
-                child: Icon(
-                  Icons.arrow_back,
-                  color: Color(0xFF0A243F),
-                  size: 24,
-                ),
+                child: Center(child: AppBackIcon()),
               ),
             ),
           ),
@@ -777,7 +818,8 @@ class _RedeemOptionsCard extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   color: const Color(0xFFF5F5F5),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Text(
                     _walletNoteText,
                     style: GoogleFonts.inter(
@@ -845,7 +887,8 @@ class _RedeemRow extends StatelessWidget {
             Text(
               amount,
               style: GoogleFonts.inter(
-                color: enabled ? const Color(0xFF0A243F) : const Color(0xFFB0B4BB),
+                color:
+                    enabled ? const Color(0xFF0A243F) : const Color(0xFFB0B4BB),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 height: 20 / 13,
@@ -862,7 +905,9 @@ class _RedeemRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
-                  color: enabled ? const Color(0xFF0A243F) : const Color(0xFFB0B4BB),
+                  color: enabled
+                      ? const Color(0xFF0A243F)
+                      : const Color(0xFFB0B4BB),
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
                   height: 20 / 13,
@@ -896,7 +941,8 @@ class _MobCreditPaymentCard extends StatelessWidget {
 
   String get _disabledMessage {
     if (total <= 0) return 'No payable amount for mobCREDIT.';
-    if (status == 'AMOUNT_DUE') return 'Clear your outstanding due to use mobCREDIT.';
+    if (status == 'AMOUNT_DUE')
+      return 'Clear your outstanding due to use mobCREDIT.';
     if (status != 'ACTIVE') return 'mobCREDIT is not active for this account.';
     if (total > mobCreditBalance) {
       return 'Order amount exceeds your mobCREDIT balance.';
@@ -927,7 +973,8 @@ class _MobCreditPaymentCard extends StatelessWidget {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
-                        child: _RadioMark(selected: selected, enabled: !isDisabled),
+                        child: _RadioMark(
+                            selected: selected, enabled: !isDisabled),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -937,13 +984,16 @@ class _MobCreditPaymentCard extends StatelessWidget {
                               const TextSpan(text: 'Pay '),
                               TextSpan(
                                 text: '₹${total.toStringAsFixed(2)}',
-                                style: const TextStyle(fontWeight: FontWeight.w700),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700),
                               ),
                               if (mobCreditBalance > 0) ...[
                                 const TextSpan(text: ' out of '),
                                 TextSpan(
-                                  text: '₹${mobCreditBalance.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                  text:
+                                      '₹${mobCreditBalance.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700),
                                 ),
                                 const TextSpan(text: ' mobCREDIT available'),
                               ] else
@@ -1129,7 +1179,8 @@ class _CheckboxMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = enabled ? const Color(0xFF0360E5) : const Color(0xFFB0B4BB);
+    final activeColor =
+        enabled ? const Color(0xFF0360E5) : const Color(0xFFB0B4BB);
     final borderColor = checked ? activeColor : const Color(0xFF767C8F);
     return Container(
       width: 18,
@@ -1154,7 +1205,8 @@ class _RadioMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = enabled ? const Color(0xFF0360E5) : const Color(0xFFB0B4BB);
+    final activeColor =
+        enabled ? const Color(0xFF0360E5) : const Color(0xFFB0B4BB);
     final borderColor = selected ? activeColor : const Color(0xFF767C8F);
     return Container(
       width: 18,
@@ -1325,7 +1377,8 @@ class _MobCreditOverlimitBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF3F0),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFEE2C00).withValues(alpha: 0.3)),
+        border:
+            Border.all(color: const Color(0xFFEE2C00).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
