@@ -169,7 +169,10 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       if (match.isNotEmpty) resolvedCartItemId = match.first.cartItemId;
     }
 
-    final (_, failure) = isAdding
+    // add_to_cart/remove_cart_item already return the full updated cart
+    // (confirmed against the raw response), so use it directly instead of
+    // following up with a second getCart() round trip.
+    final (mutatedSummary, failure) = isAdding
         ? await _repository.addToCart(
             vendorProductId: event.item.vendorProductId,
             quantity: event.newQty,
@@ -188,17 +191,10 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       return;
     }
 
-    // Add/remove endpoints don't return the full cart — fetch fresh state.
-    final (freshSummary, freshFailure) = await _repository.getCart();
-    if (freshFailure != null) {
-      AppHaptics.error();
-      emit(current.copyWith(clearUpdatingKey: true));
-    } else {
-      emit(CartLoaded(
-        summary: freshSummary!,
-        successMessage: isAdding ? 'Added to cart' : null,
-      ));
-    }
+    emit(CartLoaded(
+      summary: mutatedSummary!,
+      successMessage: isAdding ? 'Added to cart' : null,
+    ));
   }
 
   Future<void> _onRemove(
@@ -216,7 +212,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         event.item.itemKey.isNotEmpty ? event.item.itemKey : event.item.title;
     emit(current.copyWith(updatingItemKey: itemKey, clearActionError: true));
 
-    final (_, failure) = await _repository.removeFromCart(
+    final (mutatedSummary, failure) = await _repository.removeFromCart(
       cartItemId: event.item.cartItemId,
       vendorProductId: event.item.vendorProductId,
     );
@@ -228,13 +224,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       return;
     }
 
-    final (freshSummary, freshFailure) = await _repository.getCart();
-    if (freshFailure != null) {
-      AppHaptics.error();
-      emit(current.copyWith(clearUpdatingKey: true));
-    } else {
-      emit(CartLoaded(summary: freshSummary!));
-    }
+    emit(CartLoaded(summary: mutatedSummary!));
   }
 
   void _onClearError(CartActionErrorCleared event, Emitter<CartState> emit) {

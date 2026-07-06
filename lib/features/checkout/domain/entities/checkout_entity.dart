@@ -1,3 +1,5 @@
+import 'package:m_o_b_demand_side/shared/image_url.dart';
+
 class CheckoutSummaryEntity {
   const CheckoutSummaryEntity({
     required this.subtotal,
@@ -123,7 +125,7 @@ class PlacedOrderProductEntity {
         : map;
     return PlacedOrderProductEntity(
       productName: (product['product_name'] ?? '').toString(),
-      imageUrl: (product['product_image'] ?? '').toString(),
+      imageUrl: sanitizeImageUrl((product['product_image'] ?? '').toString()),
       mobSku: (product['mob_sku'] ?? '').toString(),
       vendor: (product['vendor'] ?? '').toString(),
       price: double.tryParse(

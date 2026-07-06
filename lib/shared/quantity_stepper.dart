@@ -59,7 +59,7 @@ class _QuantityStepperState extends State<QuantityStepper> {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFFD6DCE8), width: 1),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         color: Colors.white,
       ),
       child: Row(

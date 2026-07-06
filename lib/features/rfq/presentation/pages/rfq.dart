@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -6,8 +8,16 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/entities/rfq_entity.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 import 'rfq_details_page.dart';
+
+const List<({String label, String value})> _kRfqFilterOptions = [
+  (label: 'Requested', value: 'Requested'),
+  (label: 'Quote Generated', value: 'Quote sent'),
+  (label: 'Quote Accepted', value: 'Quote Accepted'),
+  (label: 'Order Created', value: 'Order Created'),
+];
 
 class RfqPage extends StatefulWidget {
   const RfqPage({super.key});
@@ -21,40 +31,131 @@ class RfqPage extends StatefulWidget {
 
 class _RfqPageState extends State<RfqPage> {
   late final RfqBloc _rfqBloc;
+  final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
+  Timer? _debounce;
+  String? _activeFilterLabel;
 
   @override
   void initState() {
     super.initState();
     _rfqBloc = sl<RfqBloc>()..add(RfqListRequested());
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _searchController.dispose();
     _rfqBloc.close();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      _rfqBloc.add(RfqNextPageRequested());
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    if (_activeFilterLabel != null) {
+      setState(() => _activeFilterLabel = null);
+    }
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _rfqBloc.add(RfqQueryChanged(value.trim()));
+    });
+  }
+
+  void _onSearchCleared() {
+    _debounce?.cancel();
+    _searchController.clear();
+    setState(() => _activeFilterLabel = null);
+    _rfqBloc.add(RfqListRequested());
+  }
+
+  void _onFilterSelected(String value, String label) {
+    _debounce?.cancel();
+    _searchController.clear();
+    setState(() => _activeFilterLabel = label);
+    _rfqBloc.add(RfqQueryChanged(value));
+  }
+
+  void _onFilterCleared() {
+    setState(() => _activeFilterLabel = null);
+    _rfqBloc.add(RfqListRequested());
+  }
+
+  Future<void> _openFilterSheet() async {
+    final selected =
+        await showModalBottomSheet<({String label, String value})?>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _RfqFilterSheet(activeLabel: _activeFilterLabel),
+    );
+    if (selected == null) return;
+    if (selected.value.isEmpty) {
+      _onFilterCleared();
+    } else {
+      _onFilterSelected(selected.value, selected.label);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider<RfqBloc>.value(
       value: _rfqBloc,
-      child: const Scaffold(
-        backgroundColor: Color(0xFFF0F0F0),
-        body: _RfqBody(),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF0F0F0),
+        body: _RfqBody(
+          searchController: _searchController,
+          scrollController: _scrollController,
+          activeFilterLabel: _activeFilterLabel,
+          onSearchChanged: _onSearchChanged,
+          onSearchCleared: _onSearchCleared,
+          onFilterTap: _openFilterSheet,
+        ),
       ),
     );
   }
 }
 
 class _RfqBody extends StatelessWidget {
-  const _RfqBody();
+  const _RfqBody({
+    required this.searchController,
+    required this.scrollController,
+    required this.activeFilterLabel,
+    required this.onSearchChanged,
+    required this.onSearchCleared,
+    required this.onFilterTap,
+  });
+
+  final TextEditingController searchController;
+  final ScrollController scrollController;
+  final String? activeFilterLabel;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onSearchCleared;
+  final VoidCallback onFilterTap;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _RfqHeader(),
+        _RfqHeader(
+          searchController: searchController,
+          activeFilterLabel: activeFilterLabel,
+          onSearchChanged: onSearchChanged,
+          onSearchCleared: onSearchCleared,
+          onFilterTap: onFilterTap,
+        ),
         Expanded(
           child: BlocBuilder<RfqBloc, RfqState>(
             builder: (context, state) {
@@ -91,12 +192,26 @@ class _RfqBody extends StatelessWidget {
                       ),
                     ),
                   ),
-                RfqListLoaded(:final rfqs) => ColoredBox(
+                RfqListLoaded(:final rfqs, :final isLoadingMore) => ColoredBox(
                     color: const Color(0xFFF0F0F0),
                     child: ListView.builder(
+                      controller: scrollController,
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      itemCount: rfqs.length,
+                      itemCount: rfqs.length + (isLoadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
+                        if (index >= rfqs.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          );
+                        }
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: _RfqCard(item: rfqs[index]),
@@ -115,7 +230,19 @@ class _RfqBody extends StatelessWidget {
 }
 
 class _RfqHeader extends StatelessWidget {
-  const _RfqHeader();
+  const _RfqHeader({
+    required this.searchController,
+    required this.activeFilterLabel,
+    required this.onSearchChanged,
+    required this.onSearchCleared,
+    required this.onFilterTap,
+  });
+
+  final TextEditingController searchController;
+  final String? activeFilterLabel;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onSearchCleared;
+  final VoidCallback onFilterTap;
 
   @override
   Widget build(BuildContext context) {
@@ -135,11 +262,7 @@ class _RfqHeader extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Color(0xFF0A243F),
-                        size: 22,
-                      ),
+                      icon: const AppBackIcon(),
                       onPressed: () {
                         if (context.canPop()) {
                           context.pop();
@@ -164,52 +287,81 @@ class _RfqHeader extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => context.push('/search'),
-              child: Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    const Icon(
-                      Icons.search,
-                      size: 22,
-                      color: Color(0xFF0A243F),
-                    ),
-                    const SizedBox(width: 14),
-                    Text(
-                      'Search for quotation',
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 16),
+                  const Icon(
+                    Icons.search,
+                    size: 22,
+                    color: Color(0xFF0A243F),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: TextField(
+                      controller: searchController,
+                      onChanged: onSearchChanged,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintText: 'Search for quotation',
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: const Color(0xFF59677C),
+                          height: 20 / 14,
+                        ),
+                      ),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
-                        color: const Color(0xFF59677C),
+                        color: const Color(0xFF0A243F),
                         height: 20 / 14,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: searchController,
+                    builder: (context, value, _) {
+                      if (value.text.isEmpty) return const SizedBox.shrink();
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onSearchCleared,
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 16),
+                          child: Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Color(0xFF59677C),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: onFilterTap,
               icon: const Icon(Icons.tune, size: 14),
               label: Text(
-                'Filters',
+                activeFilterLabel ?? 'Filters',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -217,11 +369,18 @@ class _RfqHeader extends StatelessWidget {
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF0A243F),
-                backgroundColor: Colors.white,
+                foregroundColor: activeFilterLabel != null
+                    ? const Color(0xFF0360E5)
+                    : const Color(0xFF0A243F),
+                backgroundColor:
+                    activeFilterLabel != null ? const Color(0xFFE6F4FF) : Colors.white,
                 minimumSize: const Size(80, 36),
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                side: const BorderSide(color: Color(0xFFD8DEE8)),
+                side: BorderSide(
+                  color: activeFilterLabel != null
+                      ? const Color(0xFF0360E5)
+                      : const Color(0xFFD8DEE8),
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -229,6 +388,106 @@ class _RfqHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RfqFilterSheet extends StatelessWidget {
+  const _RfqFilterSheet({required this.activeLabel});
+
+  final String? activeLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Filters',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0A243F),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (activeLabel != null)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () =>
+                        Navigator.of(context).pop((label: '', value: '')),
+                    child: Text(
+                      'Clear',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0360E5),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...(_kRfqFilterOptions.map(
+              (option) => _RfqFilterOptionTile(
+                label: option.label,
+                selected: activeLabel == option.label,
+                onTap: () => Navigator.of(context)
+                    .pop((label: option.label, value: option.value)),
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RfqFilterOptionTile extends StatelessWidget {
+  const _RfqFilterOptionTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFE6F4FF) : const Color(0xFFF7F8FA),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check, color: Color(0xFF0360E5), size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -289,11 +548,16 @@ class _RfqCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayStatus = _parseStatus(item.status);
-    final hasProjectTag = displayStatus == _RfqDisplayStatus.quoteGenerated ||
-        displayStatus == _RfqDisplayStatus.quoteAccepted;
+    final hasProjectTag = (displayStatus == _RfqDisplayStatus.quoteGenerated ||
+            displayStatus == _RfqDisplayStatus.quoteAccepted) &&
+        item.projectName.isNotEmpty;
     final showQuoteAmount = displayStatus == _RfqDisplayStatus.quoteAccepted;
     final showAction = displayStatus != _RfqDisplayStatus.requested;
-    final quoteAmount = item.totalAmount > 0 ? item.totalAmount : 10800;
+    final address = [
+      item.city,
+      if (item.pincode.isNotEmpty) item.pincode,
+    ].where((p) => p.isNotEmpty).join(', ');
+    final quoteAmount = item.totalAmount;
 
     final card = Container(
       decoration: BoxDecoration(
@@ -352,18 +616,14 @@ class _RfqCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _InfoLine(
-                  label: 'RFQ ID:',
-                  value: item.id.isNotEmpty ? item.id : 'MOB9867855HJS6',
-                ),
-                const SizedBox(height: 6),
-                const _InfoLine(
-                  label: 'Pincode:',
-                  value: '560095, Koramangala, Bengaluru',
-                ),
+                _InfoLine(label: 'RFQ ID:', value: item.id),
+                if (address.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  _InfoLine(label: 'Address:', value: address),
+                ],
                 if (hasProjectTag) ...[
                   const SizedBox(height: 10),
-                  const _ProjectChip(project: 'Hotel California'),
+                  _ProjectChip(project: item.projectName),
                 ],
               ],
             ),
@@ -585,7 +845,7 @@ class _ProjectChip extends StatelessWidget {
 String _displayDate(String raw) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) {
-    return '16 May, 10:25 am';
+    return '';
   }
 
   final parsed = DateTime.tryParse(trimmed);

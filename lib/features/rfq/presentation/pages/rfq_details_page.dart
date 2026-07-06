@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/entities/rfq_entity.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/show_accept_quote_sheet.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class RfqDetailsPage extends StatefulWidget {
   const RfqDetailsPage({super.key, this.rfqId});
@@ -59,16 +62,7 @@ class _RfqDetailsPageState extends State<RfqDetailsPage> {
                         child: CircularProgressIndicator(),
                       ),
                     RfqError(:final message) => _DetailsError(message: message),
-                    RfqDetailLoaded(:final rfq) => switch (
-                          _parseDetailStatus(rfq.status)) {
-                        _RfqDetailStatus.convertedToOrder =>
-                          _ConvertedToOrderDetailsBody(rfq: rfq),
-                        _RfqDetailStatus.quoteAccepted =>
-                          _QuoteAcceptedDetailsBody(rfq: rfq),
-                        _RfqDetailStatus.quoteGenerated =>
-                          _QuoteGeneratedDetailsBody(rfq: rfq),
-                        _ => _RequestedDetailsBody(rfq: rfq),
-                      },
+                    RfqDetailLoaded(:final rfq) => _RfqDetailsBody(rfq: rfq),
                     _ => const SizedBox.shrink(),
                   };
                 },
@@ -97,11 +91,7 @@ class _DetailsHeader extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Color(0xFF0A243F),
-                  size: 22,
-                ),
+                icon: const AppBackIcon(),
                 onPressed: () {
                   if (context.canPop()) {
                     context.pop();
@@ -127,15 +117,31 @@ class _DetailsHeader extends StatelessWidget {
   }
 }
 
-class _RequestedDetailsBody extends StatelessWidget {
-  const _RequestedDetailsBody({required this.rfq});
+class _RfqDetailsBody extends StatelessWidget {
+  const _RfqDetailsBody({required this.rfq});
 
   final RfqEntity rfq;
 
+  bool get _isMagicQuote => rfq.status == 'Magic Quote';
+  bool get _isOrderCreatedOrConverted =>
+      rfq.status == 'Order Created' || rfq.status == 'Order Converted';
+
   @override
   Widget build(BuildContext context) {
-    final itemCount = rfq.items.isEmpty ? 2 : rfq.items.length;
-    final total = rfq.totalAmount > 0 ? rfq.totalAmount : 10800.0;
+    final date = _displayDate(rfq.createdAt);
+    final detailStatus = _parseDetailStatus(rfq.status);
+    final progressCard = switch (detailStatus) {
+      _RfqDetailStatus.convertedToOrder => const _ConvertedToOrderProgressCard(),
+      _RfqDetailStatus.quoteAccepted => const _QuoteAcceptedProgressCard(),
+      _RfqDetailStatus.quoteGenerated => const _QuoteGeneratedProgressCard(),
+      _ => const _RequestedProgressCard(),
+    };
+
+    final hasItemsSelectedContent = rfq.files.isNotEmpty ||
+        rfq.rfqRemarks.isNotEmpty ||
+        rfq.preferredBrands.isNotEmpty ||
+        rfq.comments.isNotEmpty ||
+        rfq.deliveryInstructions.isNotEmpty;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -148,7 +154,7 @@ class _RequestedDetailsBody extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  rfq.id.isNotEmpty ? rfq.id : 'RFQ_B9867855HJS6',
+                  rfq.id,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -157,319 +163,426 @@ class _RequestedDetailsBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _MetaLine(date: _displayDate(rfq.createdAt)),
-                const SizedBox(height: 18),
-                const _RequestedProgressCard(),
-                const SizedBox(height: 22),
-                Text(
-                  'MOB Quotes',
-                  style: GoogleFonts.inter(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0A243F),
-                    height: 30 / 21,
-                  ),
-                ),
-                const SizedBox(height: 48),
-                Center(
-                  child: SvgPicture.asset(
-                    'assets/images/Quotependingillustration.svg',
-                    width: 192,
-                    height: 120,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                const SizedBox(height: 22),
-                Center(
-                  child: Text(
-                    'Our team is working on your final quotation',
-                    textAlign: TextAlign.center,
+                _MetaLine(date: date, address: _rfqAddress(rfq)),
+                if (_isOrderCreatedOrConverted) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Order has been created for this request. Please click '
+                    'on "View order" to check the order status',
                     style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0A243F),
-                      height: 20 / 15,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF2D9955),
+                      height: 18 / 12,
                     ),
                   ),
+                ],
+                const SizedBox(height: 18),
+                progressCard,
+                for (final quote in rfq.convertedToOrderQuotes) ...[
+                  const SizedBox(height: 16),
+                  _RealQuoteCard(quote: quote, disableAccept: true),
+                ],
+                for (final quote in rfq.acceptedQuotes) ...[
+                  const SizedBox(height: 16),
+                  _RealQuoteCard(quote: quote, disableAccept: true),
+                ],
+              ],
+            ),
+          ),
+        ),
+        if (hasItemsSelectedContent)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+            child: _ItemsSelectedCard(rfq: rfq),
+          ),
+        if (rfq.quoteRequestedItems.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+            child: _RequestedItemsByVendorCard(rfq: rfq),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'MOB Quotes',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0A243F),
+                  height: 30 / 20,
                 ),
-                const SizedBox(height: 10),
-                Center(
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: TextSpan(
+              ),
+              const SizedBox(height: 16),
+              if (_isMagicQuote)
+                _MagicQuoteDescriptionRow()
+              else
+                Text(
+                  rfq.newQuotes.isNotEmpty
+                      ? 'Click on the "Accept" button to select the quote '
+                          'you want to proceed with. For any changes like '
+                          'quantity, partial order, etc. please contact mob '
+                          'support at +91 8660423608'
+                      : 'Our team is working on it. We will reach back to '
+                          'you within 24 hrs',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF0A243F),
+                    height: 20 / 13,
+                  ),
+                ),
+              const SizedBox(height: 16),
+              if (rfq.newQuotes.isNotEmpty)
+                for (final quote in rfq.newQuotes) ...[
+                  _RealQuoteCard(
+                    quote: quote,
+                    disableAccept: rfq.acceptedQuotes.isNotEmpty ||
+                        rfq.status == 'Order Created',
+                  ),
+                  const SizedBox(height: 16),
+                ]
+              else
+                const _NoQuotesFound(),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 28),
+          child: _HelpCard(),
+        ),
+      ],
+    );
+  }
+}
+
+class _MagicQuoteDescriptionRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Our team is working on your final quotation',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0A243F),
+                  height: 20 / 14,
+                ),
+              ),
+              const SizedBox(height: 6),
+              RichText(
+                text: TextSpan(
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF0A243F),
+                    height: 18 / 12,
+                  ),
+                  children: const [
+                    TextSpan(text: 'We should reach out within 5 - 30 mins '),
+                    TextSpan(text: 'or Call '),
+                    TextSpan(
+                      text: '+918660423608',
+                      style: TextStyle(color: Color(0xFF0360E5)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        SvgPicture.asset(
+          'assets/images/magic-quote-unread-snag.svg',
+          width: 116,
+          height: 74,
+          fit: BoxFit.contain,
+        ),
+      ],
+    );
+  }
+}
+
+class _NoQuotesFound extends StatelessWidget {
+  const _NoQuotesFound();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.receipt_long_outlined,
+              size: 56,
+              color: Color(0xFFB9C0CB),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No quotes found!',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF6F7788),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemsSelectedCard extends StatelessWidget {
+  const _ItemsSelectedCard({required this.rfq});
+
+  final RfqEntity rfq;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Items selected by you',
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0A243F),
+              height: 24 / 16,
+            ),
+          ),
+          if (rfq.files.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Row(
+              children: rfq.files.take(3).toList().asMap().entries.map((e) {
+                return Padding(
+                  padding: EdgeInsets.only(right: e.key == 2 ? 0 : 12),
+                  child: _UploadImage(url: e.value),
+                );
+              }).toList(),
+            ),
+          ],
+          if (rfq.rfqRemarks.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _InfoBlock(title: 'Item list', body: rfq.rfqRemarks),
+          ],
+          if (rfq.preferredBrands.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _InfoBlock(title: 'Preferred brands', body: rfq.preferredBrands),
+          ],
+          if (rfq.comments.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _InfoBlock(title: 'Comments', body: rfq.comments),
+          ],
+          if (rfq.deliveryInstructions.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Text(
+              'Delivery instructions',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF0A243F),
+                height: 16 / 12,
+              ),
+            ),
+            const SizedBox(height: 6),
+            for (final instruction in rfq.deliveryInstructions)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      instruction.key,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
-                        color: const Color(0xFF0A243F),
-                        height: 18 / 12,
+                        color: const Color(0xFF7C859A),
+                        height: 16 / 12,
                       ),
-                      children: const [
-                        TextSpan(
-                            text: 'We should reach out within 5 - 30 mins\n'),
-                        TextSpan(text: 'or Call '),
-                        TextSpan(
-                          text: '+918660423608',
-                          style: TextStyle(color: Color(0xFF0360E5)),
+                    ),
+                    Text(
+                      instruction.value,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0A243F),
+                        height: 16 / 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoBlock extends StatelessWidget {
+  const _InfoBlock({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF0A243F),
+            height: 16 / 12,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          body,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            color: const Color(0xFF7C859A),
+            height: 16 / 12,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RequestedItemsByVendorCard extends StatelessWidget {
+  const _RequestedItemsByVendorCard({required this.rfq});
+
+  final RfqEntity rfq;
+
+  @override
+  Widget build(BuildContext context) {
+    final vendors = rfq.quoteRequestedItems.keys.toList();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RichText(
+            text: TextSpan(
+              style: GoogleFonts.inter(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0A243F),
+                height: 24 / 17,
+              ),
+              children: [
+                TextSpan(text: '${rfq.requestedItemsTotalCount} items '),
+                TextSpan(
+                  text: '(${vendors.length} suborder request)',
+                  style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          for (final vendor in vendors) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Mob partner: $vendor',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF0A243F),
+                height: 20 / 13,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final item in rfq.quoteRequestedItems[vendor]!)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF0A243F),
+                            height: 20 / 13,
+                          ),
+                          children: [
+                            TextSpan(text: '${item.productName}\n'),
+                            TextSpan(
+                              text: 'MOBSKU: ${item.mobSku}',
+                              style: const TextStyle(
+                                color: Color(0xFF7B8496),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Qty:',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF7B8496),
+                          ),
+                        ),
+                        Text(
+                          '${item.qty}',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0A243F),
+                          ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 50),
-                _AiQuoteCard(itemCount: itemCount, total: total),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-          child: _UploadsCard(rfq: rfq),
-        ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 28),
-          child: _HelpCard(),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuoteGeneratedDetailsBody extends StatelessWidget {
-  const _QuoteGeneratedDetailsBody({required this.rfq});
-
-  final RfqEntity rfq;
-
-  @override
-  Widget build(BuildContext context) {
-    final itemCount = rfq.items.isEmpty ? 2 : rfq.items.length;
-    final total = rfq.totalAmount > 0 ? rfq.totalAmount : 10800.0;
-    final date = _displayDate(rfq.createdAt);
-
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        ColoredBox(
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rfq.id.isNotEmpty ? rfq.id : 'RFQ_B9867855HJS6',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
-                    height: 24 / 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _MetaLine(date: date),
-                const SizedBox(height: 16),
-                const _QuoteGeneratedProgressCard(),
-                const SizedBox(height: 20),
-                Text(
-                  'MOB Quotes',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
-                    height: 30 / 20,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _QuoteCard(
-                  title: 'Quote 2',
-                  date: date,
-                  itemCount: itemCount,
-                  total: total,
-                  showAccept: true,
-                ),
-                const SizedBox(height: 16),
-                _QuoteCard(
-                  title: 'Quote 1',
-                  date: date,
-                  itemCount: itemCount,
-                  total: total,
-                  aiGenerated: true,
-                ),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-          child: _UploadsCard(rfq: rfq),
-        ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 28),
-          child: _HelpCard(),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuoteAcceptedDetailsBody extends StatelessWidget {
-  const _QuoteAcceptedDetailsBody({required this.rfq});
-
-  final RfqEntity rfq;
-
-  @override
-  Widget build(BuildContext context) {
-    final itemCount = rfq.items.isEmpty ? 2 : rfq.items.length;
-    final total = rfq.totalAmount > 0 ? rfq.totalAmount : 10800.0;
-    final date = _displayDate(rfq.createdAt);
-
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        ColoredBox(
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rfq.id.isNotEmpty ? rfq.id : 'RFQ_B9867855HJS6',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
-                    height: 24 / 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _MetaLine(date: date),
-                const SizedBox(height: 16),
-                const _QuoteAcceptedProgressCard(),
-                const SizedBox(height: 20),
-                Text(
-                  'MOB Quotes',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
-                    height: 30 / 20,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _QuoteCard(
-                  title: 'Quote 2',
-                  date: date,
-                  itemCount: itemCount,
-                  total: total,
-                  accepted: true,
-                ),
-                const SizedBox(height: 16),
-                _QuoteCard(
-                  title: 'Quote 1',
-                  date: date,
-                  itemCount: itemCount,
-                  total: total,
-                  aiGenerated: true,
-                ),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-          child: _UploadsCard(rfq: rfq),
-        ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 28),
-          child: _HelpCard(),
-        ),
-      ],
-    );
-  }
-}
-
-class _ConvertedToOrderDetailsBody extends StatelessWidget {
-  const _ConvertedToOrderDetailsBody({required this.rfq});
-
-  final RfqEntity rfq;
-
-  @override
-  Widget build(BuildContext context) {
-    final itemCount = rfq.items.isEmpty ? 2 : rfq.items.length;
-    final total = rfq.totalAmount > 0 ? rfq.totalAmount : 10800.0;
-    final date = _displayDate(rfq.createdAt);
-    final id = rfq.id.isNotEmpty ? rfq.id : 'MOB9867855HJS6';
-
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        ColoredBox(
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rfq.id.isNotEmpty ? rfq.id : 'RFQ_B9867855HJS6',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
-                    height: 24 / 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _MetaLine(date: date),
-                const SizedBox(height: 16),
-                const _ConvertedToOrderProgressCard(),
-                const SizedBox(height: 20),
-                Text(
-                  'MOB Quotes',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
-                    height: 30 / 20,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _QuoteCard(
-                  title: 'Order ID: $id',
-                  date: date,
-                  itemCount: itemCount,
-                  total: total,
-                  convertedToOrder: true,
-                ),
-                const SizedBox(height: 16),
-                _QuoteCard(
-                  title: 'Quote 1',
-                  date: date,
-                  itemCount: itemCount,
-                  total: total,
-                  aiGenerated: true,
-                ),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-          child: _UploadsCard(rfq: rfq),
-        ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 28),
-          child: _HelpCard(),
-        ),
-      ],
+              ),
+          ],
+        ],
+      ),
     );
   }
 }
 
 class _MetaLine extends StatelessWidget {
-  const _MetaLine({required this.date});
+  const _MetaLine({required this.date, this.address = ''});
 
   final String date;
+  final String address;
 
   @override
   Widget build(BuildContext context) {
@@ -484,25 +597,27 @@ class _MetaLine extends StatelessWidget {
             height: 18 / 12,
           ),
         ),
-        Container(
-          width: 1,
-          height: 16,
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          color: const Color(0xFFD8DEE8),
-        ),
-        Expanded(
-          child: Text(
-            '560095, Koramangala, Bengaluru',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF7B8496),
-              height: 18 / 12,
+        if (address.isNotEmpty) ...[
+          Container(
+            width: 1,
+            height: 16,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            color: const Color(0xFFD8DEE8),
+          ),
+          Expanded(
+            child: Text(
+              address,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF7B8496),
+                height: 18 / 12,
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -745,302 +860,57 @@ class _StepLine extends StatelessWidget {
   }
 }
 
-class _AiQuoteCard extends StatelessWidget {
-  const _AiQuoteCard({required this.itemCount, required this.total});
-
-  final int itemCount;
-  final double total;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 225,
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFC675), width: 1.2),
-      ),
-      child: Stack(
-        children: [
-          Container(
-            height: 32,
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color(0xFFFFC48F),
-                  Color(0xFFFFE4CF),
-                  Color(0xFFFFFFFF),
-                ],
-                stops: [0, 0.42, 1],
-              ),
-            ),
-            alignment: Alignment.centerLeft,
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.auto_awesome,
-                  size: 16,
-                  color: Color(0xFFFFA23A),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'This is AI generated and can have mistakes.',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF0A243F),
-                      height: 18 / 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Quote 1',
-                  style: GoogleFonts.inter(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
-                    height: 24 / 17,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '16 May, 10:25 am',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF7B8496),
-                    height: 20 / 14,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _QuoteMetric(label: 'Items:', value: itemCount.toString()),
-                const SizedBox(height: 6),
-                _QuoteMetric(
-                  label: 'Total:',
-                  value: '\u20B9${total.toStringAsFixed(0)}',
-                  valueWeight: FontWeight.w800,
-                ),
-                const Spacer(),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SizedBox(
-                    width: 148,
-                    height: 36,
-                    child: OutlinedButton(
-                      onPressed: () {},
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF0A243F),
-                        side: const BorderSide(color: Color(0xFFD8DEE8)),
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'View quote',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          height: 18 / 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-const _quoteActionRowPadding = EdgeInsets.fromLTRB(16, 0, 16, 16);
+const _quoteActionRowPadding = EdgeInsets.fromLTRB(0, 16, 0, 0);
 const _quoteActionButtonPadding = EdgeInsets.all(10);
-const _quoteActionButtonWidth = 148.0;
 const _quoteActionButtonHeight = 36.0;
-const _quoteActionButtonGap = 15.0;
+const _quoteActionButtonGap = 12.0;
 
-class _QuoteCard extends StatelessWidget {
-  const _QuoteCard({
-    required this.title,
-    required this.date,
-    required this.itemCount,
-    required this.total,
-    this.aiGenerated = false,
-    this.showAccept = false,
-    this.accepted = false,
-    this.convertedToOrder = false,
-  });
+class _RealQuoteCard extends StatelessWidget {
+  const _RealQuoteCard({required this.quote, this.disableAccept = false});
 
-  final String title;
-  final String date;
-  final int itemCount;
-  final double total;
-  final bool aiGenerated;
-  final bool showAccept;
-  final bool accepted;
-  final bool convertedToOrder;
+  final RfqQuoteEntity quote;
+  final bool disableAccept;
+
+  bool get _canAccept =>
+      quote.isNew && !quote.isMagicQuote && !disableAccept;
+
+  Future<void> _openUrl(String url) async {
+    if (url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final content = Padding(
-      padding: EdgeInsets.fromLTRB(
-        0,
-        aiGenerated
-            ? 48
-            : accepted || convertedToOrder
-                ? 48
-                : 16,
-        0,
-        0,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: convertedToOrder
-                        ? const Color(0xFF0360E5)
-                        : const Color(0xFF0A243F),
-                    height: 24 / 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  date,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF7B8496),
-                    height: 20 / 14,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _QuoteMetric(label: 'Items:', value: itemCount.toString()),
-                const SizedBox(height: 6),
-                _QuoteMetric(
-                  label: 'Total:',
-                  value: '\u20B9${total.toStringAsFixed(0)}',
-                  valueWeight: FontWeight.w800,
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          if (showAccept || accepted || convertedToOrder)
-            Padding(
-              padding: _quoteActionRowPadding,
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: _QuoteActionButton(
-                      label: 'View quote',
-                      variant: _QuoteActionButtonVariant.outlined,
-                      fullWidth: true,
-                    ),
-                  ),
-                  const SizedBox(width: _quoteActionButtonGap),
-                  Expanded(
-                    child: _QuoteActionButton(
-                      label: convertedToOrder
-                          ? 'View order'
-                          : accepted
-                              ? 'Confirm & pay'
-                              : 'Accept',
-                      variant: _QuoteActionButtonVariant.filled,
-                      fullWidth: true,
-                      onTap: accepted
-                          ? () => context
-                              .read<RfqBloc>()
-                              .add(RfqPaymentCompletedLocally())
-                          : convertedToOrder
-                              ? () {}
-                              : () async {
-                                  final confirmed = await showAcceptQuoteSheet(
-                                    context,
-                                    quoteTitle: title,
-                                    itemsCount: itemCount,
-                                    totalAmount: total,
-                                    timeText: date,
-                                  );
-                                  if (!context.mounted || confirmed != true) {
-                                    return;
-                                  }
-                                  context
-                                      .read<RfqBloc>()
-                                      .add(RfqQuoteAcceptedLocally());
-                                },
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            const Padding(
-              padding: _quoteActionRowPadding,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: _QuoteActionButton(
-                  label: 'View quote',
-                  variant: _QuoteActionButtonVariant.outlined,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+    final dateText = _displayDate(quote.date);
+    final quoteTitle = 'Quote ${quote.index}';
 
     return Container(
-      height: aiGenerated || accepted || convertedToOrder ? 226 : 194,
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color:
-              aiGenerated ? const Color(0xFFF7B47B) : const Color(0xFFDEDEDE),
-          width: aiGenerated ? 2 : 1,
+          color: quote.isMagicQuote
+              ? const Color(0xFFF7B47B)
+              : const Color(0xFFDEDEDE),
+          width: quote.isMagicQuote ? 2 : 1,
         ),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (convertedToOrder)
+          if (quote.isConvertedToOrder)
             Container(
               height: 32,
+              width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-              decoration: const BoxDecoration(
-                color: Color(0xFF2D9955),
-              ),
+              color: const Color(0xFF2D9955),
               alignment: Alignment.centerLeft,
               child: Text(
-                'Quote 1 converted to order',
+                '$quoteTitle converted to order',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -1048,14 +918,13 @@ class _QuoteCard extends StatelessWidget {
                   height: 18 / 12,
                 ),
               ),
-            ),
-          if (accepted)
+            )
+          else if (quote.isAccepted)
             Container(
               height: 32,
+              width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-              decoration: const BoxDecoration(
-                color: Color(0xFF2D9955),
-              ),
+              color: const Color(0xFF2D9955),
               alignment: Alignment.centerLeft,
               child: Text(
                 'Quotation accepted by you',
@@ -1066,10 +935,11 @@ class _QuoteCard extends StatelessWidget {
                   height: 18 / 12,
                 ),
               ),
-            ),
-          if (aiGenerated)
+            )
+          else if (quote.isMagicQuote)
             Container(
               height: 32,
+              width: double.infinity,
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -1108,7 +978,98 @@ class _QuoteCard extends StatelessWidget {
                 ],
               ),
             ),
-          content,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        quoteTitle,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: quote.isConvertedToOrder
+                              ? const Color(0xFF0360E5)
+                              : const Color(0xFF0A243F),
+                          height: 24 / 16,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      dateText,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF7B8496),
+                        height: 20 / 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _QuoteMetric(
+                    label: 'Items:', value: quote.itemsCount.toString()),
+                const SizedBox(height: 6),
+                _QuoteMetric(
+                  label: 'Total:',
+                  value: '₹${quote.total.toStringAsFixed(0)}',
+                  valueWeight: FontWeight.w800,
+                ),
+                Padding(
+                  padding: _quoteActionRowPadding,
+                  child: Wrap(
+                    spacing: _quoteActionButtonGap,
+                    runSpacing: 10,
+                    children: [
+                      if (_canAccept)
+                        _QuoteActionButton(
+                          label: 'Accept',
+                          variant: _QuoteActionButtonVariant.filled,
+                          onTap: () async {
+                            final confirmed = await showAcceptQuoteSheet(
+                              context,
+                              quoteTitle: quoteTitle,
+                              itemsCount: quote.itemsCount,
+                              totalAmount: quote.total,
+                              timeText: dateText,
+                            );
+                            if (!context.mounted || confirmed != true) return;
+                            context
+                                .read<RfqBloc>()
+                                .add(RfqQuoteAcceptedLocally(quote.quoteId));
+                          },
+                        ),
+                      _QuoteActionButton(
+                        label: 'View quote',
+                        variant: _QuoteActionButtonVariant.outlined,
+                        onTap: quote.quotationPdfUrl.isEmpty
+                            ? null
+                            : () => _openUrl(quote.quotationPdfUrl),
+                      ),
+                      if (quote.isConvertedToOrder && quote.orderId.isNotEmpty)
+                        _QuoteActionButton(
+                          label: 'View order',
+                          variant: _QuoteActionButtonVariant.filled,
+                          onTap: () => context.push(
+                            OrderDetailPage.routePath,
+                            extra: quote.orderId,
+                          ),
+                        ),
+                      if (quote.checkoutUrl.isNotEmpty)
+                        _QuoteActionButton(
+                          label: 'Confirm & pay',
+                          variant: _QuoteActionButtonVariant.filled,
+                          onTap: () => _openUrl(quote.checkoutUrl),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1121,53 +1082,54 @@ class _QuoteActionButton extends StatelessWidget {
   const _QuoteActionButton({
     required this.label,
     required this.variant,
-    this.fullWidth = false,
     this.onTap,
   });
 
   final String label;
   final _QuoteActionButtonVariant variant;
-  final bool fullWidth;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final isFilled = variant == _QuoteActionButtonVariant.filled;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        width: fullWidth ? double.infinity : _quoteActionButtonWidth,
-        height: _quoteActionButtonHeight,
-        padding: _quoteActionButtonPadding,
-        decoration: ShapeDecoration(
-          color: isFilled ? const Color(0xFF0360E5) : Colors.white,
-          shape: RoundedRectangleBorder(
-            side: isFilled
-                ? BorderSide.none
-                : const BorderSide(
-                    width: 1,
-                    color: Color(0xFFDEDEDE),
-                  ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                color: isFilled ? Colors.white : const Color(0xFF0A243F),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 18 / 12,
-              ),
+    final isDisabled = onTap == null;
+    return Opacity(
+      opacity: isDisabled ? 0.4 : 1,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: _quoteActionButtonHeight,
+          padding: _quoteActionButtonPadding,
+          decoration: ShapeDecoration(
+            color: isFilled ? const Color(0xFF0360E5) : Colors.white,
+            shape: RoundedRectangleBorder(
+              side: isFilled
+                  ? BorderSide.none
+                  : const BorderSide(
+                      width: 1,
+                      color: Color(0xFFDEDEDE),
+                    ),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  color: isFilled ? Colors.white : const Color(0xFF0A243F),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  height: 18 / 12,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1209,68 +1171,6 @@ class _QuoteMetric extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _UploadsCard extends StatelessWidget {
-  const _UploadsCard({required this.rfq});
-
-  final RfqEntity rfq;
-
-  @override
-  Widget build(BuildContext context) {
-    final images = rfq.items
-        .map((item) => item.imageUrl)
-        .where((url) => url.trim().isNotEmpty)
-        .take(3)
-        .toList();
-
-    return Container(
-      height: 372,
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Your uploads',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF0A243F),
-              height: 24 / 16,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: List.generate(3, (index) {
-              return Padding(
-                padding: EdgeInsets.only(right: index == 2 ? 0 : 12),
-                child: _UploadImage(
-                  url: index < images.length ? images[index] : '',
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 20),
-          const _InfoParagraph(
-            title: 'List',
-            body:
-                'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam dictum fringilla est, eu dictum magna fermentum eget. Pellentesque lectus augue, aliquam sit amet viverra vitae, semper vel magna.',
-          ),
-          const SizedBox(height: 18),
-          const _InfoParagraph(
-            title: 'Preferred brands',
-            body:
-                'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam dictum fringilla est, eu dictum magna fermentum eget. Pellentesque lectus augue, aliquam sit amet viverra vitae, semper vel magna.',
-          ),
-        ],
-      ),
     );
   }
 }
@@ -1322,41 +1222,6 @@ class _NotePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _InfoParagraph extends StatelessWidget {
-  const _InfoParagraph({required this.title, required this.body});
-
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF0A243F),
-            height: 16 / 12,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          body,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-            color: const Color(0xFF7C859A),
-            height: 16 / 12,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _HelpCard extends StatelessWidget {
   const _HelpCard();
 
@@ -1388,7 +1253,10 @@ class _HelpCard extends StatelessWidget {
                 width: 148,
                 height: 36,
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => launchUrl(
+                    Uri.parse('https://wa.me/918970415365'),
+                    mode: LaunchMode.externalApplication,
+                  ),
                   icon: const Icon(Icons.phone_in_talk_outlined, size: 18),
                   label: Text(
                     'Chat with us',
@@ -1521,10 +1389,17 @@ class _DetailsError extends StatelessWidget {
   }
 }
 
+String _rfqAddress(RfqEntity rfq) {
+  return [
+    rfq.city,
+    if (rfq.pincode.isNotEmpty) rfq.pincode,
+  ].where((p) => p.isNotEmpty).join(', ');
+}
+
 String _displayDate(String raw) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) {
-    return '16 May, 10:25 am';
+    return '';
   }
 
   final parsed = DateTime.tryParse(trimmed);
@@ -1560,6 +1435,19 @@ enum _RfqDetailStatus {
 }
 
 _RfqDetailStatus _parseDetailStatus(String raw) {
+  switch (raw) {
+    case 'Order Created':
+    case 'Order Converted':
+      return _RfqDetailStatus.convertedToOrder;
+    case 'Quote Accepted':
+      return _RfqDetailStatus.quoteAccepted;
+    case 'Quote sent':
+    case 'Magic Quote':
+      return _RfqDetailStatus.quoteGenerated;
+    case 'Requested':
+      return _RfqDetailStatus.requested;
+  }
+
   final status = raw.toLowerCase().replaceAll(' ', '_');
   if (status.contains('converted') || status.contains('order')) {
     return _RfqDetailStatus.convertedToOrder;

@@ -98,29 +98,29 @@ class _PromoFooter extends StatelessWidget {
             top: 140,
             child: Container(
               height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.only(
+                top: 8,
+                left: 8,
+                right: 8,
+                bottom: 8,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(40),
               ),
               alignment: Alignment.center,
-              child: Text(
-                'mob',
-                style: GoogleFonts.inter(
-                  color: const Color(0xFF0A243F),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: SvgPicture.asset(
+                'assets/images/moblogo-orders.svg',
+                // height: 48,
               ),
             ),
           ),
           Positioned(
             right: 0,
             bottom: -8,
-            child: Icon(
-              Icons.construction_rounded,
-              size: 124,
-              color: const Color(0xFF0A243F).withValues(alpha: 0.25),
+            child: SvgPicture.asset(
+              'assets/images/orders-fotterbanner.svg',
+              width: 124,
             ),
           ),
         ],

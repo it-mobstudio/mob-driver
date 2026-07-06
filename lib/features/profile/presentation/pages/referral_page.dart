@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ReferralPage extends StatelessWidget {
@@ -34,7 +35,8 @@ class _ReferralView extends StatelessWidget {
       body: SafeArea(
         child: BlocBuilder<ProfileBloc, ProfileState>(
           builder: (context, state) {
-            final isLoading = state is ProfileLoading || state is ProfileInitial;
+            final isLoading =
+                state is ProfileLoading || state is ProfileInitial;
             final summary =
                 state is ReferralSummaryLoaded ? state.summary : null;
             final referralCode = summary?.referralCode ?? '';
@@ -68,8 +70,8 @@ class _ReferralView extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: isLoading
                           ? null
-                          : () =>
-                              _shareReferral(context, referralCode, referralLink),
+                          : () => _shareReferral(
+                              context, referralCode, referralLink),
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         backgroundColor: const Color(0xFF0A243F),
@@ -113,8 +115,7 @@ class _ReferralView extends StatelessWidget {
         ? referralLink
         : '${AppConfig.webAppBaseUrl}/?ref=$referralCode';
 
-    final message =
-        'Hey! Need construction or interior materials in a flash? '
+    final message = 'Hey! Need construction or interior materials in a flash? '
         "I've been using Mad over Buildings, and their QWIK 1-4 hour delivery is an absolute lifesaver. "
         'No more waiting around for supplies! Try it out for yourself: '
         'sign up with my code $referralCode to get ₹1,000 off your first order. $link';
@@ -157,11 +158,7 @@ class _ReferralHeader extends StatelessWidget {
                 onPressed: onBack,
                 padding: EdgeInsets.zero,
                 alignment: Alignment.centerLeft,
-                icon: const Icon(
-                  Icons.arrow_back,
-                  size: 22,
-                  color: Color(0xFF0A243F),
-                ),
+                icon: const AppBackIcon(),
               ),
               const Spacer(),
               IconButton(

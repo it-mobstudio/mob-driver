@@ -1,5 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/product_cart_action_button.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
@@ -28,14 +30,13 @@ class VariantSelectionSheet extends StatefulWidget {
 }
 
 class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
-
   final Map<String, int> _localQuantities = <String, int>{};
   List<_VariantRowData> _variantRows = <_VariantRowData>[];
   bool _isLoading = true;
 
   final _sheetController = DraggableScrollableController();
   static const double _minFraction = 0.28;
-  static const double _maxFraction = 0.92;
+  static const double _maxFraction = 0.82;
 
   @override
   void initState() {
@@ -75,10 +76,12 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
 
     try {
       ProductModel sourceProduct = widget.product;
-      if (sourceProduct.childProducts.isEmpty && sourceProduct.variants.isEmpty) {
+      if (sourceProduct.childProducts.isEmpty &&
+          sourceProduct.variants.isEmpty) {
         final (detail, _) = await sl<ProductRepository>().getProductDetail(
           slug: widget.product.slug,
-          mobSku: widget.product.mobSku.isNotEmpty ? widget.product.mobSku : null,
+          mobSku:
+              widget.product.mobSku.isNotEmpty ? widget.product.mobSku : null,
         );
         if (detail != null) sourceProduct = detail.product;
       }
@@ -109,7 +112,8 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
         } else {
           final rows = <_VariantRowData>[];
           for (final entry in optionsBySku.entries) {
-            final (detail, failure) = await sl<ProductRepository>().getProductDetail(
+            final (detail, failure) =
+                await sl<ProductRepository>().getProductDetail(
               slug: widget.product.slug,
               mobSku: entry.key,
             );
@@ -213,6 +217,7 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
         return Stack(
           clipBehavior: Clip.none,
           children: [
+            // White sheet content
             Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -221,87 +226,77 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
               child: SafeArea(
                 top: false,
                 child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 10, bottom: 4),
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE1E6ED),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    child: Text(
-                      widget.product.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        height: 22 / 16,
-                      ),
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : ListView.separated(
-                            controller: scrollController,
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                            itemCount: _variantRows.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final row = _variantRows[index];
-                              return _VariantListRow(
-                                product: row.product,
-                                label: row.label,
-                                quantity: _quantityFor(row.product),
-                                isUpdating: _isUpdating(row.product),
-                                onChanged: (quantity) =>
-                                    _changeQuantity(row.product, quantity),
-                                onNotify: () => _notify(row.product),
-                              );
-                            },
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Drag handle only — close button is now outside the sheet
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE1E6ED),
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                  ),
-                ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Text(
+                        widget.product.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          height: 22 / 16,
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : ListView.separated(
+                              controller: scrollController,
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                              itemCount: _variantRows.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                final row = _variantRows[index];
+                                return _VariantListRow(
+                                  product: row.product,
+                                  label: row.label,
+                                  quantity: _quantityFor(row.product),
+                                  isUpdating: _isUpdating(row.product),
+                                  onChanged: (quantity) =>
+                                      _changeQuantity(row.product, quantity),
+                                  onNotify: () => _notify(row.product),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
               ),
             ),
+            // Close button floating above the white sheet — in the dark overlay
             Positioned(
-              top: -48,
+              top: -60,
               left: 0,
               right: 0,
               child: Center(
                 child: GestureDetector(
                   onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Color(0xFF0A243F),
-                      size: 20,
-                    ),
+                  child: SvgPicture.asset(
+                    'assets/images/close-dark.svg',
+                    width: 44,
+                    height: 44,
                   ),
                 ),
               ),
@@ -372,18 +367,13 @@ class _VariantListRow extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: product.primaryImageUrl.isEmpty
-                  ? Image.asset(
-                      'assets/images/Image-coming-soon.png',
-                      fit: BoxFit.contain,
-                    )
+                  ? const ProductImagePlaceholder()
                   : CachedNetworkImage(
                       imageUrl: product.primaryImageUrl,
                       fit: BoxFit.contain,
                       memCacheWidth: 120,
-                      errorWidget: (_, __, ___) => Image.asset(
-                        'assets/images/Image-coming-soon.png',
-                        fit: BoxFit.contain,
-                      ),
+                      errorWidget: (_, __, ___) =>
+                          const ProductImagePlaceholder(),
                     ),
             ),
           ),

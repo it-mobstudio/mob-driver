@@ -146,11 +146,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSignOutRequested event,
     Emitter<AuthState> emit,
   ) async {
+    // AuthSession.signOut() also clears SelectedAddressStore: the delivery
+    // address is scoped to the signed-in account, so a different account
+    // logging in next on this device must not inherit it.
     await AuthSession.instance.signOut();
-    // Deliberately NOT clearing SelectedAddressStore here: the delivery
-    // address is tied to where the device/user is, not to the auth session,
-    // so it should survive logout and be picked up automatically on the
-    // next login instead of forcing address selection again.
     emit(AuthSignedOut());
   }
 }

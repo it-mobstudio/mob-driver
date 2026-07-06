@@ -38,18 +38,19 @@ class _OrderCard extends StatelessWidget {
               )
             else
               const SizedBox(height: 8),
-            _RewardBanner(message: order.rewardMessage),
+            if (!order.isStoreOrder && order.rewardMessage.trim().isNotEmpty)
+              _RewardBanner(message: order.rewardMessage),
             if (order.projectName.trim().isNotEmpty) ...[
               const SizedBox(height: 8),
               _ProjectChip(projectName: order.projectName.trim()),
             ],
             const SizedBox(height: 16),
-            const Divider(
-              height: 0,
-              thickness: 1,
-              color: Color(0xFFE5E8EE),
-            ),
-            const _OrderActions(),
+            // const Divider(
+            //   height: 0,
+            //   thickness: 1,
+            //   color: Color(0xFFE5E8EE),
+            // ),
+            // _OrderActions(order: order),
           ],
         ),
       ),
@@ -78,14 +79,10 @@ class _OrderHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
+        SvgPicture.asset(
+          orderStatusIconAsset(order.status),
           width: 38,
           height: 38,
-          decoration: BoxDecoration(
-            color: const Color(0xFFCEFBE3),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Icon(Icons.check, color: Color(0xFF0BCB60), size: 26),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -183,19 +180,13 @@ class _ProductThumb extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
         child: imageUrl.isEmpty
-            ? Image.asset(
-                'assets/images/Image-coming-soon.png',
-                fit: BoxFit.contain,
-              )
+            ? const ProductImagePlaceholder()
             : CachedNetworkImage(
                 imageUrl: imageUrl,
                 fit: BoxFit.contain,
                 memCacheWidth: 120,
                 placeholder: (_, __) => const ImageShimmer(),
-                errorWidget: (_, __, ___) => Image.asset(
-                  'assets/images/Image-coming-soon.png',
-                  fit: BoxFit.contain,
-                ),
+                errorWidget: (_, __, ___) => const ProductImagePlaceholder(),
               ),
       ),
     );
@@ -208,9 +199,6 @@ class _RewardBanner extends StatelessWidget {
   final String message;
 
   String get _displayMessage {
-    if (message.trim().isEmpty) {
-      return '100 points will be added 7 days after delivery';
-    }
     return message
         .replaceAll('(', '')
         .replaceAll(')', '')
@@ -222,11 +210,11 @@ class _RewardBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayMessage = _displayMessage;
+    if (displayMessage.isEmpty) return const SizedBox.shrink();
     final pointsMatch = RegExp(r'^\d+\s+points').firstMatch(displayMessage);
-    final pointsLabel = pointsMatch?.group(0) ?? '100 points';
-    final suffix = displayMessage.startsWith(pointsLabel)
-        ? displayMessage.substring(pointsLabel.length)
-        : ' will be added 7 days after delivery';
+    final pointsLabel = pointsMatch?.group(0);
+    final suffix =
+        pointsLabel == null ? '' : displayMessage.substring(pointsLabel.length);
 
     return Container(
       height: 24,
@@ -244,15 +232,17 @@ class _RewardBanner extends StatelessWidget {
           const SizedBox(width: 6),
           Flexible(
             child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: pointsLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  TextSpan(text: suffix),
-                ],
-              ),
+              pointsLabel == null
+                  ? TextSpan(text: displayMessage)
+                  : TextSpan(
+                      children: [
+                        TextSpan(
+                          text: pointsLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        TextSpan(text: suffix),
+                      ],
+                    ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(
@@ -321,19 +311,32 @@ class _ProjectChip extends StatelessWidget {
 }
 
 class _OrderActions extends StatelessWidget {
-  const _OrderActions();
+  const _OrderActions({required this.order});
+
+  final OrderEntity order;
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    // An order can span multiple suborders/shipments — rating from this
+    // list-level card rates the first one, matching the suborder id shown
+    // as this order's primary reference elsewhere.
+    final suborderId = order.shipments.isNotEmpty
+        ? order.shipments.first.id
+        : order.orderNumber;
+    return SizedBox(
       height: 44,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 4, 16, 4),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: Row(
           children: [
-            Expanded(child: _OrderActionButton(label: 'Repeat')),
-            SizedBox(width: 15),
-            Expanded(child: _OrderActionButton(label: 'Rate order')),
+            const Expanded(child: _OrderActionButton(label: 'Repeat')),
+            const SizedBox(width: 15),
+            Expanded(
+              child: _OrderActionButton(
+                label: 'Rate order',
+                suborderId: suborderId,
+              ),
+            ),
           ],
         ),
       ),
@@ -343,14 +346,16 @@ class _OrderActions extends StatelessWidget {
 
 class _OrderActionButton extends StatelessWidget {
   final String label;
+  final String? suborderId;
 
-  const _OrderActionButton({required this.label});
+  const _OrderActionButton({required this.label, this.suborderId});
 
   @override
   Widget build(BuildContext context) {
     return TextButton(
-      onPressed:
-          label == 'Rate order' ? () => showOrderRatingSheet(context) : () {},
+      onPressed: label == 'Rate order' && suborderId != null
+          ? () => showOrderRatingSheet(context, suborderId: suborderId!)
+          : () {},
       style: TextButton.styleFrom(
         minimumSize: const Size.fromHeight(36),
         padding: EdgeInsets.zero,

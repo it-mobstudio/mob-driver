@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class MobstarPointsPage extends StatelessWidget {
   const MobstarPointsPage({super.key});
@@ -149,7 +150,7 @@ class _MobstarPointsHeader extends StatelessWidget {
             left: 16,
             child: IconButton(
               onPressed: () => context.pop(),
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+              icon: const AppBackIcon(color: Colors.white),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 40, height: 40),
             ),

@@ -5,7 +5,10 @@ abstract interface class CheckoutRepository {
   Future<(CheckoutSummaryEntity?, AppFailure?)> getCheckoutSummary();
   Future<AppFailure?> updateAddressToOrder(Map<String, dynamic> payload);
   Future<(PlacedOrderEntity?, AppFailure?)> placeOrder(Map<String, dynamic> payload);
-  Future<(RazorpayOrderEntity?, AppFailure?)> createRazorpayOrder(int cartId);
+  Future<(RazorpayOrderEntity?, AppFailure?)> createRazorpayOrder(
+    int cartId, {
+    String? paymentOrigin,
+  });
   Future<(PlacedOrderEntity?, AppFailure?)> verifyRazorpayPayment({
     required String paymentId,
     required String orderId,
@@ -17,6 +20,8 @@ abstract interface class CheckoutRepository {
     String merchantPaymentRefId,
     String paymentId,
     String transactionId,
+    String currency,
+    String paymentFor,
   });
   Future<(RupifiOrderEntity?, AppFailure?)> createRupifiOrder(
     String cartId, {

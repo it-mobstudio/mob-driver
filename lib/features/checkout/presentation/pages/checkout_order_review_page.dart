@@ -13,6 +13,7 @@ import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/quantity_stepper.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class CheckoutOrderReviewPage extends StatefulWidget {
   static const routeName = 'CheckoutOrderReviewPage';
@@ -164,7 +165,8 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
                     CartRequiresLogin() => const Center(
                         child: Text('Please login to continue.'),
                       ),
-                    CartLoaded(:final summary, :final updatingItemKey) => Column(
+                    CartLoaded(:final summary, :final updatingItemKey) =>
+                      Column(
                         children: [
                           _ReviewHeader(onBack: () => _goBack(context)),
                           Expanded(
@@ -191,10 +193,13 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
                                         savings: summary.savings,
                                         total: summary.total,
                                         earningPoints: summary.earningPoints,
-                                        mobstarApplied: summary.usePoints && summary.mobstarAmount > 0
+                                        mobstarApplied: summary.usePoints &&
+                                                summary.mobstarAmount > 0
                                             ? summary.mobstarAmount
                                             : null,
-                                        walletApplied: summary.useWallet && summary.applicableWalletAmount > 0
+                                        walletApplied: summary.useWallet &&
+                                                summary.applicableWalletAmount >
+                                                    0
                                             ? summary.applicableWalletAmount
                                             : null,
                                       ),
@@ -203,8 +208,7 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
                                   BottomCheckoutBar(
                                     label: 'Continue',
                                     isLoading: isSubmitting,
-                                    onProceed: () =>
-                                        _submitAddress(context),
+                                    onProceed: () => _submitAddress(context),
                                   ),
                                 ],
                               ),
@@ -253,11 +257,7 @@ class _ReviewHeader extends StatelessWidget {
               child: const SizedBox(
                 width: 48,
                 height: 50,
-                child: Icon(
-                  Icons.arrow_back,
-                  color: Color(0xFF0A243F),
-                  size: 24,
-                ),
+                child: Center(child: AppBackIcon()),
               ),
             ),
           ),
@@ -368,7 +368,9 @@ class _ReviewSellerCard extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  items.first.storeDelivery ? 'Store delivery' : 'Direct delivery',
+                  items.first.storeDelivery
+                      ? 'Store delivery'
+                      : 'Direct delivery',
                   style: GoogleFonts.inter(
                     color: const Color(0xFF0A243F),
                     fontSize: 12,
@@ -512,12 +514,10 @@ class _ReviewItemTile extends StatelessWidget {
                           fit: BoxFit.contain,
                           memCacheWidth: 128,
                           placeholder: (_, __) => const ImageShimmer(),
-                          errorWidget: (_, __, ___) => Image.asset(
-                            'assets/images/Image-coming-soon.png',
-                            fit: BoxFit.contain,
-                          ),
+                          errorWidget: (_, __, ___) =>
+                              const ProductImagePlaceholder(),
                         )
-                      : Image.asset(item.imageAsset, fit: BoxFit.contain),
+                      : const ProductImagePlaceholder(),
                 ),
               ),
               const SizedBox(width: 12),

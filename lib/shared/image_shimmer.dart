@@ -35,3 +35,21 @@ class _ImageShimmerState extends State<ImageShimmer>
     );
   }
 }
+
+class ProductImagePlaceholder extends StatelessWidget {
+  const ProductImagePlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFF1F1F2),
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 28,
+          color: Color(0xFFB9C0CB),
+        ),
+      ),
+    );
+  }
+}

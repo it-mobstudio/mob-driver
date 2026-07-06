@@ -20,29 +20,29 @@ import 'core/app_runtime/nav/nav.dart';
 import 'core/styles/app_theme.dart';
 import 'environment_values.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  if (kIsWeb) {
-    try {
-      usePathUrlStrategy();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('URL strategy warning: $e');
+void main() {
+  runZonedGuarded(() {
+    WidgetsFlutterBinding.ensureInitialized();
+    if (kIsWeb) {
+      try {
+        usePathUrlStrategy();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('URL strategy warning: $e');
+        }
       }
     }
-  }
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.dark,
-      systemNavigationBarContrastEnforced: false,
-    ),
-  );
-  runZonedGuarded(() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
+        systemNavigationBarContrastEnforced: false,
+      ),
+    );
     runApp(const AppBootstrap());
   }, (error, stack) async {
     if (!kIsWeb) {
@@ -143,8 +143,6 @@ class MyApp extends StatefulWidget {
 }
 
 class MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = AppTheme.themeMode;
-
   late AppStateNotifier _appStateNotifier;
   late GoRouter _router;
   bool _isAuthenticated = false;
@@ -191,15 +189,6 @@ class MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  void setThemeMode(ThemeMode mode) {
-    if (mounted) {
-      setState(() {
-        _themeMode = mode;
-        AppTheme.saveThemeMode(mode);
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
@@ -233,6 +222,9 @@ class MyAppState extends State<MyApp> {
             bodyMedium: theme.typography.bodyMedium,
           ),
           primaryColor: theme.primary,
+          bottomSheetTheme: const BottomSheetThemeData(
+            modalBarrierColor: Color(0x99000000),
+          ),
           pageTransitionsTheme: const PageTransitionsTheme(
             builders: {
               TargetPlatform.iOS: _MobPageTransitionsBuilder(),
@@ -249,6 +241,9 @@ class MyAppState extends State<MyApp> {
             bodyMedium: theme.typography.bodyMedium,
           ),
           primaryColor: theme.primary,
+          bottomSheetTheme: const BottomSheetThemeData(
+            modalBarrierColor: Color(0x99000000),
+          ),
           pageTransitionsTheme: const PageTransitionsTheme(
             builders: {
               TargetPlatform.iOS: _MobPageTransitionsBuilder(),
@@ -256,7 +251,7 @@ class MyAppState extends State<MyApp> {
             },
           ),
         ),
-        themeMode: _themeMode,
+        themeMode: ThemeMode.light,
         routerConfig: _router,
         builder: kIsWeb
             ? (context, child) => Container(

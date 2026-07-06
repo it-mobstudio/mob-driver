@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
+import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
@@ -21,6 +25,30 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   CartAddressEntity? _selectedDeliveryAddress;
+  AddressEntity? _storedAddress;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStoredAddress();
+  }
+
+  Future<void> _loadStoredAddress() async {
+    final stored = await SelectedAddressStore.read();
+    if (!mounted) return;
+    if (stored != null) {
+      setState(() => _storedAddress = stored);
+      return;
+    }
+    final (addresses, failure) = await sl<AddressRepository>().getAddresses();
+    if (!mounted || failure != null || addresses == null || addresses.isEmpty) {
+      return;
+    }
+    final first = addresses.first;
+    await SelectedAddressStore.save(first);
+    if (!mounted) return;
+    setState(() => _storedAddress = first);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,58 +59,57 @@ class _CartPageState extends State<CartPage> {
         child: BlocBuilder<CartBloc, CartState>(
           builder: (context, state) {
             return switch (state) {
-                CartInitial() || CartLoading() => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                CartError(:final message) => ErrorStateView(
-                    title: 'Unable to load cart',
-                    message: message,
-                    onRetry: () =>
-                        context.read<CartBloc>().add(CartLoadRequested()),
-                  ),
-                CartRequiresLogin() => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.lock_outline, size: 40),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Login to access your cart',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
+              CartInitial() || CartLoading() => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              CartError(:final message) => ErrorStateView(
+                  title: 'Unable to load cart',
+                  message: message,
+                  onRetry: () =>
+                      context.read<CartBloc>().add(CartLoadRequested()),
+                ),
+              CartRequiresLogin() => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.lock_outline, size: 40),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Login to access your cart',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
                           ),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: () =>
-                                context.go(LoginpageWidget.routePath),
-                            child: const Text('Go to Login'),
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () =>
+                              context.go(LoginpageWidget.routePath),
+                          child: const Text('Go to Login'),
+                        ),
+                      ],
                     ),
                   ),
-                CartLoaded(:final summary, :final updatingItemKey) =>
-                  summary.isEmpty
-                      ? EmptyCartBody(
-                          topBar: const CartTopBar(),
-                          shippingTile: ShippingTile(
-                            title: _deliveryName(summary),
-                            subtitle: _deliveryDetails(summary),
-                            hasAddress: summary.hasDeliveryAddress,
-                            onAddressAction: () =>
-                                _showAddressBottomSheet(summary),
-                          ),
-                        )
-                      : _buildCartWithItems(context, summary, updatingItemKey),
-              };
-            },
-          ),
+                ),
+              CartLoaded(:final summary, :final updatingItemKey) => summary
+                      .isEmpty
+                  ? EmptyCartBody(
+                      topBar: const CartTopBar(),
+                      shippingTile: ShippingTile(
+                        title: _deliveryName(summary),
+                        subtitle: _deliveryDetails(summary),
+                        hasAddress: _hasDeliveryAddress(summary),
+                        onAddressAction: () => _showAddressBottomSheet(summary),
+                      ),
+                    )
+                  : _buildCartWithItems(context, summary, updatingItemKey),
+            };
+          },
         ),
-      );
+      ),
+    );
   }
 
   Widget _buildCartWithItems(
@@ -105,7 +132,7 @@ class _CartPageState extends State<CartPage> {
                     ShippingTile(
                       title: _deliveryName(summary),
                       subtitle: _deliveryDetails(summary),
-                      hasAddress: summary.hasDeliveryAddress,
+                      hasAddress: _hasDeliveryAddress(summary),
                       onAddressAction: () => _showAddressBottomSheet(summary),
                     ),
                     if (summary.savings > 0) ...[
@@ -176,9 +203,17 @@ class _CartPageState extends State<CartPage> {
     return summary.subtotal + summary.shipping;
   }
 
+  bool _hasDeliveryAddress(CartSummaryEntity summary) {
+    return _selectedDeliveryAddress != null ||
+        _storedAddress != null ||
+        summary.hasDeliveryAddress;
+  }
+
   String _deliveryName(CartSummaryEntity summary) {
     final selectedName = _selectedDeliveryAddress?.name.trim() ?? '';
     if (selectedName.isNotEmpty) return selectedName;
+    final storedName = _storedAddress?.name.trim() ?? '';
+    if (storedName.isNotEmpty) return storedName;
     final name = summary.shippingRecipientName.trim();
     if (name.isNotEmpty) return name;
     return summary.shippingTitle;
@@ -190,6 +225,22 @@ class _CartPageState extends State<CartPage> {
       return <String>[
         selected.address.trim(),
         selected.phone.trim(),
+      ].where((p) => p.isNotEmpty).join('\n');
+    }
+    final stored = _storedAddress;
+    if (stored != null) {
+      final addressText = <String>[
+        stored.addressLine1,
+        stored.addressLine2,
+        stored.sublocality,
+        stored.city,
+        stored.pincode,
+      ].where((p) => p.trim().isNotEmpty).join(', ');
+      final displayAddress =
+          addressText.isNotEmpty ? addressText : stored.formattedAddress.trim();
+      return <String>[
+        displayAddress,
+        stored.phoneNumber.trim(),
       ].where((p) => p.isNotEmpty).join('\n');
     }
     final parts = <String>[

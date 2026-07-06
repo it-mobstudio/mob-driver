@@ -3,10 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/home/data/models/home_models.dart';
-import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
+import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_category_grid.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class CategoriesPage extends StatefulWidget {
   static const String routeName = 'Categories';
@@ -77,11 +78,7 @@ class _CategoriesHeader extends StatelessWidget {
                   context.go(HomepageWidget.routePath);
                 }
               },
-              icon: const Icon(
-                Icons.arrow_back,
-                color: Color(0xFF0A243F),
-                size: 24,
-              ),
+              icon: const AppBackIcon(),
               tooltip: 'Back',
             ),
             Expanded(

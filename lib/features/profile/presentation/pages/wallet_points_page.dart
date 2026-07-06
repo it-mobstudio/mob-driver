@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class WalletPointsPage extends StatelessWidget {
   const WalletPointsPage({super.key});
@@ -36,7 +37,7 @@ class _WalletView extends StatelessWidget {
         statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF0F0F0),
+        backgroundColor: Colors.white,
         body: BlocBuilder<ProfileBloc, ProfileState>(
           builder: (context, state) {
             if (state is WalletHistoryError) {
@@ -70,34 +71,45 @@ class _WalletView extends StatelessWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 300,
-                      child: Stack(
-                        children: [
-                          const _WalletHeader(),
-                          Positioned(
-                            left: 16,
-                            right: 16,
-                            top: 132,
-                            child: _BalanceCard(
-                              balance: wallet?.balance,
-                              loading: wallet == null,
-                            ),
-                          ),
-                          Positioned(
-                            left: 16,
-                            bottom: 13,
-                            child: Text(
-                              'Transactions',
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF0A243F),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                height: 22 / 15,
+                    child: ColoredBox(
+                      color: const Color(0xFFF0F0F0),
+                      child: SizedBox(
+                        height: 300,
+                        child: Stack(
+                          children: [
+                            const _WalletHeader(),
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              top: 132,
+                              child: _WalletContentWidth(
+                                child: _BalanceCard(
+                                  balance: wallet?.balance,
+                                  loading: wallet == null,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 13,
+                              child: _WalletContentWidth(
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'Transactions',
+                                    style: GoogleFonts.inter(
+                                      color: const Color(0xFF0A243F),
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      height: 22 / 15,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -141,50 +153,74 @@ class _WalletHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: 186,
-      color: const Color(0xFF0A243F),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0A243F),
+        image: DecorationImage(
+          image: AssetImage('assets/images/wallet_header.png'),
+          fit: BoxFit.cover,
+        ),
+      ),
       child: Stack(
-        fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/images/wallet_header.png',
-            width: double.infinity,
-            height: 186,
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-          ),
-          SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: 72,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned(
-                    left: 3,
-                    child: IconButton(
-                      onPressed: () => context.canPop() ? context.pop() : null,
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    'mobWALLET',
-                    style: GoogleFonts.inter(
+          Positioned(
+            left: 16,
+            right: 16,
+            top: 60,
+            height: 48,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.zero,
+                    onPressed: () => context.canPop() ? context.pop() : null,
+                    icon: const AppBackIcon(
                       color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      height: 22 / 15,
+                      size: 16,
                     ),
                   ),
-                ],
-              ),
+                ),
+                Text(
+                  'mobWALLET',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    height: 22 / 15,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _WalletContentWidth extends StatelessWidget {
+  const _WalletContentWidth({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = constraints.maxWidth <= 375
+            ? 16.0
+            : (constraints.maxWidth - 343) / 2;
+        return Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding.clamp(16.0, double.infinity),
+          ),
+          child: child,
+        );
+      },
     );
   }
 }
@@ -248,69 +284,74 @@ class _TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final debit = transaction.isDebit;
-    final amount = NumberFormat('#,##0.00', 'en_IN').format(transaction.amount);
+    final amount =
+        NumberFormat('#,##0.00', 'en_IN').format(transaction.amount.abs());
     final date = transaction.createdAt == null
         ? ''
         : DateFormat('dd MMM hh:mm a').format(transaction.createdAt!.toLocal());
     final order = transaction.orderNumber;
 
-    return Container(
-      height: 74,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(text: 'Order ID: '),
-                      TextSpan(
-                        text: order.isEmpty ? '—' : order,
-                        style: const TextStyle(color: Color(0xFF0360E5)),
-                      ),
-                    ],
+    return _WalletContentWidth(
+      child: Container(
+        height: 74,
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(text: 'Order ID: '),
+                        TextSpan(
+                          text: order.isEmpty ? '—' : order,
+                          style: const TextStyle(color: Color(0xFF0360E5)),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 20 / 14,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    height: 20 / 14,
+                  const SizedBox(height: 6),
+                  Text(
+                    '${transaction.transactionType.toUpperCase()}${date.isEmpty ? '' : ' on $date'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF596378),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      height: 16 / 11,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${transaction.transactionType.toUpperCase()}${date.isEmpty ? '' : ' on $date'}',
-                  maxLines: 1,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF596378),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    height: 16 / 11,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '${debit ? '-' : '+'}₹$amount',
-            style: GoogleFonts.inter(
-              color: debit ? const Color(0xFF0A243F) : const Color(0xFF07AD61),
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              height: 20 / 14,
+            const SizedBox(width: 8),
+            Text(
+              '${debit ? '-' : '+'}₹$amount',
+              textAlign: TextAlign.right,
+              style: GoogleFonts.inter(
+                color:
+                    debit ? const Color(0xFF0A243F) : const Color(0xFF07AD61),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                height: 20 / 14,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -324,19 +365,20 @@ class _LoadingRows extends StatelessWidget {
     return Column(
       children: List.generate(
         5,
-        (_) => Container(
-          height: 74,
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
-          ),
-          alignment: Alignment.centerLeft,
+        (_) => _WalletContentWidth(
           child: Container(
-            width: 210,
-            height: 14,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8EAED),
-              borderRadius: BorderRadius.circular(4),
+            height: 74,
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
+            ),
+            alignment: Alignment.centerLeft,
+            child: Container(
+              width: 210,
+              height: 14,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8EAED),
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
           ),
         ),

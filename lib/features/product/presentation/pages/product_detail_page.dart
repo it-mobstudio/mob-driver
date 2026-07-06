@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -513,14 +514,6 @@ class _ProductShareSheet extends StatelessWidget {
     }
   }
 
-  Future<void> _copyLink(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: url));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Product link copied.')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final shareText = '$productTitle\n$url';
@@ -532,7 +525,7 @@ class _ProductShareSheet extends StatelessWidget {
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height * 0.48,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -569,9 +562,7 @@ class _ProductShareSheet extends StatelessWidget {
                 children: [
                   _ShareOptionButton(
                     label: 'WhatsApp',
-                    backgroundColor: const Color(0xFFEAF8F2),
-                    foregroundColor: const Color(0xFF28B446),
-                    child: const Icon(Icons.call, size: 20),
+                    iconAsset: 'assets/images/whatsapp-plain.svg',
                     onTap: () => _launch(
                       context,
                       Uri.parse('https://wa.me/?text=$encodedText'),
@@ -580,16 +571,8 @@ class _ProductShareSheet extends StatelessWidget {
                   const SizedBox(width: 18),
                   _ShareOptionButton(
                     label: 'Facebook',
-                    backgroundColor: const Color(0xFFEFF8FA),
-                    foregroundColor: const Color(0xFF1877F2),
-                    child: Text(
-                      'f',
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                      ),
-                    ),
+                    iconSize: 24,
+                    iconAsset: 'assets/images/facebook-logo.svg',
                     onTap: () => _launch(
                       context,
                       Uri.parse(
@@ -600,17 +583,7 @@ class _ProductShareSheet extends StatelessWidget {
                   const SizedBox(width: 18),
                   _ShareOptionButton(
                     label: 'Twitter',
-                    backgroundColor: const Color(0xFFEFF8FA),
-                    foregroundColor: const Color(0xFF1DA1F2),
-                    child: Text(
-                      't',
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        fontStyle: FontStyle.italic,
-                        height: 1,
-                      ),
-                    ),
+                    iconAsset: 'assets/images/twitter.svg',
                     onTap: () => _launch(
                       context,
                       Uri.parse(
@@ -621,9 +594,7 @@ class _ProductShareSheet extends StatelessWidget {
                   const SizedBox(width: 18),
                   _ShareOptionButton(
                     label: 'Email',
-                    backgroundColor: const Color(0xFFEFF8FA),
-                    foregroundColor: const Color(0xFFE64A3A),
-                    child: const Icon(Icons.mail_outline, size: 22),
+                    iconAsset: 'assets/images/gmail.svg',
                     onTap: () => _launch(
                       context,
                       Uri(
@@ -670,18 +641,7 @@ class _ProductShareSheet extends StatelessWidget {
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () {
-                        AppHaptics.lightTap();
-                        _copyLink(context);
-                      },
-                      icon: const Icon(
-                        Icons.copy_rounded,
-                        color: Color(0xFF0A243F),
-                        size: 22,
-                      ),
-                      tooltip: 'Copy link',
-                    ),
+                    _CopyLinkButton(url: url),
                   ],
                 ),
               ),
@@ -696,16 +656,16 @@ class _ProductShareSheet extends StatelessWidget {
 class _ShareOptionButton extends StatelessWidget {
   const _ShareOptionButton({
     required this.label,
-    required this.backgroundColor,
-    required this.foregroundColor,
-    required this.child,
+    required this.iconAsset,
+    this.backgroundColor = const Color(0xFFF0F8F8),
+    this.iconSize = 24,
     required this.onTap,
   });
 
   final String label;
+  final String iconAsset;
   final Color backgroundColor;
-  final Color foregroundColor;
-  final Widget child;
+  final double iconSize;
   final VoidCallback onTap;
 
   @override
@@ -720,20 +680,93 @@ class _ShareOptionButton extends StatelessWidget {
         },
         customBorder: const CircleBorder(),
         child: Container(
-          width: 48,
-          height: 48,
-          alignment: Alignment.center,
+          padding: const EdgeInsets.all(19),
           decoration: BoxDecoration(
             color: backgroundColor,
             shape: BoxShape.circle,
           ),
-          child: IconTheme(
-            data: IconThemeData(color: foregroundColor),
-            child: DefaultTextStyle(
-              style: GoogleFonts.inter(color: foregroundColor),
-              child: child,
-            ),
+          child: SvgPicture.asset(
+            iconAsset,
+            width: iconSize,
+            height: iconSize,
+            fit: BoxFit.contain,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CopyLinkButton extends StatefulWidget {
+  const _CopyLinkButton({required this.url});
+
+  final String url;
+
+  @override
+  State<_CopyLinkButton> createState() => _CopyLinkButtonState();
+}
+
+class _CopyLinkButtonState extends State<_CopyLinkButton> {
+  bool _justCopied = false;
+  Timer? _resetTimer;
+
+  @override
+  void dispose() {
+    _resetTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _copy() async {
+    AppHaptics.lightTap();
+    await Clipboard.setData(ClipboardData(text: widget.url));
+    if (!mounted) return;
+    setState(() => _justCopied = true);
+    _resetTimer?.cancel();
+    _resetTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _justCopied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: _justCopied ? null : _copy,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (child, animation) => ScaleTransition(
+            scale: animation,
+            child: FadeTransition(opacity: animation, child: child),
+          ),
+          child: _justCopied
+              ? Row(
+                  key: const ValueKey('copied'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      color: Color(0xFF1FA855),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Copied',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF1FA855),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                )
+              : const Icon(
+                  key: ValueKey('copy'),
+                  Icons.copy_rounded,
+                  color: Color(0xFF0A243F),
+                  size: 22,
+                ),
         ),
       ),
     );
@@ -845,15 +878,14 @@ class ProductDetailBottomBar extends StatelessWidget {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomInset),
+      padding: EdgeInsets.fromLTRB(12, 12, 16, 24 + bottomInset),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 14,
-            offset: const Offset(0, -4),
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 24,
           ),
         ],
       ),
@@ -871,11 +903,11 @@ class ProductDetailBottomBar extends StatelessWidget {
               context.push('/cart');
             },
             child: Container(
-              height: 44,
+              height: 48,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE1E6ED)),
               ),
               child: Row(
@@ -933,7 +965,7 @@ class ProductDetailBottomBar extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: SizedBox(
-            height: 44,
+            height: 48,
             child: ProductCartActionButton(
               product: product,
               style: ProductCartActionButtonStyle.rail,
@@ -941,6 +973,7 @@ class ProductDetailBottomBar extends StatelessWidget {
               quantity: quantity,
               isFetchingCart: isUpdating,
               openVariantsOnAdd: false,
+              height: 48,
               onQuantityChanged: (nextQuantity) =>
                   onCartQuantityChanged(product, nextQuantity),
               onNotify: () => onNotifyTap(product),

@@ -195,7 +195,7 @@ class WalletTransactionEntity {
   final DateTime? createdAt;
   final String orderNumber;
 
-  bool get isDebit => transactionType.toUpperCase() == 'DEBIT';
+  bool get isDebit => transactionType.toUpperCase() == 'DEBIT' || amount < 0;
 
   factory WalletTransactionEntity.fromMap(Map<String, dynamic> map) {
     final details = map['details'] is Map
@@ -228,7 +228,14 @@ class WalletHistoryEntity {
     final results =
         map['results'] is List ? map['results'] as List : const <dynamic>[];
     return WalletHistoryEntity(
-      balance: double.tryParse((map['wallet'] ?? '0').toString()) ?? 0,
+      balance: double.tryParse(
+            (map['wallet'] ??
+                    map['wallet_balance'] ??
+                    map['mob_wallet_balance'] ??
+                    '0')
+                .toString(),
+          ) ??
+          0,
       transactions: results
           .whereType<Map>()
           .map((item) => WalletTransactionEntity.fromMap(
@@ -595,4 +602,16 @@ class ProjectListEntity {
     page: 1,
     totalCount: 0,
   );
+
+  ProjectListEntity copyWith({
+    List<ProjectEntity>? projects,
+    int? page,
+    int? totalCount,
+  }) {
+    return ProjectListEntity(
+      projects: projects ?? this.projects,
+      page: page ?? this.page,
+      totalCount: totalCount ?? this.totalCount,
+    );
+  }
 }

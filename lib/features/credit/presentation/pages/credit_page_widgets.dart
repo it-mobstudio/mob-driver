@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class CreditHeroBanner extends StatelessWidget {
   const CreditHeroBanner({super.key});
@@ -270,11 +271,7 @@ class CreditHowItWorksMockup extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.arrow_back,
-                      size: 16,
-                      color: AppColors.primaryText,
-                    ),
+                    const AppBackIcon(),
                     const SizedBox(width: 10),
                     Text('Payment details', style: AppTextStyles.body14Bold),
                   ],
@@ -477,7 +474,10 @@ class _MockMobCreditBadgeInfo extends StatelessWidget {
 }
 
 class CreditDocumentsCard extends StatelessWidget {
-  const CreditDocumentsCard({super.key, required this.onViewDocuments});
+  const CreditDocumentsCard({
+    super.key,
+    required this.onViewDocuments,
+  });
 
   final VoidCallback onViewDocuments;
 
@@ -486,53 +486,65 @@ class CreditDocumentsCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF7F3),
-        borderRadius: BorderRadius.circular(16),
+      decoration: ShapeDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment(1.00, 0.46),
+          end: Alignment(-0.00, 0.47),
+          colors: [
+            Color(0xFFF8FAF7),
+            Color(0xFFD5ECEA),
+          ],
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                const Text(
                   'Keep these documents ready',
-                  style: AppTextStyles.body14Bold.copyWith(fontSize: 15),
+                  style: TextStyle(
+                    color: Color(0xFF0A243F),
+                    fontSize: 17,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    height: 1.41,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: onViewDocuments,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primaryText,
-                    side: const BorderSide(color: AppColors.inputBorder),
-                    backgroundColor: Colors.white,
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: onViewDocuments,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: 12,
                       vertical: 10,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    decoration: ShapeDecoration(
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'View documents',
+                      style: TextStyle(
+                        color: Color(0xFF053961),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        height: 1.50,
+                      ),
                     ),
                   ),
-                  child: const Text('View documents'),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            width: 52,
-            height: 52,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.description_outlined,
-              color: AppColors.primaryText,
-              size: 26,
             ),
           ),
         ],
@@ -550,49 +562,43 @@ class CreditIndiaCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0F3D3E), Color(0xFF155D55)],
+      decoration: ShapeDecoration(
+        color: const Color(0xFFF8FAF7),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
-      child: Stack(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Positioned(
-            right: -20,
-            top: -20,
-            child: Opacity(
-              opacity: 0.5,
-              child: SvgPicture.asset(
-                'assets/images/Dotsmobcredit.svg',
-                width: 150,
-                height: 150,
-              ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text(
+                  'Use mobCREDIT across India',
+                  style: TextStyle(
+                    color: Color(0xFF0A243F),
+                    fontSize: 17,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    height: 1.41,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'With any registered sellers',
+                  style: TextStyle(
+                    color: Color(0xFF053961),
+                    fontSize: 12,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    height: 1.50,
+                  ),
+                ),
+              ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Use mobCREDIT across India',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'With any registered sellers',
-                style: GoogleFonts.inter(
-                  color: Colors.white.withValues(alpha: 0.75),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
           ),
         ],
       ),

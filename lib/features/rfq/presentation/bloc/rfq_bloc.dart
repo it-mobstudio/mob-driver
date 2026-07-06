@@ -9,6 +9,13 @@ sealed class RfqEvent {}
 
 final class RfqListRequested extends RfqEvent {}
 
+final class RfqQueryChanged extends RfqEvent {
+  RfqQueryChanged(this.query);
+  final String query;
+}
+
+final class RfqNextPageRequested extends RfqEvent {}
+
 final class RfqDetailRequested extends RfqEvent {
   RfqDetailRequested(this.id);
   final String id;
@@ -19,9 +26,15 @@ final class RfqSubmitRequested extends RfqEvent {
   final Map<String, dynamic> payload;
 }
 
-final class RfqQuoteAcceptedLocally extends RfqEvent {}
+final class RfqQuoteAcceptedLocally extends RfqEvent {
+  RfqQuoteAcceptedLocally(this.quoteId);
+  final String quoteId;
+}
 
-final class RfqPaymentCompletedLocally extends RfqEvent {}
+final class RfqPaymentCompletedLocally extends RfqEvent {
+  RfqPaymentCompletedLocally(this.quoteId);
+  final String quoteId;
+}
 
 final class CartRfqSubmitRequested extends RfqEvent {
   CartRfqSubmitRequested(this.payload);
@@ -37,8 +50,35 @@ final class RfqInitial extends RfqState {}
 final class RfqLoading extends RfqState {}
 
 final class RfqListLoaded extends RfqState {
-  RfqListLoaded(this.rfqs);
+  RfqListLoaded(
+    this.rfqs, {
+    this.query = '',
+    this.page = 1,
+    this.hasMore = false,
+    this.isLoadingMore = false,
+  });
+
   final List<RfqEntity> rfqs;
+  final String query;
+  final int page;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  RfqListLoaded copyWith({
+    List<RfqEntity>? rfqs,
+    String? query,
+    int? page,
+    bool? hasMore,
+    bool? isLoadingMore,
+  }) {
+    return RfqListLoaded(
+      rfqs ?? this.rfqs,
+      query: query ?? this.query,
+      page: page ?? this.page,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
 }
 
 final class RfqDetailLoaded extends RfqState {
@@ -70,6 +110,8 @@ final class CartRfqError extends RfqState {
 class RfqBloc extends Bloc<RfqEvent, RfqState> {
   RfqBloc(this._repository) : super(RfqInitial()) {
     on<RfqListRequested>(_onList);
+    on<RfqQueryChanged>(_onQueryChanged);
+    on<RfqNextPageRequested>(_onNextPage);
     on<RfqDetailRequested>(_onDetail);
     on<RfqSubmitRequested>(_onSubmit);
     on<RfqQuoteAcceptedLocally>(_onQuoteAcceptedLocally);
@@ -81,12 +123,56 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
 
   Future<void> _onList(RfqListRequested event, Emitter<RfqState> emit) async {
     emit(RfqLoading());
-    final (rfqs, failure) = await _repository.getRfqList();
+    final (rfqs, hasMore, failure) = await _repository.getRfqList(page: 1);
     if (failure != null) {
       AppHaptics.error();
       emit(RfqError(failure.message));
     } else {
-      emit(RfqListLoaded(rfqs!));
+      emit(RfqListLoaded(rfqs!, page: 1, hasMore: hasMore));
+    }
+  }
+
+  Future<void> _onQueryChanged(
+    RfqQueryChanged event,
+    Emitter<RfqState> emit,
+  ) async {
+    emit(RfqLoading());
+    final (rfqs, hasMore, failure) =
+        await _repository.getRfqList(page: 1, search: event.query);
+    if (failure != null) {
+      AppHaptics.error();
+      emit(RfqError(failure.message));
+    } else {
+      emit(RfqListLoaded(rfqs!, query: event.query, page: 1, hasMore: hasMore));
+    }
+  }
+
+  Future<void> _onNextPage(
+    RfqNextPageRequested event,
+    Emitter<RfqState> emit,
+  ) async {
+    final current = state;
+    if (current is! RfqListLoaded || !current.hasMore || current.isLoadingMore) {
+      return;
+    }
+    emit(current.copyWith(isLoadingMore: true));
+    final nextPage = current.page + 1;
+    final (rfqs, hasMore, failure) = await _repository.getRfqList(
+      page: nextPage,
+      search: current.query,
+    );
+    if (failure != null) {
+      AppHaptics.error();
+      emit(current.copyWith(isLoadingMore: false));
+    } else {
+      emit(
+        current.copyWith(
+          rfqs: [...current.rfqs, ...rfqs!],
+          page: nextPage,
+          hasMore: hasMore,
+          isLoadingMore: false,
+        ),
+      );
     }
   }
 
@@ -123,7 +209,14 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
   ) {
     final currentState = state;
     if (currentState case RfqDetailLoaded(:final rfq)) {
-      emit(RfqDetailLoaded(rfq.copyWith(status: 'quote_accepted')));
+      final quotes = rfq.quotes
+          .map((q) => q.quoteId == event.quoteId
+              ? q.copyWith(quoteStatus: 'Accepted')
+              : q)
+          .toList();
+      emit(RfqDetailLoaded(
+        rfq.copyWith(status: 'Quote Accepted', quotes: quotes),
+      ));
     }
   }
 
@@ -133,7 +226,14 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
   ) {
     final currentState = state;
     if (currentState case RfqDetailLoaded(:final rfq)) {
-      emit(RfqDetailLoaded(rfq.copyWith(status: 'converted_to_order')));
+      final quotes = rfq.quotes
+          .map((q) => q.quoteId == event.quoteId
+              ? q.copyWith(quoteStatus: 'Order Converted')
+              : q)
+          .toList();
+      emit(RfqDetailLoaded(
+        rfq.copyWith(status: 'Order Created', quotes: quotes),
+      ));
     }
   }
 

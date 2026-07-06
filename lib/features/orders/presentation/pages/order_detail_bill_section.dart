@@ -1,10 +1,20 @@
 part of 'order_detail_page.dart';
 
 class _BillDetailsSection extends StatelessWidget {
-  const _BillDetailsSection();
+  const _BillDetailsSection({this.order});
+
+  final OrderEntity? order;
 
   @override
   Widget build(BuildContext context) {
+    final subTotal = order?.subTotal ?? 0.0;
+    final total = order?.total ?? 0.0;
+    final tax = (order?.sgst ?? 0) + (order?.cgst ?? 0);
+    final shipping = order?.shippingFee ?? 0.0;
+    final savedAmount = subTotal > total ? subTotal - total : 0.0;
+    final points = order?.rewardPoints ?? 0;
+    final rewardMessage = order?.rewardMessage ?? '';
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
@@ -21,55 +31,36 @@ class _BillDetailsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const _BillRow(
+          _BillRow(
             label: 'Subtotal',
-            value: '₹26567.00',
-            oldValue: '₹ 27889.00',
+            value: '₹${subTotal.toStringAsFixed(2)}',
           ),
           const SizedBox(height: 8),
-          const _BillRow(label: 'Shipping', value: '₹500.00'),
-          const SizedBox(height: 8),
-          const _BillRow(
-            label: 'Total tax',
-            value: '₹433.00',
-            dottedUnderline: true,
+          _BillRow(
+            label: 'Shipping',
+            value: shipping > 0 ? '₹${shipping.toStringAsFixed(2)}' : 'Free',
           ),
+          if (tax > 0) ...[
+            const SizedBox(height: 8),
+            _BillRow(
+              label: 'Total tax',
+              value: '₹${tax.toStringAsFixed(2)}',
+              dottedUnderline: true,
+            ),
+          ],
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFFE0E0E0)),
           const SizedBox(height: 12),
-          const _BillRow(
+          _BillRow(
             label: 'Total',
-            value: '₹26567.00',
-            oldValue: '₹ 27889.00',
+            value: '₹${total.toStringAsFixed(2)}',
             bold: true,
           ),
-          const _SavedAmountBadge(),
-          const SizedBox(height: 12),
-          const _EarnPointsBanner(),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.file_download_outlined, size: 20),
-              label: Text(
-                'Download invoice',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  height: 21 / 14,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF0360E5),
-                side: const BorderSide(color: Color(0xFF0360E5)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
+          if (savedAmount > 0) _SavedAmountBadge(amount: savedAmount),
+          if (points > 0 || rewardMessage.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _EarnPointsBanner(points: points, message: rewardMessage),
+          ],
         ],
       ),
     );
@@ -77,7 +68,9 @@ class _BillDetailsSection extends StatelessWidget {
 }
 
 class _SavedAmountBadge extends StatelessWidget {
-  const _SavedAmountBadge();
+  const _SavedAmountBadge({required this.amount});
+
+  final double amount;
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +89,7 @@ class _SavedAmountBadge extends StatelessWidget {
         ),
         alignment: Alignment.center,
         child: Text(
-          'SAVED ₹1055',
+          'SAVED ₹${amount.toStringAsFixed(0)}',
           style: GoogleFonts.inter(
             color: const Color(0xFF329537),
             fontSize: 11,
@@ -176,14 +169,19 @@ class _BillRow extends StatelessWidget {
 }
 
 class _EarnPointsBanner extends StatelessWidget {
-  const _EarnPointsBanner();
+  const _EarnPointsBanner({required this.points, required this.message});
+
+  final int points;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
+    final displayText =
+        message.isNotEmpty ? message : '$points points on this purchase';
+
     return Container(
-      height: 42,
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFFDFF8F9),
         borderRadius: BorderRadius.circular(12),
@@ -203,20 +201,14 @@ class _EarnPointsBanner extends StatelessWidget {
           SvgPicture.asset('assets/images/points.svg', width: 16, height: 16),
           const SizedBox(width: 4),
           Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: '1150 points',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                  ),
-                  const TextSpan(text: ' on this purchase'),
-                ],
-              ),
+            child: Text(
+              displayText,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(
                 color: const Color(0xFF0A243F),
                 fontSize: 12,
-                fontWeight: FontWeight.w400,
+                fontWeight: FontWeight.w500,
                 height: 18 / 12,
               ),
             ),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
@@ -20,8 +21,9 @@ final class CheckoutOrderPlaceRequested extends CheckoutEvent {
 }
 
 final class CheckoutRazorpayOrderRequested extends CheckoutEvent {
-  CheckoutRazorpayOrderRequested({required this.cartId});
+  CheckoutRazorpayOrderRequested({required this.cartId, this.paymentOrigin});
   final int cartId;
+  final String? paymentOrigin;
 }
 
 final class CheckoutRazorpayPaymentFailed extends CheckoutEvent {
@@ -60,6 +62,21 @@ final class CheckoutRupifiOrderRequested extends CheckoutEvent {
   });
   final String cartId;
   final String? paymentOrigin;
+}
+
+final class CheckoutRupifiStatusCheckRequested extends CheckoutEvent {
+  CheckoutRupifiStatusCheckRequested({
+    required this.platformOrderId,
+    required this.merchantPaymentRefId,
+    required this.paymentId,
+    required this.transactionId,
+    this.currency = '',
+  });
+  final String platformOrderId;
+  final String merchantPaymentRefId;
+  final String paymentId;
+  final String transactionId;
+  final String currency;
 }
 
 final class CheckoutOrderConfirmationRequested extends CheckoutEvent {
@@ -119,6 +136,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     on<CheckoutRazorpayVerifyRequested>(_onVerifyRazorpayPayment);
     on<CheckoutRazorpayStatusCheckRequested>(_onRazorpayStatusCheck);
     on<CheckoutRupifiOrderRequested>(_onCreateRupifiOrder);
+    on<CheckoutRupifiStatusCheckRequested>(_onRupifiStatusCheck);
     on<CheckoutOrderConfirmationRequested>(_onOrderConfirmation);
   }
 
@@ -138,7 +156,8 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     }
   }
 
-  Future<void> _onLoad(CheckoutLoadRequested event, Emitter<CheckoutState> emit) async {
+  Future<void> _onLoad(
+      CheckoutLoadRequested event, Emitter<CheckoutState> emit) async {
     emit(CheckoutLoading());
     final (summary, failure) = await _repository.getCheckoutSummary();
     if (failure != null) {
@@ -172,7 +191,8 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     final (detailedOrder, detailFailure) = await _repository.getSuborderDetails(
       platformOrderId: placedOrder.orderId,
     );
-    emit(CheckoutOrderPlaced(detailFailure != null ? placedOrder : detailedOrder!));
+    emit(CheckoutOrderPlaced(
+        detailFailure != null ? placedOrder : detailedOrder!));
   }
 
   Future<void> _onCreateRazorpayOrder(
@@ -180,7 +200,10 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     Emitter<CheckoutState> emit,
   ) async {
     emit(CheckoutLoading());
-    final (entity, failure) = await _repository.createRazorpayOrder(event.cartId);
+    final (entity, failure) = await _repository.createRazorpayOrder(
+      event.cartId,
+      paymentOrigin: event.paymentOrigin,
+    );
     if (failure != null) {
       AppHaptics.error();
       emit(CheckoutError(failure.message));
@@ -204,7 +227,8 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(CheckoutLoading());
 
     // Step 1: Verify payment with Razorpay → returns platform order ID
-    final (verifiedOrder, verifyFailure) = await _repository.verifyRazorpayPayment(
+    final (verifiedOrder, verifyFailure) =
+        await _repository.verifyRazorpayPayment(
       paymentId: event.paymentId,
       orderId: event.orderId,
       signature: event.signature,
@@ -283,6 +307,35 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
       emit(CheckoutPaymentFailed(failure.message));
     } else {
       emit(CheckoutOrderPlaced(order!));
+    }
+  }
+
+  Future<void> _onRupifiStatusCheck(
+    CheckoutRupifiStatusCheckRequested event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    debugPrint(
+        '[Rupifi] _onRupifiStatusCheck → platformOrderId=${event.platformOrderId}');
+    debugPrint('[Rupifi]   merchantPaymentRefId=${event.merchantPaymentRefId}');
+    debugPrint('[Rupifi]   paymentId=${event.paymentId}');
+    debugPrint('[Rupifi]   transactionId=${event.transactionId}');
+    debugPrint('[Rupifi]   currency=${event.currency}');
+    emit(CheckoutLoading());
+    final (order, failure) = await _repository.getSuborderDetails(
+      platformOrderId: event.platformOrderId,
+      paymentGateway: 'RUPIFI',
+      merchantPaymentRefId: event.merchantPaymentRefId,
+      paymentId: event.paymentId,
+      transactionId: event.transactionId,
+    );
+    if (failure != null) {
+      debugPrint('[Rupifi] ❌ getSuborderDetails FAILED: ${failure.message}');
+      AppHaptics.error();
+      emit(CheckoutPaymentFailed(failure.message));
+    } else {
+      debugPrint(
+          '[Rupifi] ✅ getSuborderDetails SUCCESS – orderId=${order!.orderId}');
+      emit(CheckoutOrderPlaced(order));
     }
   }
 }

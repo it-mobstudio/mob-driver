@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_points_page.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class MobstarPage extends StatelessWidget {
   const MobstarPage({super.key});
@@ -90,8 +91,7 @@ class _MobstarView extends StatelessWidget {
                               child: const SizedBox(
                                 width: 36,
                                 height: 36,
-                                child: Icon(Icons.arrow_back,
-                                    size: 20, color: Color(0xFF0A243F)),
+                                child: Center(child: AppBackIcon()),
                               ),
                             ),
                           ),
@@ -593,11 +593,7 @@ class _AllLevelsSheet extends StatelessWidget {
     return FractionallySizedBox(
       heightFactor: .62,
       widthFactor: 1,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          ClipRRect(
+      child: ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: ColoredBox(
               color: Colors.white,
@@ -607,7 +603,7 @@ class _AllLevelsSheet extends StatelessWidget {
                   children: [
                     Container(
                       height: 56,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.only(left: 16),
                       decoration: const BoxDecoration(
                         color: Color(0xFFF0F0F0),
                         borderRadius:
@@ -629,6 +625,27 @@ class _AllLevelsSheet extends StatelessWidget {
                               'MIN SPEND IN\nA YEAR',
                               textAlign: TextAlign.right,
                               style: _levelHeaderStyle,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              width: 56,
+                              height: 56,
+                              alignment: Alignment.center,
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Color(0xFF0A243F),
+                                  size: 18,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -655,24 +672,6 @@ class _AllLevelsSheet extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            top: -61,
-            child: Material(
-              color: Colors.white,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context).pop(),
-                child: const SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Icon(Icons.close, color: Color(0xFF0A243F), size: 24),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

@@ -42,108 +42,98 @@ class _AcceptQuoteSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 504,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            top: -61,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(22),
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Do you want to accept ${quoteTitle.toLowerCase()} for\n\u20B9 ${totalAmount.toStringAsFixed(0)}?',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0A243F),
+                      height: 30 / 20,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Once accepted all other quotes will be rejected.',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF0A243F),
+                      height: 20 / 14,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _AcceptQuoteSummary(
+                    quoteTitle: quoteTitle,
+                    itemsCount: itemsCount,
+                    totalAmount: totalAmount,
+                    timeText: timeText,
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 38,
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0360E5),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Accept',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 21 / 14,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 36,
+                  height: 36,
                   decoration: const BoxDecoration(
-                    color: Colors.white,
+                    color: Color(0xFFF2F6F9),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.close,
                     color: Color(0xFF0A243F),
-                    size: 24,
+                    size: 20,
                   ),
                 ),
               ),
             ),
-          ),
-          Container(
-            height: 504,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Do you want to accept ${quoteTitle.toLowerCase()} for\n\u20B9 ${totalAmount.toStringAsFixed(0)}?',
-                        style: GoogleFonts.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF0A243F),
-                          height: 30 / 20,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Once accepted all other quotes will be rejected.',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF0A243F),
-                          height: 20 / 14,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _AcceptQuoteSummary(
-                        quoteTitle: quoteTitle,
-                        itemsCount: itemsCount,
-                        totalAmount: totalAmount,
-                        timeText: timeText,
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: 38,
-                  child: SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0360E5),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Accept',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          height: 21 / 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
 abstract interface class RfqRemoteDatasource {
-  Future<dynamic> getRfqList();
+  Future<dynamic> getRfqList({int page = 1, String? search});
   Future<Map<String, dynamic>> getRfqDetail(String id);
   Future<Map<String, dynamic>> submitRfq(Map<String, dynamic> payload);
   Future<Map<String, dynamic>> createCartQuoteRequest(
@@ -15,10 +15,14 @@ class RfqRemoteDatasourceImpl implements RfqRemoteDatasource {
   final Dio _dio;
 
   @override
-  Future<dynamic> getRfqList() async {
+  Future<dynamic> getRfqList({int page = 1, String? search}) async {
     final response = await _dio.get<dynamic>(
       '/rfq/get_rfqs/',
-      queryParameters: {'page': 1},
+      queryParameters: {
+        'page': page,
+        if (search != null && search.trim().isNotEmpty)
+          'search': search.trim(),
+      },
     );
     return response.data;
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
@@ -9,15 +10,19 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
+import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
+import 'package:m_o_b_demand_side/shared/mob_credit.dart';
 
 class MyAccountWidget extends StatefulWidget {
   const MyAccountWidget({super.key});
@@ -31,6 +36,8 @@ class MyAccountWidget extends StatefulWidget {
 
 class _MyAccountWidgetState extends State<MyAccountWidget> {
   late final ProfileBloc _profileBloc;
+  final _scrollController = ScrollController();
+  bool _frosted = false;
 
   @override
   void initState() {
@@ -40,10 +47,18 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
       if (!mounted) return;
       context.read<CartBloc>().add(CartLoadRequested());
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    final shouldFrost = _scrollController.offset > 8;
+    if (shouldFrost != _frosted) setState(() => _frosted = shouldFrost);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _profileBloc.close();
     super.dispose();
   }
@@ -52,16 +67,23 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _profileBloc,
-      child: const Scaffold(
+      child: Scaffold(
         backgroundColor: _ProfileColors.background,
-        body: _ProfileBody(),
+        body: Stack(
+          children: [
+            _ProfileBody(scrollController: _scrollController),
+            FrostedNavBar(frosted: _frosted),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _ProfileBody extends StatelessWidget {
-  const _ProfileBody();
+  const _ProfileBody({required this.scrollController});
+
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +102,7 @@ class _ProfileBody extends StatelessWidget {
             final account = cartSummary.account;
 
             return CustomScrollView(
+              controller: scrollController,
               physics: const BouncingScrollPhysics(),
               slivers: [
                 SliverToBoxAdapter(
@@ -89,10 +112,11 @@ class _ProfileBody extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   sliver: SliverList.list(
                     children: [
-                      _MobCreditCard(
+                      MobCreditCard(
                         account: account,
-                        onTap: () =>
+                        onManage: () =>
                             context.push(MobCreditProfilePage.routePath),
+                        onApply: () => context.push(CreditPage.routePath),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -110,7 +134,7 @@ class _ProfileBody extends StatelessWidget {
                             child: _SummaryCard(
                               iconAsset: 'assets/images/walletprofile.svg',
                               title: 'Wallet',
-                              subtitle: _formatRupees(account.wallet),
+                              subtitle: formatRupees(account.wallet),
                               onTap: () =>
                                   context.push(WalletPointsPage.routePath),
                             ),
@@ -144,12 +168,12 @@ class _ProfileBody extends StatelessWidget {
                           _MenuItem(
                             iconAsset: 'assets/images/myprojects.svg',
                             label: 'My projects',
-                            onTap: () => _comingSoon(context, 'My projects'),
+                            onTap: () => context.push(MyProjectsPage.routePath),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/mobsupport.svg',
                             label: 'mob support',
-                            onTap: () => _comingSoon(context, 'mob support'),
+                            onTap: () => _openWhatsapp(context),
                           ),
                         ],
                       ),
@@ -165,33 +189,44 @@ class _ProfileBody extends StatelessWidget {
                       const SizedBox(height: 20),
                       _MenuCard(
                         items: [
-                          _MenuItem(
-                            iconAsset: 'assets/images/notifications.svg',
-                            label: 'Notification preferences',
-                            onTap: () => _comingSoon(
-                                context, 'Notification preferences'),
-                          ),
+                          // Notification preferences: hidden for now (not
+                          // ready), keeping the entry here so it's a one-line
+                          // uncomment to bring back rather than a rebuild.
+                          // _MenuItem(
+                          //   iconAsset: 'assets/images/notifications.svg',
+                          //   label: 'Notification preferences',
+                          //   onTap: () => _comingSoon(
+                          //       context, 'Notification preferences'),
+                          // ),
                           _MenuItem(
                             iconAsset: 'assets/images/aboutus.svg',
                             label: 'About us',
-                            onTap: () => _comingSoon(context, 'About us'),
+                            onTap: () => _openExternal(
+                              context,
+                              'https://madoverbuildings.com/home/aboutus',
+                            ),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/faqs.svg',
                             label: 'FAQs',
-                            onTap: () => _comingSoon(context, 'FAQs'),
+                            onTap: () => _openExternal(
+                              context,
+                              'https://madoverbuildings.com/home/faq?key=faq',
+                            ),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/becomepartner.svg',
                             label: 'Become a partner',
-                            onTap: () =>
-                                _comingSoon(context, 'Become a partner'),
+                            onTap: () => _openExternal(
+                              context,
+                              'https://www.partner.madoverbuildings.com/',
+                            ),
                           ),
-                          const _MenuItem(
+                          _MenuItem(
                             iconAsset: 'assets/images/logout.svg',
                             label: 'Logout',
                             showChevron: false,
-                            onTap: _logout,
+                            onTap: () => _confirmLogout(context),
                           ),
                         ],
                       ),
@@ -207,14 +242,47 @@ class _ProfileBody extends StatelessWidget {
     );
   }
 
-  static void _comingSoon(BuildContext context, String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label is coming soon')),
-    );
+  static Future<void> _openExternal(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open link.')),
+      );
+    }
   }
 
-  static Future<void> _logout() async {
-    await AuthSession.instance.signOut();
+  static Future<void> _openWhatsapp(BuildContext context) async {
+    final uri = Uri.parse('https://wa.me/918970415365');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open WhatsApp.')),
+      );
+    }
+  }
+
+  static Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await AuthSession.instance.signOut();
+    }
   }
 }
 
@@ -247,72 +315,65 @@ class _ProfileHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 36,
-                height: 36,
-                child: Material(
-                  color: Colors.white,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => context.canPop()
-                        ? context.pop()
-                        : context.pushReplacement('/homepage'),
-                    child: const Icon(
-                      Icons.arrow_back,
-                      size: 19,
-                      color: _ProfileColors.navy,
-                    ),
+              // Back button now lives in the fixed FrostedNavBar overlay
+              // (see MyAccountWidget.build) so it stays pinned above this
+              // scrolling header instead of scrolling away with it.
+              const SizedBox(height: 56),
+              const SizedBox(height: 34),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => context.push(PersonalInfoPage.routePath),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.white,
+                        backgroundImage: profileImage.isNotEmpty
+                            ? NetworkImage(profileImage)
+                            : null,
+                        child: profileImage.isEmpty
+                            ? SvgPicture.asset(
+                                'assets/icons/profile.svg',
+                                width: 31,
+                                height: 31,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                                height: 1.48,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              phone,
+                              style: GoogleFonts.inter(
+                                color: Colors.white.withValues(alpha: .60),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                height: 1.54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // const _Chevron(color: Colors.white),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 34),
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.white,
-                    backgroundImage: profileImage.isNotEmpty
-                        ? NetworkImage(profileImage)
-                        : null,
-                    child: profileImage.isEmpty
-                        ? SvgPicture.asset(
-                            'assets/icons/profile.svg',
-                            width: 31,
-                            height: 31,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 21,
-                            fontWeight: FontWeight.w700,
-                            height: 31 / 21,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          phone,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFFB8C4D0),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            height: 20 / 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ),
               const SizedBox(height: 24),
               _MembershipBar(
@@ -342,59 +403,69 @@ class _MembershipBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: SizedBox(
-          height: 58,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                SvgPicture.asset(
-                  _mobStarAsset(membership),
-                  width: 24,
-                  height: 23,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/images/mobstar logo.svg',
-                        width: 64,
-                        height: 11,
-                      ),
-                      Text(
-                        '$membership member',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+        child: Ink(
+          decoration: ShapeDecoration(
+            color: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: SizedBox(
+            height: 58,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  SvgPicture.asset(
+                    _mobStarAsset(membership),
+                    width: 24,
+                    height: 23,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/images/mobstar logo.svg',
+                          width: 64,
+                          height: 11,
                         ),
-                      ),
-                    ],
+                        Text(
+                          '$membership member',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            height: 1.43,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  '$points Points',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                  Text(
+                    '$points Points',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 1.43,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 7),
-                const Icon(Icons.chevron_right, color: Colors.white, size: 12),
-              ],
+                  const SizedBox(width: 7),
+                  const _Chevron(color: Colors.white),
+                ],
+              ),
             ),
           ),
         ),
@@ -419,152 +490,41 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: SizedBox(
+        child: Ink(
           height: 112,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SvgPicture.asset(iconAsset, width: 24, height: 24),
-                const SizedBox(height: 12),
-                Text(title, style: _labelStyle),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _subtleStyle,
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right,
-                      size: 12,
-                      color: Color(0xFF78838F),
-                    ),
-                  ],
-                ),
-              ],
+          padding: const EdgeInsets.all(16),
+          decoration: ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MobCreditCard extends StatelessWidget {
-  const _MobCreditCard({required this.account, required this.onTap});
-
-  final CartAccountEntity account;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final creditLimit = account.rupifiCurrentLimit != 0
-        ? account.rupifiCurrentLimit
-        : account.mobCreditSanctioned;
-    final available = account.mobCreditAvailable != 0
-        ? account.mobCreditAvailable
-        : creditLimit - account.rupifiBalance;
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [Color(0xFF55A77B), Color(0xFF0D889C)],
-          ),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 96),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SvgPicture.asset(iconAsset, width: 24, height: 24),
+              const SizedBox(height: 12),
+              Text(title, style: _labelStyle),
+              const SizedBox(height: 2),
+              Row(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/images/mobcreditlogo.svg',
-                        width: 92,
-                        height: 24,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Credit limit: ${_formatRupees(creditLimit)}',
-                          textAlign: TextAlign.right,
-                          softWrap: true,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            height: 20 / 13,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ],
+                  Expanded(
+                    child: Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _subtleStyle,
+                    ),
                   ),
-                  const SizedBox(height: 13),
-                  Container(
-                    height: 1,
-                    color: Colors.white.withValues(alpha: .22),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Available balance',
-                          softWrap: true,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            height: 20 / 13,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        _formatRupees(available),
-                        textAlign: TextAlign.right,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          height: 24 / 17,
-                        ),
-                      ),
-                    ],
-                  ),
+                  const _Chevron(),
                 ],
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -605,11 +565,7 @@ class _ReferralCard extends StatelessWidget {
                   height: 24,
                 ),
                 const Spacer(),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 12,
-                  color: Color(0xFF78838F),
-                ),
+                const _Chevron(),
               ],
             ),
           ),
@@ -651,15 +607,46 @@ class _MenuCard extends StatelessWidget {
               if (index != items.length - 1)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(
-                    height: 0,
-                    thickness: 1,
-                    color: Color(0xFFE7EAEE),
-                  ),
+                  child: _DottedDivider(),
                 ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DottedDivider extends StatelessWidget {
+  const _DottedDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 1,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const dashWidth = 4.0;
+          const dashGap = 4.0;
+          final dashCount =
+              (constraints.maxWidth / (dashWidth + dashGap)).floor();
+
+          return Row(
+            children: List.generate(dashCount, (index) {
+              return Padding(
+                padding: EdgeInsets.only(
+                    right: index == dashCount - 1 ? 0 : dashGap),
+                child: const SizedBox(
+                  width: dashWidth,
+                  height: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(color: Color(0xFFE7EAEE)),
+                  ),
+                ),
+              );
+            }),
+          );
+        },
       ),
     );
   }
@@ -696,12 +683,7 @@ class _MenuRow extends StatelessWidget {
                     style: _labelStyle,
                   ),
                 ),
-                if (item.showChevron)
-                  const Icon(
-                    Icons.chevron_right,
-                    size: 12,
-                    color: Color(0xFF78838F),
-                  ),
+                if (item.showChevron) const _Chevron(),
               ],
             ),
           ),
@@ -720,12 +702,13 @@ class _VersionFooter extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(0, 26, 0, 16),
       child: Column(
         children: [
-          Text(
-            'mob∷',
-            style: GoogleFonts.inter(
-              color: const Color(0xFFC5C8CC),
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
+          SvgPicture.asset(
+            'assets/images/moblogo.svg',
+            width: 88,
+            height: 24,
+            colorFilter: const ColorFilter.mode(
+              Color(0xFFD2D4D8),
+              BlendMode.srcIn,
             ),
           ),
           const SizedBox(height: 2),
@@ -733,12 +716,30 @@ class _VersionFooter extends StatelessWidget {
             'APP VERSION 0.2.456',
             style: GoogleFonts.inter(
               color: const Color(0xFF9FA4AA),
-              fontSize: 8,
+              fontSize: 11,
               fontWeight: FontWeight.w400,
+              height: 16 / 11,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Chevron extends StatelessWidget {
+  const _Chevron({this.color = const Color(0xFF78838F)});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      'assets/images/arrow.svg',
+      width: 12,
+      height: 12,
+      fit: BoxFit.contain,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
     );
   }
 }
@@ -751,17 +752,11 @@ final TextStyle _labelStyle = GoogleFonts.inter(
 );
 
 final TextStyle _subtleStyle = GoogleFonts.inter(
-  color: const Color(0xFF747D87),
+  color: const Color(0xFF67696D),
   fontSize: 13,
   fontWeight: FontWeight.w400,
   height: 20 / 13,
 );
-
-String _formatRupees(double value) {
-  final text =
-      value % 1 == 0 ? value.toStringAsFixed(0) : value.toStringAsFixed(2);
-  return '₹$text';
-}
 
 String _mobStarAsset(String level) {
   final lower = level.toLowerCase();

@@ -18,6 +18,7 @@ import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/order_placed_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/payment_failed_page.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/nav/route_extra_cache.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
@@ -212,8 +213,8 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
-              name: OrdersPage.routeName,
-              path: OrdersPage.routePath,
+              name: 'OrdersTab',
+              path: '/orders-tab',
               builder: (context, state) => const OrdersPage(),
             ),
           ]),
@@ -222,6 +223,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
               name: CreditPage.routeName,
               path: CreditPage.routePath,
               builder: (context, state) => const CreditPage(),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              name: 'MoreMenuTab',
+              path: '/more',
+              builder: (context, state) => const MyAccountWidget(),
             ),
           ]),
         ],
@@ -367,6 +375,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
           return OrderPlacedPage(
             orderId:
                 extra as String? ?? state.uri.queryParameters['order_id'] ?? '',
+            paymentGateway: state.uri.queryParameters['payment_Gateway'],
+            merchantPaymentRefId:
+                state.uri.queryParameters['merchantPaymentRefId'],
+            paymentId: state.uri.queryParameters['paymentId'],
+            transactionId: state.uri.queryParameters['transactionId'],
+            currency: state.uri.queryParameters['currency'],
           );
         },
       ),
@@ -376,6 +390,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) => OrderPlacedPage(
           orderId: state.uri.queryParameters['order_id'] ?? '',
+          paymentGateway: state.uri.queryParameters['payment_Gateway'],
+          merchantPaymentRefId:
+              state.uri.queryParameters['merchantPaymentRefId'],
+          paymentId: state.uri.queryParameters['paymentId'],
+          transactionId: state.uri.queryParameters['transactionId'],
+          currency: state.uri.queryParameters['currency'],
         ),
       ),
       GoRoute(
@@ -433,6 +453,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         path: MyAccountWidget.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) => const MyAccountWidget(),
+      ),
+      GoRoute(
+        name: OrdersPage.routeName,
+        path: OrdersPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const OrdersPage(),
       ),
       GoRoute(
         name: MyProjectsPage.routeName,
@@ -493,9 +519,19 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         path: OrderTrackingPage.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) {
-          final extra = state.extra is Map
+          // Browser back/forward on web replays the URL only, not the
+          // `extra` payload — fall back to whatever was last pushed here
+          // this session instead of rendering blank. See RouteExtraCache.
+          final rawExtra = state.extra is Map
               ? Map<String, dynamic>.from(state.extra as Map)
-              : <String, dynamic>{};
+              : null;
+          if (rawExtra != null) {
+            RouteExtraCache.put(OrderTrackingPage.routePath, rawExtra);
+          }
+          final extra = rawExtra ??
+              RouteExtraCache.take<Map<String, dynamic>>(
+                  OrderTrackingPage.routePath) ??
+              <String, dynamic>{};
           return OrderTrackingPage(
             order: extra['order'] is OrderEntity
                 ? extra['order'] as OrderEntity

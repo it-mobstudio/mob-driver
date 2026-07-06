@@ -1,20 +1,30 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' hide TextDirection;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:lottie/lottie.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
+import 'package:m_o_b_demand_side/features/orders/domain/repositories/orders_repository.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
-Future<void> showOrderRatingSheet(BuildContext context) {
+Future<void> showOrderRatingSheet(
+  BuildContext context, {
+  required String suborderId,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: false,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.6),
-    builder: (context) => const _OrderRatingSheet(),
+    builder: (context) => _OrderRatingSheet(suborderId: suborderId),
   );
 }
 
@@ -38,18 +48,34 @@ class OrderTrackingPage extends StatelessWidget {
         : order?.items ?? const <OrderItemEntity>[];
     final orderNumber = shipment?.id.isNotEmpty == true
         ? shipment!.id
-        : order?.orderNumber ?? 'OD20260106004961';
-    final address = order?.shippingAddress.isNotEmpty == true
-        ? order!.shippingAddress
-        : '10 Downing Street, 4th floor, Infront of westend mall, Chennai, 600005';
+        : order?.orderNumber ?? '';
+    final address =
+        order?.shippingAddress.isNotEmpty == true ? order!.shippingAddress : '';
+    final deliveryName = order?.deliveryName ?? '';
+    final rawPhone = order?.deliveryPhone ?? '';
+    final deliveryPhone = rawPhone.isNotEmpty
+        ? (rawPhone.startsWith('+') ? rawPhone : '+91 $rawPhone')
+        : '';
     final shipmentStatus = shipment?.status.trim() ?? '';
     final orderStatus = order?.status.trim() ?? '';
     final trackingStatus =
         shipmentStatus.isNotEmpty ? shipmentStatus : orderStatus;
     final trackingState = _TrackingState.fromStatus(trackingStatus);
-    final deliveryDate = shipment?.deliveryDate.trim().isNotEmpty == true
-        ? shipment!.deliveryDate.trim()
-        : '15 Jan 2026 at 01:30 PM';
+    final deliverySlot = shipment?.deliverySlot ?? '';
+    // final vendorName = shipment?.vendorName ?? '';
+    // final vehicleAssigned = shipment?.vehicleAssigned ?? false;
+    final invoiceUrl = shipment?.proformaInvoiceUrl ?? '';
+    final formattedDeliveryDate = () {
+      final raw = shipment?.deliveryDate.trim() ?? '';
+      if (raw.isEmpty) return '';
+      try {
+        return DateFormat('dd MMM yyyy').format(DateTime.parse(raw).toLocal());
+      } catch (_) {
+        return raw;
+      }
+    }();
+    final deliveryDate =
+        formattedDeliveryDate.isNotEmpty ? formattedDeliveryDate : '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F1F2),
@@ -69,29 +95,43 @@ class OrderTrackingPage extends StatelessWidget {
                       _TrackingHeroSection(
                         state: trackingState,
                         deliveryDate: deliveryDate,
+                        deliverySlot: deliverySlot,
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
                         child: Column(
                           children: [
                             if (!trackingState.isDelivered) ...[
-                              const _DeliveryPartnerCard(),
-                              const SizedBox(height: 12),
-                              _DeliveryAddressCard(address: address),
+                              // if (vehicleAssigned) ...[
+                              //   _DeliveryPartnerCard(vendorName: vendorName),
+                              //   const SizedBox(height: 12),
+                              // ],
+                              _DeliveryAddressCard(
+                                address: address,
+                                deliveryName: deliveryName,
+                                deliveryPhone: deliveryPhone,
+                              ),
                               const SizedBox(height: 12),
                             ],
-                            if (trackingState.canDownloadInvoice) ...[
-                              const _DownloadInvoiceButton(),
+                            if (trackingState.canDownloadInvoice &&
+                                invoiceUrl.isNotEmpty) ...[
+                              _DownloadInvoiceButton(invoiceUrl: invoiceUrl),
                               const SizedBox(height: 12),
                             ],
                             _TrackingItemsCard(
                               items: items,
                               orderNumber: orderNumber,
+                              onViewSummary: order == null || shipment == null
+                                  ? null
+                                  : () => context.push(
+                                        '/order-detail',
+                                        extra: order!.id,
+                                      ),
                             ),
                             const SizedBox(height: 12),
                             const _TrackingHelpCard(),
                             const SizedBox(height: 12),
-                            const _TrackingRatingCard(),
+                            _TrackingRatingCard(suborderId: orderNumber),
                             const SizedBox(height: 32),
                           ],
                         ),
@@ -132,11 +172,7 @@ class _TrackingHeader extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints.expand(),
                 onPressed: () => context.pop(),
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  size: 22,
-                  color: _TrackingColors.navy,
-                ),
+                icon: const AppBackIcon(),
               ),
             ),
           ),
@@ -168,10 +204,12 @@ class _TrackingHeroSection extends StatelessWidget {
   const _TrackingHeroSection({
     required this.state,
     required this.deliveryDate,
+    required this.deliverySlot,
   });
 
   final _TrackingState state;
   final String deliveryDate;
+  final String deliverySlot;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +242,7 @@ class _TrackingHeroSection extends StatelessWidget {
                 child: _EtaCard(
                   state: state,
                   deliveryDate: deliveryDate,
+                  deliverySlot: deliverySlot,
                 ),
               ),
             ],
@@ -258,11 +297,9 @@ class _TrackingHero extends StatelessWidget {
                 right: 0,
                 top: height * 0.077,
                 height: height * 0.696,
-                child: Image.asset(
-                  state.heroAsset,
+                child: _heroAsset(
                   fit: BoxFit.cover,
                   alignment: Alignment.center,
-                  filterQuality: FilterQuality.high,
                 ),
               )
             else if (state.isDelivered)
@@ -271,18 +308,15 @@ class _TrackingHero extends StatelessWidget {
                 right: 0,
                 top: height * 0.02,
                 bottom: height * 0.17,
-                child: Image.asset(
-                  state.heroAsset,
+                child: _heroAsset(
                   fit: BoxFit.contain,
                   alignment: Alignment.bottomCenter,
-                  filterQuality: FilterQuality.high,
                 ),
               )
             else
               Positioned.fill(
-                child: Image.asset(
-                  state.heroAsset,
-                  fit: BoxFit.cover,
+                child: _heroAsset(
+                  fit: BoxFit.contain,
                   alignment: Alignment.bottomCenter,
                 ),
               ),
@@ -314,16 +348,38 @@ class _TrackingHero extends StatelessWidget {
       ),
     );
   }
+
+  Widget _heroAsset({
+    required BoxFit fit,
+    required AlignmentGeometry alignment,
+  }) {
+    final asset = state.heroAsset;
+    if (asset.toLowerCase().endsWith('.svg')) {
+      return SvgPicture.asset(
+        asset,
+        fit: fit,
+        alignment: alignment,
+      );
+    }
+    return Image.asset(
+      asset,
+      fit: fit,
+      alignment: alignment,
+      filterQuality: FilterQuality.high,
+    );
+  }
 }
 
 class _EtaCard extends StatelessWidget {
   const _EtaCard({
     required this.state,
     required this.deliveryDate,
+    required this.deliverySlot,
   });
 
   final _TrackingState state;
   final String deliveryDate;
+  final String deliverySlot;
 
   @override
   Widget build(BuildContext context) {
@@ -424,7 +480,9 @@ class _EtaCard extends StatelessWidget {
 }
 
 class _DeliveryPartnerCard extends StatelessWidget {
-  const _DeliveryPartnerCard();
+  const _DeliveryPartnerCard({required this.vendorName});
+
+  final String vendorName;
 
   @override
   Widget build(BuildContext context) {
@@ -445,7 +503,7 @@ class _DeliveryPartnerCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Aakash Iyer',
+                  vendorName.isNotEmpty ? vendorName : 'Delivery partner',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
@@ -457,7 +515,7 @@ class _DeliveryPartnerCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Delivery partner',
+                  'Seller',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
@@ -490,9 +548,15 @@ class _DeliveryPartnerCard extends StatelessWidget {
 }
 
 class _DeliveryAddressCard extends StatelessWidget {
-  const _DeliveryAddressCard({required this.address});
+  const _DeliveryAddressCard({
+    required this.address,
+    required this.deliveryName,
+    required this.deliveryPhone,
+  });
 
   final String address;
+  final String deliveryName;
+  final String deliveryPhone;
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +586,9 @@ class _DeliveryAddressCard extends StatelessWidget {
                   width: 204,
                   height: 20,
                   child: Text(
-                    'Delivery to Carlos Sainz ',
+                    deliveryName.isNotEmpty
+                        ? 'Delivery to $deliveryName'
+                        : 'Delivery address',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
@@ -539,7 +605,7 @@ class _DeliveryAddressCard extends StatelessWidget {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 54),
                     child: Text(
-                      '$address\n+91 9876554324',
+                      '$address${deliveryPhone.isNotEmpty ? '\n$deliveryPhone' : ''}',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF67696D),
                         fontSize: 12,
@@ -562,10 +628,12 @@ class _TrackingItemsCard extends StatelessWidget {
   const _TrackingItemsCard({
     required this.items,
     required this.orderNumber,
+    required this.onViewSummary,
   });
 
   final List<OrderItemEntity> items;
   final String orderNumber;
+  final VoidCallback? onViewSummary;
 
   @override
   Widget build(BuildContext context) {
@@ -594,7 +662,7 @@ class _TrackingItemsCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${items.isEmpty ? 3 : items.length} items',
+                          '${items.length} items',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
@@ -621,10 +689,14 @@ class _TrackingItemsCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(
-                              Icons.copy_rounded,
-                              size: 16,
-                              color: Color(0xFF8A8A8A),
+                            GestureDetector(
+                              onTap: () => Clipboard.setData(
+                                  ClipboardData(text: orderNumber)),
+                              child: const Icon(
+                                Icons.copy_rounded,
+                                size: 16,
+                                color: Color(0xFF8A8A8A),
+                              ),
                             ),
                           ],
                         ),
@@ -633,12 +705,8 @@ class _TrackingItemsCard extends StatelessWidget {
                           spacing: 20,
                           runSpacing: 8,
                           children: [
-                            for (var i = 0; i < 3; i++)
-                              _ProductThumb(
-                                item: i < visibleItems.length
-                                    ? visibleItems[i]
-                                    : null,
-                              ),
+                            for (final item in visibleItems)
+                              _ProductThumb(item: item),
                           ],
                         ),
                       ],
@@ -649,16 +717,19 @@ class _TrackingItemsCard extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: Color(0xFFDEDEDE)),
-          SizedBox(
-            height: 41,
-            child: Center(
-              child: Text(
-                'View order summary',
-                style: GoogleFonts.inter(
-                  color: const Color(0xFF0360E5),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  height: 18 / 12,
+          InkWell(
+            onTap: onViewSummary,
+            child: SizedBox(
+              height: 41,
+              child: Center(
+                child: Text(
+                  'View order summary',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0360E5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    height: 18 / 12,
+                  ),
                 ),
               ),
             ),
@@ -670,7 +741,9 @@ class _TrackingItemsCard extends StatelessWidget {
 }
 
 class _DownloadInvoiceButton extends StatelessWidget {
-  const _DownloadInvoiceButton();
+  const _DownloadInvoiceButton({required this.invoiceUrl});
+
+  final String invoiceUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -678,7 +751,12 @@ class _DownloadInvoiceButton extends StatelessWidget {
       height: 48,
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: () {},
+        onPressed: () async {
+          final uri = Uri.tryParse(invoiceUrl);
+          if (uri != null) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
         icon: const Icon(
           Icons.file_download_outlined,
           size: 20,
@@ -714,71 +792,93 @@ class _DownloadInvoiceButton extends StatelessWidget {
 class _TrackingHelpCard extends StatelessWidget {
   const _TrackingHelpCard();
 
+  static const _whatsappNumber = '918970415365';
+
+  Future<void> _openWhatsapp(BuildContext context) async {
+    AppHaptics.lightTap();
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await launchUrl(
+      Uri.parse('https://wa.me/$_whatsappNumber'),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Unable to open WhatsApp.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return _TrackingCard(
-      height: 80,
-      child: Row(
-        children: [
-          const _RoundIcon(
-            background: Color(0xFFDFF8F9),
-            icon: Icons.support_agent_rounded,
-            iconColor: Color(0xFF0A243F),
-            size: 48,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Need help with your order?',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: _TrackingColors.navy,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    height: 20 / 14,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openWhatsapp(context),
+      child: _TrackingCard(
+        height: 80,
+        child: Row(
+          children: [
+            const _RoundIcon(
+              background: Color(0xFFDFF8F9),
+              icon: Icons.support_agent_rounded,
+              iconColor: Color(0xFF0A243F),
+              size: 48,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Need help with your order?',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: _TrackingColors.navy,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 20 / 14,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Contact us about any issues',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: _TrackingColors.grey,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    height: 18 / 12,
+                  const SizedBox(height: 4),
+                  Text(
+                    'Contact us about any issues',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: _TrackingColors.grey,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      height: 18 / 12,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Container(
-            width: 24,
-            height: 24,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF1F1F2),
-              shape: BoxShape.circle,
+            Container(
+              width: 24,
+              height: 24,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF1F1F2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: _TrackingColors.navy,
+              ),
             ),
-            child: const Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: _TrackingColors.navy,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _TrackingRatingCard extends StatelessWidget {
-  const _TrackingRatingCard();
+  const _TrackingRatingCard({required this.suborderId});
+
+  final String suborderId;
 
   @override
   Widget build(BuildContext context) {
@@ -810,7 +910,8 @@ class _TrackingRatingCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           TextButton(
-            onPressed: () => showOrderRatingSheet(context),
+            onPressed: () =>
+                showOrderRatingSheet(context, suborderId: suborderId),
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF0360E5),
               padding: EdgeInsets.zero,
@@ -834,15 +935,40 @@ class _TrackingRatingCard extends StatelessWidget {
 }
 
 class _OrderRatingSheet extends StatefulWidget {
-  const _OrderRatingSheet();
+  const _OrderRatingSheet({required this.suborderId});
+
+  final String suborderId;
 
   @override
   State<_OrderRatingSheet> createState() => _OrderRatingSheetState();
 }
 
 class _OrderRatingSheetState extends State<_OrderRatingSheet> {
-  double _rating = 1;
+  double _rating = 9;
   bool _isSubmitted = false;
+  bool _isSubmitting = false;
+  String? _errorMessage;
+
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+    final failure = await sl<OrdersRepository>().submitReview(
+      suborderId: widget.suborderId,
+      rating: _rating.round(),
+    );
+    if (!mounted) return;
+    setState(() {
+      _isSubmitting = false;
+      if (failure != null) {
+        _errorMessage = failure.message;
+      } else {
+        _isSubmitted = true;
+      }
+    });
+  }
 
   String get _emoji {
     final value = _rating.round();
@@ -1015,7 +1141,7 @@ class _OrderRatingSheetState extends State<_OrderRatingSheet> {
                     ),
                     const SizedBox(height: 8),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 25),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: SliderTheme(
                         data: SliderTheme.of(context).copyWith(
                           trackHeight: 12,
@@ -1068,11 +1194,23 @@ class _OrderRatingSheetState extends State<_OrderRatingSheet> {
                       ),
                     ),
                     const Spacer(),
+                    if (_errorMessage != null) ...[
+                      Text(
+                        _errorMessage!,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFFD32F2F),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          height: 18 / 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     SizedBox(
                       height: 48,
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => setState(() => _isSubmitted = true),
+                        onPressed: _isSubmitting ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           elevation: 0,
                           backgroundColor: const Color(0xFF0360E5),
@@ -1083,15 +1221,24 @@ class _OrderRatingSheetState extends State<_OrderRatingSheet> {
                           padding: EdgeInsets.zero,
                           minimumSize: const Size.fromHeight(48),
                         ),
-                        child: Text(
-                          'Submit',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            height: 21 / 14,
-                          ),
-                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                'Submit',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  height: 21 / 14,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -1230,9 +1377,9 @@ class _AssetRoundIcon extends StatelessWidget {
 }
 
 class _ProductThumb extends StatelessWidget {
-  const _ProductThumb({this.item});
+  const _ProductThumb({required this.item});
 
-  final OrderItemEntity? item;
+  final OrderItemEntity item;
 
   @override
   Widget build(BuildContext context) {
@@ -1242,21 +1389,15 @@ class _ProductThumb extends StatelessWidget {
         width: 44,
         height: 44,
         color: const Color(0xFFF1F1F2),
-        child: item?.imageUrl.isNotEmpty == true
+        child: item.imageUrl.isNotEmpty
             ? CachedNetworkImage(
-                imageUrl: item!.imageUrl,
+                imageUrl: item.imageUrl,
                 fit: BoxFit.contain,
                 memCacheWidth: 88,
                 placeholder: (_, __) => const ImageShimmer(),
-                errorWidget: (_, __, ___) => Image.asset(
-                  'assets/images/Image-coming-soon.png',
-                  fit: BoxFit.contain,
-                ),
+                errorWidget: (_, __, ___) => const ProductImagePlaceholder(),
               )
-            : Image.asset(
-                'assets/images/Image-coming-soon.png',
-                fit: BoxFit.contain,
-              ),
+            : const ProductImagePlaceholder(),
       ),
     );
   }
@@ -1272,6 +1413,11 @@ enum _TrackingState {
     final value =
         status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
     final compactValue = value.replaceAll(' ', '');
+    if (value.contains('waiting') ||
+        value.contains('order placed') ||
+        compactValue == 'orderplaced') {
+      return _TrackingState.packing;
+    }
     if (value.contains('out for delivery') ||
         compactValue.contains('outfordelivery') ||
         value.contains('out for shipment') ||
@@ -1286,9 +1432,9 @@ enum _TrackingState {
       return _TrackingState.delivered;
     }
     if (value.contains('order is packed') ||
-        value.contains('your order is packed') ||
-        value.contains('packed') ||
+        value.contains('Ready for Pickup') ||
         value.contains('ready for pickup') ||
+        compactValue == 'readyforpickup' ||
         value.contains('ready to ship')) {
       return _TrackingState.packed;
     }
@@ -1306,11 +1452,10 @@ enum _TrackingState {
 
   String get heroAsset {
     return switch (this) {
-      _TrackingState.delivered => 'assets/images/Deliveredintacking.webp',
-      _TrackingState.outForDelivery =>
-        'assets/images/out_for_delivery_tracking.png',
-      _TrackingState.packed => 'assets/images/Your order is packed.webp',
-      _TrackingState.packing => 'assets/images/Packing your order.webp',
+      _TrackingState.delivered => 'assets/images/Delivered.webp',
+      _TrackingState.outForDelivery => 'assets/images/Out_for_delivery.webp',
+      _TrackingState.packed => 'assets/images/Your_order_is_packed.webp',
+      _TrackingState.packing => 'assets/images/Packing_your_order.webp',
     };
   }
 
