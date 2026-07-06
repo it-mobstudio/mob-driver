@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
@@ -16,6 +17,7 @@ import 'package:m_o_b_demand_side/features/product/presentation/widgets/browse_p
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_page.dart';
 import 'package:m_o_b_demand_side/shared/back_to_top_button.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 
@@ -80,8 +82,15 @@ class _ProductListingPageState extends State<ProductListingPage> {
 
   void _onScroll() {
     final pixels = _scrollController.position.pixels;
-
-    final show = pixels > _scrollThreshold;
+    final direction = _scrollController.position.userScrollDirection;
+    if (direction == ScrollDirection.reverse) {
+      navBarVisible.value = false;
+    } else if (direction == ScrollDirection.forward) {
+      navBarVisible.value = true;
+    }
+    // Hide while user is actively scrolling up (toward top)
+    final show = pixels > _scrollThreshold &&
+        direction != ScrollDirection.forward;
     if (show != _showBackToTop) setState(() => _showBackToTop = show);
 
     final state = _productBloc.state;

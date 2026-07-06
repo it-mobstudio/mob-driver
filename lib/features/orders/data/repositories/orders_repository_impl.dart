@@ -41,6 +41,28 @@ class OrdersRepositoryImpl implements OrdersRepository {
     }
   }
 
+  @override
+  Future<AppFailure?> submitReview({
+    required String suborderId,
+    required int rating,
+  }) async {
+    try {
+      final body = await _datasource.submitReview(
+        suborderId: suborderId,
+        rating: rating,
+      );
+      if (body['status'] == false) {
+        final msg = body['message']?.toString() ?? 'Failed to submit review.';
+        return BusinessFailure(msg);
+      }
+      return null;
+    } on DioException catch (e) {
+      return e.toAppFailure();
+    } catch (e) {
+      return UnknownFailure(e.toString());
+    }
+  }
+
   List<dynamic> _extractList(dynamic raw) {
     if (raw is List) return raw;
     if (raw is Map) {

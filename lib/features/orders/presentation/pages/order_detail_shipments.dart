@@ -21,10 +21,44 @@ class _ShipmentSection extends StatelessWidget {
     required this.items,
   });
 
+  String _formatDeliveryDate(String isoDate) {
+    if (isoDate.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(isoDate).toLocal();
+      return DateFormat('dd MMM yyyy').format(dt);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _buildDeliveryLabel() {
+    if (shipment.deliverySlot.isNotEmpty) return shipment.deliverySlot;
+    final isDelivered = order.status.trim() == 'Order Delivered';
+    if (isDelivered) {
+      final date = _formatDeliveryDate(order.createdAt);
+      return date.isNotEmpty ? 'Delivered $date' : 'Delivered';
+    }
+
+    final suborders = order.shipments;
+    if (suborders.length <= 1) {
+      final date = _formatDeliveryDate(shipment.deliveryDate);
+      return date.isNotEmpty ? 'Arriving by $date' : '';
+    }
+
+    // 4. Multiple suborders → "Arriving between {first} - {last}"
+    final firstDate = _formatDeliveryDate(suborders.first.deliveryDate);
+    final lastDate = _formatDeliveryDate(suborders.last.deliveryDate);
+    if (firstDate.isNotEmpty && lastDate.isNotEmpty) {
+      return 'Arriving between $firstDate - $lastDate';
+    }
+    if (firstDate.isNotEmpty) return 'Arriving by $firstDate';
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final deliveryLabel = _buildDeliveryLabel();
     return Container(
-      color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,7 +66,7 @@ class _ShipmentSection extends StatelessWidget {
           InkWell(
             borderRadius: BorderRadius.circular(8),
             onTap: () => context.push(
-              OrderTrackingPage.routePath,
+              SuborderDetailPage.routePath,
               extra: {'order': order, 'shipment': shipment},
             ),
             child: Row(
@@ -53,6 +87,8 @@ class _ShipmentSection extends StatelessWidget {
                     children: [
                       Text(
                         'SHIPMENT $index',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
                           color: const Color(0xFF596378),
                           fontSize: 11,
@@ -69,6 +105,16 @@ class _ShipmentSection extends StatelessWidget {
                           height: 28 / 19,
                         ),
                       ),
+                      if (deliveryLabel.isNotEmpty)
+                        Text(
+                          deliveryLabel,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF596378),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            height: 18 / 12,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -127,15 +173,10 @@ class _ShipmentItemTile extends StatelessWidget {
                       fit: BoxFit.contain,
                       memCacheWidth: 88,
                       placeholder: (_, __) => const ImageShimmer(),
-                      errorWidget: (_, __, ___) => Image.asset(
-                        'assets/images/Image-coming-soon.png',
-                        fit: BoxFit.contain,
-                      ),
+                      errorWidget: (_, __, ___) =>
+                          const ProductImagePlaceholder(),
                     )
-                  : Image.asset(
-                      'assets/images/Image-coming-soon.png',
-                      fit: BoxFit.contain,
-                    ),
+                  : const ProductImagePlaceholder(),
             ),
           ),
           const SizedBox(width: 12),

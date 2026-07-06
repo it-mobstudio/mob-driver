@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
+import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 
 /// Floating "View cart" bar. Drop inside a [Stack] and it positions itself
 /// at the bottom-center. Hides itself when the cart is empty.
@@ -40,48 +41,67 @@ class ViewCartBar extends StatelessWidget {
                 .map((i) => i.imageAsset)
                 .toList();
 
-        return Positioned(
-          bottom: bottomOffset + bottomInset + 16,
-          left: 0,
-          right: 0,
-          child: IgnorePointer(
-            ignoring: !hasCart,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 320),
-              reverseDuration: const Duration(milliseconds: 220),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              transitionBuilder: (child, animation) {
-                final offset = Tween<Offset>(
-                  begin: const Offset(0, 1.2),
-                  end: Offset.zero,
-                ).animate(animation);
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: offset,
-                    child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.96, end: 1).animate(
-                        animation,
-                      ),
-                      child: child,
+        final content = IgnorePointer(
+          ignoring: !hasCart,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 320),
+            reverseDuration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              final offset = Tween<Offset>(
+                begin: const Offset(0, 1.2),
+                end: Offset.zero,
+              ).animate(animation);
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: offset,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.96, end: 1).animate(
+                      animation,
                     ),
+                    child: child,
                   ),
-                );
-              },
-              child: hasCart
-                  ? _ViewCartBarContent(
-                      key: const ValueKey<String>('view-cart-bar'),
-                      itemCount: itemCount,
-                      miniImages: miniImages,
-                    )
-                  : const SizedBox(
-                      key: ValueKey<String>('view-cart-empty'),
-                      width: 240,
-                      height: 56,
-                    ),
-            ),
+                ),
+              );
+            },
+            child: hasCart
+                ? _ViewCartBarContent(
+                    key: const ValueKey<String>('view-cart-bar'),
+                    itemCount: itemCount,
+                    miniImages: miniImages,
+                  )
+                : const SizedBox(
+                    key: ValueKey<String>('view-cart-empty'),
+                    width: 240,
+                    height: kViewCartBarHeight,
+                  ),
           ),
+        );
+
+        // The body extends behind the (now overlay-style) bottom nav bar,
+        // so this needs to actively track its visibility: float just above
+        // it while it's showing, and drop down near the true screen edge
+        // once it slides away — otherwise it either sits hidden underneath
+        // the nav bar or leaves a large gap where the nav bar used to
+        // reserve space. Synced to the nav bar's own slide duration/curve.
+        return ValueListenableBuilder<bool>(
+          valueListenable: navBarVisible,
+          builder: (context, isNavBarVisible, child) {
+            return AnimatedPositioned(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              bottom: bottomOffset +
+                  bottomInset +
+                  kViewCartBarGap -
+                  (isNavBarVisible ? 0 : kBottomNavBarHeight),
+              left: 0,
+              right: 0,
+              child: child!,
+            );
+          },
+          child: content,
         );
       },
     );
@@ -108,9 +128,9 @@ class _ViewCartBarContent extends StatelessWidget {
         },
         child: Container(
           width: 240,
-          height: 56,
+          height: kViewCartBarHeight,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF0360E5).withValues(alpha: 0.24),
@@ -125,12 +145,12 @@ class _ViewCartBarContent extends StatelessWidget {
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
                 width: 240,
-                height: 56,
+                height: kViewCartBarHeight,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -141,7 +161,7 @@ class _ViewCartBarContent extends StatelessWidget {
                       const Color(0xFF034FC0).withValues(alpha: 0.86),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.22),
                   ),

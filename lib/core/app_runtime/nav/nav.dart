@@ -18,8 +18,10 @@ import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/order_placed_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/payment_failed_page.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/nav/route_extra_cache.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_suborder_detail_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
@@ -222,6 +224,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
               name: CreditPage.routeName,
               path: CreditPage.routePath,
               builder: (context, state) => const CreditPage(),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              name: 'MoreMenuTab',
+              path: '/more',
+              builder: (context, state) => const MyAccountWidget(),
             ),
           ]),
         ],
@@ -489,13 +498,47 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         builder: (context, state) => const OrderDetailPage(),
       ),
       GoRoute(
+        name: SuborderDetailPage.routeName,
+        path: SuborderDetailPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) {
+          // Browser back/forward on web replays the URL only, not the
+          // `extra` payload — fall back to whatever was last pushed here
+          // this session instead of rendering blank. See RouteExtraCache.
+          final rawExtra =
+              state.extra is Map ? Map<String, dynamic>.from(state.extra as Map) : null;
+          if (rawExtra != null) {
+            RouteExtraCache.put(SuborderDetailPage.routePath, rawExtra);
+          }
+          final extra = rawExtra ??
+              RouteExtraCache.take<Map<String, dynamic>>(
+                  SuborderDetailPage.routePath) ??
+              <String, dynamic>{};
+          return SuborderDetailPage(
+            order: extra['order'] is OrderEntity
+                ? extra['order'] as OrderEntity
+                : null,
+            shipment: extra['shipment'] is OrderShipmentEntity
+                ? extra['shipment'] as OrderShipmentEntity
+                : null,
+          );
+        },
+      ),
+      GoRoute(
         name: OrderTrackingPage.routeName,
         path: OrderTrackingPage.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) {
-          final extra = state.extra is Map
-              ? Map<String, dynamic>.from(state.extra as Map)
-              : <String, dynamic>{};
+          // See the matching comment on SuborderDetailPage above.
+          final rawExtra =
+              state.extra is Map ? Map<String, dynamic>.from(state.extra as Map) : null;
+          if (rawExtra != null) {
+            RouteExtraCache.put(OrderTrackingPage.routePath, rawExtra);
+          }
+          final extra = rawExtra ??
+              RouteExtraCache.take<Map<String, dynamic>>(
+                  OrderTrackingPage.routePath) ??
+              <String, dynamic>{};
           return OrderTrackingPage(
             order: extra['order'] is OrderEntity
                 ? extra['order'] as OrderEntity

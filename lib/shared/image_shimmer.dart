@@ -35,3 +35,28 @@ class _ImageShimmerState extends State<ImageShimmer>
     );
   }
 }
+
+/// Fallback shown in place of a product image when there's no URL to load,
+/// or the real image failed to load. Code-drawn rather than a bundled
+/// asset — there is no packaged "coming soon" image in this project (the
+/// path `assets/images/Image-coming-soon.png` referenced all over the
+/// codebase doesn't exist, which is why those spots rendered as broken
+/// images). Drop-in for CachedNetworkImage's `errorWidget`/`placeholder`,
+/// or directly wherever there's no image URL at all.
+class ProductImagePlaceholder extends StatelessWidget {
+  const ProductImagePlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFF1F1F2),
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 28,
+          color: Color(0xFFB9C0CB),
+        ),
+      ),
+    );
+  }
+}

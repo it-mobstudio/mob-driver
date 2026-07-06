@@ -236,7 +236,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     _requestedPaymentTotal = total;
     _isPaymentOrderRequestInFlight = true;
     _checkoutBloc.add(
-      CheckoutRazorpayOrderRequested(cartId: int.tryParse(cartId) ?? 0),
+      CheckoutRazorpayOrderRequested(
+        cartId: int.tryParse(cartId) ?? 0,
+        paymentOrigin: _paymentOrigin,
+      ),
     );
   }
 
@@ -251,12 +254,12 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     _checkoutBloc.add(
       CheckoutRupifiOrderRequested(
         cartId: cartId,
-        paymentOrigin: _rupifiPaymentOrigin,
+        paymentOrigin: _paymentOrigin,
       ),
     );
   }
 
-  String? get _rupifiPaymentOrigin {
+  String? get _paymentOrigin {
     if (kIsWeb) return null;
     return switch (defaultTargetPlatform) {
       TargetPlatform.iOS => 'IOS_APP',

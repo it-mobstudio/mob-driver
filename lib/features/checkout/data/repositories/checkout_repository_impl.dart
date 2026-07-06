@@ -185,9 +185,15 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   }
 
   @override
-  Future<(RazorpayOrderEntity?, AppFailure?)> createRazorpayOrder(int cartId) async {
+  Future<(RazorpayOrderEntity?, AppFailure?)> createRazorpayOrder(
+    int cartId, {
+    String? paymentOrigin,
+  }) async {
     try {
-      final body = await _datasource.createRazorpayOrder(cartId);
+      final body = await _datasource.createRazorpayOrder(
+        cartId,
+        paymentOrigin: paymentOrigin,
+      );
       if (body['status'] == false) {
         final msg = body['message']?.toString() ?? 'Failed to create Razorpay order.';
         return (null, BusinessFailure(msg));

@@ -768,7 +768,7 @@ class SavingsStrip extends StatelessWidget {
             'Your total savings',
             style: GoogleFonts.inter(
               fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               color: const Color(0xFF0A243F),
               height: 16 / 12,
             ),
@@ -846,7 +846,7 @@ class SellerSection extends StatelessWidget {
                     color: const Color(0xFF0A243F),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const Spacer(),
                 Text(
                   '₹400',
                   style: GoogleFonts.inter(
@@ -855,13 +855,13 @@ class SellerSection extends StatelessWidget {
                     decoration: TextDecoration.lineThrough,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Text(
                   'FREE',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0360E5),
+                    color: const Color(0xFF0A243F),
                   ),
                 ),
               ],
@@ -1012,8 +1012,7 @@ class OrderDetailsCard extends StatelessWidget {
                 _kvRow(
                   'Shipping',
                   shipping == 0 ? 'Free Delivery' : money(shipping),
-                  valueColor:
-                      shipping == 0 ? const Color(0xFF01A685) : null,
+                  valueColor: shipping == 0 ? const Color(0xFF01A685) : null,
                 ),
                 _kvRow(
                   'Total tax',
@@ -1411,10 +1410,10 @@ class BottomCheckoutBar extends StatelessWidget {
                       Text(
                         '₹ ${total!.toStringAsFixed(2)}',
                         style: GoogleFonts.inter(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
-                          height: 20 / 16,
+                          height: 20 / 14,
                         ),
                       ),
                     ],
@@ -1433,10 +1432,10 @@ class BottomCheckoutBar extends StatelessWidget {
                     Text(
                       label,
                       style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                         color: Colors.white,
-                        height: 20 / 15,
+                        height: 20 / 14,
                       ),
                     ),
                   const SizedBox(width: 8),
@@ -1510,7 +1509,6 @@ class BottomCheckoutBar extends StatelessWidget {
     );
   }
 }
-
 
 class FloatingAiMic extends StatelessWidget {
   const FloatingAiMic({

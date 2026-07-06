@@ -13,22 +13,32 @@ class _OrdersHeader extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onBack,
-              child: const SizedBox(
-                width: 20,
-                height: 48,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: Color(0xFF0A243F),
-                    size: 20,
+            // Orders is a bottom-nav tab root, but unlike the other tabs it
+            // can also be pushed on top of another page (e.g. from My
+            // Account), where a real back destination exists. Only show the
+            // arrow when there's actually somewhere to go back to — showing
+            // it unconditionally meant tapping it while on the tab root
+            // (canPop() false, the common case) fell through to a
+            // stack-wiping `go()` instead of a real back.
+            if (context.canPop())
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onBack,
+                child: const SizedBox(
+                  width: 20,
+                  height: 48,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFF0A243F),
+                      size: 20,
+                    ),
                   ),
                 ),
-              ),
-            ),
+              )
+            else
+              const SizedBox(width: 20, height: 48),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

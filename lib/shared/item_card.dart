@@ -86,20 +86,6 @@ class _ItemCardState extends State<ItemCard> {
     });
   }
 
-  void _decrement() {
-    if (_quantityFor(widget.product) <= 0) {
-      return;
-    }
-    final callback = widget.onCartQuantityChanged;
-    if (callback != null) {
-      callback(widget.product, _quantityFor(widget.product) - 1);
-      return;
-    }
-    setState(() {
-      _quantity -= 1;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
@@ -137,20 +123,14 @@ class _ItemCardState extends State<ItemCard> {
                       child: Opacity(
                         opacity: shouldShowOutOfStock ? 0.35 : 1,
                         child: product.primaryImageUrl.isEmpty
-                            ? Image.asset(
-                                'assets/images/Image-coming-soon.png',
-                                fit: BoxFit.contain,
-                              )
+                            ? const ProductImagePlaceholder()
                             : CachedNetworkImage(
                                 imageUrl: product.primaryImageUrl,
                                 fit: BoxFit.contain,
                                 memCacheWidth: 240,
                                 placeholder: (_, __) => const ImageShimmer(),
                                 errorWidget: (context, url, error) =>
-                                    Image.asset(
-                                  'assets/images/Image-coming-soon.png',
-                                  fit: BoxFit.contain,
-                                ),
+                                    const ProductImagePlaceholder(),
                               ),
                       ),
                     ),
@@ -194,14 +174,19 @@ class _ItemCardState extends State<ItemCard> {
                     isFetchingCart: _isUpdating(product),
                     onAdd: (_) async => _increment(),
                     onAddForQuote: (_) async => _increment(),
+                    // Must send the absolute quantity, not translate to a
+                    // single +1/-1 step: ProductCartActionButton debounces
+                    // rapid taps into one call carrying the final settled
+                    // quantity, so a step-based translation here would only
+                    // ever move the real cart by one regardless of how many
+                    // taps the user made.
                     onQuantityChanged: (quantity) {
-                      if (quantity > _quantityFor(product)) {
-                        _increment();
+                      final callback = widget.onCartQuantityChanged;
+                      if (callback != null) {
+                        callback(product, quantity);
                         return;
                       }
-                      if (quantity < _quantityFor(product)) {
-                        _decrement();
-                      }
+                      setState(() => _quantity = quantity);
                     },
                     onNotify: widget.onNotifyTap == null
                         ? null

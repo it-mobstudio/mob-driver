@@ -123,15 +123,10 @@ class _ProductImagesCarouselState extends State<ProductImagesCarousel> {
                             fit: BoxFit.contain,
                             memCacheWidth: 900,
                             placeholder: (_, __) => const ImageShimmer(),
-                            errorWidget: (context, url, error) => Image.asset(
-                              'assets/images/Image-coming-soon.png',
-                              fit: BoxFit.contain,
-                            ),
+                            errorWidget: (context, url, error) =>
+                                const ProductImagePlaceholder(),
                           )
-                        : Image.asset(
-                            'assets/images/Image-coming-soon.png',
-                            fit: BoxFit.contain,
-                          ),
+                        : const ProductImagePlaceholder(),
                   ),
                 ),
               );
@@ -323,10 +318,7 @@ class _PreviewImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (imageUrl.isEmpty) {
-      return Image.asset(
-        'assets/images/Image-coming-soon.png',
-        fit: BoxFit.contain,
-      );
+      return const ProductImagePlaceholder();
     }
 
     return CachedNetworkImage(
@@ -336,10 +328,7 @@ class _PreviewImage extends StatelessWidget {
       placeholder: (context, url) => const Center(
         child: CircularProgressIndicator(),
       ),
-      errorWidget: (context, url, error) => Image.asset(
-        'assets/images/Image-coming-soon.png',
-        fit: BoxFit.contain,
-      ),
+      errorWidget: (context, url, error) => const ProductImagePlaceholder(),
     );
   }
 }

@@ -512,12 +512,10 @@ class _ReviewItemTile extends StatelessWidget {
                           fit: BoxFit.contain,
                           memCacheWidth: 128,
                           placeholder: (_, __) => const ImageShimmer(),
-                          errorWidget: (_, __, ___) => Image.asset(
-                            'assets/images/Image-coming-soon.png',
-                            fit: BoxFit.contain,
-                          ),
+                          errorWidget: (_, __, ___) =>
+                              const ProductImagePlaceholder(),
                         )
-                      : Image.asset(item.imageAsset, fit: BoxFit.contain),
+                      : const ProductImagePlaceholder(),
                 ),
               ),
               const SizedBox(width: 12),

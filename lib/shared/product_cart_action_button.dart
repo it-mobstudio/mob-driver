@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
@@ -15,6 +17,10 @@ enum ProductCartActionButtonStyle {
 
 const _cartActionAnimationDuration = Duration(milliseconds: 250);
 const _cartActionHeight = 40.0;
+// Rapid +/- taps update the on-screen number immediately but only send one
+// network request for the final settled quantity, instead of racing (and
+// mostly dropping) one request per tap.
+const _quantityUpdateDebounce = Duration(milliseconds: 500);
 
 class ProductCartActionButton extends StatefulWidget {
   const ProductCartActionButton({
@@ -30,6 +36,7 @@ class ProductCartActionButton extends StatefulWidget {
     this.style = ProductCartActionButtonStyle.defaultStyle,
     this.showAddText = false,
     this.openVariantsOnAdd = true,
+    this.height,
     this.onAdd,
     this.onAddForQuote,
     this.onNotify,
@@ -48,6 +55,10 @@ class ProductCartActionButton extends StatefulWidget {
   final ProductCartActionButtonStyle style;
   final bool showAddText;
   final bool openVariantsOnAdd;
+  // Overrides the default 40px height (compact circular buttons are exempt —
+  // their size is fixed by design). Used where a page needs a taller button,
+  // e.g. the 48px sticky bar on product details.
+  final double? height;
   final Future<void> Function(int quantity)? onAdd;
   final Future<void> Function(int quantity)? onAddForQuote;
   final Future<void> Function()? onNotify;
@@ -62,12 +73,14 @@ class ProductCartActionButton extends StatefulWidget {
 class _ProductCartActionButtonState extends State<ProductCartActionButton> {
   late int _quantity;
   bool _isSubmitting = false;
+  Timer? _quantityDebounce;
 
   bool get _isCompactStyle =>
       widget.style == ProductCartActionButtonStyle.compact || widget.compact;
 
-  bool get _isRailStyle =>
-      widget.style == ProductCartActionButtonStyle.rail;
+  bool get _isRailStyle => widget.style == ProductCartActionButtonStyle.rail;
+
+  double get _height => widget.height ?? _cartActionHeight;
 
   bool get _isBusy =>
       widget.isFetching || widget.isFetchingCart || _isSubmitting;
@@ -84,9 +97,20 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
   @override
   void didUpdateWidget(ProductCartActionButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.quantity != widget.quantity && widget.quantity > 0) {
+    // Skip while a debounced tap hasn't been sent yet — otherwise a parent
+    // rebuild triggered by something unrelated (e.g. redeem points) can
+    // clobber taps the user just made with the still-stale server quantity.
+    if (_quantityDebounce == null &&
+        oldWidget.quantity != widget.quantity &&
+        widget.quantity > 0) {
       _quantity = widget.quantity;
     }
+  }
+
+  @override
+  void dispose() {
+    _quantityDebounce?.cancel();
+    super.dispose();
   }
 
   Future<void> _runWithBusy(Future<void> Function() action) async {
@@ -112,8 +136,8 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
       vendorProductId: widget.product.addToCartProductId,
     );
     context.read<CartBloc>().add(
-      CartQuantityUpdateRequested(item: cartItem, newQty: quantity),
-    );
+          CartQuantityUpdateRequested(item: cartItem, newQty: quantity),
+        );
     AnalyticsService.instance.logAddToCart(
       productId: widget.product.addToCartProductId,
       slug: widget.product.slug,
@@ -163,6 +187,8 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
     }
     final clamped = next < 0 ? 0 : next;
     if (clamped == 0) {
+      _quantityDebounce?.cancel();
+      _quantityDebounce = null;
       // Don't setState(_quantity = 0) here — that would repaint this widget
       // with "0" still inside the counter (showCounter hasn't flipped off
       // yet), then the parent's rebuild swaps in the ADD button a frame
@@ -174,8 +200,20 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
     final stock = _resolvedAvailableStock;
     final capped =
         stock != null && stock > 0 ? clamped.clamp(1, stock) : clamped;
+    // The number itself updates immediately (below); the network call is
+    // debounced so a burst of taps only sends one request for the final
+    // quantity instead of one per tap.
     setState(() => _quantity = capped);
-    widget.onQuantityChanged?.call(capped);
+    _quantityDebounce?.cancel();
+    _quantityDebounce = Timer(_quantityUpdateDebounce, () {
+      // Timer.cancel() doesn't null this out, and it doesn't clear itself
+      // once it fires either — leaving it set would permanently disable the
+      // didUpdateWidget sync below (it only re-syncs while no debounce is
+      // pending), causing this widget's _quantity to get stuck on a stale
+      // value forever after the very first debounced tap.
+      _quantityDebounce = null;
+      widget.onQuantityChanged?.call(capped);
+    });
   }
 
   int? get _resolvedAvailableStock {
@@ -207,8 +245,8 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
     } else if (shouldShowNotify) {
       child = _buildNotifyButton();
     } else if (shouldShowAdd) {
-      child = _buildAddButton(
-          hasVariants: hasVariants, variantCount: variantCount);
+      child =
+          _buildAddButton(hasVariants: hasVariants, variantCount: variantCount);
     } else {
       child = _buildQuoteButton();
     }
@@ -217,6 +255,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
       isCounter: showQuantitySelector,
       style: widget.style,
       compact: widget.compact,
+      height: _height,
       child: KeyedSubtree(
         key: ValueKey<String>(
           showQuantitySelector
@@ -251,7 +290,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
               },
         child: Container(
           width: 68,
-          height: _cartActionHeight,
+          height: _height,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -292,11 +331,13 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                         alignment: Alignment.center,
                         child: Text(
                           '$variantCount options',
+                          textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
                             color: const Color(0xFF7E7E7E),
-                            fontSize: 7,
+                            fontSize: 8,
                             fontWeight: FontWeight.w500,
+                            height: 12 / 8,
                           ),
                         ),
                       ),
@@ -344,7 +385,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
     }
 
     return SizedBox(
-      height: _cartActionHeight,
+      height: _height,
       child: ElevatedButton(
         onPressed: _isBusy
             ? null
@@ -359,9 +400,9 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF0360E5),
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, _cartActionHeight),
+          minimumSize: Size(double.infinity, _height),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 20),
         ),
         child: _isSubmitting
@@ -380,7 +421,8 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                     'ADD',
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                      fontSize: 12,
+                      height: 16 / 12,
                     ),
                   ),
                   if (hasVariants &&
@@ -389,9 +431,12 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                     const SizedBox(width: 6),
                     Text(
                       '$variantCount options',
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
+                        color: const Color(0xFF7E7E7E),
                         fontWeight: FontWeight.w500,
-                        fontSize: 11,
+                        fontSize: 8,
+                        height: 12 / 8,
                       ),
                     ),
                   ],
@@ -425,7 +470,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
     }
 
     return SizedBox(
-      height: 40,
+      height: _height,
       child: OutlinedButton(
         onPressed: _isBusy ? null : _handleQuote,
         style: OutlinedButton.styleFrom(
@@ -445,6 +490,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w700,
                   fontSize: widget.showAddText ? 14 : 12,
+                  height: widget.showAddText ? 20 / 14 : 16 / 12,
                   color: const Color(0xFF0360E5),
                 ),
               ),
@@ -459,7 +505,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
         onTap: _isBusy ? null : _handleNotify,
         child: Container(
           width: 68,
-          height: 40,
+          height: _height,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -476,9 +522,9 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                   'NOTIFY',
                   style: GoogleFonts.inter(
                     color: const Color(0xFF0360E5),
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    height: 16 / 10,
+                    height: 16 / 12,
                   ),
                 ),
         ),
@@ -505,12 +551,12 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
     }
 
     return SizedBox(
-      height: _cartActionHeight,
+      height: _height,
       child: OutlinedButton(
         onPressed: _isBusy ? null : _handleNotify,
         style: OutlinedButton.styleFrom(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           side: const BorderSide(color: Color(0xFF0A243F)),
           padding: const EdgeInsets.symmetric(horizontal: 14),
         ),
@@ -525,6 +571,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
+                  height: 16 / 12,
                   color: const Color(0xFF0A243F),
                 ),
               ),
@@ -541,7 +588,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
         maxAllowedQuantity == null || _quantity < maxAllowedQuantity;
 
     return Container(
-      height: _cartActionHeight,
+      height: _height,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -557,7 +604,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
             foregroundColor: const Color(0xFF0A243F),
             disabledColor: Colors.grey,
             width: 40,
-            height: _cartActionHeight,
+            height: _height,
             icon: Icons.remove,
             onPressed: _isBusy ? null : () => _updateQuantity(_quantity - 1),
           ),
@@ -577,7 +624,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
             foregroundColor: const Color(0xFF0A243F),
             disabledColor: Colors.grey,
             width: 40,
-            height: _cartActionHeight,
+            height: _height,
             icon: Icons.add,
             onPressed: _isBusy || !canIncrease
                 ? null
@@ -598,7 +645,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
 
     return Container(
       width: double.infinity,
-      height: _cartActionHeight,
+      height: _height,
       decoration: BoxDecoration(
         color: const Color(0xFF0360E5),
         borderRadius: BorderRadius.circular(12),
@@ -623,7 +670,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                   onPressed:
                       _isBusy ? null : () => _updateQuantity(_quantity - 1),
                   width: 38,
-                  height: _cartActionHeight,
+                  height: _height,
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
                   disabledColor: Colors.white.withValues(alpha: 0.45),
@@ -656,7 +703,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                       ? null
                       : () => _updateQuantity(_quantity + 1),
                   width: 38,
-                  height: _cartActionHeight,
+                  height: _height,
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
                   disabledColor: Colors.white.withValues(alpha: 0.45),
@@ -765,12 +812,15 @@ class _AnimatedCartActionShell extends StatelessWidget {
     required this.isCounter,
     required this.style,
     required this.compact,
+    required this.height,
     required this.child,
   });
 
   final bool isCounter;
   final ProductCartActionButtonStyle style;
   final bool compact;
+  // Ignored for the compact circular style, whose size is fixed by design.
+  final double height;
   final Widget child;
 
   bool get _isCompact =>
@@ -793,20 +843,13 @@ class _AnimatedCartActionShell extends StatelessWidget {
           (_, _, true) => hasBoundedWidth ? constraints.maxWidth : 104,
           (_, _, false) => hasBoundedWidth ? constraints.maxWidth : 88,
         };
-        final double height = switch ((_isRail, _isCompact, isCounter)) {
-          (true, _, true) => _cartActionHeight,
-          (true, _, false) => _cartActionHeight,
-          (_, true, true) => _cartActionHeight,
-          (_, true, false) => _cartActionHeight,
-          (_, _, true) => _cartActionHeight,
-          (_, _, false) => _cartActionHeight,
-        };
+        final double effectiveHeight = _isCompact ? _cartActionHeight : height;
 
         return AnimatedContainer(
           duration: _cartActionAnimationDuration,
           curve: Curves.easeOutCubic,
           width: width,
-          height: height,
+          height: effectiveHeight,
           alignment: Alignment.center,
           clipBehavior: Clip.antiAlias,
           decoration: const BoxDecoration(),
@@ -878,40 +921,21 @@ class _QuantityIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEnabled = onPressed != null;
-    return AnimatedSwitcher(
-      duration: _cartActionAnimationDuration,
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final begin = Offset(leading ? -0.45 : 0.45, 0);
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: begin,
-              end: Offset.zero,
-            ).animate(animation),
-            child: ScaleTransition(scale: animation, child: child),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            shape: BoxShape.circle,
           ),
-        );
-      },
-      child: GestureDetector(
-        key: ValueKey<bool>(isEnabled),
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: iconSize,
-              color: isEnabled ? foregroundColor : disabledColor,
-            ),
+          child: Icon(
+            icon,
+            size: iconSize,
+            color: isEnabled ? foregroundColor : disabledColor,
           ),
         ),
       ),

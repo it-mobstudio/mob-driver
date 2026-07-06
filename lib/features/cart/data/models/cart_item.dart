@@ -107,7 +107,7 @@ class CartItem {
 
     return CartItem(
       title: title.isNotEmpty ? title : 'Cart item',
-      imageAsset: image.isNotEmpty ? image : 'assets/images/Image-coming-soon.png',
+      imageAsset: image,
       qty: quantity <= 0 ? 1 : quantity,
       unitPrice: unitPrice,
       sellerCode: sellerCode.isNotEmpty ? sellerCode : 'STORE',

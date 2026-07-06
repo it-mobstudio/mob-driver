@@ -5,7 +5,10 @@ abstract interface class CheckoutRemoteDatasource {
   Future<Map<String, dynamic>> updateAddressToOrder(
       Map<String, dynamic> payload);
   Future<Map<String, dynamic>> placeOrder(Map<String, dynamic> payload);
-  Future<Map<String, dynamic>> createRazorpayOrder(int cartId);
+  Future<Map<String, dynamic>> createRazorpayOrder(
+    int cartId, {
+    String? paymentOrigin,
+  });
   Future<Map<String, dynamic>> verifyRazorpayPayment({
     required String paymentId,
     required String orderId,
@@ -56,10 +59,17 @@ class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
   }
 
   @override
-  Future<Map<String, dynamic>> createRazorpayOrder(int cartId) async {
+  Future<Map<String, dynamic>> createRazorpayOrder(
+    int cartId, {
+    String? paymentOrigin,
+  }) async {
     final response = await _dio.post<dynamic>(
       '/order/razorpay_order/',
-      data: {'cart_id': cartId},
+      data: {
+        'cart_id': cartId,
+        if (paymentOrigin != null && paymentOrigin.isNotEmpty)
+          'order_origin': paymentOrigin,
+      },
     );
     return _toMap(response.data);
   }
@@ -125,7 +135,7 @@ class CheckoutRemoteDatasourceImpl implements CheckoutRemoteDatasource {
       data: {
         'cart_id': cartId,
         if (paymentOrigin != null && paymentOrigin.isNotEmpty)
-          'payment_origin': paymentOrigin,
+          'order_origin': paymentOrigin,
       },
     );
     return _toMap(response.data);

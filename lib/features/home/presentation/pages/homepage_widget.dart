@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +19,7 @@ import 'package:m_o_b_demand_side/features/home/presentation/widgets/product_rai
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/section_title.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/widgets/referral_success_dialog.dart';
 import 'package:m_o_b_demand_side/shared/back_to_top_button.dart';
+import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 
@@ -58,7 +60,16 @@ class _HomepageWidgetState extends State<HomepageWidget> {
   }
 
   void _onScroll() {
-    final show = _scrollController.offset > _scrollThreshold;
+    final offset = _scrollController.offset;
+    final direction = _scrollController.position.userScrollDirection;
+    if (direction == ScrollDirection.reverse) {
+      navBarVisible.value = false;
+    } else if (direction == ScrollDirection.forward) {
+      navBarVisible.value = true;
+    }
+    // Hide while user is actively scrolling up (toward top)
+    final show =
+        offset > _scrollThreshold && direction != ScrollDirection.forward;
     if (show != _showBackToTop) setState(() => _showBackToTop = show);
   }
 
@@ -76,113 +87,141 @@ class _HomepageWidgetState extends State<HomepageWidget> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
+      body: Column(
         children: [
-          BlocBuilder<HomeBloc, HomeState>(
-            builder: (context, state) {
-              return switch (state) {
-                HomeLoaded(:final data) => PullToRefresh(
-                    onRefresh: () async =>
-                        context.read<HomeBloc>().add(HomeRefreshRequested()),
-                    child: CustomScrollView(
-                      controller: _scrollController,
-                      slivers: [
-                        const SliverToBoxAdapter(child: HomeHeader()),
-                        SliverPersistentHeader(
-                          pinned: true,
-                          delegate: _StickySearchDelegate(topInset: topInset),
-                        ),
-                        const SliverToBoxAdapter(child: HomePromoBanner()),
-                        const SliverToBoxAdapter(
-                          child: SectionTitle(
-                              title: 'Explore by categories', topPadding: 24),
-                        ),
-                        SliverToBoxAdapter(
-                          child: HomeCategoryGrid(
-                            categories: data.categories,
-                            isLoading: false,
-                            hasError: false,
-                          ),
-                        ),
-                        const SliverToBoxAdapter(
-                            child: SectionTitle(title: 'Top brands for you')),
-                        const SliverToBoxAdapter(child: HomeBrandGrid()),
-                        const SliverToBoxAdapter(child: HomeSavingsCard()),
-                        ...data.productSections.asMap().entries.map((entry) {
-                          return SliverToBoxAdapter(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ProductRailSection(
-                                  title: entry.value.title,
-                                  products: entry.value.products,
-                                ),
-                                if (entry.key == 0) const HomeWhyChooseCard(),
-                              ],
-                            ),
-                          );
-                        }),
-                        const SliverToBoxAdapter(child: HomeRewardCard()),
-                        SliverToBoxAdapter(
-                          child: SizedBox(
-                            height: 112 + MediaQuery.paddingOf(context).bottom,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                HomeLoading() || HomeInitial() => const _HomeLoadingSkeleton(),
-                HomeError(:final message) => PullToRefresh(
-                    onRefresh: () async =>
-                        context.read<HomeBloc>().add(HomeRefreshRequested()),
-                    child: CustomScrollView(
-                      slivers: [
-                        const SliverToBoxAdapter(child: HomeHeader()),
-                        SliverPersistentHeader(
-                          pinned: true,
-                          delegate: _StickySearchDelegate(topInset: topInset),
-                        ),
-                        SliverFillRemaining(
-                          child: Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.error_outline,
-                                      size: 40, color: Colors.red),
-                                  const SizedBox(height: 12),
-                                  Text(message),
-                                  const SizedBox(height: 12),
-                                  ElevatedButton(
-                                    onPressed: () => context
-                                        .read<HomeBloc>()
-                                        .add(HomeRefreshRequested()),
-                                    child: const Text('Retry'),
-                                  ),
-                                ],
+          // Fixed strip so the dark header extends behind the status bar
+          // without the scrolling sticky search bar reserving that same
+          // inset again (that double-reservation was the variable-height
+          // gap seen above the search box on tall-status-bar devices).
+          Container(height: topInset, color: const Color(0xFF0A3C35)),
+          Expanded(
+            child: Stack(
+              children: [
+                BlocBuilder<HomeBloc, HomeState>(
+                  builder: (context, state) {
+                    return switch (state) {
+                      HomeLoaded(:final data) => PullToRefresh(
+                          onRefresh: () async => context
+                              .read<HomeBloc>()
+                              .add(HomeRefreshRequested()),
+                          child: CustomScrollView(
+                            controller: _scrollController,
+                            slivers: [
+                              const SliverToBoxAdapter(child: HomeHeader()),
+                              const SliverPersistentHeader(
+                                pinned: true,
+                                delegate: _StickySearchDelegate(),
                               ),
-                            ),
+                              const SliverToBoxAdapter(
+                                  child: HomePromoBanner()),
+                              const SliverToBoxAdapter(
+                                child: SectionTitle(
+                                    title: 'Explore by categories',
+                                    topPadding: 24),
+                              ),
+                              SliverToBoxAdapter(
+                                child: HomeCategoryGrid(
+                                  categories: data.categories,
+                                  isLoading: false,
+                                  hasError: false,
+                                ),
+                              ),
+                              const SliverToBoxAdapter(
+                                  child:
+                                      SectionTitle(title: 'Top brands for you')),
+                              const SliverToBoxAdapter(child: HomeBrandGrid()),
+                              const SliverToBoxAdapter(
+                                  child: HomeSavingsCard()),
+                              ...data.productSections.asMap().entries.map(
+                                  (entry) {
+                                return SliverToBoxAdapter(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ProductRailSection(
+                                        title: entry.value.title,
+                                        products: entry.value.products,
+                                      ),
+                                      if (entry.key == 0)
+                                        const HomeWhyChooseCard(),
+                                    ],
+                                  ),
+                                );
+                              }),
+                              const SliverToBoxAdapter(
+                                  child: HomeRewardCard()),
+                              // Worst case: ViewCartBar pill AND the bottom
+                              // nav bar both visible at once (resting state
+                              // after scrolling to the end, cart
+                              // populated) — anything less and the last
+                              // item's text ends up hidden behind them.
+                              SliverToBoxAdapter(
+                                child: SizedBox(
+                                  height: kScrollBottomClearance +
+                                      MediaQuery.paddingOf(context).bottom,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      HomeLoading() ||
+                      HomeInitial() =>
+                        const _HomeLoadingSkeleton(),
+                      HomeError(:final message) => PullToRefresh(
+                          onRefresh: () async => context
+                              .read<HomeBloc>()
+                              .add(HomeRefreshRequested()),
+                          child: CustomScrollView(
+                            slivers: [
+                              const SliverToBoxAdapter(child: HomeHeader()),
+                              const SliverPersistentHeader(
+                                pinned: true,
+                                delegate: _StickySearchDelegate(),
+                              ),
+                              SliverFillRemaining(
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(32),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.error_outline,
+                                            size: 40, color: Colors.red),
+                                        const SizedBox(height: 12),
+                                        Text(message),
+                                        const SizedBox(height: 12),
+                                        ElevatedButton(
+                                          onPressed: () => context
+                                              .read<HomeBloc>()
+                                              .add(HomeRefreshRequested()),
+                                          child: const Text('Retry'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    };
+                  },
+                ),
+                Positioned(
+                  bottom: 80,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: BackToTopButton(
+                      visible: _showBackToTop,
+                      onTap: _scrollToTop,
                     ),
                   ),
-              };
-            },
-          ),
-          Positioned(
-            bottom: 80,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: BackToTopButton(
-                visible: _showBackToTop,
-                onTap: _scrollToTop,
-              ),
+                ),
+                const ViewCartBar(),
+              ],
             ),
           ),
-          const ViewCartBar(),
         ],
       ),
     );
@@ -190,18 +229,16 @@ class _HomepageWidgetState extends State<HomepageWidget> {
 }
 
 class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
-  const _StickySearchDelegate({required this.topInset});
-
-  final double topInset;
+  const _StickySearchDelegate();
 
   // 8 top padding + 48 search bar + 8 bottom padding
   static const double _height = 64.0;
 
   @override
-  double get minExtent => topInset + _height;
+  double get minExtent => _height;
 
   @override
-  double get maxExtent => topInset + _height;
+  double get maxExtent => _height;
 
   @override
   Widget build(
@@ -238,7 +275,7 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             color: Colors.white.withValues(alpha: 0.10),
-            padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: searchBox,
           ),
         ),
@@ -246,14 +283,13 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
     }
     return Container(
       color: const Color(0xFF0A3C35),
-      padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: searchBox,
     );
   }
 
   @override
-  bool shouldRebuild(_StickySearchDelegate oldDelegate) =>
-      topInset != oldDelegate.topInset;
+  bool shouldRebuild(_StickySearchDelegate oldDelegate) => false;
 }
 
 class _RotatingSearchHint extends StatefulWidget {
@@ -362,25 +398,23 @@ class _HomeLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return CustomScrollView(
-      physics: const NeverScrollableScrollPhysics(),
+    return const CustomScrollView(
+      physics: NeverScrollableScrollPhysics(),
       slivers: [
-        const SliverToBoxAdapter(child: HomeHeader()),
+        SliverToBoxAdapter(child: HomeHeader()),
         SliverPersistentHeader(
           pinned: true,
-          delegate: _StickySearchDelegate(topInset: topInset),
+          delegate: _StickySearchDelegate(),
         ),
-        const SliverToBoxAdapter(child: HomePromoBanner()),
-        const SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 180)),
-        const SliverToBoxAdapter(child: _CategoryGridSkeleton()),
-        const SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 150)),
-        const SliverToBoxAdapter(child: _BrandGridSkeleton()),
-        const SliverToBoxAdapter(child: _SavingsCardSkeleton()),
-        const SliverToBoxAdapter(child: _ProductRailSkeleton()),
-        const SliverToBoxAdapter(child: _ProductRailSkeleton()),
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        SliverToBoxAdapter(child: HomePromoBanner()),
+        SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 180)),
+        SliverToBoxAdapter(child: _CategoryGridSkeleton()),
+        SliverToBoxAdapter(child: _SkeletonSectionTitle(width: 150)),
+        SliverToBoxAdapter(child: _BrandGridSkeleton()),
+        SliverToBoxAdapter(child: _SavingsCardSkeleton()),
+        SliverToBoxAdapter(child: _ProductRailSkeleton()),
+        SliverToBoxAdapter(child: _ProductRailSkeleton()),
+        SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
     );
   }

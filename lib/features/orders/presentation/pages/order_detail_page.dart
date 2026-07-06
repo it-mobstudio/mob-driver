@@ -1,12 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_suborder_detail_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 
@@ -114,7 +117,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                     order: order,
                                     shipment: shipments[i],
                                     index: i + 1,
-                                    title: _shipmentTitle(shipments[i], i),
+                                    title:
+                                        _shipmentTitle(order, shipments[i], i),
                                     icon: _shipmentIcon(shipments[i], i),
                                     iconBackground: _shipmentIconBackground(
                                         shipments[i], i),
@@ -127,11 +131,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                               else
                                 const SizedBox(height: 8),
                               const _SectionGap(),
-                              const _RateItemsStrip(),
+                              // const _RateItemsStrip(),
+                              // const _SectionGap(),
+                              _BillDetailsSection(order: order),
                               const _SectionGap(),
-                              const _BillDetailsSection(),
-                              const _SectionGap(),
-                              const _OrderInfoSection(),
+                              _OrderInfoSection(order: order),
                               const _SectionGap(),
                               const _HelpTile(),
                               const _SectionGap(),
@@ -164,19 +168,19 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     ];
   }
 
-  String _shipmentTitle(OrderShipmentEntity shipment, int index) {
-    final status = shipment.status.trim().toLowerCase();
-    if (status.contains('deliver')) return 'Delivered';
-    if (status.contains('pack')) return 'Packing your order';
-    if (status.contains('wait') || status.contains('arriv')) {
-      return index == 0 ? 'Arriving in 5 mins' : 'Arriving in 34 mins';
+  String _shipmentTitle(
+      OrderEntity order, OrderShipmentEntity shipment, int index) {
+    // Use order-level status (order_status from API) to match website display.
+    // Fall back to suborder status only when the order status is empty.
+    final status = order.status.trim().isNotEmpty
+        ? order.status.trim()
+        : shipment.status.trim();
+    if (status.isEmpty) {
+      return index == 0 ? 'Processing' : 'Packing your order';
     }
-    if (shipment.status.trim().isNotEmpty) {
-      return _formatStatus(shipment.status);
-    }
-    return index < 2
-        ? 'Arriving in ${index == 0 ? 5 : 34} mins'
-        : 'Packing your order';
+    if (_isDeliveredStatus(status)) return 'Delivered';
+    if (_isOutForDeliveryStatus(status)) return 'Out for delivery';
+    return _formatStatus(status);
   }
 
   IconData _shipmentIcon(OrderShipmentEntity shipment, int index) {

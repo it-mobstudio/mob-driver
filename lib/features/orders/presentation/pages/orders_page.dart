@@ -119,10 +119,14 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   void _goBack(BuildContext context) {
+    // The header only shows this when canPop() is true, but guard here too
+    // in case it's ever wired up elsewhere. Falls back to Home (inside the
+    // tab shell) rather than a top-level route like '/myaccount', which
+    // would leave the bottom nav bar torn down.
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go('/myaccount');
+      context.go('/homepage');
     }
   }
 }

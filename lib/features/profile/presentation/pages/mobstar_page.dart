@@ -593,11 +593,7 @@ class _AllLevelsSheet extends StatelessWidget {
     return FractionallySizedBox(
       heightFactor: .62,
       widthFactor: 1,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          ClipRRect(
+      child: ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: ColoredBox(
               color: Colors.white,
@@ -607,7 +603,7 @@ class _AllLevelsSheet extends StatelessWidget {
                   children: [
                     Container(
                       height: 56,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.only(left: 16),
                       decoration: const BoxDecoration(
                         color: Color(0xFFF0F0F0),
                         borderRadius:
@@ -629,6 +625,27 @@ class _AllLevelsSheet extends StatelessWidget {
                               'MIN SPEND IN\nA YEAR',
                               textAlign: TextAlign.right,
                               style: _levelHeaderStyle,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              width: 56,
+                              height: 56,
+                              alignment: Alignment.center,
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Color(0xFF0A243F),
+                                  size: 18,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -655,24 +672,6 @@ class _AllLevelsSheet extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            top: -61,
-            child: Material(
-              color: Colors.white,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context).pop(),
-                child: const SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Icon(Icons.close, color: Color(0xFF0A243F), size: 24),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

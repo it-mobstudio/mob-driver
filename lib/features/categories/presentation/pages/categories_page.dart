@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/home/data/models/home_models.dart';
-import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_category_grid.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
@@ -69,21 +67,13 @@ class _CategoriesHeader extends StatelessWidget {
         ),
         child: Row(
           children: [
-            IconButton(
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go(HomepageWidget.routePath);
-                }
-              },
-              icon: const Icon(
-                Icons.arrow_back,
-                color: Color(0xFF0A243F),
-                size: 24,
-              ),
-              tooltip: 'Back',
-            ),
+            // Categories is a bottom-nav tab root — reached only via the
+            // tab bar, never pushed — so there's never real back history
+            // here. A back arrow that fell through to `go(Home)` on every
+            // tap (since canPop() is always false in that case) is what
+            // made "back" feel broken; the tab bar is the way to navigate
+            // away, so no back affordance is shown, matching a tab root.
+            const SizedBox(width: 48),
             Expanded(
               child: Text(
                 'Categories',

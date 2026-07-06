@@ -9,7 +9,9 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
+import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
@@ -18,6 +20,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_project
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
+import 'package:m_o_b_demand_side/shared/mob_credit.dart';
 
 class MyAccountWidget extends StatefulWidget {
   const MyAccountWidget({super.key});
@@ -89,10 +92,11 @@ class _ProfileBody extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   sliver: SliverList.list(
                     children: [
-                      _MobCreditCard(
+                      MobCreditCard(
                         account: account,
-                        onTap: () =>
+                        onManage: () =>
                             context.push(MobCreditProfilePage.routePath),
+                        onApply: () => context.push(CreditPage.routePath),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -110,7 +114,7 @@ class _ProfileBody extends StatelessWidget {
                             child: _SummaryCard(
                               iconAsset: 'assets/images/walletprofile.svg',
                               title: 'Wallet',
-                              subtitle: _formatRupees(account.wallet),
+                              subtitle: formatRupees(account.wallet),
                               onTap: () =>
                                   context.push(WalletPointsPage.routePath),
                             ),
@@ -255,9 +259,13 @@ class _ProfileHeader extends StatelessWidget {
                   shape: const CircleBorder(),
                   child: InkWell(
                     customBorder: const CircleBorder(),
+                    // Fall back to Home *inside* the tab shell (not a bare
+                    // '/homepage' pushReplacement off the root navigator,
+                    // which left the bottom nav bar torn down) for the rare
+                    // case this page has no real back history.
                     onTap: () => context.canPop()
                         ? context.pop()
-                        : context.pushReplacement('/homepage'),
+                        : context.go(HomepageWidget.routePath),
                     child: const Icon(
                       Icons.arrow_back,
                       size: 19,
@@ -461,117 +469,6 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _MobCreditCard extends StatelessWidget {
-  const _MobCreditCard({required this.account, required this.onTap});
-
-  final CartAccountEntity account;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final creditLimit = account.rupifiCurrentLimit != 0
-        ? account.rupifiCurrentLimit
-        : account.mobCreditSanctioned;
-    final available = account.mobCreditAvailable != 0
-        ? account.mobCreditAvailable
-        : creditLimit - account.rupifiBalance;
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [Color(0xFF55A77B), Color(0xFF0D889C)],
-          ),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 96),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/images/mobcreditlogo.svg',
-                        width: 92,
-                        height: 24,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Credit limit: ${_formatRupees(creditLimit)}',
-                          textAlign: TextAlign.right,
-                          softWrap: true,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            height: 20 / 13,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 13),
-                  Container(
-                    height: 1,
-                    color: Colors.white.withValues(alpha: .22),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Available balance',
-                          softWrap: true,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            height: 20 / 13,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        _formatRupees(available),
-                        textAlign: TextAlign.right,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          height: 24 / 17,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ReferralCard extends StatelessWidget {
   const _ReferralCard({required this.onTap});
 
@@ -756,12 +653,6 @@ final TextStyle _subtleStyle = GoogleFonts.inter(
   fontWeight: FontWeight.w400,
   height: 20 / 13,
 );
-
-String _formatRupees(double value) {
-  final text =
-      value % 1 == 0 ? value.toStringAsFixed(0) : value.toStringAsFixed(2);
-  return '₹$text';
-}
 
 String _mobStarAsset(String level) {
   final lower = level.toLowerCase();

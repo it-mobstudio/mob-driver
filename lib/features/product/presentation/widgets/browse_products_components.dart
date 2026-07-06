@@ -1,7 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/item_card.dart';
+import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 
@@ -232,6 +233,12 @@ class BrowseProductFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final tileCount = products.length + 1;
     final rowCount = (tileCount / crossAxisCount).ceil();
+    // Row 2, column 2 (both 0-indexed: row 1, column 1) — falls back to
+    // right after the last product if there aren't enough products for a
+    // real second row to exist yet.
+    final requestCardIndex = products.length > crossAxisCount + 1
+        ? crossAxisCount + 1
+        : products.length;
     final productTypeLabels = _productTypeLabels();
     final brands = brandOptions
         .where((option) => option.trim().isNotEmpty)
@@ -249,7 +256,22 @@ class BrowseProductFeed extends StatelessWidget {
 
     return ListView.builder(
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(10, 14, 10, 96),
+      // Horizontal padding lives on each row individually now (see below)
+      // rather than here, so the product-type rail can bleed to the true
+      // screen edges while everything else keeps a 10px inset. A shared
+      // negative Padding on that one row used to fake the same effect, but
+      // negative padding inside a sliver's tight cross-axis constraints is
+      // invalid and threw a RenderSliverMultiBoxAdaptor assertion.
+      //
+      // Worst case: ViewCartBar pill AND the bottom nav bar both visible
+      // at once — anything less and the last row's text ends up hidden
+      // behind them. Was a static 96 with no safe-area awareness at all.
+      padding: EdgeInsets.fromLTRB(
+        0,
+        14,
+        0,
+        kScrollBottomClearance + MediaQuery.paddingOf(context).bottom,
+      ),
       itemCount: itemCount,
       itemBuilder: (context, index) {
         if (showProductType && index == productTypeSectionIndex) {
@@ -274,16 +296,20 @@ class BrowseProductFeed extends StatelessWidget {
         }
 
         if (productRowIndex < rowCount) {
-          return _ProductGridRow(
-            products: products,
-            startIndex: productRowIndex * crossAxisCount,
-            crossAxisCount: crossAxisCount,
-            cartQtyByProductId: cartQtyByProductId,
-            cartUpdatingProductId: cartUpdatingProductId,
-            onProductTap: onProductTap,
-            onCartQuantityChanged: onCartQuantityChanged,
-            onNotifyTap: onNotifyTap,
-            onRequestTap: onRequestTap,
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: _ProductGridRow(
+              products: products,
+              startIndex: productRowIndex * crossAxisCount,
+              requestCardIndex: requestCardIndex,
+              crossAxisCount: crossAxisCount,
+              cartQtyByProductId: cartQtyByProductId,
+              cartUpdatingProductId: cartUpdatingProductId,
+              onProductTap: onProductTap,
+              onCartQuantityChanged: onCartQuantityChanged,
+              onNotifyTap: onNotifyTap,
+              onRequestTap: onRequestTap,
+            ),
           );
         }
 
@@ -453,7 +479,7 @@ class BrowseRequestCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                     height: 24 / 14,
                     color: Colors.white,
@@ -469,12 +495,12 @@ class BrowseRequestCard extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
                     height: 20 / 11,
-                    color: Colors.white.withOpacity(0.72),
+                    color: Colors.white.withOpacity(0.8),
                   ),
                 ),
                 const Spacer(),
-                SvgPicture.asset(
-                  'assets/images/cantfind.svg',
+                Image.asset(
+                  'assets/images/cantfind.png',
                   width: 88,
                   height: 88,
                   fit: BoxFit.contain,
@@ -512,6 +538,7 @@ class _ProductGridRow extends StatelessWidget {
   const _ProductGridRow({
     required this.products,
     required this.startIndex,
+    required this.requestCardIndex,
     required this.cartQtyByProductId,
     required this.cartUpdatingProductId,
     required this.onProductTap,
@@ -525,6 +552,9 @@ class _ProductGridRow extends StatelessWidget {
 
   final List<ProductModel> products;
   final int startIndex;
+  // Absolute grid slot the "can't find it?" card is inserted at; every
+  // product from here on shifts one slot later to make room for it.
+  final int requestCardIndex;
   final int crossAxisCount;
   final Map<String, int> cartQtyByProductId;
   final String? cartUpdatingProductId;
@@ -561,14 +591,18 @@ class _ProductGridRow extends StatelessWidget {
   }
 
   Widget _tileForIndex(int index, double width) {
-    if (index < products.length) {
-      return _cardForProduct(products[index], width);
-    }
-    if (index == products.length) {
+    if (index == requestCardIndex) {
       return SizedBox(
         height: width + 140,
         child: BrowseRequestCard(onTap: onRequestTap),
       );
+    }
+    // Slots before the request card map straight to the product list;
+    // slots after it shift back by one, since the card took up a slot
+    // that would otherwise have held a product.
+    final productIndex = index < requestCardIndex ? index : index - 1;
+    if (productIndex < products.length) {
+      return _cardForProduct(products[productIndex], width);
     }
     return SizedBox(height: width + 140);
   }
@@ -834,7 +868,8 @@ class _SubCategoryTile extends StatelessWidget {
                         ? const Color(0xFF0A243F)
                         : const Color(0xFF57627A),
                     fontSize: 11,
-                    fontWeight: FontWeight.w400,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.w400,
                     height: 1.27,
                   ),
                 ),
@@ -902,15 +937,9 @@ class _MiniCartImage extends StatelessWidget {
               imageUrl: imageUrl,
               fit: BoxFit.cover,
               memCacheWidth: 64,
-              errorWidget: (_, __, ___) => Image.asset(
-                'assets/images/Image-coming-soon.png',
-                fit: BoxFit.cover,
-              ),
+              errorWidget: (_, __, ___) => const ProductImagePlaceholder(),
             )
-          : Image.asset(
-              'assets/images/Image-coming-soon.png',
-              fit: BoxFit.cover,
-            ),
+          : const ProductImagePlaceholder(),
     );
   }
 }

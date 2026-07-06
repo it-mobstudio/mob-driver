@@ -58,12 +58,28 @@ class OrderShipmentEntity {
     required this.status,
     required this.deliveryDate,
     required this.items,
+    this.vendorName = '',
+    this.deliverySlot = '',
+    this.subTotal = 0,
+    this.total = 0,
+    this.proformaInvoiceUrl = '',
+    this.vehicleAssigned = false,
+    this.rewardPoints = 0,
+    this.rewardMessage = '',
   });
 
   final String id;
   final String status;
   final String deliveryDate;
   final List<OrderItemEntity> items;
+  final String vendorName;
+  final String deliverySlot;
+  final double subTotal;
+  final double total;
+  final String proformaInvoiceUrl;
+  final bool vehicleAssigned;
+  final int rewardPoints;
+  final String rewardMessage;
 
   factory OrderShipmentEntity.fromMap(Map<String, dynamic> map) {
     final productsRaw =
@@ -73,6 +89,36 @@ class OrderShipmentEntity {
       id: (map['suborder_id'] ?? map['id'] ?? '').toString(),
       status: (map['status'] ?? '').toString(),
       deliveryDate: (map['delivery_date'] ?? '').toString(),
+      vendorName: (map['vendor_name'] ?? '').toString(),
+      deliverySlot: (map['delivery_slot'] ?? '').toString(),
+      subTotal: double.tryParse(
+              (map['sub_total'] ?? map['subTotal'] ?? '0').toString()) ??
+          0,
+      total: double.tryParse((map['total'] ?? '0').toString()) ?? 0,
+      vehicleAssigned: map['vehicle_assigned'] == true,
+      proformaInvoiceUrl: () {
+        final proforma = map['proforma_invoices'] is List
+            ? map['proforma_invoices'] as List
+            : <dynamic>[];
+        final invoices = proforma.isNotEmpty
+            ? proforma
+            : (map['invoices'] is List ? map['invoices'] as List : <dynamic>[]);
+        final first = invoices.whereType<Map>().firstOrNull;
+        if (first == null) return '';
+        return (first['short_url'] ?? first['file'] ?? '').toString();
+      }(),
+      rewardPoints: () {
+        final ps = map['sub_order_points_summary'] is Map
+            ? Map<String, dynamic>.from(map['sub_order_points_summary'] as Map)
+            : <String, dynamic>{};
+        return int.tryParse((ps['total_points'] ?? '0').toString()) ?? 0;
+      }(),
+      rewardMessage: () {
+        final ps = map['sub_order_points_summary'] is Map
+            ? Map<String, dynamic>.from(map['sub_order_points_summary'] as Map)
+            : <String, dynamic>{};
+        return (ps['message'] ?? '').toString();
+      }(),
       items: productsRaw
           .whereType<Map>()
           .map((e) => OrderItemEntity.fromMap(Map<String, dynamic>.from(e)))
@@ -94,6 +140,18 @@ class OrderEntity {
     required this.rewardMessage,
     required this.isQuickCommerceOrder,
     required this.shipments,
+    this.subTotal = 0,
+    this.sgst = 0,
+    this.cgst = 0,
+    this.shippingFee = 0,
+    this.deliveryName = '',
+    this.deliveryPhone = '',
+    this.billingName = '',
+    this.billingPhone = '',
+    this.billingAddressFormatted = '',
+    this.gstNumber = '',
+    this.paymentMethods = const [],
+    this.rewardPoints = 0,
   });
 
   final String id;
@@ -107,6 +165,18 @@ class OrderEntity {
   final String projectName;
   final String rewardMessage;
   final List<OrderShipmentEntity> shipments;
+  final double subTotal;
+  final double sgst;
+  final double cgst;
+  final double shippingFee;
+  final String deliveryName;
+  final String deliveryPhone;
+  final String billingName;
+  final String billingPhone;
+  final String billingAddressFormatted;
+  final String gstNumber;
+  final List<String> paymentMethods;
+  final int rewardPoints;
 
   factory OrderEntity.fromMap(Map<String, dynamic> map) {
     final itemsRaw = map['items'] is List ? map['items'] as List : <dynamic>[];
@@ -133,11 +203,32 @@ class OrderEntity {
     final pointsSummary = map['order_points_summary'] is Map
         ? Map<String, dynamic>.from(map['order_points_summary'] as Map)
         : <String, dynamic>{};
-    final isQuickCommerceOrder =
-        map['is_quick_commerce_order'] == true ||
-            map['is_quick_commerce_order'] == 1 ||
-            map['isQuickCommerceOrder'] == true ||
-            map['quick_commerce'] == true;
+    final isQuickCommerceOrder = map['is_quick_commerce_order'] == true ||
+        map['is_quick_commerce_order'] == 1 ||
+        map['isQuickCommerceOrder'] == true ||
+        map['quick_commerce'] == true;
+    final billingAddr = map['billing_address'] is Map
+        ? Map<String, dynamic>.from(map['billing_address'] as Map)
+        : <String, dynamic>{};
+    final billingAddrParts = [
+      billingAddr['address_line_1']?.toString() ?? '',
+      billingAddr['address_line_2']?.toString() ?? '',
+      billingAddr['city']?.toString() ?? '',
+      billingAddr['state']?.toString() ?? '',
+      billingAddr['pincode']?.toString() ?? '',
+    ].where((e) => e.isNotEmpty).toList();
+    final paymentsRaw =
+        map['payments'] is List ? map['payments'] as List : <dynamic>[];
+    final resolvedGst = () {
+      final billingGst = (billingAddr['gst_number'] ?? '').toString().trim();
+      if (billingGst.isNotEmpty) return billingGst;
+      final orderGst = (map['gst_number'] ?? '').toString().trim();
+      if (orderGst.isNotEmpty) return orderGst;
+      final userDetails = map['user_details'] is Map
+          ? Map<String, dynamic>.from(map['user_details'] as Map)
+          : <String, dynamic>{};
+      return (userDetails['gst_number'] ?? '').toString().trim();
+    }();
 
     return OrderEntity(
       id: (map['order_id'] ??
@@ -181,6 +272,28 @@ class OrderEntity {
           .whereType<Map>()
           .map((e) => OrderShipmentEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
+      subTotal: double.tryParse(
+              (map['sub_total'] ?? map['subtotal'] ?? map['total'] ?? '0')
+                  .toString()) ??
+          0,
+      sgst: double.tryParse((map['sgst'] ?? '0').toString()) ?? 0,
+      cgst: double.tryParse((map['cgst'] ?? '0').toString()) ?? 0,
+      shippingFee:
+          double.tryParse((map['shipping_fee'] ?? '0').toString()) ?? 0,
+      deliveryName: (addr['name'] ?? '').toString(),
+      deliveryPhone: (addr['phone_number'] ?? addr['phone'] ?? '').toString(),
+      billingName: (billingAddr['name'] ?? '').toString(),
+      billingPhone: (billingAddr['phone_number'] ?? billingAddr['phone'] ?? '')
+          .toString(),
+      billingAddressFormatted: billingAddrParts.join(', '),
+      gstNumber: resolvedGst,
+      paymentMethods: paymentsRaw
+          .whereType<Map>()
+          .map((p) => (p['payment_gateway'] ?? '').toString())
+          .where((s) => s.isNotEmpty)
+          .toList(),
+      rewardPoints:
+          int.tryParse((pointsSummary['total_points'] ?? '0').toString()) ?? 0,
     );
   }
 }

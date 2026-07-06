@@ -53,11 +53,14 @@ class _HomeHeaderState extends State<HomeHeader> {
     final addressText = selectedAddress == null
         ? 'Tap to set your delivery address'
         : _selectedAddressText(selectedAddress);
+    // Default optimistic copy shown until the store-status call resolves,
+    // so the row never renders blank text that then pops in (was read as
+    // "blinking").
     final deliveryText = storeStatus?.message.trim().isNotEmpty == true
         ? storeStatus?.isOpen == true
             ? '${storeStatus!.message.trim()} delivery'
             : storeStatus!.message.trim()
-        : '';
+        : '1-4 hrs delivery';
     final deliveryIcon = storeStatus?.isOpen == false
         ? 'assets/images/timer-delivery.svg'
         : 'assets/images/thunder.svg';
@@ -65,12 +68,7 @@ class _HomeHeaderState extends State<HomeHeader> {
 
     return Container(
       color: const Color(0xFF0A3C35),
-      padding: EdgeInsets.fromLTRB(
-        16,
-        MediaQuery.paddingOf(context).top + 14,
-        16,
-        16,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       child: Column(
         children: [
           Row(
@@ -82,28 +80,32 @@ class _HomeHeaderState extends State<HomeHeader> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          SvgPicture.asset(
-                            deliveryIcon,
-                            width: 18,
-                            height: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              deliveryText,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                height: 28 / 19,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: Row(
+                          key: ValueKey('$deliveryIcon|$deliveryText'),
+                          children: [
+                            SvgPicture.asset(
+                              deliveryIcon,
+                              width: 18,
+                              height: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                deliveryText,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w700,
+                                  height: 28 / 19,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       Row(
                         children: [
@@ -112,7 +114,7 @@ class _HomeHeaderState extends State<HomeHeader> {
                             style: GoogleFonts.inter(
                               color: Colors.white,
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               height: 18 / 12,
                             ),
                           ),
@@ -124,7 +126,7 @@ class _HomeHeaderState extends State<HomeHeader> {
                               style: GoogleFonts.inter(
                                 color: Colors.white,
                                 fontSize: 12,
-                                fontWeight: FontWeight.w400,
+                                fontWeight: FontWeight.w600,
                                 height: 18 / 12,
                               ),
                             ),
@@ -281,9 +283,9 @@ class _ProfileIconFallback extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: SvgPicture.asset(
-        'assets/icons/profile.svg',
-        width: 18,
-        height: 18,
+        'assets/images/profile.svg',
+        width: 36,
+        height: 36,
       ),
     );
   }

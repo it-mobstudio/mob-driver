@@ -4,4 +4,8 @@ import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.d
 abstract interface class OrdersRepository {
   Future<(List<OrderEntity>?, AppFailure?)> getOrders();
   Future<(OrderEntity?, AppFailure?)> getOrderDetail(String id);
+  Future<AppFailure?> submitReview({
+    required String suborderId,
+    required int rating,
+  });
 }

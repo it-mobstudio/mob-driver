@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/cart/data/datasources/cart_remote_datasource.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
@@ -31,7 +32,14 @@ class CartRepositoryImpl implements CartRepository {
         vendorProductId: vendorProductId,
         quantity: quantity,
       );
-      return (_buildSummary(data), null);
+      // TEMP DIAGNOSTIC — remove once we've confirmed whether add_to_cart
+      // returns a full cart payload (would let CartBloc skip its extra
+      // getCart() refetch on every quantity change).
+      final builtSummary = _buildSummary(data);
+      debugPrint('🔵 ADD_TO_CART quick_commerce present: ${data['quick_commerce']}');
+      debugPrint(
+          '🔵 ADD_TO_CART parsed items: ${builtSummary.items.map((i) => '${i.title} x${i.qty}').toList()}');
+      return (builtSummary, null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {
@@ -49,7 +57,13 @@ class CartRepositoryImpl implements CartRepository {
         cartItemId: cartItemId,
         vendorProductId: vendorProductId,
       );
-      return (_buildSummary(data), null);
+      // TEMP DIAGNOSTIC — remove once we've confirmed whether
+      // remove_cart_item returns a full cart payload.
+      final builtSummary = _buildSummary(data);
+      debugPrint('🔵 REMOVE_CART quick_commerce present: ${data['quick_commerce']}');
+      debugPrint(
+          '🔵 REMOVE_CART parsed items: ${builtSummary.items.map((i) => '${i.title} x${i.qty}').toList()}');
+      return (builtSummary, null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {

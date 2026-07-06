@@ -20,8 +20,9 @@ final class CheckoutOrderPlaceRequested extends CheckoutEvent {
 }
 
 final class CheckoutRazorpayOrderRequested extends CheckoutEvent {
-  CheckoutRazorpayOrderRequested({required this.cartId});
+  CheckoutRazorpayOrderRequested({required this.cartId, this.paymentOrigin});
   final int cartId;
+  final String? paymentOrigin;
 }
 
 final class CheckoutRazorpayPaymentFailed extends CheckoutEvent {
@@ -180,7 +181,10 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     Emitter<CheckoutState> emit,
   ) async {
     emit(CheckoutLoading());
-    final (entity, failure) = await _repository.createRazorpayOrder(event.cartId);
+    final (entity, failure) = await _repository.createRazorpayOrder(
+      event.cartId,
+      paymentOrigin: event.paymentOrigin,
+    );
     if (failure != null) {
       AppHaptics.error();
       emit(CheckoutError(failure.message));

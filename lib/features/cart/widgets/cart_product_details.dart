@@ -63,12 +63,10 @@ class CartProductDetails extends StatelessWidget {
                       fit: BoxFit.contain,
                       memCacheWidth: 136,
                       placeholder: (_, __) => const ImageShimmer(),
-                      errorWidget: (_, __, ___) => Image.asset(
-                        'assets/images/Image-coming-soon.png',
-                        fit: BoxFit.contain,
-                      ),
+                      errorWidget: (_, __, ___) =>
+                          const ProductImagePlaceholder(),
                     )
-                  : Image.asset(item.imageAsset, fit: BoxFit.contain),
+                  : const ProductImagePlaceholder(),
             ),
             const SizedBox(width: 10),
             // Product name + unit price
@@ -81,10 +79,10 @@ class CartProductDetails extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF0A243F),
-                      height: 20 / 13,
+                      height: 20 / 12,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -92,7 +90,8 @@ class CartProductDetails extends StatelessWidget {
                     '₹ ${item.unitPrice.toStringAsFixed(0)} /unit',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: const Color(0xFF767C8F),
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF8A8A8A),
                       height: 18 / 12,
                     ),
                   ),
@@ -105,7 +104,7 @@ class CartProductDetails extends StatelessWidget {
               '₹${item.lineTotal.toStringAsFixed(0)}',
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w700,
-                fontSize: 15,
+                fontSize: 14,
                 color: const Color(0xFF0A243F),
               ),
             ),
