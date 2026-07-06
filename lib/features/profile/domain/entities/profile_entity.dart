@@ -602,4 +602,16 @@ class ProjectListEntity {
     page: 1,
     totalCount: 0,
   );
+
+  ProjectListEntity copyWith({
+    List<ProjectEntity>? projects,
+    int? page,
+    int? totalCount,
+  }) {
+    return ProjectListEntity(
+      projects: projects ?? this.projects,
+      page: page ?? this.page,
+      totalCount: totalCount ?? this.totalCount,
+    );
+  }
 }

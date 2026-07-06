@@ -5,6 +5,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/quote_item_row.dart';
+import 'package:m_o_b_demand_side/shared/image_url.dart';
 
 
 class ResultsScreen extends StatelessWidget {
@@ -454,10 +455,10 @@ class ResultsScreen extends StatelessWidget {
             'mob_sku': sku,
             'isAdded': quoteSkus.contains(sku),
             'name': name.isEmpty ? 'Recommended product' : name,
-            'img': firstNonEmptyOf([
+            'img': sanitizeImageUrl(firstNonEmptyOf([
               stringValueOf(product, const ['product_image', 'image']),
               stringValueOf(entry, const ['product_image']),
-            ]),
+            ])),
             'price': price,
             'unit': firstNonEmptyOf([
               stringValueOf(entry, const ['unit']),

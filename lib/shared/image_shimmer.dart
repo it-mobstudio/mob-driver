@@ -36,13 +36,6 @@ class _ImageShimmerState extends State<ImageShimmer>
   }
 }
 
-/// Fallback shown in place of a product image when there's no URL to load,
-/// or the real image failed to load. Code-drawn rather than a bundled
-/// asset — there is no packaged "coming soon" image in this project (the
-/// path `assets/images/Image-coming-soon.png` referenced all over the
-/// codebase doesn't exist, which is why those spots rendered as broken
-/// images). Drop-in for CachedNetworkImage's `errorWidget`/`placeholder`,
-/// or directly wherever there's no image URL at all.
 class ProductImagePlaceholder extends StatelessWidget {
   const ProductImagePlaceholder({super.key});
 

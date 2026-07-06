@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '/backend/api_requests/api_manager.dart';
 import '/core/config/app_config.dart';
+import '/features/address/data/local/selected_address_store.dart';
 
 class AuthSession extends ChangeNotifier {
   AuthSession._();
@@ -147,6 +148,11 @@ class AuthSession extends ChangeNotifier {
         userDetails == null ? null : Map<String, dynamic>.from(userDetails);
     _needsRegistration = needsRegistration;
 
+    // A fresh session may belong to a different account than whatever was
+    // last signed in on this device — drop any address cached for the
+    // previous identity so it doesn't leak into the new session.
+    await SelectedAddressStore.clear();
+
     await _storage.write(key: _accessTokenKey, value: _accessToken);
     await prefs.setString(_prefsAccessTokenKey, _accessToken!);
     if (_refreshToken != null && _refreshToken!.isNotEmpty) {
@@ -221,6 +227,7 @@ class AuthSession extends ChangeNotifier {
     ApiManager.clearCache('homeData');
     ApiManager.clearCache('browseProducts');
     ApiManager.clearCache('productDetails');
+    await SelectedAddressStore.clear();
     notifyListeners();
   }
 

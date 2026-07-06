@@ -170,10 +170,9 @@ class _HomeHeaderState extends State<HomeHeader> {
                     border: Border.all(color: const Color(0xFFD0D4DC)),
                   ),
                   alignment: Alignment.center,
-                  child: SvgPicture.asset(
-                    'assets/images/profile.svg',
-                    width: 24,
-                    height: 24,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: _ProfileAvatar(profilePictureUrl: profilePictureUrl),
                   ),
                 ),
               ),
@@ -224,14 +223,31 @@ class _HomeHeaderState extends State<HomeHeader> {
       return;
     }
 
+    // No cached selection for the current session (fresh login, or this
+    // account never picked one) — the current user's own saved addresses
+    // are the source of truth, never whatever a previous account left behind.
     final (addresses, failure) = await sl<AddressRepository>().getAddresses();
-    if (!mounted || failure != null || addresses == null || addresses.isEmpty) {
+    if (!mounted) return;
+    if (failure == null && addresses != null && addresses.isNotEmpty) {
+      final firstSavedAddress = addresses.first;
+      await SelectedAddressStore.save(firstSavedAddress);
+      if (!mounted) return;
+      setState(() => _selectedAddress = firstSavedAddress);
       return;
     }
-    final firstSavedAddress = addresses.first;
-    await SelectedAddressStore.save(firstSavedAddress);
-    if (!mounted) return;
-    setState(() => _selectedAddress = firstSavedAddress);
+
+    // New user, or an existing user with no saved address at all — proactively
+    // ask for their location instead of waiting for them to notice the header.
+    await _promptForLocation();
+  }
+
+  Future<void> _promptForLocation() async {
+    final selected = await context.push<AddressEntity>(
+      AddressSelectionWidget.routePath,
+    );
+    if (!mounted || selected == null) return;
+    await SelectedAddressStore.save(selected);
+    setState(() => _selectedAddress = selected);
   }
 
   Future<void> _loadStoreStatus() async {

@@ -33,16 +33,21 @@ class _MyProjectsView extends StatefulWidget {
 
 class _MyProjectsViewState extends State<_MyProjectsView> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _selectedCity = '';
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     _searchController
       ..removeListener(_onSearchChanged)
       ..dispose();
@@ -50,6 +55,22 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
   }
 
   void _onSearchChanged() => setState(() {});
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.extentAfter > 360) return;
+
+    final state = context.read<ProfileBloc>().state;
+    if (state is! ProjectsLoaded ||
+        state.isLoadingMore ||
+        state.hasReachedEnd) {
+      return;
+    }
+    context
+        .read<ProfileBloc>()
+        .add(ProjectsLoadRequested(page: state.projects.page + 1));
+  }
 
   Future<void> _refresh() async {
     context.read<ProfileBloc>().add(ProjectsLoadRequested());
@@ -78,6 +99,7 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
                   color: _ProjectColors.blue,
                   onRefresh: _refresh,
                   child: CustomScrollView(
+                    controller: _scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
                       if (state is! ProjectsLoaded || list.projects.isNotEmpty)
@@ -125,13 +147,42 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
                       else
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-                          sliver: SliverList.separated(
-                            itemBuilder: (context, index) {
-                              return _ProjectCard(project: projects[index]);
-                            },
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemCount: projects.length,
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                if (index < projects.length) {
+                                  return Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom:
+                                          index == projects.length - 1 ? 0 : 12,
+                                    ),
+                                    child: _ProjectCard(
+                                      project: projects[index],
+                                    ),
+                                  );
+                                }
+                                return _ProjectsPaginationFooter(
+                                  isLoading: state is ProjectsLoaded &&
+                                      state.isLoadingMore,
+                                  errorMessage: state is ProjectsLoaded
+                                      ? state.loadMoreError
+                                      : null,
+                                  onRetry: state is ProjectsLoaded
+                                      ? () => context.read<ProfileBloc>().add(
+                                            ProjectsLoadRequested(
+                                              page: state.projects.page + 1,
+                                            ),
+                                          )
+                                      : null,
+                                );
+                              },
+                              childCount: projects.length +
+                                  (state is ProjectsLoaded &&
+                                          (state.isLoadingMore ||
+                                              state.loadMoreError != null)
+                                      ? 1
+                                      : 0),
+                            ),
                           ),
                         ),
                     ],
@@ -159,6 +210,64 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
         .toList()
       ..sort();
     return cities;
+  }
+}
+
+class _ProjectsPaginationFooter extends StatelessWidget {
+  const _ProjectsPaginationFooter({
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onRetry,
+  });
+
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: _ProjectColors.blue,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (errorMessage == null || errorMessage!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        children: [
+          Text(
+            errorMessage!,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: _ProjectColors.muted,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 18 / 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

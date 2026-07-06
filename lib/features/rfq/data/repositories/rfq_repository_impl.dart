@@ -9,20 +9,25 @@ class RfqRepositoryImpl implements RfqRepository {
 
   final RfqRemoteDatasource _datasource;
 
+  static const _pageSize = 20;
+
   @override
-  Future<(List<RfqEntity>?, AppFailure?)> getRfqList() async {
+  Future<(List<RfqEntity>?, bool, AppFailure?)> getRfqList({
+    int page = 1,
+    String? search,
+  }) async {
     try {
-      final raw = await _datasource.getRfqList();
+      final raw = await _datasource.getRfqList(page: page, search: search);
       final list = _extractList(raw);
       final rfqs = list
           .whereType<Map>()
           .map((e) => RfqEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList();
-      return (rfqs, null);
+      return (rfqs, _hasMore(raw, rfqs.length, page), null);
     } on DioException catch (e) {
-      return (null, e.toAppFailure());
+      return (null, false, e.toAppFailure());
     } catch (e) {
-      return (null, UnknownFailure(e.toString()));
+      return (null, false, UnknownFailure(e.toString()));
     }
   }
 
@@ -40,6 +45,33 @@ class RfqRepositoryImpl implements RfqRepository {
     }
 
     return <dynamic>[];
+  }
+
+  Map<String, dynamic> _extractPagination(dynamic raw) {
+    if (raw is Map) {
+      final body = Map<String, dynamic>.from(raw);
+      final data = body['data'];
+      if (data is Map) {
+        final pagination = Map<String, dynamic>.from(data)['pagination'];
+        if (pagination is Map) return Map<String, dynamic>.from(pagination);
+      }
+      final pagination = body['pagination'];
+      if (pagination is Map) return Map<String, dynamic>.from(pagination);
+    }
+    return const {};
+  }
+
+  bool _hasMore(dynamic raw, int loadedCount, int page) {
+    final pagination = _extractPagination(raw);
+    if (pagination.containsKey('is_next_page')) {
+      return pagination['is_next_page'] == true;
+    }
+    final totalEntries =
+        int.tryParse((pagination['total_entries'] ?? '').toString());
+    if (totalEntries != null) {
+      return page * _pageSize < totalEntries;
+    }
+    return loadedCount >= _pageSize;
   }
 
   @override

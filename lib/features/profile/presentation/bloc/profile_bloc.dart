@@ -79,8 +79,17 @@ final class MobstarError extends ProfileState {
 }
 
 final class ProjectsLoaded extends ProfileState {
-  ProjectsLoaded(this.projects);
+  ProjectsLoaded(
+    this.projects, {
+    this.isLoadingMore = false,
+    this.hasReachedEnd = false,
+    this.loadMoreError,
+  });
+
   final ProjectListEntity projects;
+  final bool isLoadingMore;
+  final bool hasReachedEnd;
+  final String? loadMoreError;
 }
 
 final class ProjectsError extends ProfileState {
@@ -178,13 +187,79 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProjectsLoadRequested event,
     Emitter<ProfileState> emit,
   ) async {
-    emit(ProfileLoading());
+    final currentState = state;
+    final isFirstPage = event.page <= 1;
+    final currentProjects =
+        currentState is ProjectsLoaded ? currentState.projects : null;
+
+    if (isFirstPage) {
+      emit(ProfileLoading());
+    } else if (currentState is ProjectsLoaded) {
+      if (currentState.isLoadingMore || currentState.hasReachedEnd) return;
+      emit(ProjectsLoaded(
+        currentState.projects,
+        isLoadingMore: true,
+        hasReachedEnd: currentState.hasReachedEnd,
+      ));
+    }
+
     final (projects, failure) = await _repository.getProjects(page: event.page);
     if (failure != null) {
       AppHaptics.error();
-      emit(ProjectsError(failure.message));
+      if (!isFirstPage && currentProjects != null) {
+        emit(ProjectsLoaded(
+          currentProjects,
+          hasReachedEnd: false,
+          loadMoreError: failure.message,
+        ));
+      } else {
+        emit(ProjectsError(failure.message));
+      }
     } else {
-      emit(ProjectsLoaded(projects!));
+      final fetched = projects!;
+      if (isFirstPage || currentProjects == null) {
+        emit(ProjectsLoaded(
+          fetched,
+          hasReachedEnd: _hasReachedProjectsEnd(fetched),
+        ));
+      } else {
+        final merged = _mergeProjects(currentProjects.projects, fetched.projects);
+        final totalCount = fetched.totalCount > 0
+            ? fetched.totalCount
+            : currentProjects.totalCount;
+        final nextList = fetched.copyWith(
+          projects: merged,
+          totalCount: totalCount,
+        );
+        emit(ProjectsLoaded(
+          nextList,
+          hasReachedEnd: fetched.projects.isEmpty ||
+              (totalCount > 0 && merged.length >= totalCount),
+        ));
+      }
     }
+  }
+
+  bool _hasReachedProjectsEnd(ProjectListEntity projects) {
+    return projects.projects.isEmpty ||
+        (projects.totalCount > 0 &&
+            projects.projects.length >= projects.totalCount);
+  }
+
+  List<ProjectEntity> _mergeProjects(
+    List<ProjectEntity> existing,
+    List<ProjectEntity> incoming,
+  ) {
+    final seen = <String>{};
+    final merged = <ProjectEntity>[];
+    for (final project in [...existing, ...incoming]) {
+      final key = project.id != 0
+          ? project.id.toString()
+          : project.projectId.trim().isNotEmpty
+              ? project.projectId.trim()
+              : '${project.name}|${project.address}|${project.phone}';
+      if (seen.add(key)) merged.add(project);
+    }
+    return merged;
   }
 }

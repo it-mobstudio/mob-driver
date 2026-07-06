@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
@@ -11,16 +12,16 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
-import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
-import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 import 'package:m_o_b_demand_side/shared/mob_credit.dart';
 
 class MyAccountWidget extends StatefulWidget {
@@ -35,6 +36,8 @@ class MyAccountWidget extends StatefulWidget {
 
 class _MyAccountWidgetState extends State<MyAccountWidget> {
   late final ProfileBloc _profileBloc;
+  final _scrollController = ScrollController();
+  bool _frosted = false;
 
   @override
   void initState() {
@@ -44,10 +47,18 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
       if (!mounted) return;
       context.read<CartBloc>().add(CartLoadRequested());
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    final shouldFrost = _scrollController.offset > 8;
+    if (shouldFrost != _frosted) setState(() => _frosted = shouldFrost);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _profileBloc.close();
     super.dispose();
   }
@@ -56,16 +67,23 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _profileBloc,
-      child: const Scaffold(
+      child: Scaffold(
         backgroundColor: _ProfileColors.background,
-        body: _ProfileBody(),
+        body: Stack(
+          children: [
+            _ProfileBody(scrollController: _scrollController),
+            FrostedNavBar(frosted: _frosted),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _ProfileBody extends StatelessWidget {
-  const _ProfileBody();
+  const _ProfileBody({required this.scrollController});
+
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +102,7 @@ class _ProfileBody extends StatelessWidget {
             final account = cartSummary.account;
 
             return CustomScrollView(
+              controller: scrollController,
               physics: const BouncingScrollPhysics(),
               slivers: [
                 SliverToBoxAdapter(
@@ -149,12 +168,12 @@ class _ProfileBody extends StatelessWidget {
                           _MenuItem(
                             iconAsset: 'assets/images/myprojects.svg',
                             label: 'My projects',
-                            onTap: () => _comingSoon(context, 'My projects'),
+                            onTap: () => context.push(MyProjectsPage.routePath),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/mobsupport.svg',
                             label: 'mob support',
-                            onTap: () => _comingSoon(context, 'mob support'),
+                            onTap: () => _openWhatsapp(context),
                           ),
                         ],
                       ),
@@ -170,33 +189,44 @@ class _ProfileBody extends StatelessWidget {
                       const SizedBox(height: 20),
                       _MenuCard(
                         items: [
-                          _MenuItem(
-                            iconAsset: 'assets/images/notifications.svg',
-                            label: 'Notification preferences',
-                            onTap: () => _comingSoon(
-                                context, 'Notification preferences'),
-                          ),
+                          // Notification preferences: hidden for now (not
+                          // ready), keeping the entry here so it's a one-line
+                          // uncomment to bring back rather than a rebuild.
+                          // _MenuItem(
+                          //   iconAsset: 'assets/images/notifications.svg',
+                          //   label: 'Notification preferences',
+                          //   onTap: () => _comingSoon(
+                          //       context, 'Notification preferences'),
+                          // ),
                           _MenuItem(
                             iconAsset: 'assets/images/aboutus.svg',
                             label: 'About us',
-                            onTap: () => _comingSoon(context, 'About us'),
+                            onTap: () => _openExternal(
+                              context,
+                              'https://madoverbuildings.com/home/aboutus',
+                            ),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/faqs.svg',
                             label: 'FAQs',
-                            onTap: () => _comingSoon(context, 'FAQs'),
+                            onTap: () => _openExternal(
+                              context,
+                              'https://madoverbuildings.com/home/faq?key=faq',
+                            ),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/becomepartner.svg',
                             label: 'Become a partner',
-                            onTap: () =>
-                                _comingSoon(context, 'Become a partner'),
+                            onTap: () => _openExternal(
+                              context,
+                              'https://www.partner.madoverbuildings.com/',
+                            ),
                           ),
-                          const _MenuItem(
+                          _MenuItem(
                             iconAsset: 'assets/images/logout.svg',
                             label: 'Logout',
                             showChevron: false,
-                            onTap: _logout,
+                            onTap: () => _confirmLogout(context),
                           ),
                         ],
                       ),
@@ -207,131 +237,52 @@ class _ProfileBody extends StatelessWidget {
               ],
             );
           },
-        return CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(child: _ProfileHeader(profile: profile)),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              sliver: SliverList.list(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _SummaryCard(
-                          iconAsset: 'assets/images/ordersprofile.svg',
-                          title: 'Orders',
-                          subtitle: 'View all orders',
-                          onTap: () => context.push(OrdersPage.routePath),
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: _SummaryCard(
-                          iconAsset: 'assets/images/walletprofile.svg',
-                          title: 'Wallet',
-                          subtitle: '₹1500',
-                          onTap: () => context.push(WalletPointsPage.routePath),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _ReferralCard(
-                    onTap: () => context.push(ReferralPage.routePath),
-                  ),
-                  const SizedBox(height: 16),
-                  _MenuCard(
-                    items: [
-                      _MenuItem(
-                        iconAsset: 'assets/images/quotationreq.svg',
-                        label: 'Quotation request',
-                        onTap: () => context.push(RfqPage.routePath),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/addresses.svg',
-                        label: 'Address',
-                        onTap: () =>
-                            context.push(AddressSelectionWidget.routePath),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/mobcreditprofile.svg',
-                        label: 'mob Credit',
-                        onTap: () =>
-                            context.push(MobCreditProfilePage.routePath),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/myprojects.svg',
-                        label: 'My projects',
-                        onTap: () => context.push(MyProjectsPage.routePath),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/mobsupport.svg',
-                        label: 'mob support',
-                        onTap: () => _comingSoon(context, 'mob support'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'OTHER INFORMATION',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF67696D),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      height: 20 / 13,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _MenuCard(
-                    items: [
-                      _MenuItem(
-                        iconAsset: 'assets/images/notifications.svg',
-                        label: 'Notification preferences',
-                        onTap: () =>
-                            _comingSoon(context, 'Notification preferences'),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/aboutus.svg',
-                        label: 'About us',
-                        onTap: () => _comingSoon(context, 'About us'),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/faqs.svg',
-                        label: 'FAQs',
-                        onTap: () => _comingSoon(context, 'FAQs'),
-                      ),
-                      _MenuItem(
-                        iconAsset: 'assets/images/becomepartner.svg',
-                        label: 'Become a partner',
-                        onTap: () => _comingSoon(context, 'Become a partner'),
-                      ),
-                      const _MenuItem(
-                        iconAsset: 'assets/images/logout.svg',
-                        label: 'Logout',
-                        showChevron: false,
-                        onTap: _logout,
-                      ),
-                    ],
-                  ),
-                  const _VersionFooter(),
-                ],
-              ),
-            ),
-          ],
         );
       },
     );
   }
 
-  static void _comingSoon(BuildContext context, String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label is coming soon')),
-    );
+  static Future<void> _openExternal(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open link.')),
+      );
+    }
   }
 
-  static Future<void> _logout() async {
-    await AuthSession.instance.signOut();
+  static Future<void> _openWhatsapp(BuildContext context) async {
+    final uri = Uri.parse('https://wa.me/918970415365');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open WhatsApp.')),
+      );
+    }
+  }
+
+  static Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await AuthSession.instance.signOut();
+    }
   }
 }
 
@@ -364,78 +315,65 @@ class _ProfileHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 36,
-                height: 36,
-                child: Material(
-                  color: Colors.white,
-                  shape: const CircleBorder(
-                    side: BorderSide(color: Color(0xFFD0D4DC)),
-                  ),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    // Fall back to Home *inside* the tab shell (not a bare
-                    // '/homepage' pushReplacement off the root navigator,
-                    // which left the bottom nav bar torn down) for the rare
-                    // case this page has no real back history.
-                    onTap: () => context.canPop()
-                        ? context.pop()
-                        : context.go(HomepageWidget.routePath),
-                    child: const SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: Center(child: AppBackIcon()),
-                    ),
+              // Back button now lives in the fixed FrostedNavBar overlay
+              // (see MyAccountWidget.build) so it stays pinned above this
+              // scrolling header instead of scrolling away with it.
+              const SizedBox(height: 56),
+              const SizedBox(height: 34),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => context.push(PersonalInfoPage.routePath),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.white,
+                        backgroundImage: profileImage.isNotEmpty
+                            ? NetworkImage(profileImage)
+                            : null,
+                        child: profileImage.isEmpty
+                            ? SvgPicture.asset(
+                                'assets/icons/profile.svg',
+                                width: 31,
+                                height: 31,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                                height: 1.48,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              phone,
+                              style: GoogleFonts.inter(
+                                color: Colors.white.withValues(alpha: .60),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                height: 1.54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // const _Chevron(color: Colors.white),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 34),
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.white,
-                    backgroundImage: profileImage.isNotEmpty
-                        ? NetworkImage(profileImage)
-                        : null,
-                    child: profileImage.isEmpty
-                        ? SvgPicture.asset(
-                            'assets/icons/profile.svg',
-                            width: 31,
-                            height: 31,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 21,
-                            fontWeight: FontWeight.w700,
-                            height: 1.48,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          phone,
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withValues(alpha: .60),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            height: 1.54,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ),
               const SizedBox(height: 24),
               _MembershipBar(
@@ -501,8 +439,8 @@ class _MembershipBar extends StatelessWidget {
                         ),
                         Text(
                           '$membership member',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
                             color: Colors.white,
                             fontSize: 14,
@@ -515,8 +453,8 @@ class _MembershipBar extends StatelessWidget {
                   ),
                   Text(
                     '$points Points',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 14,
@@ -587,40 +525,6 @@ class _SummaryCard extends StatelessWidget {
                 ],
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SvgPicture.asset(iconAsset, width: 24, height: 24),
-                const SizedBox(height: 12),
-                Text(title, style: _labelStyle),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _subtleStyle,
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right,
-                      size: 12,
-                      color: Color(0xFF78838F),
-                    ),
-                  ],
-                ),
-              ],
-            ),
           ),
         ),
       ),

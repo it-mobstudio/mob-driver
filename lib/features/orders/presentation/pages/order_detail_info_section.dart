@@ -32,6 +32,14 @@ class _OrderInfoSection extends StatelessWidget {
     return '+91 $phone';
   }
 
+  Future<void> _copyOrderId(BuildContext context, String orderId) async {
+    await Clipboard.setData(ClipboardData(text: orderId));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Order ID copied')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (order == null) return const SizedBox.shrink();
@@ -73,7 +81,7 @@ class _OrderInfoSection extends StatelessWidget {
           const SizedBox(height: 7),
           const _DetailLabel('Order ID'),
           GestureDetector(
-            onTap: () => Clipboard.setData(ClipboardData(text: orderId)),
+            onTap: () => _copyOrderId(context, orderId),
             child: Row(
               children: [
                 _DetailValue(orderId),

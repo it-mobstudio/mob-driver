@@ -17,10 +17,28 @@ class OrderPlacedPage extends StatefulWidget {
   static const routeName = 'OrderPlacedPage';
   static const routePath = '/checkout/success';
 
-  const OrderPlacedPage({super.key, this.orderId = '', this.order});
+  const OrderPlacedPage({
+    super.key,
+    this.orderId = '',
+    this.order,
+    this.paymentGateway,
+    this.merchantPaymentRefId,
+    this.paymentId,
+    this.transactionId,
+    this.currency,
+  });
 
   final String orderId;
   final PlacedOrderEntity? order;
+
+  /// When non-null and equals 'RUPIFI', the page fires
+  /// [CheckoutRupifiStatusCheckRequested] to confirm the payment via the
+  /// proper Rupifi status-check API (e.g. when reached via an OS deep link).
+  final String? paymentGateway;
+  final String? merchantPaymentRefId;
+  final String? paymentId;
+  final String? transactionId;
+  final String? currency;
 
   @override
   State<OrderPlacedPage> createState() => _OrderPlacedPageState();
@@ -44,8 +62,21 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
     AppHaptics.success();
     _cartBloc = context.read<CartBloc>();
     if (widget.order == null && widget.orderId.isNotEmpty) {
-      _checkoutBloc = sl<CheckoutBloc>()
-        ..add(CheckoutOrderConfirmationRequested(widget.orderId));
+      final isRupifiDeepLink = widget.paymentGateway == 'RUPIFI' &&
+          (widget.merchantPaymentRefId?.isNotEmpty ?? false);
+      if (isRupifiDeepLink) {
+        _checkoutBloc = sl<CheckoutBloc>()
+          ..add(CheckoutRupifiStatusCheckRequested(
+            platformOrderId: widget.orderId,
+            merchantPaymentRefId: widget.merchantPaymentRefId!,
+            paymentId: widget.paymentId ?? '',
+            transactionId: widget.transactionId ?? '',
+            currency: widget.currency ?? '',
+          ));
+      } else {
+        _checkoutBloc = sl<CheckoutBloc>()
+          ..add(CheckoutOrderConfirmationRequested(widget.orderId));
+      }
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _cartBloc.add(CartLoadRequested());

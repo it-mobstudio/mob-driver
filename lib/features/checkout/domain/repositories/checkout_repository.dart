@@ -20,6 +20,8 @@ abstract interface class CheckoutRepository {
     String merchantPaymentRefId,
     String paymentId,
     String transactionId,
+    String currency,
+    String paymentFor,
   });
   Future<(RupifiOrderEntity?, AppFailure?)> createRupifiOrder(
     String cartId, {

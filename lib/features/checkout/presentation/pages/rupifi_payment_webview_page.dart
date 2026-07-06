@@ -9,14 +9,23 @@ class RupifiPaymentResult {
     required this.status,
     this.merchantPaymentRefId,
     this.paymentId,
+    this.orderId,
+    this.transactionId,
+    this.currency,
   });
 
   final String status;
   final String? merchantPaymentRefId;
   final String? paymentId;
+  final String? orderId;
+  final String? transactionId;
+  final String? currency;
 
   bool get isCompleted =>
-      status == 'AUTH_PENDING' || status == 'SUCCESS' || status == 'CAPTURED';
+      status == 'AUTH_PENDING' ||
+      status == 'AUTH_APPROVED' ||
+      status == 'SUCCESS' ||
+      status == 'CAPTURED';
   bool get isCancelled => status == 'CANCELLED';
 }
 
@@ -65,7 +74,43 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
 
   NavigationDecision _onNavigationRequest(NavigationRequest request) {
     final uri = Uri.tryParse(request.url);
+    debugPrint('[Rupifi] _onNavigationRequest: ${request.url}');
     if (uri == null) return NavigationDecision.navigate;
+
+    // Backend's app-scheme completion redirect (mobdemandside:// / uat
+    // variant, host "checkout"), e.g.
+    // mobdemandsideuat://checkout/success?...&merchantPaymentRefId=...
+    // Must be checked before the generic non-http scheme branch below,
+    // otherwise it gets mistaken for a UPI app handoff and never completes
+    // the WebView flow.
+    final isAppSchemeRedirect =
+        (uri.scheme == 'mobdemandside' || uri.scheme == 'mobdemandsideuat') &&
+            uri.host == 'checkout';
+    if (isAppSchemeRedirect) {
+      debugPrint('[Rupifi] ✅ App-scheme redirect detected');
+      debugPrint(
+          '[Rupifi]   scheme=${uri.scheme}  host=${uri.host}  path=${uri.path}');
+      debugPrint('[Rupifi]   params=${uri.queryParameters}');
+      final path = uri.path.toLowerCase();
+      final status = uri.queryParameters['status'] ??
+          (path.contains('fail') || path.contains('cancel')
+              ? 'CANCELLED'
+              : 'AUTH_PENDING');
+      final result = RupifiPaymentResult(
+        status: status,
+        merchantPaymentRefId: uri.queryParameters['merchantPaymentRefId'],
+        paymentId: uri.queryParameters['paymentId'],
+        orderId: uri.queryParameters['order_id'],
+        transactionId: uri.queryParameters['transactionId'],
+        currency: uri.queryParameters['currency'],
+      );
+      debugPrint(
+          '[Rupifi] RupifiPaymentResult → status=$status  orderId=${result.orderId}  isCompleted=${result.isCompleted}');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).pop(result);
+      });
+      return NavigationDecision.prevent;
+    }
 
     // Per Rupifi's UPI Intent flow (developers.rupifi.com/documentation/
     // UPI-Intent-Android-iOS), the hosted payment page redirects to a UPI
@@ -74,26 +119,24 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
     // — it just fails (blank page / ERR_UNKNOWN_URL_SCHEME). Hand off to the
     // OS so the actual UPI app opens, same as the native intent flow would.
     if (uri.scheme != 'http' && uri.scheme != 'https') {
+      debugPrint(
+          '[Rupifi] 📲 Non-http scheme – launching externally: ${uri.scheme}://${uri.host}');
       _launchExternally(uri);
       return NavigationDecision.prevent;
     }
 
-    // Intercept when Rupifi redirects back to our backend webhook
-    final isRedirect = uri.path.contains('rupifi') ||
-        uri.path.contains('payment_history') ||
-        (uri.host.contains('madoverbuilding.com') &&
-            uri.path.contains('/api/'));
-
-    if (isRedirect) {
-      final result = RupifiPaymentResult(
-        status: uri.queryParameters['status'] ?? 'AUTH_PENDING',
-        merchantPaymentRefId: uri.queryParameters['merchantPaymentRefId'],
-        paymentId: uri.queryParameters['paymentId'],
-      );
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.of(context).pop(result);
-      });
-      return NavigationDecision.prevent;
+    // Backend webhook URL (e.g. /api/webhooks/rupifi/payment_history/) —
+    // let it load so the backend can process the payment and then issue its
+    // own 302 redirect to mobdemandsideuat://checkout/success?order_id=...
+    // which will be caught by isAppSchemeRedirect above.
+    // Previously this block intercepted the webhook URL prematurely, which
+    // cut the redirect chain before the app-scheme URL was ever reached.
+    final isBackendWebhook = uri.host.contains('madoverbuilding.com') &&
+        (uri.path.contains('rupifi') || uri.path.contains('payment_history'));
+    if (isBackendWebhook) {
+      debugPrint(
+          '[Rupifi] ⏳ Backend webhook URL – letting webview follow redirect chain: ${uri.host}${uri.path}');
+      return NavigationDecision.navigate;
     }
     return NavigationDecision.navigate;
   }
@@ -171,8 +214,7 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
             )
           else
             WebViewWidget(controller: _controller!),
-          if (_isLoading)
-            const _RupifiLoadingOverlay(),
+          if (_isLoading) const _RupifiLoadingOverlay(),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
+import 'package:m_o_b_demand_side/shared/image_url.dart';
 
 /// Mirrors the web's `getItemSku`: the mob_sku used to look up swap
 /// candidates for [item].
@@ -104,10 +105,10 @@ class QuoteItemRow extends StatelessWidget {
         stringValueOf(product, const ['name', 'product_name', 'title']),
       ],
     );
-    final imageUrl = firstNonEmptyOf([
+    final imageUrl = sanitizeImageUrl(firstNonEmptyOf([
       stringValueOf(product, const ['product_image', 'image']),
       stringValueOf(item, const ['product_image', 'image']),
-    ]);
+    ]));
     final lineTotal =
         moneyValueOf(item, const ['total', 'line_total', 'amount']);
     final price = moneyValueOf(

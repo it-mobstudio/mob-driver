@@ -5,9 +5,7 @@ class _ShipmentSection extends StatelessWidget {
   final OrderShipmentEntity shipment;
   final int index;
   final String title;
-  final IconData icon;
-  final Color iconBackground;
-  final Color iconColor;
+  final String iconAsset;
   final List<OrderItemEntity> items;
 
   const _ShipmentSection({
@@ -15,9 +13,7 @@ class _ShipmentSection extends StatelessWidget {
     required this.shipment,
     required this.index,
     required this.title,
-    required this.icon,
-    required this.iconBackground,
-    required this.iconColor,
+    required this.iconAsset,
     required this.items,
   });
 
@@ -66,20 +62,12 @@ class _ShipmentSection extends StatelessWidget {
           InkWell(
             borderRadius: BorderRadius.circular(8),
             onTap: () => context.push(
-              SuborderDetailPage.routePath,
+              OrderTrackingPage.routePath,
               extra: {'order': order, 'shipment': shipment},
             ),
             child: Row(
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: iconBackground,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(icon, size: 24, color: iconColor),
-                ),
+                SvgPicture.asset(iconAsset, width: 38, height: 38),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

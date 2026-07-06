@@ -1,3 +1,5 @@
+import 'package:m_o_b_demand_side/shared/image_url.dart';
+
 class CartItem {
   const CartItem({
     required this.title,
@@ -107,7 +109,7 @@ class CartItem {
 
     return CartItem(
       title: title.isNotEmpty ? title : 'Cart item',
-      imageAsset: image,
+      imageAsset: sanitizeImageUrl(image),
       qty: quantity <= 0 ? 1 : quantity,
       unitPrice: unitPrice,
       sellerCode: sellerCode.isNotEmpty ? sellerCode : 'STORE',

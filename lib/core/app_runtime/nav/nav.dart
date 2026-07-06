@@ -21,7 +21,6 @@ import 'package:m_o_b_demand_side/features/checkout/presentation/pages/payment_f
 import 'package:m_o_b_demand_side/core/app_runtime/nav/route_extra_cache.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
-import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_suborder_detail_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
@@ -214,8 +213,8 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
-              name: OrdersPage.routeName,
-              path: OrdersPage.routePath,
+              name: 'OrdersTab',
+              path: '/orders-tab',
               builder: (context, state) => const OrdersPage(),
             ),
           ]),
@@ -376,6 +375,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
           return OrderPlacedPage(
             orderId:
                 extra as String? ?? state.uri.queryParameters['order_id'] ?? '',
+            paymentGateway: state.uri.queryParameters['payment_Gateway'],
+            merchantPaymentRefId:
+                state.uri.queryParameters['merchantPaymentRefId'],
+            paymentId: state.uri.queryParameters['paymentId'],
+            transactionId: state.uri.queryParameters['transactionId'],
+            currency: state.uri.queryParameters['currency'],
           );
         },
       ),
@@ -385,6 +390,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) => OrderPlacedPage(
           orderId: state.uri.queryParameters['order_id'] ?? '',
+          paymentGateway: state.uri.queryParameters['payment_Gateway'],
+          merchantPaymentRefId:
+              state.uri.queryParameters['merchantPaymentRefId'],
+          paymentId: state.uri.queryParameters['paymentId'],
+          transactionId: state.uri.queryParameters['transactionId'],
+          currency: state.uri.queryParameters['currency'],
         ),
       ),
       GoRoute(
@@ -444,6 +455,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         builder: (context, state) => const MyAccountWidget(),
       ),
       GoRoute(
+        name: OrdersPage.routeName,
+        path: OrdersPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const OrdersPage(),
+      ),
+      GoRoute(
         name: MyProjectsPage.routeName,
         path: MyProjectsPage.routePath,
         parentNavigatorKey: appNavigatorKey,
@@ -498,40 +515,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         builder: (context, state) => const OrderDetailPage(),
       ),
       GoRoute(
-        name: SuborderDetailPage.routeName,
-        path: SuborderDetailPage.routePath,
+        name: OrderTrackingPage.routeName,
+        path: OrderTrackingPage.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) {
           // Browser back/forward on web replays the URL only, not the
           // `extra` payload — fall back to whatever was last pushed here
           // this session instead of rendering blank. See RouteExtraCache.
-          final rawExtra =
-              state.extra is Map ? Map<String, dynamic>.from(state.extra as Map) : null;
-          if (rawExtra != null) {
-            RouteExtraCache.put(SuborderDetailPage.routePath, rawExtra);
-          }
-          final extra = rawExtra ??
-              RouteExtraCache.take<Map<String, dynamic>>(
-                  SuborderDetailPage.routePath) ??
-              <String, dynamic>{};
-          return SuborderDetailPage(
-            order: extra['order'] is OrderEntity
-                ? extra['order'] as OrderEntity
-                : null,
-            shipment: extra['shipment'] is OrderShipmentEntity
-                ? extra['shipment'] as OrderShipmentEntity
-                : null,
-          );
-        },
-      ),
-      GoRoute(
-        name: OrderTrackingPage.routeName,
-        path: OrderTrackingPage.routePath,
-        parentNavigatorKey: appNavigatorKey,
-        builder: (context, state) {
-          // See the matching comment on SuborderDetailPage above.
-          final rawExtra =
-              state.extra is Map ? Map<String, dynamic>.from(state.extra as Map) : null;
+          final rawExtra = state.extra is Map
+              ? Map<String, dynamic>.from(state.extra as Map)
+              : null;
           if (rawExtra != null) {
             RouteExtraCache.put(OrderTrackingPage.routePath, rawExtra);
           }

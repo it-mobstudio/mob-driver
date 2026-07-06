@@ -102,6 +102,8 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     String merchantPaymentRefId = '',
     String paymentId = '',
     String transactionId = '',
+    String currency = '',
+    String paymentFor = '',
   }) async {
     try {
       debugPrint('🔵 SUBORDER DETAILS REQUEST: platformOrderId=$platformOrderId merchantPaymentRefId=$merchantPaymentRefId paymentId=$paymentId');
@@ -112,9 +114,16 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
         paymentId: paymentId,
         transactionId: transactionId,
         // currency/paymentFor only make sense alongside an actual payment
-        // gateway (Razorpay flow) — omitted for wallet/direct-order success.
-        currency: paymentGateway.isNotEmpty ? 'INR' : '',
-        paymentFor: paymentGateway.isNotEmpty ? 'CART' : '',
+        // gateway (Razorpay/Rupifi flow) — omitted for wallet/direct-order
+        // success. Callers may override with a real value (e.g. Rupifi's
+        // redirect carries its own currency); otherwise fall back to the
+        // same defaults used before per-call overrides existed.
+        currency: currency.isNotEmpty
+            ? currency
+            : (paymentGateway.isNotEmpty ? 'INR' : ''),
+        paymentFor: paymentFor.isNotEmpty
+            ? paymentFor
+            : (paymentGateway.isNotEmpty ? 'CART' : ''),
       );
       debugPrint('🔵 SUBORDER DETAILS RESPONSE: $body');
       if (body['status'] == false) {

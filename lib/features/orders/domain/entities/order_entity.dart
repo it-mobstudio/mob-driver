@@ -1,3 +1,22 @@
+import 'package:m_o_b_demand_side/shared/image_url.dart';
+
+String orderStatusIconAsset(String status) {
+  final s = status.toLowerCase();
+  if (s.contains('delivered') && !s.contains('partially')) {
+    return 'assets/images/orderdeliveredicon.svg';
+  }
+  if (s.contains('cancelled')) {
+    return 'assets/images/cancelledIcon.svg';
+  }
+  if (s.contains('out for delivery') || s.contains('transit')) {
+    return 'assets/images/outfordeliveryicon.svg';
+  }
+  if (s.contains('partially')) {
+    return 'assets/images/partiallydelivered.svg';
+  }
+  return 'assets/images/packingicon.svg';
+}
+
 class OrderItemEntity {
   const OrderItemEntity({
     required this.title,
@@ -28,11 +47,13 @@ class OrderItemEntity {
               product['product_name'] ??
               '')
           .toString(),
-      imageUrl: (map['image'] ??
-              map['product_image'] ??
-              product['product_image'] ??
-              '')
-          .toString(),
+      imageUrl: sanitizeImageUrl(
+        (map['image'] ??
+                map['product_image'] ??
+                product['product_image'] ??
+                '')
+            .toString(),
+      ),
       qty: int.tryParse(map['quantity']?.toString() ?? '1') ?? 1,
       unitPrice: double.tryParse(
             (map['vendor_selling_price'] ??
@@ -152,6 +173,7 @@ class OrderEntity {
     this.gstNumber = '',
     this.paymentMethods = const [],
     this.rewardPoints = 0,
+    this.isStoreOrder = false,
   });
 
   final String id;
@@ -177,6 +199,7 @@ class OrderEntity {
   final String gstNumber;
   final List<String> paymentMethods;
   final int rewardPoints;
+  final bool isStoreOrder;
 
   factory OrderEntity.fromMap(Map<String, dynamic> map) {
     final itemsRaw = map['items'] is List ? map['items'] as List : <dynamic>[];
@@ -230,6 +253,15 @@ class OrderEntity {
       return (userDetails['gst_number'] ?? '').toString().trim();
     }();
 
+    final directItems = itemsRaw
+        .whereType<Map>()
+        .map((e) => OrderItemEntity.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+    final shipments = subordersRaw
+        .whereType<Map>()
+        .map((e) => OrderShipmentEntity.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+
     return OrderEntity(
       id: (map['order_id'] ??
               map['order_number'] ??
@@ -250,10 +282,9 @@ class OrderEntity {
                 .toString(),
           ) ??
           0,
-      items: itemsRaw
-          .whereType<Map>()
-          .map((e) => OrderItemEntity.fromMap(Map<String, dynamic>.from(e)))
-          .toList(),
+      items: directItems.isNotEmpty
+          ? directItems
+          : shipments.expand((s) => s.items).toList(),
       shippingAddress: addrParts.join(', '),
       projectName: (map['project_name'] ??
               project['name'] ??
@@ -268,10 +299,7 @@ class OrderEntity {
               '')
           .toString(),
       isQuickCommerceOrder: isQuickCommerceOrder,
-      shipments: subordersRaw
-          .whereType<Map>()
-          .map((e) => OrderShipmentEntity.fromMap(Map<String, dynamic>.from(e)))
-          .toList(),
+      shipments: shipments,
       subTotal: double.tryParse(
               (map['sub_total'] ?? map['subtotal'] ?? map['total'] ?? '0')
                   .toString()) ??
@@ -294,6 +322,7 @@ class OrderEntity {
           .toList(),
       rewardPoints:
           int.tryParse((pointsSummary['total_points'] ?? '0').toString()) ?? 0,
+      isStoreOrder: map['is_store_order'] == true,
     );
   }
 }

@@ -10,7 +10,6 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/repositories/orders_repository.dart';
-import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_suborder_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
@@ -63,8 +62,8 @@ class OrderTrackingPage extends StatelessWidget {
         shipmentStatus.isNotEmpty ? shipmentStatus : orderStatus;
     final trackingState = _TrackingState.fromStatus(trackingStatus);
     final deliverySlot = shipment?.deliverySlot ?? '';
-    final vendorName = shipment?.vendorName ?? '';
-    final vehicleAssigned = shipment?.vehicleAssigned ?? false;
+    // final vendorName = shipment?.vendorName ?? '';
+    // final vehicleAssigned = shipment?.vehicleAssigned ?? false;
     final invoiceUrl = shipment?.proformaInvoiceUrl ?? '';
     final formattedDeliveryDate = () {
       final raw = shipment?.deliveryDate.trim() ?? '';
@@ -103,10 +102,10 @@ class OrderTrackingPage extends StatelessWidget {
                         child: Column(
                           children: [
                             if (!trackingState.isDelivered) ...[
-                              if (vehicleAssigned) ...[
-                                _DeliveryPartnerCard(vendorName: vendorName),
-                                const SizedBox(height: 12),
-                              ],
+                              // if (vehicleAssigned) ...[
+                              //   _DeliveryPartnerCard(vendorName: vendorName),
+                              //   const SizedBox(height: 12),
+                              // ],
                               _DeliveryAddressCard(
                                 address: address,
                                 deliveryName: deliveryName,
@@ -114,7 +113,8 @@ class OrderTrackingPage extends StatelessWidget {
                               ),
                               const SizedBox(height: 12),
                             ],
-                            if (invoiceUrl.isNotEmpty) ...[
+                            if (trackingState.canDownloadInvoice &&
+                                invoiceUrl.isNotEmpty) ...[
                               _DownloadInvoiceButton(invoiceUrl: invoiceUrl),
                               const SizedBox(height: 12),
                             ],
@@ -124,11 +124,8 @@ class OrderTrackingPage extends StatelessWidget {
                               onViewSummary: order == null || shipment == null
                                   ? null
                                   : () => context.push(
-                                        SuborderDetailPage.routePath,
-                                        extra: {
-                                          'order': order,
-                                          'shipment': shipment,
-                                        },
+                                        '/order-detail',
+                                        extra: order!.id,
                                       ),
                             ),
                             const SizedBox(height: 12),
@@ -300,11 +297,9 @@ class _TrackingHero extends StatelessWidget {
                 right: 0,
                 top: height * 0.077,
                 height: height * 0.696,
-                child: Image.asset(
-                  state.heroAsset,
+                child: _heroAsset(
                   fit: BoxFit.cover,
                   alignment: Alignment.center,
-                  filterQuality: FilterQuality.high,
                 ),
               )
             else if (state.isDelivered)
@@ -313,18 +308,15 @@ class _TrackingHero extends StatelessWidget {
                 right: 0,
                 top: height * 0.02,
                 bottom: height * 0.17,
-                child: Image.asset(
-                  state.heroAsset,
+                child: _heroAsset(
                   fit: BoxFit.contain,
                   alignment: Alignment.bottomCenter,
-                  filterQuality: FilterQuality.high,
                 ),
               )
             else
               Positioned.fill(
-                child: Image.asset(
-                  state.heroAsset,
-                  fit: BoxFit.cover,
+                child: _heroAsset(
+                  fit: BoxFit.contain,
                   alignment: Alignment.bottomCenter,
                 ),
               ),
@@ -354,6 +346,26 @@ class _TrackingHero extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _heroAsset({
+    required BoxFit fit,
+    required AlignmentGeometry alignment,
+  }) {
+    final asset = state.heroAsset;
+    if (asset.toLowerCase().endsWith('.svg')) {
+      return SvgPicture.asset(
+        asset,
+        fit: fit,
+        alignment: alignment,
+      );
+    }
+    return Image.asset(
+      asset,
+      fit: fit,
+      alignment: alignment,
+      filterQuality: FilterQuality.high,
     );
   }
 }
@@ -1401,6 +1413,11 @@ enum _TrackingState {
     final value =
         status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
     final compactValue = value.replaceAll(' ', '');
+    if (value.contains('waiting') ||
+        value.contains('order placed') ||
+        compactValue == 'orderplaced') {
+      return _TrackingState.packing;
+    }
     if (value.contains('out for delivery') ||
         compactValue.contains('outfordelivery') ||
         value.contains('out for shipment') ||
@@ -1415,9 +1432,9 @@ enum _TrackingState {
       return _TrackingState.delivered;
     }
     if (value.contains('order is packed') ||
-        value.contains('your order is packed') ||
-        value.contains('packed') ||
+        value.contains('Ready for Pickup') ||
         value.contains('ready for pickup') ||
+        compactValue == 'readyforpickup' ||
         value.contains('ready to ship')) {
       return _TrackingState.packed;
     }
@@ -1435,11 +1452,10 @@ enum _TrackingState {
 
   String get heroAsset {
     return switch (this) {
-      _TrackingState.delivered => 'assets/images/Deliveredintacking.webp',
-      _TrackingState.outForDelivery =>
-        'assets/images/out_for_delivery_tracking.png',
-      _TrackingState.packed => 'assets/images/Your order is packed.webp',
-      _TrackingState.packing => 'assets/images/Packing your order.webp',
+      _TrackingState.delivered => 'assets/images/Delivered.webp',
+      _TrackingState.outForDelivery => 'assets/images/Out_for_delivery.webp',
+      _TrackingState.packed => 'assets/images/Your_order_is_packed.webp',
+      _TrackingState.packing => 'assets/images/Packing_your_order.webp',
     };
   }
 

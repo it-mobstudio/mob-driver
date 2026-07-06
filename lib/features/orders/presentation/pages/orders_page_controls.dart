@@ -13,32 +13,22 @@ class _OrdersHeader extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            // Orders is a bottom-nav tab root, but unlike the other tabs it
-            // can also be pushed on top of another page (e.g. from My
-            // Account), where a real back destination exists. Only show the
-            // arrow when there's actually somewhere to go back to — showing
-            // it unconditionally meant tapping it while on the tab root
-            // (canPop() false, the common case) fell through to a
-            // stack-wiping `go()` instead of a real back.
-            if (context.canPop())
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onBack,
-                child: const SizedBox(
-                  width: 20,
-                  height: 48,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Icon(
-                      Icons.arrow_back,
-                      color: Color(0xFF0A243F),
-                      size: 20,
-                    ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onBack,
+              child: const SizedBox(
+                width: 20,
+                height: 48,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Icon(
+                    Icons.arrow_back,
+                    color: Color(0xFF0A243F),
+                    size: 20,
                   ),
                 ),
-              )
-            else
-              const SizedBox(width: 20, height: 48),
+              ),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -61,7 +51,15 @@ class _OrdersHeader extends StatelessWidget {
 }
 
 class _OrdersSearch extends StatelessWidget {
-  const _OrdersSearch();
+  const _OrdersSearch({
+    required this.controller,
+    required this.onChanged,
+    required this.onCleared,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onCleared;
 
   @override
   Widget build(BuildContext context) {
@@ -83,14 +81,47 @@ class _OrdersSearch extends StatelessWidget {
         children: [
           const Icon(Icons.search, color: Color(0xFF0A243F), size: 18),
           const SizedBox(width: 16),
-          Text(
-            'Search for orders',
-            style: GoogleFonts.inter(
-              color: const Color(0xFF596378),
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              height: 20 / 14,
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Search for orders',
+                hintStyle: GoogleFonts.inter(
+                  color: const Color(0xFF596378),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  height: 20 / 14,
+                ),
+              ),
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                height: 20 / 14,
+              ),
             ),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              if (value.text.isEmpty) return const SizedBox.shrink();
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onCleared,
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(
+                    Icons.close,
+                    color: Color(0xFF596378),
+                    size: 16,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -99,34 +130,153 @@ class _OrdersSearch extends StatelessWidget {
 }
 
 class _FilterButton extends StatelessWidget {
-  const _FilterButton();
+  const _FilterButton({required this.activeLabel, required this.onTap});
+
+  final String? activeLabel;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final isActive = activeLabel != null;
     return Align(
       alignment: Alignment.centerLeft,
-      child: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFDEDEDE)),
-          borderRadius: BorderRadius.circular(6),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFFE6F4FF) : Colors.white,
+            border: Border.all(
+              color:
+                  isActive ? const Color(0xFF0360E5) : const Color(0xFFDEDEDE),
+            ),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.tune,
+                color: isActive
+                    ? const Color(0xFF0360E5)
+                    : const Color(0xFF0A243F),
+                size: 13,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isActive ? activeLabel! : 'Filters',
+                style: GoogleFonts.inter(
+                  color: isActive
+                      ? const Color(0xFF0360E5)
+                      : const Color(0xFF0A243F),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  height: 18 / 12,
+                ),
+              ),
+            ],
+          ),
         ),
-        child: Row(
+      ),
+    );
+  }
+}
+
+class _OrderFilterSheet extends StatelessWidget {
+  const _OrderFilterSheet({required this.activeLabel});
+
+  final String? activeLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.tune, color: Color(0xFF0A243F), size: 13),
-            const SizedBox(width: 8),
-            Text(
-              'Filters',
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                height: 18 / 12,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Filters',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0A243F),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (activeLabel != null)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () =>
+                        Navigator.of(context).pop((label: '', key: '')),
+                    child: Text(
+                      'Clear',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0360E5),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...kOrderFilterOptions.map(
+              (option) => _OrderFilterOptionTile(
+                label: option.label,
+                selected: activeLabel == option.label,
+                onTap: () => Navigator.of(context)
+                    .pop((label: option.label, key: option.key)),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderFilterOptionTile extends StatelessWidget {
+  const _OrderFilterOptionTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFE6F4FF) : const Color(0xFFF7F8FA),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check, color: Color(0xFF0360E5), size: 18),
           ],
         ),
       ),

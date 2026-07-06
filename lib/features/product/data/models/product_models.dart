@@ -1,3 +1,5 @@
+import 'package:m_o_b_demand_side/shared/image_url.dart';
+
 class VendorPricing {
   const VendorPricing({
     required this.vendorSellingPrice,
@@ -75,7 +77,7 @@ class ProductImageRef {
   final String url;
 
   factory ProductImageRef.fromMap(Map<String, dynamic> map) =>
-      ProductImageRef(url: map['image']?.toString() ?? '');
+      ProductImageRef(url: sanitizeImageUrl(map['image']?.toString()));
 }
 
 class ProductVariantOption {
@@ -210,7 +212,8 @@ class ProductChildRef {
       id: (map['product_id'] ?? map['id'] ?? '').toString(),
       slug: map['slug']?.toString() ?? '',
       title: (map['item_name_title'] ?? map['product_name'] ?? '').toString(),
-      imageUrl: (map['image'] ?? map['primary_image'] ?? '').toString(),
+      imageUrl: sanitizeImageUrl(
+          (map['image'] ?? map['primary_image'] ?? '').toString()),
       mobSku: map['mob_sku']?.toString() ?? '',
       vendorProductId:
           (map['vendor_product_id'] ?? vendorPricingMap['vendor_product_id'] ?? '')
@@ -558,7 +561,7 @@ class SubCategoryModel {
   factory SubCategoryModel.fromMap(Map<String, dynamic> map) {
     return SubCategoryModel(
       name: map['sub_category_name']?.toString() ?? '',
-      image: map['image']?.toString() ?? '',
+      image: sanitizeImageUrl(map['image']?.toString()),
       slug: (map['sub_category_slug'] ??
               map['slug'] ??
               map['category_slug'] ??

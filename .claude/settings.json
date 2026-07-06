@@ -4,7 +4,9 @@
       "Bash(curl -s https://pub.dev/api/packages/url_launcher_android)",
       "Bash(python3 -c ' *)",
       "Bash(flutter devices *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 61817 -ErrorAction SilentlyContinue | Select-Object -First 5 OwningProcess\")",
+      "Bash(powershell -Command \"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 61817 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, Path\")"
     ]
   }
 }

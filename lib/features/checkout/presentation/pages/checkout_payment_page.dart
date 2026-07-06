@@ -199,12 +199,18 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       }
       return;
     }
+    setState(() => _isRupifiHandoffInProgress = true);
+    debugPrint(
+        '[Rupifi] Opening WebView for payment URL: ${entity.paymentUrl}');
     final result = await Navigator.of(context).push<RupifiPaymentResult>(
       MaterialPageRoute(
         builder: (_) => RupifiPaymentWebviewPage(paymentUrl: entity.paymentUrl),
       ),
     );
     if (!mounted) return;
+    setState(() => _isRupifiHandoffInProgress = false);
+    debugPrint(
+        '[Rupifi] WebView closed – result: ${result == null ? 'null (dismissed)' : 'status=${result.status}  orderId=${result.orderId}  isCompleted=${result.isCompleted}  isCancelled=${result.isCancelled}'}');
     if (result == null || result.isCancelled) return;
     if (!result.isCompleted) {
       _router.go(
@@ -213,10 +219,30 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       );
       return;
     }
-    _router.go(
-      OrderPlacedPage.routePath,
-      extra: result.merchantPaymentRefId ?? '',
+    final platformOrderId = result.orderId ?? '';
+    if (platformOrderId.isEmpty) {
+      // Defensive fallback if the redirect ever omits order_id — OrderPlacedPage
+      // still resolves the full order itself via CheckoutOrderConfirmationRequested.
+      _router.go(
+        OrderPlacedPage.routePath,
+        extra: result.merchantPaymentRefId ?? '',
+      );
+      return;
+    }
+    // Mirrors the Razorpay flow: confirm the payment against the backend
+    // and let the BlocConsumer below navigate on CheckoutOrderPlaced /
+    // CheckoutPaymentFailed, instead of jumping straight to OrderPlacedPage.
+    _checkoutBloc.add(
+      CheckoutRupifiStatusCheckRequested(
+        platformOrderId: platformOrderId,
+        merchantPaymentRefId: result.merchantPaymentRefId ?? '',
+        paymentId: result.paymentId ?? '',
+        transactionId: result.transactionId ?? '',
+        currency: result.currency ?? '',
+      ),
     );
+    debugPrint(
+        '[Rupifi] ▶ CheckoutRupifiStatusCheckRequested fired – platformOrderId=$platformOrderId  currency=${result.currency}');
   }
 
   // Called when Razorpay radio is tapped — triggers order creation immediately
@@ -413,8 +439,8 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                     }
                     return BlocConsumer<CheckoutBloc, CheckoutState>(
                       listener: (context, checkoutState) {
-                        // The bloc's async work (Razorpay verify, place_direct_order
-                        // + suborder-details fetch, etc.) can still be in flight
+                        // The bloc's async work (Razorpay verify, place_direct_order,
+                        // and follow-up order fetches) can still be in flight
                         // when the user navigates away (e.g. back button). If this
                         // page's element is no longer in the tree by the time the
                         // state arrives, bail out instead of looking up an

@@ -38,18 +38,19 @@ class _OrderCard extends StatelessWidget {
               )
             else
               const SizedBox(height: 8),
-            _RewardBanner(message: order.rewardMessage),
+            if (!order.isStoreOrder && order.rewardMessage.trim().isNotEmpty)
+              _RewardBanner(message: order.rewardMessage),
             if (order.projectName.trim().isNotEmpty) ...[
               const SizedBox(height: 8),
               _ProjectChip(projectName: order.projectName.trim()),
             ],
             const SizedBox(height: 16),
-            const Divider(
-              height: 0,
-              thickness: 1,
-              color: Color(0xFFE5E8EE),
-            ),
-            _OrderActions(order: order),
+            // const Divider(
+            //   height: 0,
+            //   thickness: 1,
+            //   color: Color(0xFFE5E8EE),
+            // ),
+            // _OrderActions(order: order),
           ],
         ),
       ),
@@ -78,14 +79,10 @@ class _OrderHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
+        SvgPicture.asset(
+          orderStatusIconAsset(order.status),
           width: 38,
           height: 38,
-          decoration: BoxDecoration(
-            color: const Color(0xFFCEFBE3),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Icon(Icons.check, color: Color(0xFF0BCB60), size: 26),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -202,9 +199,6 @@ class _RewardBanner extends StatelessWidget {
   final String message;
 
   String get _displayMessage {
-    if (message.trim().isEmpty) {
-      return '100 points will be added 7 days after delivery';
-    }
     return message
         .replaceAll('(', '')
         .replaceAll(')', '')
@@ -216,11 +210,11 @@ class _RewardBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayMessage = _displayMessage;
+    if (displayMessage.isEmpty) return const SizedBox.shrink();
     final pointsMatch = RegExp(r'^\d+\s+points').firstMatch(displayMessage);
-    final pointsLabel = pointsMatch?.group(0) ?? '100 points';
-    final suffix = displayMessage.startsWith(pointsLabel)
-        ? displayMessage.substring(pointsLabel.length)
-        : ' will be added 7 days after delivery';
+    final pointsLabel = pointsMatch?.group(0);
+    final suffix =
+        pointsLabel == null ? '' : displayMessage.substring(pointsLabel.length);
 
     return Container(
       height: 24,
@@ -238,15 +232,17 @@ class _RewardBanner extends StatelessWidget {
           const SizedBox(width: 6),
           Flexible(
             child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: pointsLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  TextSpan(text: suffix),
-                ],
-              ),
+              pointsLabel == null
+                  ? TextSpan(text: displayMessage)
+                  : TextSpan(
+                      children: [
+                        TextSpan(
+                          text: pointsLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        TextSpan(text: suffix),
+                      ],
+                    ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(
