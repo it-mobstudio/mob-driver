@@ -824,27 +824,50 @@ class CreditFaqRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFEDF0F4)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Frequently asked questions',
-                style: AppTextStyles.body14Bold,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: ShapeDecoration(
+            color: Colors.white.withValues(alpha: .1),
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(
+                width: 1,
+                color: Color(0xFFDEDEDE),
               ),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.primaryText),
-          ],
+          ),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Frequently asked questions',
+                  style: TextStyle(
+                    color: Color(0xFF0A243F),
+                    fontSize: 13,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                    height: 1.54,
+                  ),
+                ),
+              ),
+              SvgPicture.asset(
+                'assets/images/Arrow.svg',
+                width: 12,
+                height: 12,
+                fit: BoxFit.contain,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF0A243F),
+                  BlendMode.srcIn,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

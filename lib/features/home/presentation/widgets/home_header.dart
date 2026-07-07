@@ -301,8 +301,8 @@ class _ProfileIconFallback extends StatelessWidget {
     return Center(
       child: SvgPicture.asset(
         'assets/images/profile.svg',
-        width: 36,
-        height: 36,
+        width: 15,
+        height: 18,
       ),
     );
   }

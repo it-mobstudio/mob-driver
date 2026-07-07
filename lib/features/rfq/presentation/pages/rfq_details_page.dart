@@ -131,7 +131,8 @@ class _RfqDetailsBody extends StatelessWidget {
     final date = _displayDate(rfq.createdAt);
     final detailStatus = _parseDetailStatus(rfq.status);
     final progressCard = switch (detailStatus) {
-      _RfqDetailStatus.convertedToOrder => const _ConvertedToOrderProgressCard(),
+      _RfqDetailStatus.convertedToOrder =>
+        const _ConvertedToOrderProgressCard(),
       _RfqDetailStatus.quoteAccepted => const _QuoteAcceptedProgressCard(),
       _RfqDetailStatus.quoteGenerated => const _QuoteGeneratedProgressCard(),
       _ => const _RequestedProgressCard(),
@@ -502,7 +503,8 @@ class _RequestedItemsByVendorCard extends StatelessWidget {
                 TextSpan(text: '${rfq.requestedItemsTotalCount} items '),
                 TextSpan(
                   text: '(${vendors.length} suborder request)',
-                  style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 14),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w400, fontSize: 14),
                 ),
               ],
             ),
@@ -871,8 +873,7 @@ class _RealQuoteCard extends StatelessWidget {
   final RfqQuoteEntity quote;
   final bool disableAccept;
 
-  bool get _canAccept =>
-      quote.isNew && !quote.isMagicQuote && !disableAccept;
+  bool get _canAccept => quote.isNew && !quote.isMagicQuote && !disableAccept;
 
   Future<void> _openUrl(String url) async {
     if (url.isEmpty) return;

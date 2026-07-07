@@ -95,103 +95,106 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
               child: Divider(height: 1, color: Color(0xFFE8E8E8)),
             ),
           ),
-          body: SafeArea(
-            top: false,
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(10, 12, 10, 24),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(13, 19, 13, 13),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            _ProfileAvatar(
-                              onEdit: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Profile image upload coming soon'),
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 29),
-                            _ProfileField(
-                              label: 'Name',
-                              controller: _nameController,
-                              textInputAction: TextInputAction.next,
-                            ),
-                            const SizedBox(height: 12),
-                            _ProfileField(
-                              label: 'Business mobile',
-                              controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              textInputAction: TextInputAction.next,
-                            ),
-                            const SizedBox(height: 12),
-                            _ProfileField(
-                              label: 'Email',
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.done,
-                            ),
-                          ],
-                        ),
+          body: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(10, 12, 10, 24),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(13, 19, 13, 13),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          _ProfileAvatar(
+                            onEdit: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content:
+                                      Text('Profile image upload coming soon'),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 29),
+                          _ProfileField(
+                            label: 'Name',
+                            controller: _nameController,
+                            textInputAction: TextInputAction.next,
+                          ),
+                          const SizedBox(height: 12),
+                          _ProfileField(
+                            label: 'Business mobile',
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                          ),
+                          const SizedBox(height: 12),
+                          _ProfileField(
+                            label: 'Email',
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.done,
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                Container(
+              ),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(
+                  10,
+                  12,
+                  10,
+                  10 + MediaQuery.of(context).padding.bottom,
+                ),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(12),
+                  ),
+                ),
+                child: SizedBox(
                   width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                  ),
-                  child: SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : _updateProfile,
-                      style: ElevatedButton.styleFrom(
-                        elevation: 0,
-                        backgroundColor: const Color(0xFF0866E9),
-                        disabledBackgroundColor: const Color(0xFF9BBFF1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : _updateProfile,
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: const Color(0xFF0866E9),
+                      disabledBackgroundColor: const Color(0xFF9BBFF1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'Update profile',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
                     ),
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Update profile',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },

@@ -77,80 +77,72 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                     Expanded(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 343),
-                            child: Column(
-                              children: [
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 24),
-                                  child: Text(
-                                    'Log in or sign up',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(
-                                      color: AppColors.primaryText,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                      height: 24 / 16,
-                                    ),
-                                  ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              child: Text(
+                                'Log in or sign up',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  color: AppColors.primaryText,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                  height: 24 / 16,
                                 ),
-                                AppTextField(
-                                  controller: _mobileController,
-                                  focusNode: _mobileFocusNode,
-                                  hintText: 'Enter mobile number',
-                                  keyboardType: TextInputType.phone,
-                                  textInputAction: TextInputAction.done,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(10),
-                                  ],
-                                  prefixIcon: const _PhonePrefix(),
-                                  showClearButton: false,
-                                  onFieldSubmitted: (_) => _submit(context),
-                                ),
-                                const SizedBox(height: 16),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 48,
-                                  child: ElevatedButton(
-                                    onPressed: isLoading
-                                        ? null
-                                        : () => _submit(context),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                    child: isLoading
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation(
-                                                Colors.white,
-                                              ),
-                                            ),
-                                          )
-                                        : Text(
-                                            'Continue',
-                                            style: GoogleFonts.inter(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
-                                              height: 21 / 14,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
+                            AppTextField(
+                              controller: _mobileController,
+                              focusNode: _mobileFocusNode,
+                              hintText: 'Enter mobile number',
+                              keyboardType: TextInputType.phone,
+                              textInputAction: TextInputAction.done,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ],
+                              prefixIcon: const _PhonePrefix(),
+                              onFieldSubmitted: (_) => _submit(context),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton(
+                                onPressed:
+                                    isLoading ? null : () => _submit(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                    : Text(
+                                        'Continue',
+                                        style: GoogleFonts.inter(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                          height: 21 / 14,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

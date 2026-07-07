@@ -101,115 +101,116 @@ class _SignupWidgetState extends State<SignupWidget> {
       },
       builder: (context, state) {
         final isLoading = state is AuthLoading;
-
         return GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Scaffold(
-            backgroundColor: Colors.white,
-            appBar: AppBar(
-              elevation: 0,
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF0A243F),
-              leading: IconButton(
-                onPressed: _handleBack,
-                icon: const AppBackIcon(),
-              ),
-              toolbarHeight: 70,
-            ),
-            body: SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.fromLTRB(16, 26, 16, 24),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 343),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Welcome to mob',
-                                  style: GoogleFonts.inter(
-                                    color: const Color(0xFF0A243F),
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
-                                    height: 32 / 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 32),
-                                AppTextField(
-                                  label: 'Name*',
-                                  controller: _nameController,
-                                  textInputAction: TextInputAction.next,
-                                  validator: (value) {
-                                    final name = value?.trim() ?? '';
-                                    if (name.isEmpty) {
-                                      return 'Name is required';
-                                    }
-                                    if (name.length < 3) {
-                                      return 'Enter valid name';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 20),
-                                AppTextField(
-                                  label: 'Email id',
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  textInputAction: TextInputAction.next,
-                                  validator: (value) {
-                                    final email = value?.trim() ?? '';
-                                    if (email.isEmpty) return null;
-                                    final emailRegex = RegExp(
-                                      r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                    );
-                                    if (!emailRegex.hasMatch(email)) {
-                                      return 'Enter valid email';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 20),
-                                AppTextField(
-                                  controller: _referralController,
-                                  hintText: 'Have a referral code?',
-                                  textInputAction: TextInputAction.done,
-                                  textCapitalization:
-                                      TextCapitalization.characters,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(
-                                      RegExp(r'[a-zA-Z0-9]'),
-                                    ),
-                                  ],
-                                  onFieldSubmitted: (_) {
-                                    if (!isLoading) _submit();
-                                  },
-                                ),
-                                const SizedBox(height: 4),
-                                const WalletRewardBanner(amount: 1000),
-                              ],
-                            ),
-                          ),
-                        ),
+  onTap: () => FocusScope.of(context).unfocus(),
+  child: Scaffold(
+    backgroundColor: Colors.white,
+    body: SafeArea(
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      onPressed: _handleBack,
+                      icon: const AppBackIcon(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+
+                    // 16 top padding + 36 back icon height = 52 from top
+                    const SizedBox(height: 16),
+
+                    Text(
+                      'Welcome to mob',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0A243F),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        height: 32 / 24,
                       ),
                     ),
-                  ),
-                  _SignupBottomBar(
-                    isLoading: isLoading,
-                    onPressed: isLoading ? null : _submit,
-                  ),
-                ],
+
+                    const SizedBox(height: 24),
+
+                    AppTextField(
+                      label: 'Name*',
+                      controller: _nameController,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        final name = value?.trim() ?? '';
+                        if (name.isEmpty) {
+                          return 'Name is required';
+                        }
+                        if (name.length < 3) {
+                          return 'Enter valid name';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    AppTextField(
+                      label: 'Email id',
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        final email = value?.trim() ?? '';
+                        if (email.isEmpty) return null;
+
+                        final emailRegex = RegExp(
+                          r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        );
+
+                        if (!emailRegex.hasMatch(email)) {
+                          return 'Enter valid email';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    AppTextField(
+                      controller: _referralController,
+                      hintText: 'Have a referral code?',
+                      textInputAction: TextInputAction.done,
+                      textCapitalization: TextCapitalization.characters,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[a-zA-Z0-9]'),
+                        ),
+                      ],
+                      onFieldSubmitted: (_) {
+                        if (!isLoading) _submit();
+                      },
+                    ),
+
+                    const SizedBox(height: 2),
+                    const WalletRewardBanner(amount: 1000),
+                  ],
+                ),
               ),
             ),
           ),
-        );
+
+          _SignupBottomBar(
+            isLoading: isLoading,
+            onPressed: isLoading ? null : _submit,
+          ),
+        ],
+      ),
+    ),
+  ),
+);
       },
     );
   }
@@ -254,42 +255,37 @@ class _SignupBottomBar extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(16, 16, 16, 10 + bottomPadding),
       color: Colors.white,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 343),
-          child: SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                backgroundColor: const Color(0xFF0360E5),
-                disabledBackgroundColor: const Color(0xFF9BBFF1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(
-                      'Agree and continue',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        height: 21 / 14,
-                      ),
-                    ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            backgroundColor: const Color(0xFF0360E5),
+            disabledBackgroundColor: const Color(0xFF9BBFF1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
+          child: isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  'Agree and continue',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 21 / 14,
+                  ),
+                ),
         ),
       ),
     );

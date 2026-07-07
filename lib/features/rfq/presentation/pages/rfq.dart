@@ -372,8 +372,9 @@ class _RfqHeader extends StatelessWidget {
                 foregroundColor: activeFilterLabel != null
                     ? const Color(0xFF0360E5)
                     : const Color(0xFF0A243F),
-                backgroundColor:
-                    activeFilterLabel != null ? const Color(0xFFE6F4FF) : Colors.white,
+                backgroundColor: activeFilterLabel != null
+                    ? const Color(0xFFE6F4FF)
+                    : Colors.white,
                 minimumSize: const Size(80, 36),
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 side: BorderSide(
