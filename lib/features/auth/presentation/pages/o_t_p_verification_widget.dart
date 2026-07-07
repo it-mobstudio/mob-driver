@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
@@ -26,6 +27,8 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
 
   int _resendSeconds = 40;
   Timer? _timer;
+  bool _isApplyingOtp = false;
+  String? _lastSubmittedOtp;
 
   String get _rawPhone =>
       widget.phoneNumber.replaceAll('+91', '').replaceAll(' ', '').trim();
@@ -53,14 +56,62 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
     super.dispose();
   }
 
-  void _onOtpDigitChanged(int index, String val) {
-    if (val.isNotEmpty && index < 3) {
-      FocusScope.of(context).requestFocus(_otpFocusNodes[index + 1]);
-    } else if (val.isEmpty && index > 0) {
-      FocusScope.of(context).requestFocus(_otpFocusNodes[index - 1]);
+  void _onOtpDigitChanged(int index, String value) {
+    if (_isApplyingOtp) return;
+
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits.length > 1) {
+      _applyOtpDigits(index, digits);
+      _verifyIfComplete();
+      return;
     }
+
+    if (digits != value) {
+      _setDigit(index, digits);
+      return;
+    }
+
+    if (digits.isNotEmpty && index < _otpFocusNodes.length - 1) {
+      _otpFocusNodes[index + 1].requestFocus();
+    } else if (digits.isEmpty && index > 0) {
+      _otpFocusNodes[index - 1].requestFocus();
+    }
+    _lastSubmittedOtp = null;
+    _verifyIfComplete();
+  }
+
+  void _applyOtpDigits(int startIndex, String digits) {
+    _isApplyingOtp = true;
+    final chars = digits.split('');
+    var charIndex = 0;
+    for (var i = startIndex; i < _otpControllers.length; i++) {
+      _setDigit(i, charIndex < chars.length ? chars[charIndex] : '');
+      charIndex++;
+    }
+    _isApplyingOtp = false;
+
+    final nextEmpty = _otpControllers.indexWhere((c) => c.text.isEmpty);
+    if (nextEmpty == -1) {
+      _otpFocusNodes.last.requestFocus();
+    } else {
+      _otpFocusNodes[nextEmpty].requestFocus();
+    }
+    _lastSubmittedOtp = null;
+  }
+
+  void _setDigit(int index, String value) {
+    final text = value.isEmpty ? '' : value.characters.first;
+    _otpControllers[index].value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
+  void _verifyIfComplete() {
     if (_otpControllers.every((c) => c.text.isNotEmpty)) {
       final otp = _otpControllers.map((c) => c.text).join();
+      if (_lastSubmittedOtp == otp) return;
+      _lastSubmittedOtp = otp;
       context.read<AuthBloc>().add(
             AuthOtpVerifyRequested(emailOrPhone: _rawPhone, otp: otp),
           );
@@ -68,13 +119,20 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
   }
 
   void _resendOtp() {
-    for (final c in _otpControllers) {
-      c.clear();
-    }
+    _clearOtp();
     _otpFocusNodes.first.requestFocus();
     context.read<AuthBloc>().add(
           AuthOtpSendRequested(emailOrPhone: _rawPhone, isPhone: true),
         );
+  }
+
+  void _clearOtp() {
+    _isApplyingOtp = true;
+    for (final c in _otpControllers) {
+      c.clear();
+    }
+    _isApplyingOtp = false;
+    _lastSubmittedOtp = null;
   }
 
   void _startResendTimer() {
@@ -99,7 +157,18 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
       listener: (context, state) {
         if (state is AuthOtpSent) {
           _startResendTimer();
+        } else if (state is AuthVerified) {
+          if (state.isNewAccount) {
+            context.go(
+              SignupWidget.routePath,
+              extra: {'phoneNumber': widget.phoneNumber},
+            );
+          } else {
+            context.go(HomepageWidget.routePath);
+          }
         } else if (state is AuthError) {
+          _clearOtp();
+          _otpFocusNodes.first.requestFocus();
           _showDialog(context, 'OTP Failed', state.message);
         }
       },
@@ -122,17 +191,17 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
               elevation: 0.0,
             ),
             body: SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 344),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 24),
                         Text(
-                          'OTP Verification',
+                          'OTP verification',
                           textAlign: TextAlign.left,
                           style: GoogleFonts.inter(
                             color: const Color(0xFF0A243F),
@@ -142,20 +211,34 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        RichText(
-                          text: TextSpan(
-                            text: 'OTP has been sent to ',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF0A243F),
-                              fontSize: 14,
-                            ),
+                        Text.rich(
+                          TextSpan(
                             children: [
+                              TextSpan(
+                                text: 'We have sent an OTP to ',
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF0A243F),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  height: 21 / 14,
+                                ),
+                              ),
                               TextSpan(
                                 text: widget.phoneNumber,
                                 style: GoogleFonts.inter(
                                   color: const Color(0xFF0A243F),
-                                  fontWeight: FontWeight.bold,
                                   fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  height: 21 / 14,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' ',
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF0A243F),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  height: 21 / 14,
                                 ),
                               ),
                             ],
@@ -175,7 +258,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                                     border: Border.all(
                                       color: _otpFocusNodes[i].hasFocus
                                           ? const Color(0xFF0A243F)
-                                          : const Color(0xFFB5B5B5),
+                                          : const Color(0xFFDFE4EC),
                                       width: _otpFocusNodes[i].hasFocus
                                           ? 1.5
                                           : 1.0,
@@ -187,16 +270,33 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                                       focusNode: _otpFocusNodes[i],
                                       textAlign: TextAlign.center,
                                       keyboardType: TextInputType.number,
-                                      maxLength: 1,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                        LengthLimitingTextInputFormatter(4),
+                                      ],
                                       enabled: !isLoading,
+                                      showCursor: false,
+                                      onTap: () {
+                                        _otpControllers[i].selection =
+                                            TextSelection(
+                                          baseOffset: 0,
+                                          extentOffset:
+                                              _otpControllers[i].text.length,
+                                        );
+                                      },
                                       style: GoogleFonts.inter(
                                         color: const Color(0xFF0A243F),
                                         fontSize: 20,
-                                        fontWeight: FontWeight.w500,
+                                        fontWeight: FontWeight.w700,
+                                        height: 30 / 20,
                                       ),
                                       decoration: const InputDecoration(
-                                        counterText: '',
                                         border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        disabledBorder: InputBorder.none,
+                                        isCollapsed: true,
+                                        contentPadding: EdgeInsets.zero,
                                       ),
                                       onChanged: (val) =>
                                           _onOtpDigitChanged(i, val),
@@ -218,6 +318,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                               color: const Color(0xFFAFB4C0),
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
+                              height: 21 / 14,
                             ),
                           )
                         else

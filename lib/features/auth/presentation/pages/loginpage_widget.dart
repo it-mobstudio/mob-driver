@@ -5,6 +5,7 @@ import 'package:m_o_b_demand_side/shared/login_top_banner.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 import 'package:go_router/go_router.dart';
 import '/index.dart';
 
@@ -63,124 +64,99 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
           },
           child: Scaffold(
             backgroundColor: Colors.white,
-            body: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  const LoginTopBanner(),
-                  const SizedBox(height: 32),
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          Text(
-                            'Log in or sign up',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              color: AppColors.primaryText,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(8),
-                              border:
-                                  Border.all(color: const Color(0xFFB5B5B5)),
-                            ),
-                            child: Row(
+            body: LayoutBuilder(
+              builder: (context, constraints) {
+                final headerHeight = constraints.maxHeight * .5;
+
+                return Column(
+                  children: [
+                    LoginTopBanner(
+                      height: headerHeight,
+                      onSkip: () => context.go(HomepageWidget.routePath),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 343),
+                            child: Column(
                               children: [
-                                const SizedBox(width: 16),
-                                Text(
-                                  '+91',
-                                  style: GoogleFonts.inter(
-                                    color: AppColors.primaryText,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 14,
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 24),
+                                  child: Text(
+                                    'Log in or sign up',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      color: AppColors.primaryText,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                      height: 24 / 16,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 48,
-                                    child: TextFormField(
-                                      controller: _mobileController,
-                                      focusNode: _mobileFocusNode,
-                                      keyboardType: TextInputType.phone,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                        LengthLimitingTextInputFormatter(10),
-                                      ],
-                                      decoration: InputDecoration(
-                                        border: InputBorder.none,
-                                        hintText: 'Enter mobile number',
-                                        hintStyle: GoogleFonts.inter(
-                                          color: AppColors.inputHint,
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: 14,
-                                        ),
-                                        isDense: false,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                vertical: 12),
+                                AppTextField(
+                                  controller: _mobileController,
+                                  focusNode: _mobileFocusNode,
+                                  hintText: 'Enter mobile number',
+                                  keyboardType: TextInputType.phone,
+                                  textInputAction: TextInputAction.done,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(10),
+                                  ],
+                                  prefixIcon: const _PhonePrefix(),
+                                  showClearButton: false,
+                                  onFieldSubmitted: (_) => _submit(context),
+                                ),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: ElevatedButton(
+                                    onPressed: isLoading
+                                        ? null
+                                        : () => _submit(context),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      style: GoogleFonts.inter(
-                                        color: AppColors.primaryText,
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14,
-                                      ),
-                                      onFieldSubmitted: (_) =>
-                                          _submit(context),
+                                      elevation: 0,
                                     ),
+                                    child: isLoading
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation(
+                                                Colors.white,
+                                              ),
+                                            ),
+                                          )
+                                        : Text(
+                                            'Continue',
+                                            style: GoogleFonts.inter(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                              height: 21 / 14,
+                                            ),
+                                          ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed:
-                                  isLoading ? null : () => _submit(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation(
-                                            Colors.white),
-                                      ),
-                                    )
-                                  : Text(
-                                      'Continue',
-                                      style: GoogleFonts.inter(
-                                        color: AppColors.surface,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
           ),
         );
@@ -201,6 +177,28 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
             child: const Text('Ok'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PhonePrefix extends StatelessWidget {
+  const _PhonePrefix();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, right: 24),
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          '+91',
+          style: GoogleFonts.inter(
+            color: const Color(0xFF0A243F),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }

@@ -11,7 +11,6 @@ import 'package:m_o_b_demand_side/features/address/presentation/pages/address_se
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
-import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
@@ -114,9 +113,8 @@ class _ProfileBody extends StatelessWidget {
                     children: [
                       MobCreditCard(
                         account: account,
-                        onManage: () =>
-                            context.push(MobCreditProfilePage.routePath),
-                        onApply: () => context.push(CreditPage.routePath),
+                        onManage: () => context.go(CreditPage.routePath),
+                        onApply: () => context.go(CreditPage.routePath),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -162,8 +160,7 @@ class _ProfileBody extends StatelessWidget {
                           _MenuItem(
                             iconAsset: 'assets/images/mobcreditprofile.svg',
                             label: 'mob Credit',
-                            onTap: () =>
-                                context.push(MobCreditProfilePage.routePath),
+                            onTap: () => context.go(CreditPage.routePath),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/myprojects.svg',

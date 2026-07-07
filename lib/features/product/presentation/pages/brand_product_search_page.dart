@@ -484,7 +484,7 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
                       ),
                     ],
                   ),
-                  const ViewCartBar(),
+                  const ViewCartBar(trackNavBarVisibility: false),
                 ],
               );
             },

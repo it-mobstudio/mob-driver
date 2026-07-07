@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
@@ -123,10 +124,12 @@ class CartProductDetails extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.delete_outline_rounded,
-                        size: 14,
-                        color: removeColor,
+                      SvgPicture.asset(
+                        'assets/images/trash.svg',
+                        width: 14,
+                        height: 14,
+                        colorFilter:
+                            ColorFilter.mode(removeColor, BlendMode.srcIn),
                       ),
                       const SizedBox(width: 4),
                       Text(

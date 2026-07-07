@@ -591,7 +591,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
                       ),
                     ),
                   ),
-                  const ViewCartBar(),
+                  const ViewCartBar(trackNavBarVisibility: false),
                 ],
               );
             },

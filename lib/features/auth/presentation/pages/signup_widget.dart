@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,7 +8,9 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
+import 'package:m_o_b_demand_side/shared/build_wallet_reward.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
 class SignupWidget extends StatefulWidget {
   const SignupWidget({
@@ -27,43 +30,8 @@ class SignupWidget extends StatefulWidget {
 class _SignupWidgetState extends State<SignupWidget> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
-  final _nameFocusNode = FocusNode();
-  final _emailFocusNode = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    final user = AuthSession.instance.userDetails ?? const <String, dynamic>{};
-    _nameController.text = _firstString(user, const [
-      'full_name',
-      'fullName',
-      'name',
-      'first_name',
-      'username',
-    ]);
-    _phoneController.text = _formatPhone(_rawPhone);
-    _emailController.text = _firstString(user, const ['email', 'email_id']);
-    _nameFocusNode.addListener(_onFieldFocusChanged);
-    _emailFocusNode.addListener(_onFieldFocusChanged);
-  }
-
-  @override
-  void dispose() {
-    _nameFocusNode.removeListener(_onFieldFocusChanged);
-    _emailFocusNode.removeListener(_onFieldFocusChanged);
-    _nameFocusNode.dispose();
-    _emailFocusNode.dispose();
-    _nameController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    super.dispose();
-  }
-
-  void _onFieldFocusChanged() {
-    if (mounted) setState(() {});
-  }
+  final _referralController = TextEditingController();
 
   String get _rawPhone {
     final fromRoute =
@@ -79,6 +47,28 @@ class _SignupWidgetState extends State<SignupWidget> {
       'phone',
       'email_or_phone',
     ]).replaceAll('+91', '').replaceAll(' ', '').trim();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final user = AuthSession.instance.userDetails ?? const <String, dynamic>{};
+    _nameController.text = _firstString(user, const [
+      'full_name',
+      'fullName',
+      'name',
+      'first_name',
+      'username',
+    ]);
+    _emailController.text = _firstString(user, const ['email', 'email_id']);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _referralController.dispose();
+    super.dispose();
   }
 
   @override
@@ -115,7 +105,7 @@ class _SignupWidgetState extends State<SignupWidget> {
         return GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: Scaffold(
-            backgroundColor: const Color(0xFFF0F0F0),
+            backgroundColor: Colors.white,
             appBar: AppBar(
               elevation: 0,
               backgroundColor: Colors.white,
@@ -124,19 +114,7 @@ class _SignupWidgetState extends State<SignupWidget> {
                 onPressed: _handleBack,
                 icon: const AppBackIcon(),
               ),
-              centerTitle: true,
-              title: Text(
-                'Personal info',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  color: const Color(0xFF0A243F),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  height: 22 / 15,
-                ),
-              ),
-              toolbarHeight: 60,
+              toolbarHeight: 70,
             ),
             body: SafeArea(
               top: false,
@@ -144,79 +122,79 @@ class _SignupWidgetState extends State<SignupWidget> {
                 children: [
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.fromLTRB(16, 26, 16, 24),
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 343),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                children: [
-                                  _SignupAvatar(
-                                    onEdit: () {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Profile image upload coming soon',
-                                          ),
-                                        ),
-                                      );
-                                    },
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Welcome to mob',
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF0A243F),
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w700,
+                                    height: 32 / 24,
                                   ),
-                                  const SizedBox(height: 40),
-                                  _SignupField(
-                                    label: 'Name',
-                                    controller: _nameController,
-                                    focusNode: _nameFocusNode,
-                                    textInputAction: TextInputAction.next,
-                                    validator: (value) {
-                                      final name = value?.trim() ?? '';
-                                      if (name.isEmpty) {
-                                        return 'Name is required';
-                                      }
-                                      if (name.length < 3) {
-                                        return 'Enter valid name';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _SignupField(
-                                    label: 'Business mobile',
-                                    controller: _phoneController,
-                                    keyboardType: TextInputType.phone,
-                                    textInputAction: TextInputAction.next,
-                                    readOnly: true,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _SignupField(
-                                    label: 'Email',
-                                    controller: _emailController,
-                                    focusNode: _emailFocusNode,
-                                    keyboardType: TextInputType.emailAddress,
-                                    textInputAction: TextInputAction.done,
-                                    validator: (value) {
-                                      final email = value?.trim() ?? '';
-                                      if (email.isEmpty) return null;
-                                      final emailRegex = RegExp(
-                                        r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                      );
-                                      if (!emailRegex.hasMatch(email)) {
-                                        return 'Enter valid email';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(height: 32),
+                                AppTextField(
+                                  label: 'Name*',
+                                  controller: _nameController,
+                                  textInputAction: TextInputAction.next,
+                                  validator: (value) {
+                                    final name = value?.trim() ?? '';
+                                    if (name.isEmpty) {
+                                      return 'Name is required';
+                                    }
+                                    if (name.length < 3) {
+                                      return 'Enter valid name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                                AppTextField(
+                                  label: 'Email id',
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  validator: (value) {
+                                    final email = value?.trim() ?? '';
+                                    if (email.isEmpty) return null;
+                                    final emailRegex = RegExp(
+                                      r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                    );
+                                    if (!emailRegex.hasMatch(email)) {
+                                      return 'Enter valid email';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                                AppTextField(
+                                  controller: _referralController,
+                                  hintText: 'Have a referral code?',
+                                  textInputAction: TextInputAction.done,
+                                  textCapitalization:
+                                      TextCapitalization.characters,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                      RegExp(r'[a-zA-Z0-9]'),
+                                    ),
+                                  ],
+                                  onFieldSubmitted: (_) {
+                                    if (!isLoading) _submit();
+                                  },
+                                ),
+                                const SizedBox(height: 4),
+                                const WalletRewardBanner(amount: 1000),
+                              ],
                             ),
                           ),
                         ),
@@ -239,6 +217,7 @@ class _SignupWidgetState extends State<SignupWidget> {
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final referralCode = _referralController.text.trim().toUpperCase();
     context.read<AuthBloc>().add(
           AuthRegisterRequested(
             name: _nameController.text.trim(),
@@ -246,6 +225,7 @@ class _SignupWidgetState extends State<SignupWidget> {
             email: _emailController.text.trim().isEmpty
                 ? null
                 : _emailController.text.trim(),
+            referralCode: referralCode.isEmpty ? null : referralCode,
           ),
         );
   }
@@ -254,163 +234,6 @@ class _SignupWidgetState extends State<SignupWidget> {
     await AuthSession.instance.signOut();
     if (!mounted) return;
     context.go(LoginpageWidget.routePath);
-  }
-}
-
-class _SignupAvatar extends StatelessWidget {
-  const _SignupAvatar({required this.onEdit});
-
-  final VoidCallback onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 104,
-      height: 104,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          const CircleAvatar(
-            radius: 52,
-            backgroundColor: Color(0xFFF0F0F0),
-            child: Icon(
-              Icons.person,
-              color: Color(0xFF969696),
-              size: 58,
-            ),
-          ),
-          Positioned(
-            right: 2,
-            bottom: 2,
-            child: Material(
-              color: Colors.white,
-              shape: const CircleBorder(
-                side: BorderSide(color: Color(0xFFCBD3DE)),
-              ),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: onEdit,
-                child: const SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: Icon(
-                    Icons.edit,
-                    size: 17,
-                    color: Color(0xFF0A243F),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SignupField extends StatelessWidget {
-  const _SignupField({
-    required this.label,
-    required this.controller,
-    this.focusNode,
-    this.keyboardType,
-    this.textInputAction,
-    this.validator,
-    this.readOnly = false,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final FocusNode? focusNode;
-  final TextInputType? keyboardType;
-  final TextInputAction? textInputAction;
-  final String? Function(String?)? validator;
-  final bool readOnly;
-
-  @override
-  Widget build(BuildContext context) {
-    final isFocused = focusNode?.hasFocus ?? false;
-    final textColor =
-        readOnly ? const Color(0x7F0A243F) : const Color(0xFF0A243F);
-    final labelColor =
-        isFocused ? const Color(0xFF0A243F) : const Color(0xFF767C8F);
-
-    return SizedBox(
-      height: 48,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: ShapeDecoration(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  side: BorderSide(
-                    width: isFocused ? 1.5 : 1,
-                    color: isFocused
-                        ? const Color(0xFF0A243F)
-                        : const Color(0xFFDFE4EC),
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            left: 16,
-            right: 16,
-            top: 0,
-            child: Center(
-              child: TextFormField(
-                controller: controller,
-                focusNode: focusNode,
-                readOnly: readOnly,
-                keyboardType: keyboardType,
-                textInputAction: textInputAction,
-                validator: validator,
-                cursorColor: const Color(0xFF0A243F),
-                cursorHeight: 14,
-                style: GoogleFonts.inter(
-                  color: textColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  height: 20 / 14,
-                ),
-                decoration: const InputDecoration(
-                  isDense: true,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 2),
-                  errorStyle: TextStyle(height: 0, fontSize: 0),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 8,
-            top: -7,
-            child: ColoredBox(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  '$label*',
-                  style: GoogleFonts.inter(
-                    color: labelColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    height: 14 / 11,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -430,17 +253,7 @@ class _SignupBottomBar extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(16, 16, 16, 10 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x40000000),
-            offset: Offset(0, 9),
-            blurRadius: 24,
-          ),
-        ],
-      ),
+      color: Colors.white,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 343),
@@ -467,7 +280,7 @@ class _SignupBottomBar extends StatelessWidget {
                       ),
                     )
                   : Text(
-                      'Update profile',
+                      'Agree and continue',
                       style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 14,
@@ -490,10 +303,4 @@ String _firstString(Map<String, dynamic> map, List<String> keys) {
     if (text.isNotEmpty && text != 'null') return text;
   }
   return '';
-}
-
-String _formatPhone(String phone) {
-  final digits = phone.replaceAll(RegExp(r'\D'), '');
-  if (digits.length >= 10) return digits.substring(digits.length - 10);
-  return phone;
 }

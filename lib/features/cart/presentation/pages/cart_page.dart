@@ -139,10 +139,10 @@ class _CartPageState extends State<CartPage> {
                       const SizedBox(height: 8),
                       SavingsStrip(savings: summary.savings),
                     ],
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
                     ...summary.itemsBySeller.entries.map(
                       (entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.only(bottom: 20),
                         child: SellerSection(
                           sellerCode: entry.key,
                           sellerItems: entry.value,
@@ -169,7 +169,7 @@ class _CartPageState extends State<CartPage> {
                       ),
                     ),
                     // const ViewCouponsTile(),
-                    const SizedBox(height: 12),
+                    // const SizedBox(height: 8),
                     OrderDetailsCard(
                       subtotal: summary.subtotal,
                       shipping: summary.shipping,
@@ -178,9 +178,9 @@ class _CartPageState extends State<CartPage> {
                       total: _effectiveTotal(summary),
                       earningPoints: summary.earningPoints,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
                     CartActionRow(summary: summary),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),

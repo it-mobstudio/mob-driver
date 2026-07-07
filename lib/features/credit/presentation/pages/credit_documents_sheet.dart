@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 
 Future<void> showCreditDocumentsSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -17,49 +16,67 @@ class _DocumentItem {
   const _DocumentItem({
     required this.title,
     required this.subtitle,
-    required this.preview,
+    required this.asset,
+    this.assetWidth,
+    this.assetHeight,
+    this.alignAssetToBottom = false,
   });
 
   final String title;
   final String subtitle;
-  final _DocumentPreviewType preview;
+  final String asset;
+  final double? assetWidth;
+  final double? assetHeight;
+  final bool alignAssetToBottom;
 }
 
 const _documents = [
   _DocumentItem(
     title: 'Insert ADDRESS where business SIGNBOARD is there',
     subtitle: 'Physical verification might be conducted',
-    preview: _DocumentPreviewType.signboard,
+    asset: 'assets/images/Company name.webp',
+    assetWidth: 123,
+    assetHeight: 81,
   ),
   _DocumentItem(
     title: 'GSTIN login CREDENTIALS of your business',
     subtitle: '',
-    preview: _DocumentPreviewType.gstin,
+    asset: 'assets/images/GST login.webp',
+    assetWidth: 120,
+    assetHeight: 118,
+    alignAssetToBottom: true,
   ),
   _DocumentItem(
     title: 'Client and Business KYC',
     subtitle: 'Aadhar and PAN of business and ALL directors/ partners/ owners',
-    preview: _DocumentPreviewType.kyc,
+    asset: 'assets/images/Business KYC.webp',
+    assetWidth: 104,
+    assetHeight: 116,
   ),
   _DocumentItem(
     title: 'Document formats',
     subtitle:
         'Document formats to be transferred to your letterhead and signed by ALL directors/ partners/ owners',
-    preview: _DocumentPreviewType.format,
+    asset: 'assets/images/Documents format.webp',
+    assetWidth: 104,
+    assetHeight: 128,
+    alignAssetToBottom: true,
   ),
   _DocumentItem(
     title: 'Uploading 6 months of primary business bank account statement',
     subtitle: 'Mandate by the NBFC for higher credit limit',
-    preview: _DocumentPreviewType.statement,
+    asset: 'assets/images/bank-statement.svg',
+    assetWidth: 69,
+    assetHeight: 92,
   ),
   _DocumentItem(
     title: 'Need for e-NACH setup upon approval of Line of Credit',
     subtitle: 'E-Nach will be triggered after 90 days, if payment is declined',
-    preview: _DocumentPreviewType.enach,
+    asset: 'assets/images/E nach.svg',
+    assetWidth: 104,
+    assetHeight: 23,
   ),
 ];
-
-enum _DocumentPreviewType { signboard, gstin, kyc, format, statement, enach }
 
 class _CreditDocumentsSheet extends StatelessWidget {
   const _CreditDocumentsSheet();
@@ -67,7 +84,7 @@ class _CreditDocumentsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final sheetHeight = screenHeight * .60;
+    final sheetHeight = screenHeight * .75;
 
     return SizedBox(
       height: screenHeight,
@@ -88,36 +105,42 @@ class _CreditDocumentsSheet extends StatelessWidget {
                   height: sheetHeight,
                   child: SafeArea(
                     top: false,
-                    child: CustomScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      slivers: [
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                          sliver: SliverList.separated(
-                            itemCount: _documents.length + 1,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 16),
-                            itemBuilder: (context, index) {
-                              if (index == 0) {
-                                return const Text(
-                                  'Documents required',
-                                  style: TextStyle(
-                                    color: Color(0xFF0A243F),
-                                    fontSize: 18,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    height: 1.44,
-                                  ),
-                                );
-                              }
-                              return _DocumentRow(
-                                index: index,
-                                document: _documents[index - 1],
-                              );
-                            },
-                          ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 375),
+                        child: CustomScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          slivers: [
+                            SliverPadding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                              sliver: SliverList.separated(
+                                itemCount: _documents.length + 1,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 16),
+                                itemBuilder: (context, index) {
+                                  if (index == 0) {
+                                    return const Text(
+                                      'Documents required',
+                                      style: TextStyle(
+                                        color: Color(0xFF0A243F),
+                                        fontSize: 18,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w600,
+                                        height: 26 / 18,
+                                      ),
+                                    );
+                                  }
+                                  return _DocumentRow(
+                                    index: index,
+                                    document: _documents[index - 1],
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -129,12 +152,17 @@ class _CreditDocumentsSheet extends StatelessWidget {
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: () => Navigator.of(context).pop(),
-              child: SizedBox(
+              child: Container(
                 width: 44,
                 height: 44,
-                child: SvgPicture.asset(
-                  'assets/images/close.svg',
-                  fit: BoxFit.contain,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 24,
+                  color: Color(0xFF0A243F),
                 ),
               ),
             ),
@@ -156,297 +184,104 @@ class _DocumentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _DocumentPreview(type: document.preview),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$index. ${document.title}',
-                style: const TextStyle(
-                  color: Color(0xFF0A243F),
-                  fontSize: 14,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w600,
-                  height: 1.43,
-                ),
-              ),
-              if (document.subtitle.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  document.subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF767C8F),
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
-                    height: 1.50,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tileSize = constraints.maxWidth < 330 ? 128.0 : 144.0;
+        final assetScale = tileSize / 144;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _DocumentPreview(
+              document: document,
+              size: tileSize,
+              assetScale: assetScale,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$index. ${document.title}',
+                    style: const TextStyle(
+                      color: Color(0xFF0A243F),
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      height: 20 / 14,
+                    ),
                   ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DocumentPreview extends StatelessWidget {
-  const _DocumentPreview({required this.type});
-
-  final _DocumentPreviewType type;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 144,
-      height: 144,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEDEDED),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: switch (type) {
-        _DocumentPreviewType.signboard => const _SignboardPreview(),
-        _DocumentPreviewType.gstin => const _GstinPreview(),
-        _DocumentPreviewType.kyc => const _KycPreview(),
-        _DocumentPreviewType.format => const _LetterheadPreview(),
-        _DocumentPreviewType.statement => const _StatementPreview(),
-        _DocumentPreviewType.enach => const _EnachPreview(),
+                  if (document.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      document.subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFF767C8F),
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w400,
+                        height: 18 / 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
       },
     );
   }
 }
 
-class _SignboardPreview extends StatelessWidget {
-  const _SignboardPreview();
+class _DocumentPreview extends StatelessWidget {
+  const _DocumentPreview({
+    required this.document,
+    required this.size,
+    required this.assetScale,
+  });
+
+  final _DocumentItem document;
+  final double size;
+  final double assetScale;
 
   @override
   Widget build(BuildContext context) {
+    final assetWidth =
+        document.assetWidth == null ? null : document.assetWidth! * assetScale;
+    final assetHeight = document.assetHeight == null
+        ? null
+        : document.assetHeight! * assetScale;
+    final child = document.asset.endsWith('.svg')
+        ? SvgPicture.asset(
+            document.asset,
+            width: assetWidth,
+            height: assetHeight,
+            fit: BoxFit.contain,
+          )
+        : Image.asset(
+            document.asset,
+            width: assetWidth,
+            height: assetHeight,
+            fit: BoxFit.contain,
+          );
+
     return Container(
-      width: 118,
-      height: 78,
-      padding: const EdgeInsets.all(8),
+      width: size,
+      height: size,
+      alignment: document.alignAssetToBottom
+          ? Alignment.bottomCenter
+          : Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F1DE),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: const Color(0xFFC6BDA2), width: 2),
+        color: const Color(0xFFEDEDED),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'COMPANY NAME',
-            textAlign: TextAlign.center,
-            style: _docTextStyle(
-              color: const Color(0xFF29384A),
-              size: 10,
-              weight: FontWeight.w700,
-              height: 12 / 10,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Container(height: 3, width: 80, color: const Color(0xFFB8B8B8)),
-          const SizedBox(height: 4),
-          Container(height: 3, width: 64, color: const Color(0xFFCFCFCF)),
-        ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: child,
       ),
     );
   }
-}
-
-class _GstinPreview extends StatelessWidget {
-  const _GstinPreview();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 118,
-      height: 92,
-      padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'GST Verification',
-            style: _docTextStyle(
-              color: const Color(0xFF0A243F),
-              size: 8,
-              weight: FontWeight.w700,
-              height: 10 / 8,
-            ),
-          ),
-          const SizedBox(height: 6),
-          _previewLine(width: 92),
-          const SizedBox(height: 5),
-          _previewField(),
-          const SizedBox(height: 5),
-          _previewField(),
-          const Spacer(),
-          Container(
-            height: 10,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0360E5),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KycPreview extends StatelessWidget {
-  const _KycPreview();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 112,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _idCard(const Color(0xFFF5EEF0), const Color(0xFFD84E4E)),
-          const SizedBox(height: 8),
-          _idCard(const Color(0xFFFDF4E4), const Color(0xFFF2A33B)),
-        ],
-      ),
-    );
-  }
-
-  Widget _idCard(Color bg, Color accent) {
-    return Container(
-      height: 46,
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        children: [
-          Container(width: 28, height: 28, color: accent.withValues(alpha: .3)),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _previewLine(width: double.infinity),
-                const SizedBox(height: 4),
-                _previewLine(width: double.infinity, color: accent),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LetterheadPreview extends StatelessWidget {
-  const _LetterheadPreview();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 104,
-      height: 128,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-      color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(width: 24, height: 8, color: const Color(0xFFE44848)),
-          const SizedBox(height: 12),
-          for (final width in const [76.0, 64.0, 82.0, 70.0, 58.0]) ...[
-            _previewLine(width: width),
-            const SizedBox(height: 6),
-          ],
-          const Spacer(),
-          _previewLine(width: 32, color: const Color(0xFFB8B8B8)),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatementPreview extends StatelessWidget {
-  const _StatementPreview();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Icon(
-      Icons.receipt_long_outlined,
-      size: 72,
-      color: Color(0xFFBDBDBD),
-    );
-  }
-}
-
-class _EnachPreview extends StatelessWidget {
-  const _EnachPreview();
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      'NACH',
-      style: GoogleFonts.inter(
-        color: const Color(0xFF8E8E8E),
-        fontSize: 30,
-        fontWeight: FontWeight.w700,
-        fontStyle: FontStyle.italic,
-        letterSpacing: 2,
-      ),
-    );
-  }
-}
-
-Widget _previewField() {
-  return Container(
-    height: 12,
-    width: double.infinity,
-    decoration: BoxDecoration(
-      border: Border.all(color: const Color(0xFFE2E2E2)),
-      borderRadius: BorderRadius.circular(2),
-    ),
-  );
-}
-
-Widget _previewLine({
-  required double width,
-  Color color = const Color(0xFFD8D8D8),
-}) {
-  return Container(
-    height: 3,
-    width: width,
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(2),
-    ),
-  );
-}
-
-TextStyle _docTextStyle({
-  required Color color,
-  required double size,
-  required FontWeight weight,
-  required double height,
-}) {
-  return GoogleFonts.inter(
-    color: color,
-    fontSize: size,
-    fontWeight: weight,
-    height: height,
-  );
 }
