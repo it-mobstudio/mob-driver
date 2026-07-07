@@ -54,41 +54,72 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        SliverToBoxAdapter(
-          child: ColoredBox(
-            color: MobCreditDashboardPage._background,
-            child: Stack(
-              children: [
-                const _DashboardHeader(),
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  top: 132,
-                  child: _CreditBalanceCard(account: account),
-                ),
-              ],
+    return Stack(
+      children: [
+        // Decorative full-bleed backdrop behind the scroll content — the
+        // "overlap" look comes purely from the balance card's own white
+        // background sitting on top of this, not from Positioned/absolute
+        // layout (that needed a hand-tuned container height and clipped the
+        // card whenever it grew taller than the guess, which is what broke).
+        Container(
+          height: 186,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF08131F), Color(0xFF0A243F)],
             ),
           ),
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-          sliver: SliverList.list(
-            children: [
-              Text(
-                'Transactions',
-                style: GoogleFonts.inter(
-                  color: MobCreditDashboardPage._primary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  height: 24 / 16,
+        SafeArea(
+          bottom: false,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    const _DashboardHeader(),
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _CreditBalanceCard(account: account),
+                    ),
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Transactions',
+                          style: GoogleFonts.inter(
+                            color: MobCreditDashboardPage._primary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            height: 24 / 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              const _CreditTransactionsList(),
+              SliverToBoxAdapter(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 40),
+                    child: _CreditTransactionsList(),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -102,45 +133,40 @@ class _DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 186,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF08131F), Color(0xFF0A243F)],
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            Positioned(
-              left: 4,
-              top: 8,
-              child: IconButton(
-                icon: const AppBackIcon(color: Colors.white),
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/homepage');
-                  }
-                },
-              ),
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 48,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: const AppBackIcon(color: Colors.white),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/homepage');
+                }
+              },
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 24),
+          ),
+          Expanded(
+            child: Center(
               child: SvgPicture.asset(
-                'assets/images/mobcredwithtick.svg',
+                'assets/images/myaccounts-mobcredit.svg',
                 width: 146,
-                height: 32,
+                height: 21,
                 fit: BoxFit.contain,
               ),
             ),
-          ],
-        ),
+          ),
+          // Mirrors the leading back-button slot so the logo is centered in
+          // the true remaining space instead of the full row width — a
+          // Stack + Positioned(left) + centered logo collided on narrower
+          // screens because the logo never reserved room for the button.
+          const SizedBox(width: 48),
+        ],
       ),
     );
   }

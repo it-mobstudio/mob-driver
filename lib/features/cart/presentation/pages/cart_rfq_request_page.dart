@@ -49,6 +49,7 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
   static const _blue = Color(0xFF0865E8);
 
   final _formKey = GlobalKey<FormState>();
+  final _sheetController = DraggableScrollableController();
   late final RfqBloc _rfqBloc;
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -69,6 +70,7 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
   @override
   void dispose() {
     _rfqBloc.close();
+    _sheetController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
     _pincodeController.dispose();
@@ -157,12 +159,12 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
           final submitting = state is CartRfqSubmitting;
           final screenHeight = MediaQuery.sizeOf(context).height;
           final childSize = _submittedRfqId.isEmpty ? 0.84 : 0.78;
-          final sheetTop = screenHeight * (1 - childSize);
           return SizedBox(
             height: screenHeight,
             child: Stack(
               children: [
                 DraggableScrollableSheet(
+                  controller: _sheetController,
                   initialChildSize: childSize,
                   minChildSize: 0.56,
                   maxChildSize: 0.96,
@@ -174,10 +176,30 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
                         : _successSheet(scrollController);
                   },
                 ),
-                Positioned(
-                  top: sheetTop - 38,
-                  left: 0,
-                  right: 0,
+                // The close button lives in THIS outer, full-screen Stack
+                // (not nested inside the DraggableScrollableSheet's own
+                // builder) because a Positioned child painted outside the
+                // sheet's own fractional bounds via Clip.none is visible but
+                // NOT hit-testable — Flutter's hit-testing still gates on
+                // each RenderBox's own reported size, which for the sheet's
+                // content is only ever the current extent, never the
+                // overflow above it. Tracking the live extent here keeps the
+                // button positioned correctly as the sheet is dragged/snapped.
+                AnimatedBuilder(
+                  animation: _sheetController,
+                  builder: (context, child) {
+                    final extent = _sheetController.isAttached
+                        ? _sheetController.size
+                        : childSize;
+                    // 44px button + 16px gap above the sheet's top edge,
+                    // instead of the button's bottom half overlapping it.
+                    return Positioned(
+                      top: screenHeight * (1 - extent) - 60,
+                      left: 0,
+                      right: 0,
+                      child: child!,
+                    );
+                  },
                   child: _closeButton(size: 44),
                 ),
               ],
@@ -208,7 +230,6 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
 
   Widget _requestSheet(bool submitting, ScrollController scrollController) {
     return Container(
-      margin: const EdgeInsets.only(top: 22),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -717,7 +738,6 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
 
   Widget _successSheet(ScrollController scrollController) {
     return Container(
-      margin: const EdgeInsets.only(top: 22),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
