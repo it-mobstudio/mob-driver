@@ -7,43 +7,49 @@ class _OrdersHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 66,
+    final safeTop = MediaQuery.paddingOf(context).top;
+
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onBack,
-              child: const SizedBox(
-                width: 20,
+        padding: EdgeInsets.fromLTRB(16, safeTop + 13, 16, 8),
+        child: SizedBox(
+          height: 48,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 48,
                 height: 48,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: Color(0xFF0A243F),
-                    size: 20,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: onBack,
+                    child: const Align(
+                      alignment: Alignment.centerLeft,
+                      child: AppBackIcon(size: 16),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'My orders',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  color: const Color(0xFF0A243F),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  height: 20 / 14,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'My orders',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0A243F),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    height: 1.47,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

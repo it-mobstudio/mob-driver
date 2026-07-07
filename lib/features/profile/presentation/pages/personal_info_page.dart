@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
@@ -133,6 +134,7 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
                             textInputAction: TextInputAction.next,
+                            readOnly: true,
                           ),
                           const SizedBox(height: 12),
                           _ProfileField(
@@ -202,14 +204,12 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
   }
 
   void _updateProfile() {
-    final phone = _phoneController.text.trim();
     final email = _emailController.text.trim();
 
     setState(() => _submitting = true);
     context.read<ProfileBloc>().add(
           ProfileUpdateRequested({
             'full_name': _nameController.text.trim(),
-            if (phone.isNotEmpty) 'email_or_phone': phone,
             if (email.isNotEmpty) 'email': email,
           }),
         );
@@ -217,25 +217,34 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
 }
 
 class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.onEdit});
+  const _ProfileAvatar({
+    required this.onEdit,
+  });
 
   final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 84,
-      height: 84,
+      width: 104,
+      height: 104,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          const CircleAvatar(
-            radius: 41,
-            backgroundColor: Color(0xFFF0F0F0),
-            child: Icon(
-              Icons.person,
-              color: Color(0xFF969696),
-              size: 55,
+          Container(
+            width: 104,
+            height: 104,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFF0F0F0),
+            ),
+            child: Center(
+              child: SvgPicture.asset(
+                'assets/images/grayprofile.svg',
+                width: 48,
+                height: 48,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           Positioned(
@@ -245,17 +254,22 @@ class _ProfileAvatar extends StatelessWidget {
               onTap: onEdit,
               customBorder: const CircleBorder(),
               child: Container(
-                width: 26,
-                height: 26,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFCBD3DE)),
+                  border: Border.all(
+                    color: const Color(0xFFCBD3DE),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.edit,
-                  size: 15,
-                  color: Color(0xFF0A243F),
+                child: Center(
+                  child: SvgPicture.asset(
+                    'assets/images/editicon.svg',
+                    width: 16,
+                    height: 16,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
@@ -264,6 +278,55 @@ class _ProfileAvatar extends StatelessWidget {
       ),
     );
   }
+
+// class _ProfileAvatar extends StatelessWidget {
+//   const _ProfileAvatar({required this.onEdit});
+
+//   final VoidCallback onEdit;
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return SizedBox(
+//       width: 84,
+//       height: 84,
+//       child: Stack(
+//         clipBehavior: Clip.none,
+//         children: [
+//           const CircleAvatar(
+//             radius: 41,
+//             backgroundColor: Color(0xFFF0F0F0),
+//             child: Icon(
+//               Icons.person,
+//               color: Color(0xFF969696),
+//               size: 55,
+//             ),
+//           ),
+//           Positioned(
+//             right: -1,
+//             bottom: 1,
+//             child: InkWell(
+//               onTap: onEdit,
+//               customBorder: const CircleBorder(),
+//               child: Container(
+//                 width: 26,
+//                 height: 26,
+//                 decoration: BoxDecoration(
+//                   color: Colors.white,
+//                   shape: BoxShape.circle,
+//                   border: Border.all(color: const Color(0xFFCBD3DE)),
+//                 ),
+//                 child: const Icon(
+//                   Icons.edit,
+//                   size: 15,
+//                   color: Color(0xFF0A243F),
+//                 ),
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
 }
 
 class _ProfileField extends StatelessWidget {
@@ -292,16 +355,18 @@ class _ProfileField extends StatelessWidget {
       textInputAction: textInputAction,
       validator: validator,
       style: GoogleFonts.inter(
-        color: readOnly ? const Color(0xFF8794A6) : const Color(0xFF0A243F),
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
+        color: readOnly ? const Color(0x7F0A243F) : const Color(0xFF0A243F),
+        fontSize: readOnly ? 14 : 12,
+        fontWeight: readOnly ? FontWeight.w500 : FontWeight.w400,
+        height: readOnly ? 1.43 : null,
       ),
       decoration: InputDecoration(
         label: Text('$label *'),
         labelStyle: GoogleFonts.inter(
-          color: const Color(0xFF6E7C8F),
-          fontSize: 10,
-          fontWeight: FontWeight.w400,
+          color: readOnly ? const Color(0xFF767C8F) : const Color(0xFF6E7C8F),
+          fontSize: readOnly ? 11 : 10,
+          fontWeight: readOnly ? FontWeight.w500 : FontWeight.w400,
+          height: readOnly ? 1.27 : null,
         ),
         floatingLabelBehavior: FloatingLabelBehavior.always,
         filled: true,

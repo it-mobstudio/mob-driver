@@ -32,38 +32,39 @@ class _ReferralView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      body: SafeArea(
-        child: BlocBuilder<ProfileBloc, ProfileState>(
-          builder: (context, state) {
-            final isLoading =
-                state is ProfileLoading || state is ProfileInitial;
-            final summary =
-                state is ReferralSummaryLoaded ? state.summary : null;
-            final referralCode = summary?.referralCode ?? '';
-            final referralLink = summary?.referralLink ?? '';
+      body: BlocBuilder<ProfileBloc, ProfileState>(
+        builder: (context, state) {
+          final isLoading = state is ProfileLoading || state is ProfileInitial;
+          final summary = state is ReferralSummaryLoaded ? state.summary : null;
+          final referralCode = summary?.referralCode ?? '';
+          final referralLink = summary?.referralLink ?? '';
 
-            return Column(
-              children: [
-                _ReferralHeader(
-                  onBack: () => context.pop(),
-                  onSearch: () => context.push('/search'),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _ReferralPromoSection(
-                          referralCode: referralCode,
-                          isLoading: isLoading,
-                        ),
-                      ],
-                    ),
+          return Column(
+            children: [
+              _ReferralHeader(
+                onBack: () => context.pop(),
+                onSearch: () => context.push('/search'),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _ReferralPromoSection(
+                        referralCode: referralCode,
+                        isLoading: isLoading,
+                      ),
+                    ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+              ),
+              SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                   child: SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -71,7 +72,10 @@ class _ReferralView extends StatelessWidget {
                       onPressed: isLoading
                           ? null
                           : () => _shareReferral(
-                              context, referralCode, referralLink),
+                                context,
+                                referralCode,
+                                referralLink,
+                              ),
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         backgroundColor: const Color(0xFF0A243F),
@@ -98,10 +102,10 @@ class _ReferralView extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -148,10 +152,10 @@ class _ReferralHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: Colors.white,
-      child: SizedBox(
-        height: 68,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 60, 16, 10),
+        child: SizedBox(
+          height: 48,
           child: Row(
             children: [
               IconButton(

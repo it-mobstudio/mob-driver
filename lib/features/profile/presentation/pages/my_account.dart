@@ -73,7 +73,10 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
         body: Stack(
           children: [
             _ProfileBody(scrollController: _scrollController),
-            FrostedNavBar(frosted: _frosted),
+            FrostedNavBar(
+              frosted: _frosted,
+              onBack: () => context.go('/homepage'),
+            ),
           ],
         ),
       ),
@@ -166,6 +169,10 @@ class _ProfileBody extends StatelessWidget {
                         onTap: () => context.push(ReferralPage.routePath),
                       ),
                       const SizedBox(height: 16),
+                      _UpdateAvailableCard(
+                        onTap: () => _showUpdateAvailable(context),
+                      ),
+                      const SizedBox(height: 16),
                       _MenuCard(
                         items: [
                           _MenuItem(
@@ -178,6 +185,12 @@ class _ProfileBody extends StatelessWidget {
                             label: 'Addresses',
                             onTap: () =>
                                 context.push(AddressSelectionWidget.routePath),
+                          ),
+                          _MenuItem(
+                            iconAsset: 'assets/images/personalinfo.svg',
+                            label: 'Personal info',
+                            onTap: () =>
+                                context.push(PersonalInfoPage.routePath),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/mobcreditprofile.svg',
@@ -290,6 +303,12 @@ class _ProfileBody extends StatelessWidget {
     }
   }
 
+  static void _showUpdateAvailable(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('App update available')),
+    );
+  }
+
   static Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -344,7 +363,9 @@ class _MyAccountSkeleton extends StatelessWidget {
               const SizedBox(height: 16),
               const SkeletonBox(height: 58, borderRadius: 16),
               const SizedBox(height: 16),
-              _menuCardSkeleton(rowCount: 5),
+              const SkeletonBox(height: 58, borderRadius: 16),
+              const SizedBox(height: 16),
+              _menuCardSkeleton(rowCount: 6),
               const SizedBox(height: 24),
               const SkeletonBox(width: 140, height: 10, borderRadius: 4),
               const SizedBox(height: 20),
@@ -419,7 +440,8 @@ class _MyAccountSkeleton extends StatelessWidget {
               if (i != rowCount - 1)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(height: 1, thickness: 1, color: Color(0xFFE7EAEE)),
+                  child: Divider(
+                      height: 1, thickness: 1, color: Color(0xFFE7EAEE)),
                 ),
             ],
           ],
@@ -707,6 +729,43 @@ class _ReferralCard extends StatelessWidget {
                   width: 61,
                   height: 24,
                 ),
+                const Spacer(),
+                const _Chevron(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UpdateAvailableCard extends StatelessWidget {
+  const _UpdateAvailableCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: SizedBox(
+          height: 58,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                SvgPicture.asset(
+                  'assets/images/updateavailable.svg',
+                  width: 24,
+                  height: 24,
+                ),
+                const SizedBox(width: 16),
+                Text('App update available', style: _labelStyle),
                 const Spacer(),
                 const _Chevron(),
               ],

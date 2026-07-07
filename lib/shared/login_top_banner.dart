@@ -41,27 +41,27 @@ class LoginTopBanner extends StatelessWidget {
                 fit: BoxFit.contain,
               ),
             ),
-            Positioned(
-              top: topPadding + 24,
-              right: 16,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onSkip,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  child: Text(
-                    'Skip',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                      height: 22 / 15,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            // Positioned(
+            //   top: topPadding + 24,
+            //   right: 16,
+            //   child: GestureDetector(
+            //     behavior: HitTestBehavior.opaque,
+            //     onTap: onSkip,
+            //     child: const Padding(
+            //       padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            //       child: Text(
+            //         'Skip',
+            //         style: TextStyle(
+            //           color: Colors.white,
+            //           fontSize: 15,
+            //           fontFamily: 'Inter',
+            //           fontWeight: FontWeight.w500,
+            //           height: 22 / 15,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
             Positioned(
               top: topPadding + 72,
               left: 16,
