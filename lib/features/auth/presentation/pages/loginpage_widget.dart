@@ -64,82 +64,99 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
           },
           child: Scaffold(
             backgroundColor: Colors.white,
-            body: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  const LoginTopBanner(),
-                  const SizedBox(height: 32),
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          Text(
-                            'Log in or sign up',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              color: AppColors.primaryText,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          AppTextField(
-                            controller: _mobileController,
-                            focusNode: _mobileFocusNode,
-                            hintText: 'Enter mobile number',
-                            keyboardType: TextInputType.phone,
-                            textInputAction: TextInputAction.done,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(10),
-                            ],
-                            prefixIcon: const _PhonePrefix(),
-                            showClearButton: false,
-                            onFieldSubmitted: (_) => _submit(context),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed:
-                                  isLoading ? null : () => _submit(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation(
-                                            Colors.white),
-                                      ),
-                                    )
-                                  : Text(
-                                      'Continue',
-                                      style: GoogleFonts.inter(
-                                        color: AppColors.surface,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
+            body: LayoutBuilder(
+              builder: (context, constraints) {
+                final headerHeight = constraints.maxHeight * .5;
+
+                return Column(
+                  children: [
+                    LoginTopBanner(
+                      height: headerHeight,
+                      onSkip: () => context.go(HomepageWidget.routePath),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 343),
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 24),
+                                  child: Text(
+                                    'Log in or sign up',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      color: AppColors.primaryText,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                      height: 24 / 16,
                                     ),
+                                  ),
+                                ),
+                                AppTextField(
+                                  controller: _mobileController,
+                                  focusNode: _mobileFocusNode,
+                                  hintText: 'Enter mobile number',
+                                  keyboardType: TextInputType.phone,
+                                  textInputAction: TextInputAction.done,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(10),
+                                  ],
+                                  prefixIcon: const _PhonePrefix(),
+                                  showClearButton: false,
+                                  onFieldSubmitted: (_) => _submit(context),
+                                ),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: ElevatedButton(
+                                    onPressed: isLoading
+                                        ? null
+                                        : () => _submit(context),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    child: isLoading
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation(
+                                                Colors.white,
+                                              ),
+                                            ),
+                                          )
+                                        : Text(
+                                            'Continue',
+                                            style: GoogleFonts.inter(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                              height: 21 / 14,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
           ),
         );
