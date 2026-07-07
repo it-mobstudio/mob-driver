@@ -14,9 +14,18 @@ class ViewCartBar extends StatelessWidget {
   const ViewCartBar({
     super.key,
     this.bottomOffset = 0,
+    this.trackNavBarVisibility = true,
   });
 
   final double bottomOffset;
+
+  /// Whether to factor the shell's persistent bottom nav bar into this
+  /// bar's vertical position. [navBarVisible] is a single global flag shared
+  /// by every page, but only pages inside the bottom-tab shell actually have
+  /// a nav bar to float above — set this to false on full-screen/pushed
+  /// pages (no nav bar present) so a stale flag value from whatever shell
+  /// page was visited last can't shove this bar off-screen.
+  final bool trackNavBarVisibility;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +88,15 @@ class ViewCartBar extends StatelessWidget {
                   ),
           ),
         );
+
+        if (!trackNavBarVisibility) {
+          return Positioned(
+            bottom: bottomOffset + bottomInset + kViewCartBarGap,
+            left: 0,
+            right: 0,
+            child: content,
+          );
+        }
 
         // The body extends behind the (now overlay-style) bottom nav bar,
         // so this needs to actively track its visibility: float just above

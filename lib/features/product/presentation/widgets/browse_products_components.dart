@@ -496,11 +496,13 @@ class BrowseRequestCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Image.asset(
-                  'assets/images/cantfind.png',
-                  width: 88,
-                  height: 88,
-                  fit: BoxFit.contain,
+                Flexible(
+                  child: Image.asset(
+                    'assets/images/cantfind.png',
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.contain,
+                  ),
                 ),
                 const Spacer(),
                 Container(

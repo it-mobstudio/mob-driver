@@ -470,7 +470,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: MobCreditProfilePage.routeName,
         path: MobCreditProfilePage.routePath,
         parentNavigatorKey: appNavigatorKey,
-        builder: (context, state) => const MobCreditProfilePage(),
+        redirect: (context, state) => CreditPage.routePath,
       ),
       GoRoute(
         name: PersonalInfoPage.routeName,

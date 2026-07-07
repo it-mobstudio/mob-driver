@@ -738,11 +738,11 @@ class SavingsStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
+      height: 41,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: const Color(0xFFE8FAF3),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
@@ -754,10 +754,10 @@ class SavingsStrip extends StatelessWidget {
               color: Color(0xFFFFF2BF),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.local_offer,
-              size: 12,
-              color: Color(0xFFFFAB00),
+            child: SvgPicture.asset(
+              'assets/images/yoursavings.svg',
+              width: 11.554,
+              height: 16,
             ),
           ),
           const SizedBox(width: 8),
