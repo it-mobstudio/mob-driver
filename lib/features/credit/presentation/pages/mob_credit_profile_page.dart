@@ -1661,14 +1661,15 @@ class MobCreditSupportCard extends StatelessWidget {
             ),
           ),
           Positioned(
-            right: 0,
-            top: 12,
+            right: 16,
+            top: 0,
+            bottom: 0,
             child: IgnorePointer(
-              child: SvgPicture.asset(
-                'assets/images/chatwithus.svg',
-                width: 118,
-                height: 120,
+              child: Image.asset(
+                'assets/images/Chat with us.webp',
+                width: 126,
                 fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
               ),
             ),
           ),

@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/entities/business_segment_entity.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/bloc/credit_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
 Future<void> showCreditApplySheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -162,7 +163,7 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                           ),
                                         ),
                                         const SizedBox(height: 32),
-                                        _CreditApplyTextField(
+                                        AppTextField(
                                           controller: _businessName,
                                           label: 'Business name*',
                                           validator: (value) =>
@@ -172,7 +173,7 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                                   : null,
                                         ),
                                         const SizedBox(height: 20),
-                                        _CreditApplyTextField(
+                                        AppTextField(
                                           controller: _phone,
                                           label: 'Business mobile (for OTP)*',
                                           keyboardType: TextInputType.phone,
@@ -192,7 +193,7 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                           },
                                         ),
                                         const SizedBox(height: 20),
-                                        _CreditApplyTextField(
+                                        AppTextField(
                                           controller: _gst,
                                           label: 'GSTIN*',
                                           textCapitalization:
@@ -327,17 +328,20 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
         color: Color(0xFF0A243F),
         size: 24,
       ),
-      decoration: _applyInputDecoration('Business segment*'),
+      decoration: appTextFieldDecoration(label: 'Business segment*'),
       hint: _segmentsLoading
-          ? Text('Loading...', style: _inputTextStyle)
-          : Text('Select business segment', style: _inputTextStyle),
+          ? Text('Loading...', style: AppTextFieldStyles.inputText)
+          : Text(
+              'Select business segment',
+              style: AppTextFieldStyles.inputText,
+            ),
       selectedItemBuilder: (context) => _segments
           .map(
             (segment) => Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 segment.categoryName,
-                style: _inputTextStyle,
+                style: AppTextFieldStyles.inputText,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -350,7 +354,7 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
               value: segment,
               child: Text(
                 segment.categoryName,
-                style: _inputTextStyle,
+                style: AppTextFieldStyles.inputText,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -362,79 +366,6 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
     );
   }
 }
-
-class _CreditApplyTextField extends StatelessWidget {
-  const _CreditApplyTextField({
-    required this.controller,
-    required this.label,
-    this.keyboardType,
-    this.inputFormatters,
-    this.textCapitalization = TextCapitalization.none,
-    this.validator,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final TextInputType? keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
-  final TextCapitalization textCapitalization;
-  final String? Function(String?)? validator;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      textCapitalization: textCapitalization,
-      style: _inputTextStyle,
-      decoration: _applyInputDecoration(label),
-      validator: validator,
-    );
-  }
-}
-
-InputDecoration _applyInputDecoration(String label) {
-  return InputDecoration(
-    labelText: label,
-    labelStyle: _sheetTextStyle(
-      color: const Color(0xFF767C8F),
-      size: 11,
-      weight: FontWeight.w500,
-      height: 1.27,
-    ),
-    floatingLabelStyle: _sheetTextStyle(
-      color: const Color(0xFF767C8F),
-      size: 11,
-      weight: FontWeight.w500,
-      height: 1.27,
-    ),
-    contentPadding: const EdgeInsets.fromLTRB(15, 12, 15, 12),
-    filled: true,
-    fillColor: Colors.white,
-    isDense: true,
-    constraints: const BoxConstraints(minHeight: 48),
-    border: _inputBorder(),
-    enabledBorder: _inputBorder(),
-    focusedBorder: _inputBorder(color: const Color(0xFF0360E5)),
-    errorBorder: _inputBorder(color: const Color(0xFFE54848)),
-    focusedErrorBorder: _inputBorder(color: const Color(0xFFE54848)),
-  );
-}
-
-OutlineInputBorder _inputBorder({Color color = const Color(0xFFDFE4EC)}) {
-  return OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: color),
-  );
-}
-
-TextStyle get _inputTextStyle => _sheetTextStyle(
-      color: const Color(0xFF0A243F),
-      size: 14,
-      weight: FontWeight.w500,
-      height: 1.43,
-    );
 
 TextStyle _sheetTextStyle({
   required Color color,

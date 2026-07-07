@@ -568,14 +568,14 @@ class CreditIndiaCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
       ),
-      child: Row(
+      child: const Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 Text(
                   'Use mobCREDIT across India',
                   style: TextStyle(
@@ -720,55 +720,99 @@ class CreditSupportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFE8F6C6), Color(0xFFD4F4F3)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Get more clarity about\nmobCREDIT',
-                  style: AppTextStyles.body14Bold.copyWith(fontSize: 15),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Chat with us about limit, how to apply, documents required etc',
-                  style: AppTextStyles.body14.copyWith(
-                    color: AppColors.inputLabel,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: onChatTap,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF25D366),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.chat_bubble, size: 16),
-                  label: const Text('Chat with us'),
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textWidth =
+            constraints.maxWidth < 340 ? constraints.maxWidth - 142 : 185.0;
+
+        return Container(
+          width: double.infinity,
+          height: 172,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+              colors: [Color(0xFFF4FFDE), Color(0xFFD7F2E1)],
             ),
+            borderRadius: BorderRadius.circular(20),
           ),
-        ],
-      ),
+          child: Stack(
+            children: [
+              SizedBox(
+                width: textWidth < 150 ? 150 : textWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Get more clarity about mobCREDIT',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0A243F),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        height: 24 / 16,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Chat with us about limit, how to apply, documents required etc',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0A243F),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        height: 18 / 12,
+                      ),
+                    ),
+                    const Spacer(),
+                    SizedBox(
+                      height: 32,
+                      child: ElevatedButton.icon(
+                        onPressed: onChatTap,
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          backgroundColor: const Color(0xFF37BD68),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        icon: SvgPicture.asset(
+                          'assets/images/whatsapp.svg',
+                          width: 18,
+                          height: 18,
+                        ),
+                        label: Text(
+                          'Chat with us',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            height: 18 / 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                right: 16,
+                top: 0,
+                bottom: 0,
+                child: IgnorePointer(
+                  child: Image.asset(
+                    'assets/images/Chat with us.webp',
+                    width: 126,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

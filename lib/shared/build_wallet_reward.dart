@@ -16,7 +16,7 @@ class WalletRewardBanner extends StatelessWidget {
       height: 32,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFFFEA94).withValues(alpha: 0.2),
+        color: const Color(0x33FFEA94),
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -40,7 +40,7 @@ class WalletRewardBanner extends StatelessWidget {
                 ),
                 children: [
                   TextSpan(
-                    text: ' will be added to mobwallet',
+                    text: ' will be added to mobwallet ',
                     style: GoogleFonts.inter(
                       color: const Color(0xFF0A243F),
                       fontSize: 12,
