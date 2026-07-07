@@ -5,6 +5,7 @@ import 'package:m_o_b_demand_side/shared/login_top_banner.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 import 'package:go_router/go_router.dart';
 import '/index.dart';
 
@@ -85,61 +86,19 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                             ),
                           ),
                           const SizedBox(height: 32),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(8),
-                              border:
-                                  Border.all(color: const Color(0xFFB5B5B5)),
-                            ),
-                            child: Row(
-                              children: [
-                                const SizedBox(width: 16),
-                                Text(
-                                  '+91',
-                                  style: GoogleFonts.inter(
-                                    color: AppColors.primaryText,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 48,
-                                    child: TextFormField(
-                                      controller: _mobileController,
-                                      focusNode: _mobileFocusNode,
-                                      keyboardType: TextInputType.phone,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                        LengthLimitingTextInputFormatter(10),
-                                      ],
-                                      decoration: InputDecoration(
-                                        border: InputBorder.none,
-                                        hintText: 'Enter mobile number',
-                                        hintStyle: GoogleFonts.inter(
-                                          color: AppColors.inputHint,
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: 14,
-                                        ),
-                                        isDense: false,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                vertical: 12),
-                                      ),
-                                      style: GoogleFonts.inter(
-                                        color: AppColors.primaryText,
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14,
-                                      ),
-                                      onFieldSubmitted: (_) =>
-                                          _submit(context),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          AppTextField(
+                            controller: _mobileController,
+                            focusNode: _mobileFocusNode,
+                            hintText: 'Enter mobile number',
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.done,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
+                            ],
+                            prefixIcon: const _PhonePrefix(),
+                            showClearButton: false,
+                            onFieldSubmitted: (_) => _submit(context),
                           ),
                           const SizedBox(height: 16),
                           SizedBox(
@@ -201,6 +160,28 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
             child: const Text('Ok'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PhonePrefix extends StatelessWidget {
+  const _PhonePrefix();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, right: 24),
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          '+91',
+          style: GoogleFonts.inter(
+            color: const Color(0xFF0A243F),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }
