@@ -168,12 +168,12 @@ class _ActiveCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final creditLimit = account.rupifiCurrentLimit != 0
-        ? account.rupifiCurrentLimit
-        : account.mobCreditSanctioned;
-    final available = account.mobCreditAvailable != 0
-        ? account.mobCreditAvailable
-        : creditLimit - account.rupifiBalance;
+    final creditLimit = account.rupifiCurrentLimit;
+    // rupifiDetails.balance is already the remaining spendable amount, not
+    // an amount-utilized figure to subtract from the limit (confirmed
+    // against a real account: current_limit 100000, balance 6729.2 —
+    // "Available balance" is 6729.2, not 93270.8).
+    final available = account.rupifiBalance;
 
     return _CardShell(
       gradient: const LinearGradient(
@@ -242,9 +242,7 @@ class _AmountDueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final due = account.mobCreditUtilized > 0
-        ? account.mobCreditUtilized
-        : account.rupifiBalance;
+    final due = account.rupifiBalance;
 
     return _CardShell(
       gradient: const LinearGradient(
@@ -350,7 +348,7 @@ class _StatusCard extends StatelessWidget {
                 ),
               ),
               Text(
-                formatRupees(account.mobCreditAvailable),
+                formatRupees(account.rupifiBalance),
                 style: GoogleFonts.inter(
                   color: Colors.white.withValues(alpha: 0.6),
                   fontSize: 13,

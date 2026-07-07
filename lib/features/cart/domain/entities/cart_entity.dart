@@ -43,14 +43,6 @@ class CartAccountEntity {
     required this.mobStarPercentage,
     required this.freeDelivery,
     required this.gstNumber,
-    required this.mobCreditActivated,
-    required this.mobCreditStatus,
-    required this.mobCreditSanctioned,
-    required this.mobCreditUtilized,
-    required this.mobCreditPending,
-    required this.mobCreditAvailable,
-    required this.mobCreditDays,
-    required this.mobCreditExists,
     required this.rupifiPrimaryStatus,
     required this.rupifiAccountStatus,
     required this.rupifiCurrentLimit,
@@ -72,14 +64,6 @@ class CartAccountEntity {
   final double mobStarPercentage;
   final int freeDelivery;
   final String gstNumber;
-  final bool mobCreditActivated;
-  final String mobCreditStatus;
-  final double mobCreditSanctioned;
-  final double mobCreditUtilized;
-  final double mobCreditPending;
-  final double mobCreditAvailable;
-  final int mobCreditDays;
-  final bool mobCreditExists;
   final String rupifiPrimaryStatus;
   final String rupifiAccountStatus;
   final double rupifiCurrentLimit;
@@ -102,10 +86,6 @@ class CartAccountEntity {
   factory CartAccountEntity.fromMap(Map<String, dynamic> map) {
     final mobStar = map['mobStarPoints'] is Map
         ? Map<String, dynamic>.from(map['mobStarPoints'] as Map)
-        : <String, dynamic>{};
-    final mobCreditSource = map['mobCredit'] ?? map['mob_credit'];
-    final mobCredit = mobCreditSource is Map
-        ? Map<String, dynamic>.from(mobCreditSource)
         : <String, dynamic>{};
     final rupifi = map['rupifiDetails'] is Map
         ? Map<String, dynamic>.from(map['rupifiDetails'] as Map)
@@ -142,15 +122,6 @@ class CartAccountEntity {
       mobStarPercentage: _entityNum(mobStar, const ['percentage']).toDouble(),
       freeDelivery: _entityInt(mobStar, const ['free_delivery']),
       gstNumber: _entityStr(map, const ['gst_number', 'gstin', 'gst_no']),
-      mobCreditActivated: mobCredit['is_activated'] == true,
-      mobCreditStatus: _entityStr(mobCredit, const ['status']),
-      mobCreditSanctioned:
-          _entityNum(mobCredit, const ['sanctioned']).toDouble(),
-      mobCreditUtilized: _entityNum(mobCredit, const ['utilized']).toDouble(),
-      mobCreditPending: _entityNum(mobCredit, const ['pending']).toDouble(),
-      mobCreditAvailable: _entityNum(mobCredit, const ['available']).toDouble(),
-      mobCreditDays: _entityInt(mobCredit, const ['days']),
-      mobCreditExists: mobCredit['exists'] == true,
       rupifiPrimaryStatus: _entityStr(rupifi, const ['primary_status']),
       rupifiAccountStatus: _entityStr(rupifi, const ['account_status']),
       rupifiCurrentLimit:
@@ -176,14 +147,6 @@ class CartAccountEntity {
     mobStarPercentage: 0,
     freeDelivery: 0,
     gstNumber: '',
-    mobCreditActivated: false,
-    mobCreditStatus: '',
-    mobCreditSanctioned: 0,
-    mobCreditUtilized: 0,
-    mobCreditPending: 0,
-    mobCreditAvailable: 0,
-    mobCreditDays: 0,
-    mobCreditExists: false,
     rupifiPrimaryStatus: '',
     rupifiAccountStatus: '',
     rupifiCurrentLimit: 0,

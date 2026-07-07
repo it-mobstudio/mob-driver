@@ -75,7 +75,7 @@ class HomeRewardCard extends StatelessWidget {
                   width: 24,
                   height: 24,
                   child: SvgPicture.asset(
-                    'assets/images/Arrow.svg',
+                    'assets/images/RoundArrow.svg',
                     fit: BoxFit.contain,
                   ),
                 ),

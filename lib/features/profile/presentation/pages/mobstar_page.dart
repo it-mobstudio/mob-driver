@@ -419,19 +419,18 @@ class _LevelCard extends StatelessWidget {
 
   final MobstarEntity mobstar;
 
-  double get progress {
-    if (mobstar.purchaseLimit <= 0) return 0;
-    return (mobstar.points / mobstar.purchaseLimit).clamp(0.0, 1.0).toDouble();
-  }
+  // No API field gives progress-toward-next-level directly, and
+  // purchase_limit is just the flat target — not something to subtract or
+  // divide against other fields ourselves.
+  double get progress => 0;
 
   @override
   Widget build(BuildContext context) {
-    final remaining =
-        (mobstar.purchaseLimit - mobstar.points).clamp(0, double.infinity);
-    final remainingText = remaining.round().toString().replaceAllMapped(
-          RegExp(r'\B(?=(\d{3})+(?!\d))'),
-          (_) => ',',
-        );
+    final remainingText =
+        mobstar.purchaseLimit.round().toString().replaceAllMapped(
+              RegExp(r'\B(?=(\d{3})+(?!\d))'),
+              (_) => ',',
+            );
     final nextMembership = mobstar.nextMembership;
 
     return Container(

@@ -32,6 +32,7 @@ class OrderDetailPage extends StatefulWidget {
 class _OrderDetailPageState extends State<OrderDetailPage> {
   late final OrdersBloc _ordersBloc;
   bool _initialized = false;
+  bool _navigatingBack = false;
 
   @override
   void initState() {
@@ -64,82 +65,99 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<OrdersBloc>.value(
-      value: _ordersBloc,
-      child: BlocBuilder<OrdersBloc, OrdersState>(
-        builder: (context, state) {
-          final order = switch (state) {
-            OrderDetailLoaded(:final order) => order,
-            _ => null,
-          };
-          final shipments = _shipmentsFor(order);
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || _navigatingBack) return;
+        _navigatingBack = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/homepage');
+          }
+        });
+      },
+      child: BlocProvider<OrdersBloc>.value(
+        value: _ordersBloc,
+        child: BlocBuilder<OrdersBloc, OrdersState>(
+          builder: (context, state) {
+            final order = switch (state) {
+              OrderDetailLoaded(:final order) => order,
+              _ => null,
+            };
+            final shipments = _shipmentsFor(order);
 
-          return Scaffold(
-            backgroundColor: Colors.white,
-            body: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  _OrderDetailHeader(order: order),
-                  Expanded(
-                    child: switch (state) {
-                      OrdersInitial() || OrdersLoading() => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                      OrdersError(:final message) => Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text(
-                              message,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF596378),
-                                fontSize: 14,
+            return Scaffold(
+              backgroundColor: Colors.white,
+              body: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    _OrderDetailHeader(order: order),
+                    Expanded(
+                      child: switch (state) {
+                        OrdersInitial() || OrdersLoading() => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        OrdersError(:final message) => Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                message,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF596378),
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      _ => SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (order != null && shipments.isNotEmpty)
-                                for (var i = 0; i < shipments.length; i++) ...[
-                                  _ShipmentSection(
-                                    order: order,
-                                    shipment: shipments[i],
-                                    index: i + 1,
-                                    title:
-                                        _shipmentTitle(order, shipments[i], i),
-                                    iconAsset:
-                                        _shipmentIconAsset(order, shipments[i]),
-                                    items: shipments[i].items,
-                                  ),
-                                  if (i < shipments.length - 1)
-                                    const _SectionGap(),
-                                ]
-                              else
-                                const SizedBox(height: 8),
-                              const _SectionGap(),
-                              // const _RateItemsStrip(),
-                              // const _SectionGap(),
-                              _BillDetailsSection(order: order),
-                              const _SectionGap(),
-                              _OrderInfoSection(order: order),
-                              const _SectionGap(),
-                              const _HelpTile(),
-                              const _SectionGap(),
-                              const _PromoFooter(),
-                            ],
+                        _ => SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (order != null && shipments.isNotEmpty)
+                                  for (var i = 0;
+                                      i < shipments.length;
+                                      i++) ...[
+                                    _ShipmentSection(
+                                      order: order,
+                                      shipment: shipments[i],
+                                      index: i + 1,
+                                      title: _shipmentTitle(
+                                          order, shipments[i], i),
+                                      iconAsset: _shipmentIconAsset(
+                                          order, shipments[i]),
+                                      items: shipments[i].items,
+                                    ),
+                                    if (i < shipments.length - 1)
+                                      const _SectionGap(),
+                                  ]
+                                else
+                                  const SizedBox(height: 8),
+                                const _SectionGap(),
+                                // const _RateItemsStrip(),
+                                // const _SectionGap(),
+                                _BillDetailsSection(order: order),
+                                const _SectionGap(),
+                                _OrderInfoSection(order: order),
+                                const _SectionGap(),
+                                const _HelpTile(),
+                                const _SectionGap(),
+                                const _PromoFooter(),
+                              ],
+                            ),
                           ),
-                        ),
-                    },
-                  ),
-                ],
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

@@ -81,12 +81,19 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _cartBloc.add(CartLoadRequested());
     });
-    _navTimer = Timer(const Duration(seconds: 2), _navigateToOrderDetail);
+    _navTimer = Timer(const Duration(seconds: 4), _navigateToOrderDetail);
   }
 
   void _navigateToOrderDetail() {
     if (!mounted) return;
     final orderId = widget.order?.orderId ?? widget.orderId;
+    // A single atomic navigation — do not chain another go()/push() right
+    // after this one. Firing two Navigator page-list mutations back to back
+    // with no frame in between raced go_router's own transition and threw
+    // "Duplicate GlobalKey" / "deactivated widget" errors. This replaces the
+    // whole stack with just OrderDetailPage; canPop() is false afterward,
+    // so _OrderDetailHeader's back button falls back to a single, separate
+    // context.go('/homepage') call of its own when tapped later.
     _router.go(
       OrderDetailPage.routePath,
       extra: orderId.isNotEmpty ? orderId : null,
@@ -138,7 +145,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
                       width: 230,
                       height: 230,
                       fit: BoxFit.contain,
-                      repeat: false,
+                      repeat: true,
                     ),
                     const SizedBox(height: 10),
                     Text(

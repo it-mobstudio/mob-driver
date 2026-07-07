@@ -30,7 +30,7 @@ class RfqSuccessPage extends StatelessWidget {
                         width: 220,
                         height: 220,
                         fit: BoxFit.contain,
-                        repeat: false,
+                        repeat: true,
                       ),
                       const SizedBox(height: 8),
                       Text(

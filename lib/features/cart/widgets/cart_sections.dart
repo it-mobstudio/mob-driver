@@ -23,7 +23,13 @@ class CartTopBar extends StatelessWidget {
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => GoRouter.of(context).go(HomepageWidget.routePath),
+            onTap: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(HomepageWidget.routePath);
+              }
+            },
             child: const SizedBox(
               width: 40,
               height: 60,

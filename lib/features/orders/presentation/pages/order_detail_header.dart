@@ -26,7 +26,13 @@ class _OrderDetailHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/homepage');
+              }
+            },
             icon: const AppBackIcon(),
           ),
           Expanded(

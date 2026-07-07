@@ -294,8 +294,12 @@ class MobstarEntity {
     final pointsMap = first['mobStarPoints'] is Map
         ? Map<String, dynamic>.from(first['mobStarPoints'] as Map)
         : <String, dynamic>{};
+    // pointsMap['points'] is the true lifetime/redeemable balance (matches
+    // the same mobStarPoints.points field My Account binds correctly).
+    // program_details.current_points is a different, often-zero field —
+    // it must not take precedence just because `??` only skips on null.
     final points = int.tryParse(
-          (program['current_points'] ?? pointsMap['points'] ?? '0').toString(),
+          (pointsMap['points'] ?? program['current_points'] ?? '0').toString(),
         ) ??
         0;
     final moneyFromApi =

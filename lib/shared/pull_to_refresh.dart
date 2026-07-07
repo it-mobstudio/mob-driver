@@ -20,12 +20,18 @@ class PullToRefresh extends StatefulWidget {
 
 class _PullToRefreshState extends State<PullToRefresh>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _spinController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1100),
-  );
+  late final AnimationController _spinController;
 
   bool _refreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _spinController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+  }
 
   Future<void> _handleRefresh() async {
     setState(() => _refreshing = true);
@@ -96,7 +102,8 @@ class _BouncingDots extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: List.generate(3, (i) {
                 final t = (animation.value + (i * 0.2)) % 1.0;
-                final scale = 0.5 + 0.5 * (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0);
+                final scale =
+                    0.5 + 0.5 * (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0);
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: Transform.scale(

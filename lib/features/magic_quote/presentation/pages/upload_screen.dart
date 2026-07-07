@@ -348,7 +348,7 @@ class UploadScreen extends StatelessWidget {
                   style: GoogleFonts.inter(
                     color: MagicQuoteColors.navy,
                     fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -514,7 +514,7 @@ class _UploadDropZoneState extends State<_UploadDropZone> {
                       style: GoogleFonts.inter(
                         color: MagicQuoteColors.navy,
                         fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),

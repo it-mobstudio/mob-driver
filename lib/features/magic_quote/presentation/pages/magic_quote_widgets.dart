@@ -52,7 +52,7 @@ class MagicQuoteSectionTitle extends StatelessWidget {
       style: GoogleFonts.inter(
         color: MagicQuoteColors.navy,
         fontSize: 16,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
       ),
     );
   }

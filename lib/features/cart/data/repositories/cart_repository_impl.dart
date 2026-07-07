@@ -128,31 +128,34 @@ class CartRepositoryImpl implements CartRepository {
       'mobStarPoints', 'mob_star', 'mob_star_tier', 'loyalty', 'loyalty_tier', 'tier', 'reward_tier',
     ]);
 
-    // mobCREDIT balance + account status — look inside user_details under common key names, then root data.
-    // The real field is `rupifiDetails` (e.g. {is_activated, status, sanctioned, utilized, pending,
-    // available, exists}) — not a flat `account_status`/`balance` pair, which is why this previously
-    // never matched and the option stayed hidden even for activated accounts.
-    final mobCreditObjFromUd = _findNestedMap(udMap, const ['rupifiDetails', 'rupifi_details', 'mob_credit', 'rupifi', 'credit', 'credit_details']);
-    final mobCreditObjFromRoot = _findNestedMap(data, const ['rupifiDetails', 'rupifi_details', 'mob_credit', 'rupifi', 'credit', 'credit_details']);
-    final mobCreditObj = mobCreditObjFromUd.isNotEmpty ? mobCreditObjFromUd : mobCreditObjFromRoot;
-    final mobCreditBalance = _num(
-      mobCreditObj,
-      const ['available', 'available_balance', 'balance', 'current_limit'],
-    ).toDouble();
+    // mobCREDIT balance + account status — sourced entirely from
+    // `rupifiDetails` (in user_details, falling back to root data). The old
+    // separate `mobCredit`/`mob_credit` account object was a distinct,
+    // deprecated feature that the backend no longer sends.
+    final rupifiObjFromUd =
+        _findNestedMap(udMap, const ['rupifiDetails', 'rupifi_details']);
+    final rupifiObjFromRoot =
+        _findNestedMap(data, const ['rupifiDetails', 'rupifi_details']);
+    final rupifiObj =
+        rupifiObjFromUd.isNotEmpty ? rupifiObjFromUd : rupifiObjFromRoot;
+    // rupifiDetails.balance is already the remaining spendable amount, not
+    // an amount-utilized figure to subtract from current_limit (confirmed
+    // against a real account response).
+    final mobCreditBalance = _num(rupifiObj, const ['balance']).toDouble();
     // null → hide mobCREDIT. This matches web checkout: inactive or incomplete
     // credit accounts should not render as a disabled payment method.
-    final mobCreditExists = mobCreditObj.isNotEmpty &&
-        (mobCreditObj['exists'] == null || mobCreditObj['exists'] == true);
+    final mobCreditExists = rupifiObj.isNotEmpty &&
+        (rupifiObj['exists'] == null || rupifiObj['exists'] == true);
     String? mobCreditAccountStatus;
     if (mobCreditExists) {
-      final isActivated = mobCreditObj['is_activated'] != false;
+      final isActivated = rupifiObj['is_activated'] != false;
       final accountStatus =
-          (mobCreditObj['account_status'] ?? mobCreditObj['status'])
+          (rupifiObj['account_status'] ?? rupifiObj['status'])
               ?.toString()
               .trim()
               .toUpperCase();
       final primaryStatus =
-          mobCreditObj['primary_status']?.toString().trim().toUpperCase();
+          rupifiObj['primary_status']?.toString().trim().toUpperCase();
       final hasDue = accountStatus == 'AMOUNT_DUE' || primaryStatus == 'AMOUNT_DUE';
       final isAccountActive = accountStatus == 'ACTIVE';
       final isPrimaryActive = primaryStatus == 'ACTIVE';

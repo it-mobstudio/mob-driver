@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/address/presentation/pages/address_se
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
@@ -22,6 +23,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_poi
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 import 'package:m_o_b_demand_side/shared/mob_credit.dart';
+import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 
 class MyAccountWidget extends StatefulWidget {
   const MyAccountWidget({super.key});
@@ -90,6 +92,21 @@ class _ProfileBody extends StatelessWidget {
       builder: (context, profileState) {
         return BlocBuilder<CartBloc, CartState>(
           builder: (context, cartState) {
+            // Show a skeleton until both blocs have reached a terminal
+            // state at least once — rendering real widgets against empty
+            // placeholder entities in the meantime caused a visible flash
+            // (default "Welcome back" name, zeroed balances, Apply-now
+            // mobCREDIT card) the instant real data arrived.
+            final isProfileReady = profileState is ProfileLoaded ||
+                profileState is ProfileUpdated ||
+                profileState is ProfileError;
+            final isCartReady = cartState is CartLoaded ||
+                cartState is CartError ||
+                cartState is CartRequiresLogin;
+            if (!isProfileReady || !isCartReady) {
+              return _MyAccountSkeleton(scrollController: scrollController);
+            }
+
             final profile = switch (profileState) {
               ProfileLoaded(:final profile) => profile,
               ProfileUpdated(:final profile) => profile,
@@ -113,8 +130,9 @@ class _ProfileBody extends StatelessWidget {
                     children: [
                       MobCreditCard(
                         account: account,
-                        onManage: () => context.go(CreditPage.routePath),
-                        onApply: () => context.go(CreditPage.routePath),
+                        onManage: () =>
+                            context.push(MobCreditProfilePage.routePath),
+                        onApply: () => context.push(CreditPage.routePath),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -283,6 +301,121 @@ class _ProfileBody extends StatelessWidget {
   }
 }
 
+/// Mirrors the real page's section heights so there's no layout jump when
+/// the skeleton is swapped for actual content.
+class _MyAccountSkeleton extends StatelessWidget {
+  const _MyAccountSkeleton({required this.scrollController});
+
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      controller: scrollController,
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(child: _headerSkeleton()),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          sliver: SliverList.list(
+            children: [
+              const SkeletonBox(height: 96, borderRadius: 16),
+              const SizedBox(height: 16),
+              Row(
+                children: const [
+                  Expanded(child: SkeletonBox(height: 112, borderRadius: 16)),
+                  SizedBox(width: 15),
+                  Expanded(child: SkeletonBox(height: 112, borderRadius: 16)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const SkeletonBox(height: 58, borderRadius: 16),
+              const SizedBox(height: 16),
+              _menuCardSkeleton(rowCount: 5),
+              const SizedBox(height: 24),
+              const SkeletonBox(width: 140, height: 10, borderRadius: 4),
+              const SizedBox(height: 20),
+              _menuCardSkeleton(rowCount: 4),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _headerSkeleton() {
+    return ColoredBox(
+      color: _ProfileColors.navy,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 56),
+              Row(
+                children: [
+                  const SkeletonBox(width: 56, height: 56, borderRadius: 28),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        SkeletonBox(width: 160, height: 20, borderRadius: 6),
+                        SizedBox(height: 8),
+                        SkeletonBox(width: 110, height: 14, borderRadius: 6),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const SkeletonBox(height: 58, borderRadius: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _menuCardSkeleton({required int rowCount}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: ColoredBox(
+        color: Colors.white,
+        child: Column(
+          children: [
+            for (var i = 0; i < rowCount; i++) ...[
+              SizedBox(
+                height: 56,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: const [
+                      SkeletonBox(width: 24, height: 24, borderRadius: 6),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: SkeletonBox(height: 14, borderRadius: 6),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (i != rowCount - 1)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(height: 1, thickness: 1, color: Color(0xFFE7EAEE)),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({required this.profile, required this.account});
 
@@ -316,7 +449,7 @@ class _ProfileHeader extends StatelessWidget {
               // (see MyAccountWidget.build) so it stays pinned above this
               // scrolling header instead of scrolling away with it.
               const SizedBox(height: 56),
-              const SizedBox(height: 34),
+              // const SizedBox(height: 34),
               Material(
                 color: Colors.transparent,
                 child: InkWell(

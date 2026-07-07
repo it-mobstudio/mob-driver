@@ -184,8 +184,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
               title,
               style: GoogleFonts.inter(
                 color: _navy,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
               ),
               overflow: TextOverflow.ellipsis,
             ),
