@@ -13,6 +13,7 @@ import 'package:m_o_b_demand_side/features/home/domain/entities/home_entity.dart
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
+import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 
 class HomeHeader extends StatefulWidget {
   const HomeHeader({super.key});
@@ -24,6 +25,7 @@ class HomeHeader extends StatefulWidget {
 class _HomeHeaderState extends State<HomeHeader> {
   AddressEntity? _selectedAddress;
   StoreOpenStatusEntity? _storeStatus;
+  bool _storeStatusLoading = true;
 
   @override
   void initState() {
@@ -53,17 +55,20 @@ class _HomeHeaderState extends State<HomeHeader> {
     final addressText = selectedAddress == null
         ? 'Tap to set your delivery address'
         : _selectedAddressText(selectedAddress);
-    // Default optimistic copy shown until the store-status call resolves,
-    // so the row never renders blank text that then pops in (was read as
-    // "blinking").
-    final deliveryText = storeStatus?.message.trim().isNotEmpty == true
-        ? storeStatus?.isOpen == true
-            ? '${storeStatus!.message.trim()} delivery'
-            : storeStatus!.message.trim()
-        : '1-4 hrs delivery';
+
+    final deliveryText = storeStatus == null
+        ? ''
+        : storeStatus.isOpen
+            ? (storeStatus.message.trim().isNotEmpty
+                ? '${storeStatus.message.trim()} delivery'
+                : '')
+            : 'Currently closed';
     final deliveryIcon = storeStatus?.isOpen == false
         ? 'assets/images/timer-delivery.svg'
         : 'assets/images/thunder.svg';
+    final closedSubtitle = storeStatus != null && !storeStatus.isOpen
+        ? storeStatus.message.trim()
+        : '';
     final profilePictureUrl = _profilePictureUrl();
 
     return Container(
@@ -82,30 +87,68 @@ class _HomeHeaderState extends State<HomeHeader> {
                     children: [
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 250),
-                        child: Row(
-                          key: ValueKey('$deliveryIcon|$deliveryText'),
-                          children: [
-                            SvgPicture.asset(
-                              deliveryIcon,
-                              width: 18,
-                              height: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                deliveryText,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(
-                                  color: Colors.white,
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.w700,
-                                  height: 28 / 19,
+                        child: _storeStatusLoading
+                            ? const Padding(
+                                key: ValueKey('delivery-loading'),
+                                padding: EdgeInsets.symmetric(vertical: 5),
+                                child: SkeletonBox(
+                                  width: 130,
+                                  height: 18,
+                                  borderRadius: 6,
                                 ),
-                              ),
-                            ),
-                          ],
-                        ),
+                              )
+                            : deliveryText.isEmpty
+                                ? const SizedBox(
+                                    key: ValueKey('delivery-empty'),
+                                    height: 28,
+                                  )
+                                : Column(
+                                    key: ValueKey(
+                                      '$deliveryIcon|$deliveryText|$closedSubtitle',
+                                    ),
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (closedSubtitle.isNotEmpty) ...[
+                                        Text(
+                                          closedSubtitle,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.inter(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            height: 18 / 12,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                      ],
+                                      Row(
+                                        children: [
+                                          SvgPicture.asset(
+                                            deliveryIcon,
+                                            width: 18,
+                                            height: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              deliveryText,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.inter(
+                                                color: Colors.white,
+                                                fontSize: 19,
+                                                fontWeight: FontWeight.w700,
+                                                height: 28 / 19,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                       ),
                       Row(
                         children: [
@@ -252,8 +295,11 @@ class _HomeHeaderState extends State<HomeHeader> {
 
   Future<void> _loadStoreStatus() async {
     final (status, failure) = await sl<HomeRepository>().getStoreOpenStatus();
-    if (!mounted || failure != null || status == null) return;
-    setState(() => _storeStatus = status);
+    if (!mounted) return;
+    setState(() {
+      _storeStatusLoading = false;
+      if (failure == null && status != null) _storeStatus = status;
+    });
   }
 
   String _selectedAddressText(AddressEntity address) {

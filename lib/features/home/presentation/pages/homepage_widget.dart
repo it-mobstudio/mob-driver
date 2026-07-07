@@ -402,7 +402,7 @@ class _HomeLoadingSkeleton extends StatelessWidget {
     return const CustomScrollView(
       physics: NeverScrollableScrollPhysics(),
       slivers: [
-        SliverToBoxAdapter(child: HomeHeader()),
+        SliverToBoxAdapter(child: _HomeHeaderSkeleton()),
         SliverPersistentHeader(
           pinned: true,
           delegate: _StickySearchDelegate(),
@@ -417,6 +417,59 @@ class _HomeLoadingSkeleton extends StatelessWidget {
         SliverToBoxAdapter(child: _ProductRailSkeleton()),
         SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
+    );
+  }
+}
+
+// Purely visual placeholder for HomeHeader — never mount the real,
+// API-fetching HomeHeader here. It used to sit in this skeleton screen
+// directly, so every time HomeBloc flipped from HomeLoading to HomeLoaded
+// the switch below swapped to a differently-typed widget tree, unmounting
+// this one and mounting a brand new HomeHeader from scratch — restarting
+// its own address/store-status fetch and re-showing its internal loading
+// state a second time (the "text, then loader, then text" flicker).
+class _HomeHeaderSkeleton extends StatelessWidget {
+  const _HomeHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF0A3C35),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: const Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 130,
+                  height: 18,
+                  child: _SkeletonFill(borderRadius: 6),
+                ),
+                SizedBox(height: 8),
+                SizedBox(
+                  width: 200,
+                  height: 14,
+                  child: _SkeletonFill(borderRadius: 4),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8),
+          SizedBox(
+            width: 72,
+            height: 36,
+            child: _SkeletonFill(borderRadius: 18),
+          ),
+          SizedBox(width: 8),
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: _SkeletonFill(borderRadius: 18),
+          ),
+        ],
+      ),
     );
   }
 }

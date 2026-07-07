@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/network/dio_client.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
@@ -1006,28 +1007,48 @@ class _PincodeErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      height: 92,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF0F0),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFFCDD2)),
+        color: const Color(0xFFFFE9E9),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.warning_amber_rounded,
-              color: Color(0xFFE53935), size: 16),
-          const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              'Delivery unavailable for this pincode at the moment. '
-              'Please enter a different pincode.',
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-                height: 18 / 12,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "We don't deliver\nhere yet.",
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF0A243F),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    height: 20 / 18,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Please try another location.',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF67696D),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    height: 18 / 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 92,
+            height: 92,
+            child: Lottie.asset(
+              'assets/lottiejson/Unserviceable.json',
+              fit: BoxFit.contain,
+              repeat: true,
             ),
           ),
         ],

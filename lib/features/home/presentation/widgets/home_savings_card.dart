@@ -1,11 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
+import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_dashboard_page.dart';
+import 'package:m_o_b_demand_side/shared/mob_credit.dart';
 
 class HomeSavingsCard extends StatelessWidget {
   const HomeSavingsCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CartBloc, CartState>(
+      builder: (context, state) {
+        final account = state is CartLoaded
+            ? state.summary.account
+            : CartAccountEntity.empty;
+        final hasApplied =
+            resolveMobCreditStatus(account) != MobCreditStatus.notApplied;
+        return _SavingsCardBody(
+          onTap: () {
+            if (hasApplied) {
+              context.push(MobCreditDashboardPage.routePath);
+            } else {
+              // CreditPage.routePath is the bottom nav bar's own tab route —
+              // pushing it stacks a second Navigator on top of the shell
+              // branch's, tripping a duplicate GlobalKey assertion. go()
+              // switches to the existing tab instead.
+              context.go(CreditPage.routePath);
+            }
+          },
+        );
+      },
+    );
+  }
+}
+
+class _SavingsCardBody extends StatelessWidget {
+  const _SavingsCardBody({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +134,7 @@ class HomeSavingsCard extends StatelessWidget {
                   left: 16,
                   top: 133,
                   child: InkWell(
-                    onTap: () => context.push(CreditPage.routePath),
+                    onTap: onTap,
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
                       height: 32,

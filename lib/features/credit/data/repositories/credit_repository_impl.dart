@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/credit/data/datasources/credit_remote_datasource.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/entities/business_segment_entity.dart';
+import 'package:m_o_b_demand_side/features/credit/domain/entities/credit_transaction_entity.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/repositories/credit_repository.dart';
 
 class CreditRepositoryImpl implements CreditRepository {
@@ -45,6 +46,24 @@ class CreditRepositoryImpl implements CreditRepository {
       return (false, e.toAppFailure());
     } catch (e) {
       return (false, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(List<CreditTransactionEntity>?, AppFailure?)> getCreditHistory() async {
+    try {
+      final raw = await _datasource.getCreditHistory();
+      final list = _extractList(raw);
+      final transactions = list
+          .whereType<Map>()
+          .map((e) =>
+              CreditTransactionEntity.fromMap(Map<String, dynamic>.from(e)))
+          .toList();
+      return (transactions, null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
     }
   }
 

@@ -37,7 +37,7 @@ class HomeRepositoryImpl implements HomeRepository {
       final body = await _datasource.getStoreOpenStatus();
       return (
         StoreOpenStatusEntity(
-          message: body['message']?.toString() ?? '1-4 hrs delivery',
+          message: body['message']?.toString() ?? '',
           isOpen: body['is_open'] == true,
           deliveryDate: body['delivery_date']?.toString() ?? '',
         ),

@@ -6,11 +6,10 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/map_location_widget.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/splash_screen.dart';
-import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_page.dart';
-import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_rfq_request_page.dart';
 import 'package:m_o_b_demand_side/features/categories/presentation/pages/categories_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_dashboard_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_order_review_page.dart';
@@ -222,7 +221,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
             GoRoute(
               name: CreditPage.routeName,
               path: CreditPage.routePath,
-              builder: (context, state) => const CreditPage(),
+              builder: (context, state) => const CreditTabPage(),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -327,16 +326,6 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         path: CartPage.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) => const CartPage(),
-      ),
-      GoRoute(
-        name: CartRfqRequestPage.routeName,
-        path: CartRfqRequestPage.routePath,
-        parentNavigatorKey: appNavigatorKey,
-        builder: (context, state) => CartRfqRequestPage(
-          summary: state.extra is CartSummaryEntity
-              ? state.extra as CartSummaryEntity
-              : CartSummaryEntity.empty,
-        ),
       ),
       GoRoute(
         name: CheckoutAddressPage.routeName,
@@ -471,6 +460,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         path: MobCreditProfilePage.routePath,
         parentNavigatorKey: appNavigatorKey,
         redirect: (context, state) => CreditPage.routePath,
+      ),
+      GoRoute(
+        name: MobCreditDashboardPage.routeName,
+        path: MobCreditDashboardPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const MobCreditDashboardPage(),
       ),
       GoRoute(
         name: PersonalInfoPage.routeName,

@@ -21,7 +21,12 @@ MobCreditStatus resolveMobCreditStatus(CartAccountEntity account) {
   final accountStatus = account.rupifiAccountStatus.trim().toUpperCase();
   final primaryStatus = account.rupifiPrimaryStatus.trim().toUpperCase();
 
-  if (primaryStatus.isEmpty) return MobCreditStatus.notApplied;
+  // The web app's ApplyCreditOrApprovedCredit gates "not applied" on
+  // account_status being empty, not primary_status — a never-applied
+  // customer's rupifiDetails can still carry a non-empty primary_status
+  // placeholder, which previously caused this to fall through to
+  // MobCreditStatus.inactive instead of notApplied.
+  if (accountStatus.isEmpty) return MobCreditStatus.notApplied;
   if (accountStatus == 'ACTIVE') return MobCreditStatus.active;
   if (accountStatus == 'AMOUNT_DUE') return MobCreditStatus.amountDue;
 

@@ -1301,10 +1301,7 @@ class CartActionRow extends StatelessWidget {
           ),
           const Spacer(),
           OutlinedButton(
-            onPressed: () => context.push(
-              CartRfqRequestPage.routePath,
-              extra: summary,
-            ),
+            onPressed: () => showCartRfqRequestSheet(context, summary),
             style: OutlinedButton.styleFrom(
               backgroundColor: Colors.white,
               side: const BorderSide(

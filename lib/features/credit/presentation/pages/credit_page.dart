@@ -1,10 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
+import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_apply_sheet.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_documents_sheet.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_dashboard_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
+import 'package:m_o_b_demand_side/shared/mob_credit.dart';
 
 const _creditWhatsappNumber = '918970415365';
+
+/// Entry point for the bottom nav bar's mob Credit tab — an already-active
+/// Rupifi customer lands on the real [MobCreditDashboardPage] instead of the
+/// "Apply now" flow.
+class CreditTabPage extends StatelessWidget {
+  const CreditTabPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CartBloc, CartState>(
+      builder: (context, state) {
+        final account = state is CartLoaded
+            ? state.summary.account
+            : CartAccountEntity.empty;
+        final hasApplied =
+            resolveMobCreditStatus(account) != MobCreditStatus.notApplied;
+        return hasApplied
+            ? const MobCreditDashboardPage()
+            : const CreditPage();
+      },
+    );
+  }
+}
 
 class CreditPage extends StatelessWidget {
   static const String routeName = 'Credit';

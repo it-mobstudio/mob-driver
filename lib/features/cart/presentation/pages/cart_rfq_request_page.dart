@@ -14,19 +14,35 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 
-class CartRfqRequestPage extends StatefulWidget {
-  const CartRfqRequestPage({super.key, required this.summary});
+/// Opens the RFQ ("purchase later / recheck prices") form as a true modal
+/// bottom sheet over the current screen, matching the rest of the app's
+/// sheet conventions (see `showCreditDocumentsSheet`) instead of a full page
+/// route — a full route rendered its own fake dimmed backdrop and "Cart"
+/// header, which looked like a totally different screen mid-transition.
+Future<void> showCartRfqRequestSheet(
+  BuildContext context,
+  CartSummaryEntity summary,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.6),
+    builder: (ctx) => _CartRfqRequestSheet(summary: summary),
+  );
+}
 
-  static const String routeName = 'CartRfqRequestPage';
-  static const String routePath = '/cart/rfq-request';
+class _CartRfqRequestSheet extends StatefulWidget {
+  const _CartRfqRequestSheet({required this.summary});
 
   final CartSummaryEntity summary;
 
   @override
-  State<CartRfqRequestPage> createState() => _CartRfqRequestPageState();
+  State<_CartRfqRequestSheet> createState() => _CartRfqRequestSheetState();
 }
 
-class _CartRfqRequestPageState extends State<CartRfqRequestPage> {
+class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
   static const _navy = Color(0xFF0A243F);
   static const _muted = Color(0xFF6C7C8C);
   static const _border = Color(0xFFE1E6ED);
@@ -139,92 +155,36 @@ class _CartRfqRequestPageState extends State<CartRfqRequestPage> {
         listener: _onRfqStateChanged,
         builder: (context, state) {
           final submitting = state is CartRfqSubmitting;
-          return Scaffold(
-            backgroundColor: const Color(0x99000000),
-            body: AnnotatedRegion<SystemUiOverlayStyle>(
-              value: SystemUiOverlayStyle.dark,
-              child: SafeArea(
-                bottom: false,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final childSize = _submittedRfqId.isEmpty ? 0.84 : 0.78;
-                    final sheetTop = constraints.maxHeight * (1 - childSize);
-                    return Stack(
-                      children: [
-                        _dimmedCartChrome(),
-                        DraggableScrollableSheet(
-                          initialChildSize: childSize,
-                          minChildSize: 0.56,
-                          maxChildSize: 0.96,
-                          snap: true,
-                          snapSizes: const [0.56, 0.78, 0.84, 0.96],
-                          builder: (context, scrollController) {
-                            return _submittedRfqId.isEmpty
-                                ? _requestSheet(submitting, scrollController)
-                                : _successSheet(scrollController);
-                          },
-                        ),
-                        Positioned(
-                          top: sheetTop - 38,
-                          left: 0,
-                          right: 0,
-                          child: _closeButton(size: 44),
-                        ),
-                      ],
-                    );
+          final screenHeight = MediaQuery.sizeOf(context).height;
+          final childSize = _submittedRfqId.isEmpty ? 0.84 : 0.78;
+          final sheetTop = screenHeight * (1 - childSize);
+          return SizedBox(
+            height: screenHeight,
+            child: Stack(
+              children: [
+                DraggableScrollableSheet(
+                  initialChildSize: childSize,
+                  minChildSize: 0.56,
+                  maxChildSize: 0.96,
+                  snap: true,
+                  snapSizes: const [0.56, 0.78, 0.84, 0.96],
+                  builder: (context, scrollController) {
+                    return _submittedRfqId.isEmpty
+                        ? _requestSheet(submitting, scrollController)
+                        : _successSheet(scrollController);
                   },
                 ),
-              ),
+                Positioned(
+                  top: sheetTop - 38,
+                  left: 0,
+                  right: 0,
+                  child: _closeButton(size: 44),
+                ),
+              ],
             ),
           );
         },
       ),
-    );
-  }
-
-  Widget _dimmedCartChrome() {
-    final name = widget.summary.shippingRecipientName.trim().isEmpty
-        ? 'Add address'
-        : widget.summary.shippingRecipientName.trim();
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
-          child: Row(
-            children: [
-              const Icon(Icons.arrow_back, color: _navy),
-              const SizedBox(width: 14),
-              Text(
-                'Cart',
-                style: GoogleFonts.inter(
-                  color: _navy,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              const Icon(Icons.search, color: _navy),
-            ],
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.28),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Shipping to:  $name',
-            style: GoogleFonts.inter(
-              color: _navy,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -235,7 +195,7 @@ class _CartRfqRequestPageState extends State<CartRfqRequestPage> {
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
-          onTap: () => context.pop(),
+          onTap: () => Navigator.of(context).pop(),
           child: SizedBox(
             width: size,
             height: size,
@@ -407,7 +367,7 @@ class _CartRfqRequestPageState extends State<CartRfqRequestPage> {
             ),
           ),
           TextButton(
-            onPressed: () => context.pop(),
+            onPressed: () => Navigator.of(context).pop(),
             style: TextButton.styleFrom(
               foregroundColor: _navy,
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -775,7 +735,7 @@ class _CartRfqRequestPageState extends State<CartRfqRequestPage> {
                   width: 210,
                   height: 210,
                   fit: BoxFit.contain,
-                  repeat: false,
+                  repeat: true,
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -827,7 +787,10 @@ class _CartRfqRequestPageState extends State<CartRfqRequestPage> {
             child: SafeArea(
               top: false,
               child: OutlinedButton(
-                onPressed: () => context.goNamed(RfqPage.routeName),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.goNamed(RfqPage.routeName);
+                },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _blue,
                   side: const BorderSide(color: _blue),

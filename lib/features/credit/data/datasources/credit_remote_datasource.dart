@@ -4,6 +4,8 @@ abstract interface class CreditRemoteDatasource {
   Future<dynamic> getBusinessSegments();
 
   Future<Map<String, dynamic>> requestLineOfCredit(Map<String, dynamic> body);
+
+  Future<dynamic> getCreditHistory();
 }
 
 class CreditRemoteDatasourceImpl implements CreditRemoteDatasource {
@@ -28,5 +30,13 @@ class CreditRemoteDatasourceImpl implements CreditRemoteDatasource {
     final raw = response.data;
     if (raw is Map) return Map<String, dynamic>.from(raw);
     return {};
+  }
+
+  @override
+  Future<dynamic> getCreditHistory() async {
+    final response = await _dio.get<dynamic>(
+      '/accounts/mob_user_account/get_credit_history/',
+    );
+    return response.data;
   }
 }

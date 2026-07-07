@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/entities/business_segment_entity.dart';
+import 'package:m_o_b_demand_side/features/credit/domain/entities/credit_transaction_entity.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/repositories/credit_repository.dart';
 
 // ── Events ───────────────────────────────────────────────────────────────────
@@ -8,6 +9,8 @@ import 'package:m_o_b_demand_side/features/credit/domain/repositories/credit_rep
 sealed class CreditEvent {}
 
 final class CreditSegmentsRequested extends CreditEvent {}
+
+final class CreditHistoryRequested extends CreditEvent {}
 
 final class CreditApplyRequested extends CreditEvent {
   CreditApplyRequested({
@@ -50,12 +53,25 @@ final class CreditApplyError extends CreditState {
   final String message;
 }
 
+final class CreditHistoryLoading extends CreditState {}
+
+final class CreditHistoryLoaded extends CreditState {
+  CreditHistoryLoaded(this.transactions);
+  final List<CreditTransactionEntity> transactions;
+}
+
+final class CreditHistoryError extends CreditState {
+  CreditHistoryError(this.message);
+  final String message;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class CreditBloc extends Bloc<CreditEvent, CreditState> {
   CreditBloc(this._repository) : super(CreditInitial()) {
     on<CreditSegmentsRequested>(_onSegments);
     on<CreditApplyRequested>(_onApply);
+    on<CreditHistoryRequested>(_onHistory);
   }
 
   final CreditRepository _repository;
@@ -90,6 +106,19 @@ class CreditBloc extends Bloc<CreditEvent, CreditState> {
     } else {
       AppHaptics.success();
       emit(CreditApplySubmitted());
+    }
+  }
+
+  Future<void> _onHistory(
+    CreditHistoryRequested event,
+    Emitter<CreditState> emit,
+  ) async {
+    emit(CreditHistoryLoading());
+    final (transactions, failure) = await _repository.getCreditHistory();
+    if (failure != null) {
+      emit(CreditHistoryError(failure.message));
+    } else {
+      emit(CreditHistoryLoaded(transactions!));
     }
   }
 }

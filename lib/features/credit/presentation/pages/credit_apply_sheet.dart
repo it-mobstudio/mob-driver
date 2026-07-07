@@ -119,6 +119,9 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
               SnackBar(content: Text(message)),
             );
           case CreditInitial():
+          case CreditHistoryLoading():
+          case CreditHistoryLoaded():
+          case CreditHistoryError():
             break;
         }
       },
