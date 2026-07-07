@@ -332,9 +332,9 @@ class _ProfileHeader extends StatelessWidget {
                             : null,
                         child: profileImage.isEmpty
                             ? SvgPicture.asset(
-                                'assets/icons/profile.svg',
-                                width: 31,
-                                height: 31,
+                                'assets/images/profile.svg',
+                                width: 24,
+                                height: 24,
                               )
                             : null,
                       ),
@@ -732,7 +732,7 @@ class _Chevron extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SvgPicture.asset(
-      'assets/images/arrow.svg',
+      'assets/images/Arrow.svg',
       width: 12,
       height: 12,
       fit: BoxFit.contain,

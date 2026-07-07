@@ -181,167 +181,124 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
           },
           child: Scaffold(
             backgroundColor: Colors.white,
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              automaticallyImplyLeading: false,
-              leading: IconButton(
-                icon: const AppBackIcon(),
-                onPressed: () => context.go(LoginpageWidget.routePath),
-              ),
-              elevation: 0.0,
-            ),
             body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 344),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 24),
-                        Text(
-                          'OTP verification',
-                          textAlign: TextAlign.left,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF0A243F),
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            height: 1.33,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text.rich(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      onPressed: () => context.go(LoginpageWidget.routePath),
+                      icon: const AppBackIcon(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 24,
+                        height: 24,
+                      ),
+                      splashRadius: 20,
+                    ),
+                    const SizedBox(height: 28),
+                    Text(
+                      'OTP verification',
+                      textAlign: TextAlign.left,
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0A243F),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        height: 32 / 24,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text.rich(
+                      TextSpan(
+                        children: [
                           TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'We have sent an OTP to ',
-                                style: GoogleFonts.inter(
-                                  color: const Color(0xFF0A243F),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  height: 21 / 14,
-                                ),
-                              ),
-                              TextSpan(
-                                text: widget.phoneNumber,
-                                style: GoogleFonts.inter(
-                                  color: const Color(0xFF0A243F),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  height: 21 / 14,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' ',
-                                style: GoogleFonts.inter(
-                                  color: const Color(0xFF0A243F),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  height: 21 / 14,
-                                ),
-                              ),
-                            ],
+                            text: 'We have sent an OTP to ',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF0A243F),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              height: 21 / 14,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 32),
-                        Row(
+                          TextSpan(
+                            text: widget.phoneNumber,
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF0A243F),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              height: 21 / 14,
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' ',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF0A243F),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              height: 21 / 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        const gap = 16.0;
+
+                        return Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
                             for (int i = 0; i < 4; i++) ...[
                               Expanded(
-                                child: Container(
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: _otpFocusNodes[i].hasFocus
-                                          ? const Color(0xFF0A243F)
-                                          : const Color(0xFFDFE4EC),
-                                      width: _otpFocusNodes[i].hasFocus
-                                          ? 1.5
-                                          : 1.0,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: TextField(
-                                      controller: _otpControllers[i],
-                                      focusNode: _otpFocusNodes[i],
-                                      textAlign: TextAlign.center,
-                                      keyboardType: TextInputType.number,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                        LengthLimitingTextInputFormatter(4),
-                                      ],
-                                      enabled: !isLoading,
-                                      showCursor: false,
-                                      onTap: () {
-                                        _otpControllers[i].selection =
-                                            TextSelection(
-                                          baseOffset: 0,
-                                          extentOffset:
-                                              _otpControllers[i].text.length,
-                                        );
-                                      },
-                                      style: GoogleFonts.inter(
-                                        color: const Color(0xFF0A243F),
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w700,
-                                        height: 30 / 20,
-                                      ),
-                                      decoration: const InputDecoration(
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        disabledBorder: InputBorder.none,
-                                        isCollapsed: true,
-                                        contentPadding: EdgeInsets.zero,
-                                      ),
-                                      onChanged: (val) =>
-                                          _onOtpDigitChanged(i, val),
-                                    ),
-                                  ),
+                                child: _OtpDigitField(
+                                  controller: _otpControllers[i],
+                                  focusNode: _otpFocusNodes[i],
+                                  enabled: !isLoading,
+                                  onChanged: (val) =>
+                                      _onOtpDigitChanged(i, val),
                                 ),
                               ),
-                              if (i < 3) const SizedBox(width: 16),
+                              if (i < 3) const SizedBox(width: gap),
                             ],
                           ],
-                        ),
-                        const SizedBox(height: 24),
-                        if (isLoading)
-                          const Center(child: CircularProgressIndicator())
-                        else if (_resendSeconds > 0)
-                          Text(
-                            'Resend OTP in ${_resendSeconds}s',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFFAFB4C0),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              height: 21 / 14,
-                            ),
-                          )
-                        else
-                          TextButton(
-                            onPressed: _resendOtp,
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF0360E5),
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'Resend OTP',
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF0360E5),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                      ],
+                        );
+                      },
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    if (isLoading)
+                      const Center(child: CircularProgressIndicator())
+                    else if (_resendSeconds > 0)
+                      Text(
+                        'Resend OTP in ${_resendSeconds}s',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFFAFB4C0),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          height: 21 / 14,
+                        ),
+                      )
+                    else
+                      TextButton(
+                        onPressed: _resendOtp,
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF0360E5),
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Resend OTP',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF0360E5),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            height: 21 / 14,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -365,6 +322,72 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
             child: const Text('Ok'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OtpDigitField extends StatelessWidget {
+  const _OtpDigitField({
+    required this.controller,
+    required this.focusNode,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool enabled;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFocused = focusNode.hasFocus;
+
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isFocused ? const Color(0xFF0A243F) : const Color(0xFFDFE4EC),
+          width: isFocused ? 1.5 : 1.0,
+        ),
+      ),
+      child: Center(
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(4),
+          ],
+          enabled: enabled,
+          showCursor: false,
+          onTap: () {
+            controller.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: controller.text.length,
+            );
+          },
+          style: GoogleFonts.inter(
+            color: const Color(0xFF0A243F),
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            height: 30 / 20,
+          ),
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            isCollapsed: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+          onChanged: onChanged,
+        ),
       ),
     );
   }

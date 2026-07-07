@@ -607,7 +607,7 @@ class _ProfileChevron extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SvgPicture.asset(
-      'assets/images/arrow.svg',
+      'assets/images/Arrow.svg',
       width: 12,
       height: 12,
       fit: BoxFit.contain,
@@ -1722,7 +1722,7 @@ class MobCreditFaqRow extends StatelessWidget {
                 ),
               ),
               SvgPicture.asset(
-                'assets/images/arrow.svg',
+                'assets/images/Arrow.svg',
                 width: 12,
                 height: 12,
                 fit: BoxFit.contain,

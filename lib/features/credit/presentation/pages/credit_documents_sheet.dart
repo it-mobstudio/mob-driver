@@ -85,6 +85,8 @@ class _CreditDocumentsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
     final sheetHeight = screenHeight * .75;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    final scrollBottomPadding = bottomPadding > 0 ? bottomPadding + 16 : 32.0;
 
     return SizedBox(
       height: screenHeight,
@@ -103,45 +105,44 @@ class _CreditDocumentsSheet extends StatelessWidget {
                 color: Colors.white,
                 child: SizedBox(
                   height: sheetHeight,
-                  child: SafeArea(
-                    top: false,
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 375),
-                        child: CustomScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          slivers: [
-                            SliverPadding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                              sliver: SliverList.separated(
-                                itemCount: _documents.length + 1,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 16),
-                                itemBuilder: (context, index) {
-                                  if (index == 0) {
-                                    return const Text(
-                                      'Documents required',
-                                      style: TextStyle(
-                                        color: Color(0xFF0A243F),
-                                        fontSize: 18,
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w600,
-                                        height: 26 / 18,
-                                      ),
-                                    );
-                                  }
-                                  return _DocumentRow(
-                                    index: index,
-                                    document: _documents[index - 1],
-                                  );
-                                },
-                              ),
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      const SliverPadding(
+                        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        sliver: SliverToBoxAdapter(
+                          child: Text(
+                            'Documents required',
+                            style: TextStyle(
+                              color: Color(0xFF0A243F),
+                              fontSize: 18,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                              height: 26 / 18,
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          28,
+                          16,
+                          scrollBottomPadding,
+                        ),
+                        sliver: SliverList.separated(
+                          itemCount: _documents.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 16),
+                          itemBuilder: (context, index) {
+                            return _DocumentRow(
+                              index: index + 1,
+                              document: _documents[index],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

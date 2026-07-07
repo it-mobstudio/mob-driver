@@ -27,6 +27,7 @@ class AppTextField extends StatefulWidget {
     this.showClearButton = true,
     this.focusNode,
     this.autofillHints,
+    this.floatingLabelBehavior,
   }) : assert(
           controller == null || initialValue == null,
           'Provide either controller or initialValue, not both.',
@@ -54,6 +55,7 @@ class AppTextField extends StatefulWidget {
   final bool showClearButton;
   final FocusNode? focusNode;
   final Iterable<String>? autofillHints;
+  final FloatingLabelBehavior? floatingLabelBehavior;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -64,6 +66,7 @@ class _AppTextFieldState extends State<AppTextField> {
   late FocusNode _focusNode;
   late bool _ownsController;
   late bool _ownsFocusNode;
+  late bool _showClearButton;
 
   @override
   void initState() {
@@ -73,40 +76,58 @@ class _AppTextFieldState extends State<AppTextField> {
         widget.controller ?? TextEditingController(text: widget.initialValue);
     _ownsFocusNode = widget.focusNode == null;
     _focusNode = widget.focusNode ?? FocusNode();
-    _controller.addListener(_refresh);
-    _focusNode.addListener(_refresh);
+    _showClearButton = _shouldShowClearButton;
+    _controller.addListener(_refreshClearButton);
+    _focusNode.addListener(_refreshClearButton);
   }
 
   @override
   void didUpdateWidget(covariant AppTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      _controller.removeListener(_refresh);
+      _controller.removeListener(_refreshClearButton);
       if (_ownsController) _controller.dispose();
       _ownsController = widget.controller == null;
       _controller = widget.controller ?? TextEditingController();
-      _controller.addListener(_refresh);
+      _controller.addListener(_refreshClearButton);
     }
     if (oldWidget.focusNode != widget.focusNode) {
-      _focusNode.removeListener(_refresh);
+      _focusNode.removeListener(_refreshClearButton);
       if (_ownsFocusNode) _focusNode.dispose();
       _ownsFocusNode = widget.focusNode == null;
       _focusNode = widget.focusNode ?? FocusNode();
-      _focusNode.addListener(_refresh);
+      _focusNode.addListener(_refreshClearButton);
+    }
+    final nextShowClearButton = _shouldShowClearButton;
+    if (_showClearButton != nextShowClearButton) {
+      _showClearButton = nextShowClearButton;
     }
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_refresh);
-    _focusNode.removeListener(_refresh);
+    _controller.removeListener(_refreshClearButton);
+    _focusNode.removeListener(_refreshClearButton);
     if (_ownsController) _controller.dispose();
     if (_ownsFocusNode) _focusNode.dispose();
     super.dispose();
   }
 
-  void _refresh() {
-    if (mounted) setState(() {});
+  bool get _shouldShowClearButton =>
+      widget.showClearButton &&
+      widget.enabled &&
+      !widget.readOnly &&
+      _focusNode.hasFocus &&
+      _controller.text.isNotEmpty;
+
+  void _refreshClearButton() {
+    final nextShowClearButton = _shouldShowClearButton;
+    if (_showClearButton == nextShowClearButton) return;
+    if (mounted) {
+      setState(() => _showClearButton = nextShowClearButton);
+    } else {
+      _showClearButton = nextShowClearButton;
+    }
   }
 
   void _clear() {
@@ -116,12 +137,6 @@ class _AppTextFieldState extends State<AppTextField> {
 
   @override
   Widget build(BuildContext context) {
-    final canClear = widget.showClearButton &&
-        widget.enabled &&
-        !widget.readOnly &&
-        _focusNode.hasFocus &&
-        _controller.text.isNotEmpty;
-
     return SizedBox(
       width: double.infinity,
       child: TextFormField(
@@ -146,11 +161,12 @@ class _AppTextFieldState extends State<AppTextField> {
         decoration: appTextFieldDecoration(
           label: widget.label,
           hintText: widget.hintText,
-          suffixIcon: canClear
+          suffixIcon: _showClearButton
               ? _ClearTextButton(onPressed: _clear)
               : widget.suffixIcon,
           prefixIcon: widget.prefixIcon,
           prefixText: widget.prefixText,
+          floatingLabelBehavior: widget.floatingLabelBehavior,
         ),
       ),
     );
@@ -163,10 +179,12 @@ InputDecoration appTextFieldDecoration({
   Widget? suffixIcon,
   Widget? prefixIcon,
   String? prefixText,
+  FloatingLabelBehavior? floatingLabelBehavior,
 }) {
   return InputDecoration(
     labelText: (label == null || label.isEmpty) ? null : label,
     hintText: hintText,
+    floatingLabelBehavior: floatingLabelBehavior,
     labelStyle: AppTextFieldStyles.label,
     floatingLabelStyle: AppTextFieldStyles.stateLabel,
     hintStyle: AppTextFieldStyles.hint,

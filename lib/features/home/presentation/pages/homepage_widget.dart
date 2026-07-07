@@ -127,13 +127,15 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                                 ),
                               ),
                               const SliverToBoxAdapter(
-                                  child:
-                                      SectionTitle(title: 'Top brands for you')),
+                                  child: SectionTitle(
+                                      title: 'Top brands for you')),
                               const SliverToBoxAdapter(child: HomeBrandGrid()),
                               const SliverToBoxAdapter(
                                   child: HomeSavingsCard()),
-                              ...data.productSections.asMap().entries.map(
-                                  (entry) {
+                              ...data.productSections
+                                  .asMap()
+                                  .entries
+                                  .map((entry) {
                                 return SliverToBoxAdapter(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
@@ -148,8 +150,7 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                                   ),
                                 );
                               }),
-                              const SliverToBoxAdapter(
-                                  child: HomeRewardCard()),
+                              const SliverToBoxAdapter(child: HomeRewardCard()),
                               // Worst case: ViewCartBar pill AND the bottom
                               // nav bar both visible at once (resting state
                               // after scrolling to the end, cart

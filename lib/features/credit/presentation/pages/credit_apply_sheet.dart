@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/entities/business_segment_entity.dart';
@@ -70,7 +73,16 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final sheetHeight = screenHeight * .60;
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    final buttonBottomPadding = bottomPadding > 0 ? bottomPadding + 4 : 24.0;
+    final sheetHeight = math
+        .min(
+          math.max(560.0, screenHeight * .75),
+          screenHeight - topPadding - 72,
+        )
+        .clamp(0.0, screenHeight)
+        .toDouble();
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return BlocConsumer<CreditBloc, CreditState>(
@@ -132,135 +144,145 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                       color: Colors.white,
                       child: SizedBox(
                         height: sheetHeight,
-                        child: SafeArea(
-                          top: false,
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    physics: const BouncingScrollPhysics(),
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      16,
-                                      16,
-                                      24,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Apply for mobCREDIT',
-                                          style: TextStyle(
-                                            color: Color(0xFF0A243F),
-                                            fontSize: 18,
-                                            fontFamily: 'Inter',
-                                            fontWeight: FontWeight.w600,
-                                            height: 1.44,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 32),
-                                        AppTextField(
-                                          controller: _businessName,
-                                          label: 'Business name*',
-                                          validator: (value) =>
-                                              (value == null ||
-                                                      value.trim().isEmpty)
-                                                  ? 'Business name is required'
-                                                  : null,
-                                        ),
-                                        const SizedBox(height: 20),
-                                        AppTextField(
-                                          controller: _phone,
-                                          label: 'Business mobile (for OTP)*',
-                                          keyboardType: TextInputType.phone,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter
-                                                .digitsOnly,
-                                            LengthLimitingTextInputFormatter(
-                                              10,
-                                            ),
-                                          ],
-                                          validator: (value) {
-                                            final digits = value?.trim() ?? '';
-                                            if (digits.length != 10) {
-                                              return 'Enter a valid 10-digit mobile number';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                        const SizedBox(height: 20),
-                                        AppTextField(
-                                          controller: _gst,
-                                          label: 'GSTIN*',
-                                          textCapitalization:
-                                              TextCapitalization.characters,
-                                          validator: (value) => (value ==
-                                                      null ||
-                                                  value.trim().length < 15)
-                                              ? 'Enter a valid 15-character GSTIN'
-                                              : null,
-                                        ),
-                                        const SizedBox(height: 20),
-                                        _segmentDropdown(),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                Padding(
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
                                   padding: const EdgeInsets.fromLTRB(
                                     16,
-                                    8,
+                                    16,
                                     16,
                                     24,
                                   ),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    height: 48,
-                                    child: ElevatedButton(
-                                      onPressed: _submitting
-                                          ? null
-                                          : () => _submit(context),
-                                      style: ElevatedButton.styleFrom(
-                                        elevation: 0,
-                                        backgroundColor: const Color(
-                                          0xFF0360E5,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        disabledBackgroundColor: const Color(
-                                          0xFF8FB8F5,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Apply for mobCREDIT',
+                                        style: TextStyle(
+                                          color: Color(0xFF0A243F),
+                                          fontSize: 18,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                          height: 1.44,
                                         ),
                                       ),
-                                      child: _submitting
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: Colors.white,
-                                              ),
-                                            )
-                                          : Text(
-                                              'Send request',
-                                              style: _sheetTextStyle(
-                                                color: Colors.white,
-                                                size: 14,
-                                                weight: FontWeight.w600,
-                                                height: 21 / 14,
-                                              ),
-                                            ),
-                                    ),
+                                      const SizedBox(height: 32),
+                                      AppTextField(
+                                        controller: _businessName,
+                                        label: 'Business name*',
+                                        showClearButton: false,
+                                        floatingLabelBehavior:
+                                            FloatingLabelBehavior.always,
+                                        textInputAction: TextInputAction.next,
+                                        validator: (value) => (value == null ||
+                                                value.trim().isEmpty)
+                                            ? 'Business name is required'
+                                            : null,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      AppTextField(
+                                        controller: _phone,
+                                        label: 'Business mobile (for OTP)*',
+                                        keyboardType: TextInputType.phone,
+                                        textInputAction: TextInputAction.next,
+                                        showClearButton: false,
+                                        floatingLabelBehavior:
+                                            FloatingLabelBehavior.always,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                          LengthLimitingTextInputFormatter(
+                                            10,
+                                          ),
+                                        ],
+                                        validator: (value) {
+                                          final digits = value?.trim() ?? '';
+                                          if (digits.length != 10) {
+                                            return 'Enter a valid 10-digit mobile number';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      const SizedBox(height: 20),
+                                      AppTextField(
+                                        controller: _gst,
+                                        label: 'GSTIN*',
+                                        textInputAction: TextInputAction.next,
+                                        showClearButton: false,
+                                        floatingLabelBehavior:
+                                            FloatingLabelBehavior.always,
+                                        textCapitalization:
+                                            TextCapitalization.characters,
+                                        inputFormatters: [
+                                          LengthLimitingTextInputFormatter(
+                                            15,
+                                          ),
+                                        ],
+                                        validator: (value) => (value == null ||
+                                                value.trim().length < 15)
+                                            ? 'Enter a valid 15-character GSTIN'
+                                            : null,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _segmentDropdown(),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  16,
+                                  8,
+                                  16,
+                                  buttonBottomPadding,
+                                ),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: ElevatedButton(
+                                    onPressed: _submitting
+                                        ? null
+                                        : () => _submit(context),
+                                    style: ElevatedButton.styleFrom(
+                                      elevation: 0,
+                                      backgroundColor: const Color(
+                                        0xFF0360E5,
+                                      ),
+                                      foregroundColor: Colors.white,
+                                      disabledBackgroundColor:
+                                          const Color(0xFF8FB8F5),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: _submitting
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(
+                                            'Send request',
+                                            style: _sheetTextStyle(
+                                              color: Colors.white,
+                                              size: 14,
+                                              weight: FontWeight.w600,
+                                              height: 21 / 14,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -323,12 +345,22 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
     return DropdownButtonFormField<BusinessSegmentEntity>(
       initialValue: _selectedSegment,
       isExpanded: true,
-      icon: const Icon(
-        Icons.keyboard_arrow_down_rounded,
-        color: Color(0xFF0A243F),
-        size: 24,
+      icon: RotatedBox(
+        quarterTurns: 1,
+        child: SvgPicture.asset(
+          'assets/images/Arrow.svg',
+          width: 18,
+          height: 18,
+          colorFilter: const ColorFilter.mode(
+            Color(0xFF0A243F),
+            BlendMode.srcIn,
+          ),
+        ),
       ),
-      decoration: appTextFieldDecoration(label: 'Business segment*'),
+      decoration: appTextFieldDecoration(
+        label: 'Business segment*',
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+      ),
       hint: _segmentsLoading
           ? Text('Loading...', style: AppTextFieldStyles.inputText)
           : Text(
