@@ -14,11 +14,13 @@ import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
-Future<void> showOrderRatingSheet(
+/// Resolves to true once the user has actually submitted a rating during
+/// this sheet's lifetime (whenever they close it, at any point after).
+Future<bool> showOrderRatingSheet(
   BuildContext context, {
   required String suborderId,
-}) {
-  return showModalBottomSheet<void>(
+}) async {
+  final submitted = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     useSafeArea: false,
@@ -26,9 +28,10 @@ Future<void> showOrderRatingSheet(
     barrierColor: Colors.black.withValues(alpha: 0.6),
     builder: (context) => _OrderRatingSheet(suborderId: suborderId),
   );
+  return submitted ?? false;
 }
 
-class OrderTrackingPage extends StatelessWidget {
+class OrderTrackingPage extends StatefulWidget {
   static const String routeName = 'OrderTrackingPage';
   static const String routePath = '/order-tracking';
 
@@ -42,7 +45,16 @@ class OrderTrackingPage extends StatelessWidget {
   final OrderShipmentEntity? shipment;
 
   @override
+  State<OrderTrackingPage> createState() => _OrderTrackingPageState();
+}
+
+class _OrderTrackingPageState extends State<OrderTrackingPage> {
+  late bool _hasReview = widget.shipment?.hasReview ?? false;
+
+  @override
   Widget build(BuildContext context) {
+    final order = widget.order;
+    final shipment = widget.shipment;
     final items = shipment?.items.isNotEmpty == true
         ? shipment!.items
         : order?.items ?? const <OrderItemEntity>[];
@@ -125,13 +137,19 @@ class OrderTrackingPage extends StatelessWidget {
                                   ? null
                                   : () => context.push(
                                         '/order-detail',
-                                        extra: order!.id,
+                                        extra: order.id,
                                       ),
                             ),
                             const SizedBox(height: 12),
                             const _TrackingHelpCard(),
-                            const SizedBox(height: 12),
-                            _TrackingRatingCard(suborderId: orderNumber),
+                            if (!_hasReview) ...[
+                              const SizedBox(height: 12),
+                              _TrackingRatingCard(
+                                suborderId: orderNumber,
+                                onReviewSubmitted: () =>
+                                    setState(() => _hasReview = true),
+                              ),
+                            ],
                             const SizedBox(height: 32),
                           ],
                         ),
@@ -876,9 +894,13 @@ class _TrackingHelpCard extends StatelessWidget {
 }
 
 class _TrackingRatingCard extends StatelessWidget {
-  const _TrackingRatingCard({required this.suborderId});
+  const _TrackingRatingCard({
+    required this.suborderId,
+    required this.onReviewSubmitted,
+  });
 
   final String suborderId;
+  final VoidCallback onReviewSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -910,8 +932,13 @@ class _TrackingRatingCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           TextButton(
-            onPressed: () =>
-                showOrderRatingSheet(context, suborderId: suborderId),
+            onPressed: () async {
+              final submitted = await showOrderRatingSheet(
+                context,
+                suborderId: suborderId,
+              );
+              if (submitted) onReviewSubmitted();
+            },
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF0360E5),
               padding: EdgeInsets.zero,
@@ -1023,7 +1050,7 @@ class _OrderRatingSheetState extends State<_OrderRatingSheet> {
               elevation: 0,
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context).pop(),
+                onTap: () => Navigator.of(context).pop(_isSubmitted),
                 child: const SizedBox(
                   width: 44,
                   height: 44,

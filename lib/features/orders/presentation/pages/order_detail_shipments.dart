@@ -17,6 +17,18 @@ class _ShipmentSection extends StatelessWidget {
     required this.items,
   });
 
+  void _showFilesAttachedSheet(
+    BuildContext context,
+    List<OrderShipmentFileEntity> files,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _SuborderFilesSheet(files: files),
+    );
+  }
+
   String _formatDeliveryDate(String isoDate) {
     if (isoDate.isEmpty) return '';
     try {
@@ -117,6 +129,13 @@ class _ShipmentSection extends StatelessWidget {
             color: Color(0xFFE0E0E0),
           ),
           const SizedBox(height: 14),
+          if (shipment.files.isNotEmpty) ...[
+            _FilesAttachedRow(
+              count: shipment.files.length,
+              onTap: () => _showFilesAttachedSheet(context, shipment.files),
+            ),
+            const SizedBox(height: 14),
+          ],
           Text(
             '${items.length} ${items.length == 1 ? 'item' : 'items'} in shipment',
             style: GoogleFonts.inter(
@@ -321,6 +340,306 @@ class _RateItemsStrip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FilesAttachedRow extends StatelessWidget {
+  const _FilesAttachedRow({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F8F8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              'assets/images/attachment.svg',
+              width: 16,
+              height: 16,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$count ${count == 1 ? 'file' : 'files'} attached',
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0360E5),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 20 / 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Close button sits as a normal flow child directly above the sheet (not a
+// Positioned overlap) — a negative-offset Positioned outside a Stack's own
+// bounds paints fine but never receives hit-test dispatch (RenderBox.hitTest
+// gates on its own reported size first), the same issue already hit and
+// fixed in the RFQ "recheck prices" sheet.
+class _SuborderFilesSheet extends StatelessWidget {
+  const _SuborderFilesSheet({required this.files});
+
+  final List<OrderShipmentFileEntity> files;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 40,
+              height: 40,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.14),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                color: Color(0xFF0A243F),
+                size: 22,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: Material(
+              color: Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              clipBehavior: Clip.antiAlias,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${files.length} ${files.length == 1 ? 'file' : 'files'} attached',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          height: 26 / 18,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'These are the files shared by MOB team',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF596378),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          height: 18 / 13,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          for (var i = 0; i < files.length; i++)
+                            _SuborderFileThumbnail(
+                              file: files[i],
+                              onTap: () => _openPreview(context, i),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openPreview(BuildContext context, int index) {
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close file preview',
+      barrierColor: Colors.black,
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (_, __, ___) {
+        return _SuborderFilePreviewOverlay(files: files, initialIndex: index);
+      },
+    );
+  }
+}
+
+class _SuborderFileThumbnail extends StatelessWidget {
+  const _SuborderFileThumbnail({required this.file, required this.onTap});
+
+  final OrderShipmentFileEntity file;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: 88,
+          height: 88,
+          color: const Color(0xFFF1F1F2),
+          child: file.fileUrl.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: file.fileUrl,
+                  fit: BoxFit.cover,
+                  memCacheWidth: 176,
+                  placeholder: (_, __) => const ImageShimmer(),
+                  errorWidget: (_, __, ___) => const Icon(
+                    Icons.insert_drive_file_outlined,
+                    color: Color(0xFF8A8A8A),
+                  ),
+                )
+              : const Icon(
+                  Icons.insert_drive_file_outlined,
+                  color: Color(0xFF8A8A8A),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SuborderFilePreviewOverlay extends StatefulWidget {
+  const _SuborderFilePreviewOverlay({
+    required this.files,
+    required this.initialIndex,
+  });
+
+  final List<OrderShipmentFileEntity> files;
+  final int initialIndex;
+
+  @override
+  State<_SuborderFilePreviewOverlay> createState() =>
+      _SuborderFilePreviewOverlayState();
+}
+
+class _SuborderFilePreviewOverlayState
+    extends State<_SuborderFilePreviewOverlay> {
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    final maxIndex = widget.files.isEmpty ? 0 : widget.files.length - 1;
+    _pageController =
+        PageController(initialPage: widget.initialIndex.clamp(0, maxIndex));
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black,
+      child: SafeArea(
+        child: Stack(
+          children: [
+            PageView.builder(
+              controller: _pageController,
+              itemCount: widget.files.isEmpty ? 1 : widget.files.length,
+              itemBuilder: (context, index) {
+                final fileUrl =
+                    widget.files.isEmpty ? '' : widget.files[index].fileUrl;
+                return InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Center(
+                    child: fileUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: fileUrl,
+                            fit: BoxFit.contain,
+                            memCacheWidth: 1100,
+                            placeholder: (_, __) => const ImageShimmer(),
+                            errorWidget: (_, __, ___) => const Icon(
+                              Icons.insert_drive_file_outlined,
+                              color: Colors.white,
+                              size: 64,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.insert_drive_file_outlined,
+                            color: Colors.white,
+                            size: 64,
+                          ),
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              right: 16,
+              top: 16,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.14),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Color(0xFF0A243F),
+                    size: 26,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -194,6 +194,8 @@ class RfqEntity {
       quotes.where((q) => q.isAccepted).toList();
   List<RfqQuoteEntity> get convertedToOrderQuotes =>
       quotes.where((q) => q.isConvertedToOrder).toList();
+  List<RfqQuoteEntity> get magicQuotes =>
+      quotes.where((q) => q.isMagicQuote).toList();
 
   int get requestedItemsTotalCount => quoteRequestedItems.values
       .expand((items) => items)

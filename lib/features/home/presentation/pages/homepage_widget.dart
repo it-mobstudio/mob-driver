@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_brand_grid.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_category_grid.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_header.dart';
+import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_magicquote_card.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_promo_banner.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_reward_card.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_savings_card.dart';
@@ -132,6 +133,8 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                               const SliverToBoxAdapter(child: HomeBrandGrid()),
                               const SliverToBoxAdapter(
                                   child: HomeSavingsCard()),
+                              const SliverToBoxAdapter(
+                                  child: HomeMagicQuoteCard()),
                               ...data.productSections
                                   .asMap()
                                   .entries

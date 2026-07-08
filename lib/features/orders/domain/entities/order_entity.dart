@@ -73,6 +73,26 @@ class OrderItemEntity {
   }
 }
 
+class OrderShipmentFileEntity {
+  const OrderShipmentFileEntity({
+    required this.id,
+    required this.fileName,
+    required this.fileUrl,
+  });
+
+  final String id;
+  final String fileName;
+  final String fileUrl;
+
+  factory OrderShipmentFileEntity.fromMap(Map<String, dynamic> map) {
+    return OrderShipmentFileEntity(
+      id: (map['id'] ?? '').toString(),
+      fileName: (map['file_name'] ?? '').toString(),
+      fileUrl: sanitizeImageUrl((map['file'] ?? '').toString()),
+    );
+  }
+}
+
 class OrderShipmentEntity {
   const OrderShipmentEntity({
     required this.id,
@@ -87,6 +107,8 @@ class OrderShipmentEntity {
     this.vehicleAssigned = false,
     this.rewardPoints = 0,
     this.rewardMessage = '',
+    this.files = const <OrderShipmentFileEntity>[],
+    this.hasReview = false,
   });
 
   final String id;
@@ -101,6 +123,11 @@ class OrderShipmentEntity {
   final bool vehicleAssigned;
   final int rewardPoints;
   final String rewardMessage;
+  final List<OrderShipmentFileEntity> files;
+  // "review" is only ever present once the customer has actually submitted
+  // one — its mere presence (not its contents) is what should hide the
+  // "Rate now" prompt on the tracking page.
+  final bool hasReview;
 
   factory OrderShipmentEntity.fromMap(Map<String, dynamic> map) {
     final productsRaw =
@@ -144,6 +171,14 @@ class OrderShipmentEntity {
           .whereType<Map>()
           .map((e) => OrderItemEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
+      files: (map['suborder_files'] is List
+              ? map['suborder_files'] as List
+              : <dynamic>[])
+          .whereType<Map>()
+          .map((e) =>
+              OrderShipmentFileEntity.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
+      hasReview: map['review'] != null,
     );
   }
 }

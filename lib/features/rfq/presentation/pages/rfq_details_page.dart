@@ -192,6 +192,62 @@ class _RfqDetailsBody extends StatelessWidget {
             ),
           ),
         ),
+        ColoredBox(
+          color: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'MOB Quotes',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0A243F),
+                    height: 30 / 20,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (_isMagicQuote || rfq.magicQuotes.isNotEmpty)
+                  _MagicQuoteDescriptionRow()
+                else
+                  Text(
+                    rfq.newQuotes.isNotEmpty
+                        ? 'Click on the "Accept" button to select the quote '
+                            'you want to proceed with. For any changes like '
+                            'quantity, partial order, etc. please contact mob '
+                            'support at +91 8660423608'
+                        : 'Our team is working on it. We will reach back to '
+                            'you within 24 hrs',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF0A243F),
+                      height: 20 / 13,
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                if (rfq.magicQuotes.isNotEmpty) ...[
+                  for (final quote in rfq.magicQuotes) ...[
+                    _RealQuoteCard(quote: quote, disableAccept: true),
+                    const SizedBox(height: 16),
+                  ],
+                ] else if (rfq.newQuotes.isNotEmpty)
+                  for (final quote in rfq.newQuotes) ...[
+                    _RealQuoteCard(
+                      quote: quote,
+                      disableAccept: rfq.acceptedQuotes.isNotEmpty ||
+                          rfq.status == 'Order Created',
+                    ),
+                    const SizedBox(height: 16),
+                  ]
+                else if (!_isMagicQuote)
+                  const _NoQuotesFound(),
+              ],
+            ),
+          ),
+        ),
         if (hasItemsSelectedContent)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -202,54 +258,6 @@ class _RfqDetailsBody extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
             child: _RequestedItemsByVendorCard(rfq: rfq),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'MOB Quotes',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0A243F),
-                  height: 30 / 20,
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (_isMagicQuote)
-                _MagicQuoteDescriptionRow()
-              else
-                Text(
-                  rfq.newQuotes.isNotEmpty
-                      ? 'Click on the "Accept" button to select the quote '
-                          'you want to proceed with. For any changes like '
-                          'quantity, partial order, etc. please contact mob '
-                          'support at +91 8660423608'
-                      : 'Our team is working on it. We will reach back to '
-                          'you within 24 hrs',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF0A243F),
-                    height: 20 / 13,
-                  ),
-                ),
-              const SizedBox(height: 16),
-              if (rfq.newQuotes.isNotEmpty)
-                for (final quote in rfq.newQuotes) ...[
-                  _RealQuoteCard(
-                    quote: quote,
-                    disableAccept: rfq.acceptedQuotes.isNotEmpty ||
-                        rfq.status == 'Order Created',
-                  ),
-                  const SizedBox(height: 16),
-                ]
-              else
-                const _NoQuotesFound(),
-            ],
-          ),
-        ),
         const Padding(
           padding: EdgeInsets.fromLTRB(16, 16, 16, 28),
           child: _HelpCard(),
@@ -262,52 +270,54 @@ class _RfqDetailsBody extends StatelessWidget {
 class _MagicQuoteDescriptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Our team is working on your final quotation',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0A243F),
-                  height: 20 / 14,
-                ),
-              ),
-              const SizedBox(height: 6),
-              RichText(
-                text: TextSpan(
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF0A243F),
-                    height: 18 / 12,
-                  ),
-                  children: const [
-                    TextSpan(text: 'We should reach out within 5 - 30 mins '),
-                    TextSpan(text: 'or Call '),
-                    TextSpan(
-                      text: '+918660423608',
-                      style: TextStyle(color: Color(0xFF0360E5)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    // Column sizes to its widest child by default — since the headline text
+    // is narrower than the full card, the whole group would otherwise hug
+    // the left edge (the outer Column here uses crossAxisAlignment.start)
+    // instead of actually centering within the card's full width.
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SvgPicture.asset(
+            'assets/images/magic-quote-unread-snag.svg',
+            width: 160,
+            height: 102,
+            fit: BoxFit.contain,
           ),
-        ),
-        const SizedBox(width: 12),
-        SvgPicture.asset(
-          'assets/images/magic-quote-unread-snag.svg',
-          width: 116,
-          height: 74,
-          fit: BoxFit.contain,
-        ),
-      ],
+          const SizedBox(height: 16),
+          Text(
+            'Our team is working on your final quotation',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0A243F),
+              height: 20 / 14,
+            ),
+          ),
+          const SizedBox(height: 6),
+          RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF0A243F),
+                height: 18 / 12,
+              ),
+              children: const [
+                TextSpan(text: 'We should reach out within 5 - 30 mins\n'),
+                TextSpan(text: 'or Call '),
+                TextSpan(
+                  text: '+918660423608',
+                  style: TextStyle(color: Color(0xFF0360E5)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -361,7 +371,7 @@ class _ItemsSelectedCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Items selected by you',
+            'Your uploads',
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -875,12 +885,7 @@ class _RealQuoteCard extends StatelessWidget {
 
   bool get _canAccept => quote.isNew && !quote.isMagicQuote && !disableAccept;
 
-  Future<void> _openUrl(String url) async {
-    if (url.isEmpty) return;
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
+  Future<void> _openUrl(String url) => openExternalUrl(url);
 
   @override
   Widget build(BuildContext context) {
@@ -903,80 +908,104 @@ class _RealQuoteCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Explicit top-corner clip on each banner — relying solely on the
+          // outer Container's Clip.antiAlias left a hairline square seam at
+          // the top-right corner where the banner's rect met the card's
+          // rounded border. Radius is inset by the border's own width (1px
+          // for the grey/green cards, 2px for the orange magic-quote one) so
+          // it sits flush just inside the border stroke.
           if (quote.isConvertedToOrder)
-            Container(
-              height: 32,
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-              color: const Color(0xFF2D9955),
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '$quoteTitle converted to order',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                  height: 18 / 12,
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(15),
+                topRight: Radius.circular(15),
+              ),
+              child: Container(
+                height: 32,
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                color: const Color(0xFF2D9955),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '$quoteTitle converted to order',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    height: 18 / 12,
+                  ),
                 ),
               ),
             )
           else if (quote.isAccepted)
-            Container(
-              height: 32,
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-              color: const Color(0xFF2D9955),
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Quotation accepted by you',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                  height: 18 / 12,
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(15),
+                topRight: Radius.circular(15),
+              ),
+              child: Container(
+                height: 32,
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                color: const Color(0xFF2D9955),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Quotation accepted by you',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    height: 18 / 12,
+                  ),
                 ),
               ),
             )
           else if (quote.isMagicQuote)
-            Container(
-              height: 32,
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Color(0xFFF8C194),
-                    Color(0xFFFFE5D0),
-                    Color(0xFFFFFFFF),
-                  ],
-                  stops: [0, 0.45, 1],
-                ),
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(14),
+                topRight: Radius.circular(14),
               ),
-              alignment: Alignment.centerLeft,
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.auto_awesome,
-                    size: 16,
-                    color: Color(0xFFFFA23A),
+              child: Container(
+                height: 32,
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Color(0xFFF8C194),
+                      Color(0xFFFFE5D0),
+                      Color(0xFFFFFFFF),
+                    ],
+                    stops: [0, 0.45, 1],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This is AI generated and can have mistakes.',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF0A243F),
-                        height: 18 / 12,
+                ),
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: Color(0xFFFFA23A),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This is AI generated and can have mistakes.',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF0A243F),
+                          height: 18 / 12,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           Padding(
@@ -1176,22 +1205,184 @@ class _QuoteMetric extends StatelessWidget {
   }
 }
 
+/// Opens any URL in the platform's best available viewer — a browser tab on
+/// web, or the OS-registered app (PDF reader, Office, Google Drive, etc.) on
+/// mobile. Flutter has no built-in renderer for doc/docx/xls/xlsx and
+/// `webview_flutter` doesn't support web (see kIsWeb guard in
+/// RupifiPaymentWebviewPage), so handing off to the platform is the one
+/// approach that works uniformly for every file type on every platform.
+Future<void> openExternalUrl(String url) async {
+  if (url.isEmpty) return;
+  final uri = Uri.tryParse(url);
+  if (uri == null) return;
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
+}
+
+const _imageFileExtensions = {'.jpg', '.jpeg', '.png'};
+
+String _fileExtension(String url) {
+  final withoutQuery = url.split('?').first;
+  final dot = withoutQuery.lastIndexOf('.');
+  if (dot == -1) return '';
+  return withoutQuery.substring(dot).toLowerCase();
+}
+
+bool _isImageFile(String url) =>
+    _imageFileExtensions.contains(_fileExtension(url));
+
 class _UploadImage extends StatelessWidget {
   const _UploadImage({required this.url});
 
   final String url;
 
+  Future<void> _open(BuildContext context) async {
+    if (url.isEmpty) return;
+    if (_isImageFile(url)) {
+      showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'Close file preview',
+        barrierColor: Colors.black,
+        transitionDuration: const Duration(milliseconds: 180),
+        pageBuilder: (_, __, ___) => _UploadFilePreviewOverlay(url: url),
+      );
+      return;
+    }
+    // pdf/doc/docx/xls/xlsx — no in-app renderer, hand off to the platform.
+    await openExternalUrl(url);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 84,
-        height: 84,
-        color: const Color(0xFFF7F9FC),
-        child: url.isEmpty
-            ? CustomPaint(painter: _NotePainter())
-            : Image.network(url, fit: BoxFit.cover),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _open(context),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 84,
+          height: 84,
+          color: const Color(0xFFF7F9FC),
+          child: switch (url.isEmpty ? null : _fileExtension(url)) {
+            null => CustomPaint(painter: _NotePainter()),
+            '.jpg' ||
+            '.jpeg' ||
+            '.png' =>
+              Image.network(url, fit: BoxFit.cover),
+            _ => _FileTypeIcon(extension: _fileExtension(url)),
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _FileTypeIcon extends StatelessWidget {
+  const _FileTypeIcon({required this.extension});
+
+  final String extension;
+
+  ({IconData icon, Color color}) get _style => switch (extension) {
+        '.pdf' => (
+            icon: Icons.picture_as_pdf_rounded,
+            color: const Color(0xFFE0402E)
+          ),
+        '.doc' || '.docx' => (
+            icon: Icons.description_rounded,
+            color: const Color(0xFF2B6BE0)
+          ),
+        '.xls' || '.xlsx' => (
+            icon: Icons.table_chart_rounded,
+            color: const Color(0xFF1F9254)
+          ),
+        _ => (
+            icon: Icons.insert_drive_file_rounded,
+            color: const Color(0xFF7B8496)
+          ),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _style;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(style.icon, color: style.color, size: 32),
+          if (extension.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              extension.replaceFirst('.', '').toUpperCase(),
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: style.color,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _UploadFilePreviewOverlay extends StatelessWidget {
+  const _UploadFilePreviewOverlay({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black,
+      child: SafeArea(
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 1,
+              maxScale: 4,
+              child: Center(
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.broken_image_outlined,
+                    color: Colors.white,
+                    size: 64,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 16,
+              top: 16,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.14),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Color(0xFF0A243F),
+                    size: 26,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
