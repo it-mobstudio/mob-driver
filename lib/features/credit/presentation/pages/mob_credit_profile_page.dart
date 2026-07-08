@@ -286,14 +286,14 @@ class _CreditTopBar extends StatelessWidget {
               child: InkWell(
                 borderRadius: BorderRadius.circular(18),
                 onTap: onBack,
-                child: const SizedBox(
+                child: SizedBox(
                   width: 36,
                   height: 36,
                   child: Center(
-                    child: Icon(
-                      Icons.arrow_back_ios_new,
-                      size: 14,
-                      color: Color(0xFF053961),
+                    child: SvgPicture.asset(
+                      'assets/images/Arrow.svg',
+                      width: 16,
+                      height: 16,
                     ),
                   ),
                 ),
@@ -1085,14 +1085,59 @@ class MobCreditTermCard extends StatelessWidget {
   }
 }
 
-class MobCreditHowItWorksCard extends StatelessWidget {
+class MobCreditHowItWorksCard extends StatefulWidget {
   const MobCreditHowItWorksCard({super.key});
+
+  @override
+  State<MobCreditHowItWorksCard> createState() =>
+      _MobCreditHowItWorksCardState();
+}
+
+class _MobCreditHowItWorksCardState extends State<MobCreditHowItWorksCard> {
+  static const _steps = [
+    _MobCreditHowStep(
+      title: 'Apply online',
+      image: 'assets/images/Step1.webp',
+    ),
+    _MobCreditHowStep(
+      title: 'Get approved',
+      image: 'assets/images/Step2.webp',
+    ),
+    _MobCreditHowStep(
+      title: 'Use mobCREDIT anywhere',
+      image: 'assets/images/mobileimg.webp',
+    ),
+  ];
+
+  late final PageController _pageController;
+  int _currentStep = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _goToStep(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 456,
+      clipBehavior: Clip.antiAlias,
       decoration: ShapeDecoration(
         gradient: const LinearGradient(
           begin: Alignment(0.50, -0.00),
@@ -1106,29 +1151,52 @@ class MobCreditHowItWorksCard extends StatelessWidget {
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
-          const Positioned(top: 16, child: _StepDots()),
-          const Positioned(
-            top: 72,
-            child: Text(
-              'Use mobCREDIT anywhere',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF0A243F),
-                fontSize: 17,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
-                height: 1.41,
-              ),
-            ),
+          PageView.builder(
+            controller: _pageController,
+            itemCount: _steps.length,
+            onPageChanged: (index) => setState(() => _currentStep = index),
+            itemBuilder: (context, index) {
+              final step = _steps[index];
+              return Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  Positioned(
+                    top: 72,
+                    left: 16,
+                    right: 16,
+                    child: Text(
+                      step.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF0A243F),
+                        fontSize: 17,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        height: 1.41,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Image.asset(
+                      step.image,
+                      width: 248,
+                      height: 320,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           Positioned(
-            bottom: 0,
-            child: Image.asset(
-              'assets/images/mobileimg.webp',
-              width: 248,
-              height: 319,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
+            top: 16,
+            child: _StepDots(
+              activeIndex: _currentStep,
+              onStepTap: _goToStep,
             ),
           ),
         ],
@@ -1137,8 +1205,24 @@ class MobCreditHowItWorksCard extends StatelessWidget {
   }
 }
 
+class _MobCreditHowStep {
+  const _MobCreditHowStep({
+    required this.title,
+    required this.image,
+  });
+
+  final String title;
+  final String image;
+}
+
 class _StepDots extends StatelessWidget {
-  const _StepDots();
+  const _StepDots({
+    required this.activeIndex,
+    required this.onStepTap,
+  });
+
+  final int activeIndex;
+  final ValueChanged<int> onStepTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1155,37 +1239,42 @@ class _StepDots extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _dot('1', false),
+          _dot('1', 0),
           const SizedBox(width: 4),
           _line(),
           const SizedBox(width: 4),
-          _dot('2', false),
+          _dot('2', 1),
           const SizedBox(width: 4),
           _line(),
           const SizedBox(width: 4),
-          _dot('3', true),
+          _dot('3', 2),
         ],
       ),
     );
   }
 
-  Widget _dot(String text, bool active) {
-    return Container(
-      width: 20,
-      height: 20,
-      alignment: Alignment.center,
-      decoration: ShapeDecoration(
-        color: active ? const Color(0xFF0A243F) : const Color(0xFFEAEAEA),
-        shape: const OvalBorder(),
-      ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: _inter(
-          color: active ? Colors.white : const Color(0xFF767C8F),
-          size: 12,
-          weight: FontWeight.w700,
-          height: 1.50,
+  Widget _dot(String text, int index) {
+    final active = index == activeIndex;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onStepTap(index),
+      child: Container(
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
+        decoration: ShapeDecoration(
+          color: active ? const Color(0xFF0A243F) : const Color(0xFFEAEAEA),
+          shape: const OvalBorder(),
+        ),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: _inter(
+            color: active ? Colors.white : const Color(0xFF767C8F),
+            size: 12,
+            weight: FontWeight.w700,
+            height: 1.50,
+          ),
         ),
       ),
     );

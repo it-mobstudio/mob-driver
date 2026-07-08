@@ -29,6 +29,7 @@ class _MobstarPointsView extends StatelessWidget {
 
   static const _primary = Color(0xFF0A243F);
   static const _muted = Color(0xFF596378);
+  static const _summaryCardHeight = 118.0;
 
   @override
   Widget build(BuildContext context) {
@@ -41,97 +42,131 @@ class _MobstarPointsView extends StatelessWidget {
         ? mobstar.actualMoney.toStringAsFixed(0)
         : mobstar.actualMoney.toStringAsFixed(2);
     final transactions = mobstar.transactions;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final headerHeight = (screenHeight * 0.22).clamp(186.0, 260.0);
+    final headerContentHeight =
+        headerHeight + (_summaryCardHeight / 2) + 8 + 52 + 24 + 22 + 14;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F0F0),
-      body: Stack(
+      body: Column(
         children: [
-          Container(
-            height: 186,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF000000), Color(0xFF505AB1)],
-                stops: [.09, .98],
-              ),
-            ),
-          ),
-          SafeArea(
-            bottom: false,
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      const _MobstarPointsHeader(),
-                      const SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: _PointsSummaryCard(
-                          points: points,
-                          valueText: valueText,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: _PointsInfoNote(),
-                      ),
-                      const SizedBox(height: 24),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Transactions',
-                            style: TextStyle(
-                              color: _primary,
-                              fontSize: 15,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                              height: 22 / 15,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                    ],
+          SizedBox(
+            height: headerContentHeight,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  height: headerHeight,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF000000), Color(0xFF505AB1)],
+                      stops: [.09, .98],
+                    ),
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
+                const SafeArea(
+                  bottom: false,
+                  child: _MobstarPointsHeader(),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  top: headerHeight - (_summaryCardHeight / 2),
+                  child: _PointsSummaryCard(
+                    points: points,
+                    valueText: valueText,
+                  ),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  top: headerHeight + (_summaryCardHeight / 2) + 8,
+                  child: const _PointsInfoNote(),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  top: headerHeight + (_summaryCardHeight / 2) + 84,
+                  child: const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Transactions',
+                      style: TextStyle(
+                        color: _primary,
+                        fontSize: 15,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        height: 22 / 15,
                       ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-                      child: transactions.isEmpty
-                          ? const _EmptyTransactions()
-                          : Column(
-                              children: [
-                                for (var i = 0;
-                                    i < transactions.length;
-                                    i++) ...[
-                                  _TransactionRow(transaction: transactions[i]),
-                                  if (i != transactions.length - 1)
-                                    const _TransactionDivider(),
-                                ],
-                              ],
-                            ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: transactions.isEmpty
+                  ? const _EmptyTransactionsScrollView()
+                  : ListView.separated(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        16,
+                        16,
+                        40 + MediaQuery.paddingOf(context).bottom,
+                      ),
+                      itemCount: transactions.length,
+                      separatorBuilder: (context, index) =>
+                          const _TransactionDivider(),
+                      itemBuilder: (context, index) => _TransactionRow(
+                        transaction: transactions[index],
+                      ),
+                    ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _EmptyTransactionsScrollView extends StatelessWidget {
+  const _EmptyTransactionsScrollView();
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = EdgeInsets.fromLTRB(
+      16,
+      16,
+      16,
+      40 + MediaQuery.paddingOf(context).bottom,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: padding,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: const Center(
+              child: _EmptyTransactions(),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -143,6 +178,7 @@ class _MobstarPointsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 48,
+      width: double.infinity,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -152,17 +188,26 @@ class _MobstarPointsHeader extends StatelessWidget {
               onPressed: () => context.pop(),
               icon: const AppBackIcon(color: Colors.white),
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+              constraints: const BoxConstraints.tightFor(
+                width: 40,
+                height: 40,
+              ),
             ),
           ),
-          Text(
-            'mobSTAR',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              height: 22 / 15,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 46),
+            child: SizedBox(
+              width: double.infinity,
+              child: Text(
+                'mobSTAR',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  height: 22 / 15, // 1.47
+                ),
+              ),
             ),
           ),
         ],
@@ -183,47 +228,73 @@ class _PointsSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 118),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      decoration: BoxDecoration(
+      width: double.infinity,
+      height: _MobstarPointsView._summaryCardHeight,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 7),
+      decoration: ShapeDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'mobSTAR points',
+            textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              color: _MobstarPointsView._muted,
+              color: const Color(0xFF596378),
               fontSize: 13,
               fontWeight: FontWeight.w500,
               height: 20 / 13,
             ),
           ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                'assets/images/mobstarcoin.svg',
-                width: 20,
-                height: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '$points',
-                style: GoogleFonts.inter(
-                  color: _MobstarPointsView._primary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  height: 42 / 28,
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 42,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Transform.translate(
+                  offset: const Offset(0, -1),
+                  child: SvgPicture.asset(
+                    'assets/images/points.svg',
+                    width: 20,
+                    height: 20,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 42,
+                  child: Center(
+                    child: Text(
+                      '$points',
+                      strutStyle: const StrutStyle(
+                        fontSize: 28,
+                        height: 1,
+                        forceStrutHeight: true,
+                      ),
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0A243F),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(height: 1),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 2,
+            ),
             decoration: BoxDecoration(
               color: const Color(0xFFF0F0F0),
               borderRadius: BorderRadius.circular(16),
@@ -231,7 +302,7 @@ class _PointsSummaryCard extends StatelessWidget {
             child: Text(
               '₹$valueText',
               style: GoogleFonts.inter(
-                color: _MobstarPointsView._primary,
+                color: const Color(0xFF0A243F),
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
                 height: 20 / 13,

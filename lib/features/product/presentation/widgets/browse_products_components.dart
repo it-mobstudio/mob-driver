@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/item_card.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
@@ -96,7 +97,7 @@ class BrowseFilterRow extends StatelessWidget {
         children: [
           _FilterChip(
             label: 'Filters',
-            leadingIcon: Icons.tune_rounded,
+            leadingAsset: 'assets/images/filter.svg',
             onTap: onFilterTap,
             selectedCount: selectedFilterCount,
             onClear: onClearFilters,
@@ -941,7 +942,7 @@ class _MiniCartImage extends StatelessWidget {
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
-    this.leadingIcon,
+    this.leadingAsset,
     this.trailingIcon,
     this.onTap,
     this.selectedCount = 0,
@@ -949,7 +950,7 @@ class _FilterChip extends StatelessWidget {
   });
 
   final String label;
-  final IconData? leadingIcon;
+  final String? leadingAsset;
   final IconData? trailingIcon;
   final VoidCallback? onTap;
   final int selectedCount;
@@ -975,8 +976,16 @@ class _FilterChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (leadingIcon != null) ...[
-              Icon(leadingIcon, size: 12, color: const Color(0xFF0A243F)),
+            if (leadingAsset != null) ...[
+              SvgPicture.asset(
+                leadingAsset!,
+                width: 12,
+                height: 12,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF0A243F),
+                  BlendMode.srcIn,
+                ),
+              ),
               const SizedBox(width: 8),
             ],
             Text(

@@ -476,7 +476,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: MobCreditProfilePage.routeName,
         path: MobCreditProfilePage.routePath,
         parentNavigatorKey: appNavigatorKey,
-        redirect: (context, state) => CreditPage.routePath,
+        builder: (context, state) {
+          final extra = state.extra is Map
+              ? Map<String, dynamic>.from(state.extra as Map)
+              : <String, dynamic>{};
+          return CreditPage(showBackButton: extra['showBackButton'] == true);
+        },
       ),
       GoRoute(
         name: MobCreditDashboardPage.routeName,
