@@ -163,12 +163,14 @@ class _FilterButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.tune,
-                color: isActive
-                    ? const Color(0xFF0360E5)
-                    : const Color(0xFF0A243F),
-                size: 13,
+              SvgPicture.asset(
+                'assets/images/filter.svg',
+                width: 13,
+                height: 13,
+                colorFilter: ColorFilter.mode(
+                  isActive ? const Color(0xFF0360E5) : const Color(0xFF0A243F),
+                  BlendMode.srcIn,
+                ),
               ),
               const SizedBox(width: 8),
               Text(

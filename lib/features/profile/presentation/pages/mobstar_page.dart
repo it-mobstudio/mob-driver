@@ -103,7 +103,7 @@ class _MobstarView extends StatelessWidget {
                           child: Center(child: _MobstarLogo()),
                         ),
                         Positioned(
-                          top: 172,
+                          top: 180,
                           left: 0,
                           right: 0,
                           child: Text(
@@ -170,67 +170,94 @@ class _MobstarView extends StatelessWidget {
                                           Colors.white.withValues(alpha: .15)),
                                 ),
                                 child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                  Expanded(
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                        Text('mobSTAR points',
-                                            style: _text(
-                                                13, muted, FontWeight.w500)),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.start,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            children: [
-                                              const Icon(Icons.stars_rounded,
-                                                  color: Color(0xFFFFC928),
-                                                  size: 22),
-                                              const SizedBox(width: 7),
-                                              Text('$points',
-                                                  style: _text(28, Colors.white,
-                                                      FontWeight.w900,
-                                                      height: 42 / 28)),
-                                              const SizedBox(width: 9),
-                                              Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                      color: Colors.white
-                                                          .withValues(
-                                                              alpha: .2),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              16)),
-                                                  child: Text('₹$valueText',
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                          child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                            Text('mobSTAR points',
+                                                style: _text(13, muted,
+                                                    FontWeight.w500)),
+                                            const SizedBox(height: 4),
+                                            SizedBox(
+                                              height: 42,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.center,
+                                                children: [
+                                                  Transform.translate(
+                                                    offset: const Offset(0,
+                                                        -2), // adjust: -3, -2, -1, 0
+                                                    child: SvgPicture.asset(
+                                                      'assets/images/points.svg',
+                                                      width: 20,
+                                                      height: 20,
+                                                      fit: BoxFit.contain,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 7),
+                                                  Transform.translate(
+                                                    offset: const Offset(0, 0),
+                                                    child: Text(
+                                                      '$points',
                                                       style: _text(
+                                                        28,
+                                                        const Color(0xFF999999),
+                                                        FontWeight.w900,
+                                                        height: 1,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 9),
+                                                  Transform.translate(
+                                                    offset: const Offset(0, -1),
+                                                    child: Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 10,
+                                                          vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white
+                                                            .withValues(
+                                                                alpha: .2),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(16),
+                                                      ),
+                                                      child: Text(
+                                                        '₹$valueText',
+                                                        style: _text(
                                                           13,
                                                           Colors.white70,
-                                                          FontWeight.w500))),
-                                            ]),
-                                        const SizedBox(height: 4),
-                                        Text('4 points = ₹1',
-                                            style: _text(
-                                                13, muted, FontWeight.w500)),
-                                      ])),
-                                  const Center(
-                                    child: CircleAvatar(
-                                        radius: 12,
-                                        backgroundColor: Color(0xFFF0F3F5),
-                                        child: Icon(Icons.chevron_right,
-                                            size: 20,
-                                            color: Color(0xFF273A6A))),
-                                  ),
-                                ]),
+                                                          FontWeight.w500,
+                                                          height: 1,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text('4 points = ₹1',
+                                                style: _text(13, muted,
+                                                    FontWeight.w500)),
+                                          ])),
+                                      const Center(
+                                        child: CircleAvatar(
+                                            radius: 12,
+                                            backgroundColor: Color(0xFFF0F3F5),
+                                            child: Icon(Icons.chevron_right,
+                                                size: 20,
+                                                color: Color(0xFF273A6A))),
+                                      ),
+                                    ]),
                               ),
                             ),
                           ),
@@ -593,84 +620,84 @@ class _AllLevelsSheet extends StatelessWidget {
       heightFactor: .62,
       widthFactor: 1,
       child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: ColoredBox(
-              color: Colors.white,
-              child: SizedBox(
-                width: double.infinity,
-                child: Column(
-                  children: [
-                    Container(
-                      height: 56,
-                      padding: const EdgeInsets.only(left: 16),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF0F0F0),
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        child: ColoredBox(
+          color: Colors.white,
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              children: [
+                Container(
+                  height: 56,
+                  padding: const EdgeInsets.only(left: 16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF0F0F0),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 44,
+                        child: Text('LEVEL', style: _levelHeaderStyle),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 44,
-                            child: Text('LEVEL', style: _levelHeaderStyle),
-                          ),
-                          Expanded(
-                            flex: 28,
-                            child: Text('POINTS', style: _levelHeaderStyle),
-                          ),
-                          Expanded(
-                            flex: 36,
-                            child: Text(
-                              'MIN SPEND IN\nA YEAR',
-                              textAlign: TextAlign.right,
-                              style: _levelHeaderStyle,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Container(
-                              width: 56,
-                              height: 56,
-                              alignment: Alignment.center,
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Color(0xFF0A243F),
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      Expanded(
+                        flex: 28,
+                        child: Text('POINTS', style: _levelHeaderStyle),
                       ),
-                    ),
-                    Expanded(
-                      child: ListView.separated(
-                        padding: EdgeInsets.zero,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _levels.length,
-                        separatorBuilder: (_, __) => const Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: Color(0xFFE2E2E2),
-                        ),
-                        itemBuilder: (context, index) => _LevelSheetRow(
-                          level: _levels[index],
-                          current: _isCurrentLevel(_levels[index].name),
+                      Expanded(
+                        flex: 36,
+                        child: Text(
+                          'MIN SPEND IN\nA YEAR',
+                          textAlign: TextAlign.right,
+                          style: _levelHeaderStyle,
                         ),
                       ),
-                    ),
-                  ],
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          alignment: Alignment.center,
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Color(0xFF0A243F),
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                Expanded(
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _levels.length,
+                    separatorBuilder: (_, __) => const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFE2E2E2),
+                    ),
+                    itemBuilder: (context, index) => _LevelSheetRow(
+                      level: _levels[index],
+                      current: _isCurrentLevel(_levels[index].name),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
+      ),
     );
   }
 

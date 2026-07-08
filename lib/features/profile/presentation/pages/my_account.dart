@@ -10,8 +10,8 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
-import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_dashboard_page.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
@@ -135,11 +135,8 @@ class _ProfileBody extends StatelessWidget {
                         account: account,
                         onManage: () =>
                             context.push(MobCreditDashboardPage.routePath),
-                        // CreditPage.routePath is the bottom nav bar's own
-                        // tab route — push() would stack a duplicate
-                        // Navigator on the shell branch's and trip a
-                        // duplicate GlobalKey assertion, so go() instead.
-                        onApply: () => context.go(CreditPage.routePath),
+                        onApply: () =>
+                            context.push(MobCreditProfilePage.routePath),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -195,16 +192,10 @@ class _ProfileBody extends StatelessWidget {
                           _MenuItem(
                             iconAsset: 'assets/images/mobcreditprofile.svg',
                             label: 'mob Credit',
-                            onTap: () {
-                              if (resolveMobCreditStatus(account) !=
-                                  MobCreditStatus.notApplied) {
-                                context.push(
-                                  MobCreditDashboardPage.routePath,
-                                );
-                              } else {
-                                context.go(CreditPage.routePath);
-                              }
-                            },
+                            onTap: () => context.push(
+                              MobCreditProfilePage.routePath,
+                              extra: {'showBackButton': true},
+                            ),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/myprojects.svg',

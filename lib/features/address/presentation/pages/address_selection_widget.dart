@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
@@ -251,7 +252,11 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.chevron_right, color: Color(0xFF767C8F)),
+                  : SvgPicture.asset(
+    'assets/images/Arrow.svg',
+    width: 16,
+    height: 16,
+  ),
             ],
           ),
         ),

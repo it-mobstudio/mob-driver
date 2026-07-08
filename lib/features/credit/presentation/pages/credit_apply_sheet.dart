@@ -315,91 +315,64 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
     );
   }
 
-  Widget _segmentDropdown() {
-    if (_segmentsError != null) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFDECEC),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                _segmentsError!,
-                style: _sheetTextStyle(
-                  color: Colors.red,
-                  size: 14,
-                  weight: FontWeight.w500,
-                  height: 20 / 14,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () =>
-                  context.read<CreditBloc>().add(CreditSegmentsRequested()),
-              child: const Text('Retry'),
-            ),
-          ],
+Widget _segmentDropdown() {
+  return PopupMenuButton<BusinessSegmentEntity>(
+    offset: const Offset(0, 58),
+    constraints: const BoxConstraints(
+      maxHeight: 260,
+      minWidth: 300,
+    ),
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    onSelected: (value) {
+      setState(() => _selectedSegment = value);
+    },
+    itemBuilder: (context) => _segments.map((segment) {
+      return PopupMenuItem<BusinessSegmentEntity>(
+        value: segment,
+        child: Text(
+          segment.categoryName,
+          style: AppTextFieldStyles.inputText,
+          overflow: TextOverflow.ellipsis,
         ),
       );
-    }
-    return DropdownButtonFormField<BusinessSegmentEntity>(
-      initialValue: _selectedSegment,
-      isExpanded: true,
-      icon: RotatedBox(
-        quarterTurns: 1,
-        child: SvgPicture.asset(
-          'assets/images/Arrow.svg',
-          width: 18,
-          height: 18,
-          colorFilter: const ColorFilter.mode(
-            Color(0xFF0A243F),
-            BlendMode.srcIn,
-          ),
-        ),
-      ),
+    }).toList(),
+    child: InputDecorator(
       decoration: appTextFieldDecoration(
         label: 'Business segment*',
         floatingLabelBehavior: FloatingLabelBehavior.always,
       ),
-      hint: _segmentsLoading
-          ? Text('Loading...', style: AppTextFieldStyles.inputText)
-          : Text(
-              'Select business segment',
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _segmentsLoading
+                  ? 'Loading...'
+                  : (_selectedSegment?.categoryName ??
+                      'Select business segment'),
               style: AppTextFieldStyles.inputText,
+              overflow: TextOverflow.ellipsis,
             ),
-      selectedItemBuilder: (context) => _segments
-          .map(
-            (segment) => Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                segment.categoryName,
-                style: AppTextFieldStyles.inputText,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+          ),
+          RotatedBox(
+            quarterTurns: 1,
+            child: SvgPicture.asset(
+              'assets/images/Arrow.svg',
+              width: 18,
+              height: 18,
+              colorFilter: const ColorFilter.mode(
+                Color(0xFF0A243F),
+                BlendMode.srcIn,
               ),
             ),
-          )
-          .toList(),
-      items: _segments
-          .map(
-            (segment) => DropdownMenuItem(
-              value: segment,
-              child: Text(
-                segment.categoryName,
-                style: AppTextFieldStyles.inputText,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          )
-          .toList(),
-      onChanged: _segmentsLoading
-          ? null
-          : (value) => setState(() => _selectedSegment = value),
-    );
-  }
+          ),
+        ],
+      ),
+    ),
+  );
+}
 }
 
 TextStyle _sheetTextStyle({

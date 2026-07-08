@@ -359,7 +359,17 @@ class _RfqHeader extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: OutlinedButton.icon(
               onPressed: onFilterTap,
-              icon: const Icon(Icons.tune, size: 14),
+              icon: SvgPicture.asset(
+                'assets/images/filter.svg',
+                width: 14,
+                height: 14,
+                colorFilter: ColorFilter.mode(
+                  activeFilterLabel != null
+                      ? const Color(0xFF0360E5)
+                      : const Color(0xFF0A243F),
+                  BlendMode.srcIn,
+                ),
+              ),
               label: Text(
                 activeFilterLabel ?? 'Filters',
                 style: GoogleFonts.inter(

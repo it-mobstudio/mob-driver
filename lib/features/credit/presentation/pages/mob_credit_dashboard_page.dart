@@ -51,76 +51,95 @@ class _DashboardBody extends StatelessWidget {
   const _DashboardBody({required this.account});
 
   final CartAccountEntity account;
+  static const _balanceCardHeight = 152.0;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final headerHeight = (screenHeight * 0.28).clamp(186.0, 262.0);
+    final headerContentHeight =
+        headerHeight + (_balanceCardHeight / 2) + 24 + 22 + 14;
+
+    return Column(
       children: [
-        // Decorative full-bleed backdrop behind the scroll content — the
-        // "overlap" look comes purely from the balance card's own white
-        // background sitting on top of this, not from Positioned/absolute
-        // layout (that needed a hand-tuned container height and clipped the
-        // card whenever it grew taller than the guess, which is what broke).
-        Container(
-          height: 186,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF08131F), Color(0xFF0A243F)],
-            ),
-          ),
-        ),
-        SafeArea(
-          bottom: false,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
+        SizedBox(
+          height: headerContentHeight,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                height: headerHeight,
+                decoration: const BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.topCenter,
+                    radius: 1.0,
+                    colors: [
+                      Color(0xFF4A8F67),
+                      Color(0xFF2B4939),
+                      Color(0xFF181818),
+                    ],
+                    stops: [
+                      0.0,
+                      0.45,
+                      1.0,
+                    ],
+                  ),
+                ),
+              ),
+              SafeArea(
+                bottom: false,
                 child: Column(
                   children: [
                     const _DashboardHeader(),
-                    const SizedBox(height: 24),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _CreditBalanceCard(account: account),
-                    ),
-                    const SizedBox(height: 24),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Transactions',
-                          style: GoogleFonts.inter(
-                            color: MobCreditDashboardPage._primary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            height: 24 / 16,
-                          ),
-                        ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: SvgPicture.asset(
+                        'assets/images/myaccounts-mobcredit.svg',
+                        width: 146,
+                        height: 21,
+                        fit: BoxFit.contain,
                       ),
                     ),
-                    const SizedBox(height: 14),
                   ],
                 ),
               ),
-              SliverToBoxAdapter(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+              Positioned(
+                left: 16,
+                right: 16,
+                top: headerHeight - (_balanceCardHeight / 2),
+                child: _CreditBalanceCard(account: account),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                top: headerHeight + (_balanceCardHeight / 2) + 24,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Transactions',
+                    style: GoogleFonts.inter(
+                      color: MobCreditDashboardPage._primary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      height: 22 / 15,
                     ),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 16, 16, 40),
-                    child: _CreditTransactionsList(),
                   ),
                 ),
               ),
             ],
+          ),
+        ),
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: const _CreditTransactionsList(),
           ),
         ),
       ],
@@ -151,21 +170,6 @@ class _DashboardHeader extends StatelessWidget {
               },
             ),
           ),
-          Expanded(
-            child: Center(
-              child: SvgPicture.asset(
-                'assets/images/myaccounts-mobcredit.svg',
-                width: 146,
-                height: 21,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-          // Mirrors the leading back-button slot so the logo is centered in
-          // the true remaining space instead of the full row width — a
-          // Stack + Positioned(left) + centered logo collided on narrower
-          // screens because the logo never reserved room for the button.
-          const SizedBox(width: 48),
         ],
       ),
     );
@@ -185,6 +189,7 @@ class _CreditBalanceCard extends StatelessWidget {
         creditLimit > 0 ? (available / creditLimit).clamp(0.0, 1.0) : 0.0;
 
     return Container(
+      height: _DashboardBody._balanceCardHeight,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -249,10 +254,14 @@ class _CreditTransactionsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final listPadding = EdgeInsets.fromLTRB(16, 16, 16, 40 + bottomInset);
+
     return BlocBuilder<CreditBloc, CreditState>(
       builder: (context, state) {
         if (state is CreditHistoryError) {
-          return _CreditHistoryMessage(
+          return _CreditHistoryMessageScrollView(
+            padding: listPadding,
             text: state.message,
             onRetry: () =>
                 context.read<CreditBloc>().add(CreditHistoryRequested()),
@@ -260,15 +269,26 @@ class _CreditTransactionsList extends StatelessWidget {
         }
         if (state is CreditHistoryLoaded) {
           if (state.transactions.isEmpty) {
-            return const _CreditHistoryMessage(text: 'No transactions yet');
+            return _CreditHistoryMessageScrollView(
+              padding: listPadding,
+              text: 'No transactions yet',
+            );
           }
-          return Column(
-            children: state.transactions
-                .map((t) => _CreditTransactionRow(transaction: t))
-                .toList(),
+          return ListView.builder(
+            physics: const BouncingScrollPhysics(),
+            padding: listPadding,
+            itemCount: state.transactions.length,
+            itemBuilder: (context, index) => _CreditTransactionRow(
+              transaction: state.transactions[index],
+            ),
           );
         }
-        return const _CreditHistoryLoadingRows();
+        return ListView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: listPadding,
+          itemCount: 4,
+          itemBuilder: (context, index) => const _CreditHistoryLoadingRow(),
+        );
       },
     );
   }
@@ -356,31 +376,56 @@ class _CreditTransactionRow extends StatelessWidget {
   }
 }
 
-class _CreditHistoryLoadingRows extends StatelessWidget {
-  const _CreditHistoryLoadingRows();
+class _CreditHistoryLoadingRow extends StatelessWidget {
+  const _CreditHistoryLoadingRow();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: List.generate(
-        4,
-        (_) => Container(
-          height: 60,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
-          ),
-          alignment: Alignment.centerLeft,
-          child: Container(
-            width: 180,
-            height: 14,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8EAED),
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
+      ),
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 180,
+        height: 14,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8EAED),
+          borderRadius: BorderRadius.circular(4),
         ),
       ),
+    );
+  }
+}
+
+class _CreditHistoryMessageScrollView extends StatelessWidget {
+  const _CreditHistoryMessageScrollView({
+    required this.padding,
+    required this.text,
+    this.onRetry,
+  });
+
+  final EdgeInsets padding;
+  final String text;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: padding,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: _CreditHistoryMessage(text: text, onRetry: onRetry),
+            ),
+          ),
+        );
+      },
     );
   }
 }
