@@ -4,14 +4,18 @@ import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/network/dio_client.dart';
+import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
-import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/add_address_detail_page.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_order_review_page.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class CheckoutAddressPage extends StatefulWidget {
@@ -28,8 +32,8 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
   late final AddressBloc _addressBloc;
   late final CartBloc _cartBloc;
   bool _sameAddress = false;
-  CartAddressEntity? _selectedDelivery;
-  CartAddressEntity? _selectedBilling;
+  AddressEntity? _selectedDelivery;
+  AddressEntity? _selectedBilling;
 
   // null = not checked yet, true = serviceable, false = not serviceable
   bool? _pincodeValid;
@@ -101,7 +105,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
   // leaving the user to manually pick an address they've already saved.
   void _autoSelectDefaultAddresses(
     CartSummaryEntity summary,
-    List<CartAddressEntity> addresses,
+    List<AddressEntity> addresses,
   ) {
     if (addresses.isEmpty) return;
     var changed = false;
@@ -115,7 +119,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
         _selectedBilling == null &&
         summary.billingAddress.trim().isEmpty) {
       for (final address in addresses) {
-        if (address.isMobCredit) {
+        if (address.mobCredit) {
           _selectedBilling = address;
           changed = true;
           break;
@@ -126,22 +130,9 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
     if (changed) setState(() {});
   }
 
-  List<CartAddressEntity> _addressList() {
+  List<AddressEntity> _addressList() {
     final state = _addressBloc.state;
-    if (state is AddressListLoaded) {
-      return state.addresses
-          .map((a) => CartAddressEntity(
-                addressId: a.id,
-                name: a.name,
-                address: a.displayAddress,
-                pincode: a.pincode,
-                phone: a.phoneNumber,
-                tag: a.addressTag,
-                project: a.projectName,
-                isMobCredit: a.mobCredit,
-              ))
-          .toList();
-    }
+    if (state is AddressListLoaded) return state.addresses;
     return const [];
   }
 
@@ -161,40 +152,133 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        return _AddressSelectionDrawer(
-          addresses: _addressList(),
-          onAddAddress: () {
-            Navigator.of(sheetContext).pop();
-            _openAddressFlow(context);
-          },
-          onSelectAddress: (CartAddressEntity address) {
-            Navigator.of(sheetContext).pop();
-            setState(() {
-              if (forBilling && !_sameAddress) {
-                _selectedBilling = address;
-              } else {
-                _selectedDelivery = address;
-                if (_sameAddress) _selectedBilling = address;
-                // Reset pincode validity and re-check for new delivery address
-                _pincodeValid = null;
-                _lastCheckedPincode = '';
-              }
-            });
-            if (!forBilling || _sameAddress) {
-              _checkPincode(address.pincode);
-            }
-          },
+        // BlocProvider.value + BlocBuilder (not just a snapshot list) so
+        // edit/delete can refresh the address list in place without closing
+        // this sheet — a bottom-sheet route sits alongside the page's own
+        // route, not inside its widget subtree, so it can't see _addressBloc
+        // unless it's re-provided here.
+        return BlocProvider<AddressBloc>.value(
+          value: _addressBloc,
+          child: BlocBuilder<AddressBloc, AddressState>(
+            builder: (context, state) {
+              return _AddressSelectionDrawer(
+                addresses: state is AddressListLoaded
+                    ? state.addresses
+                    : _addressList(),
+                title: forBilling
+                    ? 'Select billing address'
+                    : 'Select delivery address',
+                selectedAddressId:
+                    (forBilling ? _selectedBilling : _selectedDelivery)?.id,
+                onAddAddress: () {
+                  Navigator.of(sheetContext).pop();
+                  _openAddressFlow(context);
+                },
+                onSelectAddress: (address) {
+                  Navigator.of(sheetContext).pop();
+                  setState(() {
+                    if (forBilling && !_sameAddress) {
+                      _selectedBilling = address;
+                    } else {
+                      _selectedDelivery = address;
+                      if (_sameAddress) _selectedBilling = address;
+                      // Reset pincode validity and re-check for new delivery address
+                      _pincodeValid = null;
+                      _lastCheckedPincode = '';
+                    }
+                  });
+                  if (!forBilling || _sameAddress) {
+                    _checkPincode(address.pincode);
+                  }
+                },
+                // Edit/delete keep this sheet open — the BlocBuilder above
+                // picks up the refreshed list once the edit page returns or
+                // the delete confirmation completes.
+                onEditAddress: _editAddress,
+                onDeleteAddress: _confirmDeleteAddress,
+              );
+            },
+          ),
         );
       },
     );
   }
 
   Future<void> _openAddressFlow(BuildContext context) async {
-    final savedAddress = await context.push(
-      AddressSelectionWidget.routePath,
+    // Same shortcut as cart/AddressSelectionWidget: straight to the
+    // map-confirm step (defaulting to a Bengaluru pin) then the receiver
+    // detail form, instead of a whole separate search screen.
+    final confirmed = await context.push<AddressEntity>(
+      ConfirmDeliveryLocationPage.routePath,
+      extra: const AddressLocationEntity(
+        latitude: 12.9716,
+        longitude: 77.5946,
+        formattedAddress: '',
+        city: '',
+        state: '',
+        pincode: '',
+        sublocality: '',
+        locationName: '',
+      ),
+    );
+    if (!context.mounted || confirmed == null) return;
+    final savedAddress = await context.push<AddressEntity>(
+      AddAddressDetailPage.routePath,
+      extra: confirmed,
     );
     if (!context.mounted || savedAddress == null) return;
+    _addressBloc.add(AddressLoadRequested());
     _cartBloc.add(CartLoadRequested());
+  }
+
+  Future<void> _editAddress(AddressEntity existing) async {
+    final updated = await context.push<AddressEntity>(
+      AddAddressDetailPage.routePath,
+      extra: existing,
+    );
+    if (!mounted || updated == null) return;
+    setState(() {
+      if (_selectedDelivery?.id == updated.id) _selectedDelivery = updated;
+      if (_selectedBilling?.id == updated.id) _selectedBilling = updated;
+    });
+    _addressBloc.add(AddressLoadRequested());
+  }
+
+  Future<void> _confirmDeleteAddress(AddressEntity address) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete address?'),
+        content: const Text('Are you sure you want to delete this address?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final (success, failure) =
+        await sl<AddressRepository>().deleteAddress(address.id);
+    if (!mounted) return;
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(failure?.message ?? 'Unable to delete address.'),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      if (_selectedDelivery?.id == address.id) _selectedDelivery = null;
+      if (_selectedBilling?.id == address.id) _selectedBilling = null;
+    });
+    _addressBloc.add(AddressLoadRequested());
   }
 
   @override
@@ -264,13 +348,17 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                       _DeliveryAddressCard(
                                         name: _selectedDelivery?.name ??
                                             summary.shippingRecipientName,
-                                        address: _selectedDelivery?.address ??
+                                        address: _selectedDelivery
+                                                ?.displayAddress ??
                                             summary.shippingAddress,
-                                        phone: _selectedDelivery?.phone ??
+                                        phone: _selectedDelivery
+                                                ?.phoneNumber ??
                                             summary.shippingPhone,
-                                        tag: _selectedDelivery?.tag ?? '',
+                                        tag: _selectedDelivery?.addressTag ??
+                                            '',
                                         project:
-                                            _selectedDelivery?.project ?? '',
+                                            _selectedDelivery?.projectName ??
+                                                '',
                                         actionLabel:
                                             hasAnyAddress ? 'Change' : 'Add',
                                         onAction: () =>
@@ -285,9 +373,11 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                       const SizedBox(height: 20),
                                       _BillingAddressCard(
                                         address: _sameAddress
-                                            ? (_selectedDelivery?.address ??
+                                            ? (_selectedDelivery
+                                                    ?.displayAddress ??
                                                 summary.shippingAddress)
-                                            : (_selectedBilling?.address ??
+                                            : (_selectedBilling
+                                                    ?.displayAddress ??
                                                 summary.billingAddress),
                                         gstNumber: summary.billingGstNumber,
                                         actionLabel: _sameAddress
@@ -320,14 +410,14 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                     isDisabled: !_canContinue(summary),
                                     onProceed: () {
                                       final deliveryId = int.tryParse(
-                                            _selectedDelivery?.addressId ??
+                                            _selectedDelivery?.id ??
                                                 summary.shippingAddressId,
                                           ) ??
                                           0;
                                       final billingId = _sameAddress
                                           ? deliveryId
                                           : int.tryParse(
-                                                _selectedBilling?.addressId ??
+                                                _selectedBilling?.id ??
                                                     summary.billingAddressId,
                                               ) ??
                                               deliveryId;
@@ -535,6 +625,39 @@ class _DeliveryAddressCard extends StatelessWidget {
   }
 }
 
+class _AddressPill extends StatelessWidget {
+  const _AddressPill({
+    required this.text,
+    required this.color,
+  });
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 190),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.inter(
+          color: const Color(0xFF0A243F),
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          height: 16 / 11,
+        ),
+      ),
+    );
+  }
+}
+
 class _SameAddressRow extends StatelessWidget {
   const _SameAddressRow({required this.checked, required this.onChanged});
 
@@ -693,11 +816,19 @@ class _AddressSelectionDrawer extends StatelessWidget {
     required this.addresses,
     required this.onAddAddress,
     required this.onSelectAddress,
+    required this.onEditAddress,
+    required this.onDeleteAddress,
+    this.selectedAddressId,
+    this.title = 'Select delivery address',
   });
 
-  final List<CartAddressEntity> addresses;
+  final List<AddressEntity> addresses;
+  final String? selectedAddressId;
+  final String title;
   final VoidCallback onAddAddress;
-  final void Function(CartAddressEntity) onSelectAddress;
+  final ValueChanged<AddressEntity> onSelectAddress;
+  final ValueChanged<AddressEntity> onEditAddress;
+  final ValueChanged<AddressEntity> onDeleteAddress;
 
   @override
   Widget build(BuildContext context) {
@@ -707,23 +838,23 @@ class _AddressSelectionDrawer extends StatelessWidget {
         heightFactor: 656 / 812,
         widthFactor: 1,
         child: Material(
-          color: Colors.white,
+          color: const Color(0xFFF7F7F7),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           clipBehavior: Clip.antiAlias,
           child: SafeArea(
             top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: SizedBox(
                     height: 30,
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(
-                            'Select partner',
+                            title,
                             style: GoogleFonts.inter(
                               color: const Color(0xFF0A243F),
                               fontSize: 16,
@@ -748,225 +879,21 @@ class _AddressSelectionDrawer extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  _AddAddressTile(onTap: onAddAddress),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Your saved address',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF0A243F),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      height: 20 / 14,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: addresses.isEmpty
-                        ? _EmptyAddressState(onAddAddress: onAddAddress)
-                        : ListView.separated(
-                            padding: EdgeInsets.zero,
-                            itemCount: addresses.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 16),
-                            itemBuilder: (context, index) {
-                              return _SavedAddressCard(
-                                address: addresses[index],
-                                onTap: () => onSelectAddress(addresses[index]),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AddAddressTile extends StatelessWidget {
-  const _AddAddressTile({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.add_circle_outline,
-              color: Color(0xFF0A243F),
-              size: 16,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Add new address',
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                height: 20 / 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SavedAddressCard extends StatelessWidget {
-  const _SavedAddressCard({
-    required this.address,
-    required this.onTap,
-  });
-
-  final CartAddressEntity address;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: 120,
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
+                ),
                 Expanded(
-                  child: Text(
-                    address.name.trim().isNotEmpty
-                        ? address.name.trim()
-                        : 'Saved address',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF0A243F),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      height: 20 / 13,
-                    ),
+                  child: AddressPickerBody(
+                    addresses: addresses,
+                    selectedAddressId: selectedAddressId,
+                    showSearch: false,
+                    showQuickActions: false,
+                    onAddNewAddress: onAddAddress,
+                    onSelectAddress: onSelectAddress,
+                    onEditAddress: onEditAddress,
+                    onDeleteAddress: onDeleteAddress,
                   ),
-                ),
-                const Icon(
-                  Icons.more_horiz,
-                  color: Color(0xFF767C8F),
-                  size: 20,
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              address.address,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                color: const Color(0xFF767C8F),
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-                height: 16 / 12,
-              ),
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                if (address.tag.trim().isNotEmpty)
-                  _AddressPill(
-                    text: address.tag.trim(),
-                    color: const Color(0xFFE6EEF9),
-                  ),
-                if (address.project.trim().isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: _AddressPill(
-                      text: address.project.trim().startsWith('Project:')
-                          ? address.project.trim()
-                          : 'Project: ${address.project.trim()}',
-                      color: const Color(0xFFFFEFCE),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddressPill extends StatelessWidget {
-  const _AddressPill({
-    required this.text,
-    required this.color,
-  });
-
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 190),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: GoogleFonts.inter(
-          color: const Color(0xFF0A243F),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          height: 16 / 11,
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyAddressState extends StatelessWidget {
-  const _EmptyAddressState({required this.onAddAddress});
-
-  final VoidCallback onAddAddress;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: TextButton(
-        onPressed: onAddAddress,
-        child: Text(
-          'No saved address. Add new address',
-          style: GoogleFonts.inter(
-            color: const Color(0xFF0360E5),
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
           ),
         ),
       ),

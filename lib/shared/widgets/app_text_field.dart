@@ -195,7 +195,7 @@ InputDecoration appTextFieldDecoration({
     filled: true,
     fillColor: Colors.white,
     isDense: true,
-    constraints: const BoxConstraints(minHeight: 48),
+    // constraints: const BoxConstraints(minHeight: 48),
     suffixIcon: suffixIcon,
     prefixIcon: prefixIcon,
     suffixIconConstraints: const BoxConstraints(minHeight: 48, minWidth: 40),

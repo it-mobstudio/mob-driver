@@ -4,6 +4,8 @@ import 'package:m_o_b_demand_side/core/config/app_config.dart';
 abstract interface class AddressRemoteDatasource {
   Future<dynamic> getAddresses();
   Future<Map<String, dynamic>> createAddress(Map<String, dynamic> payload);
+  Future<Map<String, dynamic>> updateAddress(Map<String, dynamic> payload);
+  Future<Map<String, dynamic>> deleteAddress(String addressId);
   Future<Map<String, dynamic>> searchLocations(String query);
   Future<Map<String, dynamic>> getLocationDetails(String placeId);
   Future<Map<String, dynamic>> reverseGeocode(double latitude, double longitude);
@@ -36,6 +38,28 @@ class AddressRemoteDatasourceImpl implements AddressRemoteDatasource {
     final response = await _dio.post<dynamic>(
       '/accounts/mob_user_account/create_address/',
       data: payload,
+      options: Options(contentType: Headers.jsonContentType),
+    );
+    return _toMap(response.data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateAddress(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.patch<dynamic>(
+      '/accounts/mob_user_account/update_address/',
+      data: payload,
+      options: Options(contentType: Headers.jsonContentType),
+    );
+    return _toMap(response.data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> deleteAddress(String addressId) async {
+    final response = await _dio.delete<dynamic>(
+      '/accounts/mob_user_account/delete_address/',
+      data: {'address_id': addressId},
       options: Options(contentType: Headers.jsonContentType),
     );
     return _toMap(response.data);

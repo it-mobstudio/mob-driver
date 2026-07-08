@@ -5,7 +5,8 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
-import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/add_address_detail_page.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
@@ -24,13 +25,15 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  CartAddressEntity? _selectedDeliveryAddress;
+  AddressEntity? _selectedDeliveryAddress;
   AddressEntity? _storedAddress;
+  List<AddressEntity> _savedAddresses = const [];
 
   @override
   void initState() {
     super.initState();
     _loadStoredAddress();
+    _loadSavedAddresses();
   }
 
   Future<void> _loadStoredAddress() async {
@@ -48,6 +51,12 @@ class _CartPageState extends State<CartPage> {
     await SelectedAddressStore.save(first);
     if (!mounted) return;
     setState(() => _storedAddress = first);
+  }
+
+  Future<void> _loadSavedAddresses() async {
+    final (addresses, failure) = await sl<AddressRepository>().getAddresses();
+    if (!mounted || failure != null || addresses == null) return;
+    setState(() => _savedAddresses = addresses);
   }
 
   @override
@@ -220,27 +229,21 @@ class _CartPageState extends State<CartPage> {
   }
 
   String _deliveryDetails(CartSummaryEntity summary) {
-    final selected = _selectedDeliveryAddress;
+    final selected = _selectedDeliveryAddress ?? _storedAddress;
     if (selected != null) {
-      return <String>[
-        selected.address.trim(),
-        selected.phone.trim(),
-      ].where((p) => p.isNotEmpty).join('\n');
-    }
-    final stored = _storedAddress;
-    if (stored != null) {
       final addressText = <String>[
-        stored.addressLine1,
-        stored.addressLine2,
-        stored.sublocality,
-        stored.city,
-        stored.pincode,
+        selected.addressLine1,
+        selected.addressLine2,
+        selected.sublocality,
+        selected.city,
+        selected.pincode,
       ].where((p) => p.trim().isNotEmpty).join(', ');
-      final displayAddress =
-          addressText.isNotEmpty ? addressText : stored.formattedAddress.trim();
+      final displayAddress = addressText.isNotEmpty
+          ? addressText
+          : selected.formattedAddress.trim();
       return <String>[
         displayAddress,
-        stored.phoneNumber.trim(),
+        selected.phoneNumber.trim(),
       ].where((p) => p.isNotEmpty).join('\n');
     }
     final parts = <String>[
@@ -257,26 +260,150 @@ class _CartPageState extends State<CartPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        return CartAddressBottomSheet(
-          addresses: summary.savedAddresses,
-          onSelectAddress: (CartAddressEntity address) {
-            Navigator.of(sheetContext).pop();
-            setState(() => _selectedDeliveryAddress = address);
-          },
-          onAddAddress: () {
-            Navigator.of(sheetContext).pop();
-            _openAddressFlow();
+        // StatefulBuilder so edit/delete can refresh the list in place
+        // without closing this sheet — _savedAddresses lives on the page's
+        // State, and a bottom-sheet route isn't rebuilt by the page's own
+        // setState, so it needs its own rebuild trigger.
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return CartAddressBottomSheet(
+              addresses: _savedAddresses,
+              selectedAddressId:
+                  (_selectedDeliveryAddress ?? _storedAddress)?.id,
+              onSelectAddress: (address) {
+                Navigator.of(sheetContext).pop();
+                _selectAddress(address);
+              },
+              onAddAddress: () {
+                Navigator.of(sheetContext).pop();
+                _openAddressFlow();
+              },
+              onEditAddress: (address) async {
+                await _editAddress(address);
+                if (sheetContext.mounted) setSheetState(() {});
+              },
+              onDeleteAddress: (address) async {
+                await _confirmDeleteAddress(address);
+                if (sheetContext.mounted) setSheetState(() {});
+              },
+            );
           },
         );
       },
     );
   }
 
+  Future<void> _editAddress(AddressEntity existing) async {
+    final updated = await context.push<AddressEntity>(
+      AddAddressDetailPage.routePath,
+      extra: existing,
+    );
+    if (!mounted || updated == null) return;
+    setState(() {
+      _savedAddresses = [
+        for (final address in _savedAddresses)
+          if (address.id == updated.id) updated else address,
+      ];
+      if (_selectedDeliveryAddress?.id == updated.id) {
+        _selectedDeliveryAddress = updated;
+      }
+    });
+    if (_storedAddress?.id == updated.id) {
+      await SelectedAddressStore.save(updated);
+      if (!mounted) return;
+      setState(() => _storedAddress = updated);
+    }
+  }
+
+  Future<void> _confirmDeleteAddress(AddressEntity address) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete address?'),
+        content: const Text('Are you sure you want to delete this address?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final (success, failure) =
+        await sl<AddressRepository>().deleteAddress(address.id);
+    if (!mounted) return;
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(failure?.message ?? 'Unable to delete address.'),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _savedAddresses =
+          _savedAddresses.where((a) => a.id != address.id).toList();
+      if (_selectedDeliveryAddress?.id == address.id) {
+        _selectedDeliveryAddress = null;
+      }
+    });
+    if (_storedAddress?.id == address.id) {
+      await SelectedAddressStore.clear();
+      if (!mounted) return;
+      setState(() => _storedAddress = null);
+    }
+  }
+
+  // Picking a saved address here only updated this page's own ephemeral
+  // widget state before — it never actually took effect (survived
+  // navigation, showed up at checkout, etc.) because nothing persisted it.
+  // SelectedAddressStore is the single source of truth the rest of the app
+  // (nav bar, checkout) already reads from, so save there too — mirrors the
+  // web app's selectDeliveryLocation, which updates both redux state and
+  // localStorage's storedAddress.
+  Future<void> _selectAddress(AddressEntity address) async {
+    setState(() => _selectedDeliveryAddress = address);
+    await SelectedAddressStore.save(address);
+    if (!mounted) return;
+    setState(() => _storedAddress = SelectedAddressStore.cached);
+  }
+
+  // "Add new address" here used to push the whole search screen
+  // (AddressSelectionWidget), which has its own "Add new address" tile —
+  // forcing a second, redundant tap. Go straight to the map-confirm step
+  // instead, mirroring AddressSelectionWidget's own _openMap(): a default
+  // Bengaluru pin (auto-resolved once the map loads) unless the user drags
+  // it or searches from there.
   Future<void> _openAddressFlow() async {
-    final savedAddress = await context.push(
-      AddressSelectionWidget.routePath,
+    final confirmed = await context.push<AddressEntity>(
+      ConfirmDeliveryLocationPage.routePath,
+      extra: const AddressLocationEntity(
+        latitude: 12.9716,
+        longitude: 77.5946,
+        formattedAddress: '',
+        city: '',
+        state: '',
+        pincode: '',
+        sublocality: '',
+        locationName: '',
+      ),
+    );
+    if (!mounted || confirmed == null) return;
+    final savedAddress = await context.push<AddressEntity>(
+      AddAddressDetailPage.routePath,
+      extra: confirmed,
     );
     if (!mounted || savedAddress == null) return;
-    context.read<CartBloc>().add(CartLoadRequested());
+    await SelectedAddressStore.save(savedAddress);
+    if (!mounted) return;
+    setState(() {
+      _storedAddress = savedAddress;
+      _savedAddresses = [..._savedAddresses, savedAddress];
+    });
   }
 }

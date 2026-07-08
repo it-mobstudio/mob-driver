@@ -1,0 +1,531 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+
+/// The saved-address-picker UI, shared by the nav bar's full-page
+/// AddressSelectionWidget, My Account's "Addresses" menu, cart's "Change"
+/// bottom sheet, and checkout's delivery/billing "Change" bottom sheet.
+///
+/// Fully controlled — no navigation or network calls of its own. Each
+/// caller supplies the address list, search/suggestion state, and
+/// callbacks, then wraps this in whatever chrome fits (a Scaffold body for
+/// full pages, a Material sheet for bottom sheets).
+class AddressPickerBody extends StatelessWidget {
+  const AddressPickerBody({
+    super.key,
+    required this.addresses,
+    required this.onSelectAddress,
+    required this.onEditAddress,
+    required this.onDeleteAddress,
+    required this.onAddNewAddress,
+    this.selectedAddressId,
+    this.showSearch = true,
+    this.showQuickActions = false,
+    this.searchController,
+    this.onSearchChanged,
+    this.suggestions = const [],
+    this.onSelectSuggestion,
+    this.isSearching = false,
+    this.isLoadingAddresses = false,
+    this.detectingCurrentLocation = false,
+    this.onCurrentLocation,
+    this.onMapsLink,
+  });
+
+  final List<AddressEntity> addresses;
+  final String? selectedAddressId;
+  final ValueChanged<AddressEntity> onSelectAddress;
+  final ValueChanged<AddressEntity> onEditAddress;
+  final ValueChanged<AddressEntity> onDeleteAddress;
+  final VoidCallback onAddNewAddress;
+
+  final bool showSearch;
+  final TextEditingController? searchController;
+  final ValueChanged<String>? onSearchChanged;
+  final List<AddressSuggestionEntity> suggestions;
+  final ValueChanged<AddressSuggestionEntity>? onSelectSuggestion;
+  final bool isSearching;
+  final bool isLoadingAddresses;
+  final bool showQuickActions;
+  final bool detectingCurrentLocation;
+  final VoidCallback? onCurrentLocation;
+  final VoidCallback? onMapsLink;
+
+  static const _navy = Color(0xFF0A243F);
+  static const _blue = Color(0xFF0360E5);
+  static const _border = Color(0xFFDFE4EC);
+  static const _muted = Color(0xFF767C8F);
+
+  @override
+  Widget build(BuildContext context) {
+    final showSuggestions = showSearch && suggestions.isNotEmpty;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (showSearch) ...[
+          _searchField(),
+          const SizedBox(height: 16),
+        ],
+        if (showQuickActions && !showSuggestions) ...[
+          Row(
+            children: [
+              Expanded(
+                child: _quickActionPill(
+                  icon: Icons.my_location,
+                  label: 'Current location',
+                  loading: detectingCurrentLocation,
+                  onTap: onCurrentLocation,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _quickActionPill(
+                  icon: Icons.map_outlined,
+                  label: 'Maps link',
+                  onTap: onMapsLink,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (showSuggestions)
+          ..._suggestionTiles()
+        else ...[
+          _addNewAddressTile(),
+          const SizedBox(height: 24),
+          Text(
+            'Your saved address',
+            style: GoogleFonts.inter(
+              color: _navy,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (isLoadingAddresses)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (addresses.isEmpty)
+            const _EmptySavedAddress()
+          else
+            ...addresses.map(
+              (address) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AddressPickerCard(
+                  address: address,
+                  isSelected: selectedAddressId != null &&
+                      selectedAddressId == address.id,
+                  onTap: () => onSelectAddress(address),
+                  onEdit: () => onEditAddress(address),
+                  onDelete: () => onDeleteAddress(address),
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _searchField() {
+    return TextField(
+      controller: searchController,
+      onChanged: onSearchChanged,
+      decoration: InputDecoration(
+        hintText: 'Search for area, street name..',
+        hintStyle:
+            GoogleFonts.inter(color: const Color(0xFFAFB4C0), fontSize: 14),
+        prefixIcon: Icon(Icons.search, color: _navy.withValues(alpha: 0.7)),
+        filled: true,
+        fillColor: Colors.white,
+        border: _fieldBorder(),
+        enabledBorder: _fieldBorder(),
+        focusedBorder: _fieldBorder(color: _blue),
+      ),
+    );
+  }
+
+  OutlineInputBorder _fieldBorder({Color color = _border}) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: color),
+    );
+  }
+
+  Widget _quickActionPill({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+    bool loading = false,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: loading ? null : onTap,
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(color: _border),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (loading)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Icon(icon, color: _blue, size: 16),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: _blue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _addNewAddressTile() {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onAddNewAddress,
+        child: Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            border: Border.all(color: _border),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.add, color: _blue, size: 22),
+              const SizedBox(width: 12),
+              Text(
+                'Add new address',
+                style: GoogleFonts.inter(
+                  color: _blue,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _suggestionTiles() {
+    if (isSearching) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+    return suggestions
+        .map(
+          (suggestion) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: onSelectSuggestion == null
+                    ? null
+                    : () => onSelectSuggestion!(suggestion),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined, color: _navy),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              suggestion.primaryText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                color: _navy,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (suggestion.secondaryText.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                suggestion.secondaryText,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  color: _muted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        )
+        .toList();
+  }
+}
+
+class _EmptySavedAddress extends StatelessWidget {
+  const _EmptySavedAddress();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 36),
+      child: Center(
+        child: Text(
+          'No saved addresses yet.',
+          style: GoogleFonts.inter(color: const Color(0xFF767C8F)),
+        ),
+      ),
+    );
+  }
+}
+
+/// A single saved-address row: name (+ "SELECTED" badge), address text,
+/// tag/project pills, and the edit/delete overflow menu.
+class AddressPickerCard extends StatelessWidget {
+  const AddressPickerCard({
+    super.key,
+    required this.address,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
+    this.isSelected = false,
+  });
+
+  final AddressEntity address;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  static const _navy = Color(0xFF0A243F);
+  static const _muted = Color(0xFF596378);
+  static const _border = Color(0xFFDFE4EC);
+
+  @override
+  Widget build(BuildContext context) {
+    final name = address.name.trim().isNotEmpty
+        ? address.name.trim()
+        : (address.locationName.trim().isNotEmpty
+            ? address.locationName.trim()
+            : 'Saved address');
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 120),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: _navy,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            height: 20 / 14,
+                          ),
+                        ),
+                      ),
+                      if (isSelected) ...[
+                        const SizedBox(width: 8),
+                        const _SelectedBadge(),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    address.displayAddress,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: _muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      height: 16 / 11,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      if (address.addressTag.trim().isNotEmpty)
+                        _AddressPill(
+                          text: address.addressTag.trim(),
+                          color: const Color(0xFFF7F7F7),
+                        ),
+                      if (address.projectName.trim().isNotEmpty)
+                        _AddressPill(
+                          text:
+                              address.projectName.trim().startsWith('Project:')
+                                  ? address.projectName.trim()
+                                  : 'Project: ${address.projectName.trim()}',
+                          color: const Color(0xFFFFD911),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            PopupMenuButton<String>(
+              padding: EdgeInsets.zero,
+              offset: const Offset(0, 30),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onSelected: (value) {
+                if (value == 'edit') onEdit();
+                if (value == 'delete') onDelete();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'edit', child: Text('Edit address')),
+                PopupMenuItem(value: 'delete', child: Text('Delete address')),
+              ],
+              child: Container(
+                width: 26,
+                height: 26,
+                alignment: Alignment.center,
+                // decoration: BoxDecoration(
+                //   color: Colors.white,
+                //   shape: BoxShape.circle,
+                //   border: Border.all(color: const Color(0xFFD9DEE8)),
+                // ),
+                child: SvgPicture.asset(
+                  'assets/images/Menu.svg',
+                  width: 12,
+                  height: 15,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedBadge extends StatelessWidget {
+  const _SelectedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F7EC),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'SELECTED',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF13A05A),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              height: 16 / 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddressPill extends StatelessWidget {
+  const _AddressPill({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    // maxWidth bounds the Text directly so its ellipsis can kick in — a Row
+    // wrapper here would give Text unbounded width (Row lays out non-flex
+    // children loosely) and overflow instead of truncating.
+    return Container(
+      height: 20,
+      constraints: const BoxConstraints(maxWidth: 190),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.inter(
+          color: const Color(0xFF0A243F),
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          height: 16 / 11,
+        ),
+      ),
+    );
+  }
+}

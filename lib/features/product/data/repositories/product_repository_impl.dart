@@ -211,6 +211,24 @@ class ProductRepositoryImpl implements ProductRepository {
     }
   }
 
+  @override
+  Future<(bool, AppFailure?)> notifyOutOfStock({
+    required int productId,
+    required String phoneNumber,
+  }) async {
+    try {
+      await _datasource.notifyOutOfStock(
+        productId: productId,
+        phoneNumber: phoneNumber,
+      );
+      return (true, null);
+    } on DioException catch (e) {
+      return (false, e.toAppFailure());
+    } catch (e) {
+      return (false, UnknownFailure(e.toString()));
+    }
+  }
+
   Map<String, dynamic> _data(Map<String, dynamic> body) {
     if (body['data'] is Map) return Map<String, dynamic>.from(body['data'] as Map);
     return body;

@@ -3,10 +3,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_rfq_request_page.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
 import 'package:m_o_b_demand_side/index.dart';
+import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class CartTopBar extends StatelessWidget {
@@ -318,11 +320,17 @@ class CartAddressBottomSheet extends StatefulWidget {
     required this.addresses,
     required this.onSelectAddress,
     required this.onAddAddress,
+    required this.onEditAddress,
+    required this.onDeleteAddress,
+    this.selectedAddressId,
   });
 
-  final List<CartAddressEntity> addresses;
-  final ValueChanged<CartAddressEntity> onSelectAddress;
+  final List<AddressEntity> addresses;
+  final String? selectedAddressId;
+  final ValueChanged<AddressEntity> onSelectAddress;
   final VoidCallback onAddAddress;
+  final ValueChanged<AddressEntity> onEditAddress;
+  final ValueChanged<AddressEntity> onDeleteAddress;
 
   @override
   State<CartAddressBottomSheet> createState() => _CartAddressBottomSheetState();
@@ -344,19 +352,16 @@ class _CartAddressBottomSheetState extends State<CartAddressBottomSheet> {
     super.dispose();
   }
 
-  List<CartAddressEntity> get _filteredAddresses {
+  List<AddressEntity> get _filteredAddresses {
     final query = _query.trim().toLowerCase();
-    if (query.isEmpty) {
-      return widget.addresses;
-    }
-
+    if (query.isEmpty) return widget.addresses;
     return widget.addresses.where((address) {
       final searchable = [
         address.name,
-        address.address,
-        address.phone,
-        address.tag,
-        address.project,
+        address.displayAddress,
+        address.phoneNumber,
+        address.addressTag,
+        address.projectName,
       ].join(' ').toLowerCase();
       return searchable.contains(query);
     }).toList();
@@ -364,8 +369,6 @@ class _CartAddressBottomSheetState extends State<CartAddressBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredAddresses = _filteredAddresses;
-
     return Align(
       alignment: Alignment.bottomCenter,
       child: FractionallySizedBox(
@@ -377,12 +380,12 @@ class _CartAddressBottomSheetState extends State<CartAddressBottomSheet> {
           clipBehavior: Clip.antiAlias,
           child: SafeArea(
             top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: SizedBox(
                     height: 30,
                     child: Row(
                       children: [
@@ -413,321 +416,25 @@ class _CartAddressBottomSheetState extends State<CartAddressBottomSheet> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  _CartAddAddressTile(onTap: widget.onAddAddress),
-                  const SizedBox(height: 16),
-                  _CartAddressSearchField(
-                    controller: _searchController,
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Your saved address',
-                    style: GoogleFonts.inter(
-                      color: Colors.black,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      height: 20 / 13,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: widget.addresses.isEmpty
-                        ? _CartEmptyAddressState(
-                            message: 'No saved address',
-                            onAddAddress: widget.onAddAddress,
-                          )
-                        : filteredAddresses.isEmpty
-                            ? const _CartEmptyAddressState(
-                                message: 'No address found',
-                              )
-                            : ListView.separated(
-                                padding: EdgeInsets.zero,
-                                itemCount: filteredAddresses.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 16),
-                                itemBuilder: (context, index) {
-                                  return _CartSavedAddressCard(
-                                    address: filteredAddresses[index],
-                                    onTap: () => widget.onSelectAddress(
-                                      filteredAddresses[index],
-                                    ),
-                                  );
-                                },
-                              ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CartAddAddressTile extends StatelessWidget {
-  const _CartAddAddressTile({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.add,
-              color: Color(0xFF2973F0),
-              size: 22,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Add new address',
-              style: GoogleFonts.inter(
-                color: const Color(0xFF2973F0),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                height: 20 / 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CartAddressSearchField extends StatelessWidget {
-  const _CartAddressSearchField({
-    required this.controller,
-    required this.onChanged,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        textInputAction: TextInputAction.search,
-        style: GoogleFonts.inter(
-          color: const Color(0xFF0A243F),
-          fontSize: 13,
-          fontWeight: FontWeight.w400,
-          height: 20 / 13,
-        ),
-        decoration: InputDecoration(
-          hintText: 'Search address',
-          hintStyle: GoogleFonts.inter(
-            color: const Color(0xFF767C8F),
-            fontSize: 13,
-            fontWeight: FontWeight.w400,
-            height: 20 / 13,
-          ),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: Color(0xFF767C8F),
-            size: 18,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-      ),
-    );
-  }
-}
-
-class _CartSavedAddressCard extends StatelessWidget {
-  const _CartSavedAddressCard({
-    required this.address,
-    required this.onTap,
-  });
-
-  final CartAddressEntity address;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final name =
-        address.name.trim().isNotEmpty ? address.name.trim() : 'Saved address';
-    final addressText = address.address.trim();
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 120),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF0A243F),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      height: 20 / 14,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    addressText,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF596378),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w400,
-                      height: 16 / 11,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: [
-                      if (address.tag.trim().isNotEmpty)
-                        _CartAddressPill(
-                          text: address.tag.trim(),
-                          color: const Color(0xFFF7F7F7),
-                        ),
-                      if (address.project.trim().isNotEmpty)
-                        _CartAddressPill(
-                          text: address.project.trim().startsWith('Project:')
-                              ? address.project.trim()
-                              : 'Project: ${address.project.trim()}',
-                          color: const Color(0xFFFFD911),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFD9DEE8)),
-              ),
-              child: const Icon(
-                Icons.more_horiz,
-                color: Color(0xFF0A243F),
-                size: 18,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CartAddressPill extends StatelessWidget {
-  const _CartAddressPill({
-    required this.text,
-    required this.color,
-  });
-
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: GoogleFonts.inter(
-          color: const Color(0xFF0A243F),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          height: 16 / 11,
-        ),
-      ),
-    );
-  }
-}
-
-class _CartEmptyAddressState extends StatelessWidget {
-  const _CartEmptyAddressState({
-    required this.message,
-    this.onAddAddress,
-  });
-
-  final String message;
-  final VoidCallback? onAddAddress;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            message,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF0A243F),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (onAddAddress != null) ...[
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: onAddAddress,
-              child: Text(
-                'Add a delivery address',
-                style: GoogleFonts.inter(
-                  color: const Color(0xFF2973F0),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
                 ),
-              ),
+                Expanded(
+                  child: AddressPickerBody(
+                    addresses: _filteredAddresses,
+                    selectedAddressId: widget.selectedAddressId,
+                    showSearch: true,
+                    showQuickActions: false,
+                    searchController: _searchController,
+                    onSearchChanged: (value) => setState(() => _query = value),
+                    onAddNewAddress: widget.onAddAddress,
+                    onSelectAddress: widget.onSelectAddress,
+                    onEditAddress: widget.onEditAddress,
+                    onDeleteAddress: widget.onDeleteAddress,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

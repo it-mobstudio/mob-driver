@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
+import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/bloc/product_bloc.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
@@ -174,11 +175,22 @@ class _ProductListingPageState extends State<ProductListingPage> {
       if (mounted) context.go(LoginpageWidget.routePath);
       return;
     }
+    final productId = int.tryParse(product.id);
+    final phoneNumber = AuthSession.instance.phoneNumber;
+    if (productId == null || phoneNumber == null) return;
+    final (success, failure) = await sl<ProductRepository>().notifyOutOfStock(
+      productId: productId,
+      phoneNumber: phoneNumber,
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Notify feature will be enabled soon.'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(
+          success
+              ? "We'll notify you when this is back in stock."
+              : failure?.message ?? 'Unable to set up notification.',
+        ),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

@@ -838,6 +838,7 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
   Future<void> _openAddressFlow() async {
     final savedAddress = await context.push<AddressEntity>(
       AddressSelectionWidget.routePath,
+      extra: {'showSearch': false, 'title': 'Your address'},
     );
     if (!mounted || savedAddress == null) return;
     setState(() {

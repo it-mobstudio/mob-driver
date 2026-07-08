@@ -6,6 +6,10 @@ abstract interface class AddressRepository {
 
   Future<(AddressEntity?, AppFailure?)> createAddress(AddressEntity address);
 
+  Future<(AddressEntity?, AppFailure?)> updateAddress(AddressEntity address);
+
+  Future<(bool, AppFailure?)> deleteAddress(String addressId);
+
   Future<(List<AddressSuggestionEntity>?, AppFailure?)> searchLocations(
     String query,
   );

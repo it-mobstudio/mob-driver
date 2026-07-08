@@ -45,6 +45,20 @@ class AuthSession extends ChangeNotifier {
   // instead of routes that gate on isAuthenticated alone.
   bool get needsRegistration => _needsRegistration;
 
+  /// Signed-in user's phone number, wherever the user_details payload put
+  /// it (the backend hasn't been consistent about the key name).
+  String? get phoneNumber {
+    final details = _userDetails;
+    if (details == null) return null;
+    for (final key in const ['phone_number', 'phone', 'mobile']) {
+      final value = details[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return null;
+  }
+
   Future<bool> get isProFirstTime async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_isProFirstTimeKey) ?? true;

@@ -120,7 +120,11 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
     Emitter<AddressState> emit,
   ) async {
     emit(AddressSaving());
-    final (address, failure) = await _repository.createAddress(event.address);
+    // A non-empty id means this address already exists — editing it must
+    // PATCH the existing record, not silently create a duplicate.
+    final (address, failure) = event.address.id.trim().isNotEmpty
+        ? await _repository.updateAddress(event.address)
+        : await _repository.createAddress(event.address);
     if (failure != null) {
       AppHaptics.error();
       emit(AddressError(failure.message));

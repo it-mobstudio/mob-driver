@@ -21,6 +21,7 @@ class AddressEntity {
     this.isLocationServiceable = true,
     this.projectName = '',
     this.mobCredit = false,
+    this.gstNumber = '',
   });
 
   final String id;
@@ -47,6 +48,7 @@ class AddressEntity {
   /// address (mirrors web's `address?.mob_credit`, used to auto-pick a
   /// billing address at checkout).
   final bool mobCredit;
+  final String gstNumber;
 
   String get displayAddress => [
         addressLine1,
@@ -101,9 +103,10 @@ class AddressEntity {
       addressTag:
           _stringValue(map, const ['address_tag', 'tag', 'address_type']),
       phoneNumber: _stringValue(map, const ['phone_number', 'phone', 'mobile']),
-      projectName: _stringValue(map, const ['project_name', 'project']),
+      projectName: _projectNameValue(map),
       mobCredit: map['mob_credit'] == true ||
           map['mob_credit']?.toString().toLowerCase() == 'true',
+      gstNumber: _stringValue(map, const ['gst_number', 'gstin', 'gst_no']),
     );
   }
 
@@ -130,6 +133,7 @@ class AddressEntity {
       'phone_number': phoneNumber,
       'project_name': projectName,
       'mob_credit': mobCredit,
+      'gst_number': gstNumber,
     };
   }
 
@@ -155,6 +159,7 @@ class AddressEntity {
       'address_tag': addressTag,
       'phone_number': phoneNumber,
       'address_line_2': addressLine2,
+      'gst_number': gstNumber,
     };
   }
 
@@ -181,6 +186,28 @@ class AddressEntity {
     if (value is bool) return value;
     final normalized = value.toString().trim().toLowerCase();
     return normalized != 'false' && normalized != '0' && normalized != 'no';
+  }
+
+  /// 'project_name' and 'project' can each hold either a plain string or the
+  /// full project object ({project_id, project_name, city, project_image})
+  /// depending on the endpoint — always unwrap to just the name, never dump
+  /// the object's toString().
+  static String _projectNameValue(Map<String, dynamic> map) {
+    for (final key in const ['project_name', 'project']) {
+      final value = map[key];
+      if (value == null) continue;
+      if (value is Map) {
+        final nested = _stringValue(
+          value.cast<String, dynamic>(),
+          const ['project_name', 'name'],
+        );
+        if (nested.isNotEmpty) return nested;
+        continue;
+      }
+      final text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return '';
   }
 
   static String _pincodeValue(Map<String, dynamic> map) {

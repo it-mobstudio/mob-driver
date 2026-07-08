@@ -230,12 +230,8 @@ class BrowseProductFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final tileCount = products.length + 1;
     final rowCount = (tileCount / crossAxisCount).ceil();
-    // Row 2, column 2 (both 0-indexed: row 1, column 1) — falls back to
-    // right after the last product if there aren't enough products for a
-    // real second row to exist yet.
-    final requestCardIndex = products.length > crossAxisCount + 1
-        ? crossAxisCount + 1
-        : products.length;
+    // Last slot in the grid — after every real result, not interrupting them.
+    final requestCardIndex = products.length;
     final productTypeLabels = _productTypeLabels();
     final brands = brandOptions
         .where((option) => option.trim().isNotEmpty)
@@ -518,7 +514,7 @@ class BrowseRequestCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0A243F),
                     ),
@@ -867,8 +863,7 @@ class _SubCategoryTile extends StatelessWidget {
                         ? const Color(0xFF0A243F)
                         : const Color(0xFF57627A),
                     fontSize: 11,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     height: 1.27,
                   ),
                 ),

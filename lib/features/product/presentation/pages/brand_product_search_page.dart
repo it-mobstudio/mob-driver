@@ -6,12 +6,14 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
+import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/bloc/product_bloc.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/filter_bottom_sheet.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/sort_bottom_sheet.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/widgets/browse_products_components.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
+import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
@@ -142,10 +144,21 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
       if (mounted) context.go(LoginpageWidget.routePath);
       return;
     }
+    final productId = int.tryParse(product.id);
+    final phoneNumber = AuthSession.instance.phoneNumber;
+    if (productId == null || phoneNumber == null) return;
+    final (success, failure) = await sl<ProductRepository>().notifyOutOfStock(
+      productId: productId,
+      phoneNumber: phoneNumber,
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${product.title} notify feature will be enabled soon.'),
+        content: Text(
+          success
+              ? "We'll notify you when this is back in stock."
+              : failure?.message ?? 'Unable to set up notification.',
+        ),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -479,7 +492,8 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
                                         onNotifyTap: _handleNotifyTap,
                                         onProductTypeTap:
                                             _toggleInlineProductType,
-                                        onRequestTap: () {},
+                                        onRequestTap: () =>
+                                            context.push(MagicAiQuotePage.routePath),
                                       ),
                       ),
                     ],

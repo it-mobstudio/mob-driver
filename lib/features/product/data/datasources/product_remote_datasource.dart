@@ -34,6 +34,11 @@ abstract interface class ProductRemoteDatasource {
     String? sortBy,
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
   });
+
+  Future<Map<String, dynamic>> notifyOutOfStock({
+    required int productId,
+    required String phoneNumber,
+  });
 }
 
 class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
@@ -136,6 +141,21 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
       },
     );
     return response.data;
+  }
+
+  @override
+  Future<Map<String, dynamic>> notifyOutOfStock({
+    required int productId,
+    required String phoneNumber,
+  }) async {
+    final response = await _dio.post<dynamic>(
+      '/home/notify-out-of-stock/',
+      data: {
+        'product': productId,
+        'phone_number': phoneNumber,
+      },
+    );
+    return _toMap(response.data);
   }
 
   Map<String, dynamic> _toMap(dynamic raw) {

@@ -60,6 +60,50 @@ class AddressRepositoryImpl implements AddressRepository {
   }
 
   @override
+  Future<(AddressEntity?, AppFailure?)> updateAddress(
+    AddressEntity address,
+  ) async {
+    try {
+      final payload = {
+        ...address.toCreatePayload(),
+        'address_id': address.id,
+      };
+      final body = await _datasource.updateAddress(payload);
+      if (body['status'] == false) {
+        return (null, BusinessFailure(_responseMessage(body)));
+      }
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      return (
+        _containsAddressData(data)
+            ? AddressEntity.fromMap({...payload, ...data})
+            : address,
+        null,
+      );
+    } on DioException catch (error) {
+      return (null, _addressFailure(error));
+    } catch (error) {
+      return (null, UnknownFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<(bool, AppFailure?)> deleteAddress(String addressId) async {
+    try {
+      final body = await _datasource.deleteAddress(addressId);
+      if (body['status'] == false) {
+        return (false, BusinessFailure(_responseMessage(body)));
+      }
+      return (true, null);
+    } on DioException catch (error) {
+      return (false, error.toAppFailure());
+    } catch (error) {
+      return (false, UnknownFailure(error.toString()));
+    }
+  }
+
+  @override
   Future<(List<AddressSuggestionEntity>?, AppFailure?)> searchLocations(
     String query,
   ) async {

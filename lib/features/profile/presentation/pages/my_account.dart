@@ -183,8 +183,10 @@ class _ProfileBody extends StatelessWidget {
                           _MenuItem(
                             iconAsset: 'assets/images/addresses.svg',
                             label: 'Addresses',
-                            onTap: () =>
-                                context.push(AddressSelectionWidget.routePath),
+                            onTap: () => context.push(
+                              AddressSelectionWidget.routePath,
+                              extra: {'showSearch': false},
+                            ),
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/personalinfo.svg',

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
-import 'package:m_o_b_demand_side/features/address/presentation/pages/map_location_widget.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/add_address_detail_page.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/splash_screen.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_page.dart';
@@ -182,6 +183,8 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
           return AddressSelectionWidget(
             returnToHome: extra['returnToHome'] == true,
             showReferralBonus: extra['showReferralBonus'] == true,
+            showSearch: extra['showSearch'] != false,
+            title: extra['title']?.toString(),
           );
         },
       ),
@@ -395,13 +398,27 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
             PaymentFailedPage(message: state.extra as String? ?? ''),
       ),
       GoRoute(
-        name: MapLocationWidget.routeName,
-        path: MapLocationWidget.routePath,
+        name: AddAddressDetailPage.routeName,
+        path: AddAddressDetailPage.routePath,
         parentNavigatorKey: appNavigatorKey,
-        builder: (context, state) => MapLocationWidget(
-          initialLocation: state.extra is AddressLocationEntity
-              ? state.extra as AddressLocationEntity
-              : null,
+        builder: (context, state) {
+          final extra = state.extra as AddressEntity;
+          // A non-empty id means this is an existing saved address being
+          // edited (its own details are both the location and the form's
+          // starting values), not a freshly-confirmed pin with nothing
+          // saved yet.
+          return AddAddressDetailPage(
+            location: extra,
+            existingAddress: extra.id.trim().isNotEmpty ? extra : null,
+          );
+        },
+      ),
+      GoRoute(
+        name: ConfirmDeliveryLocationPage.routeName,
+        path: ConfirmDeliveryLocationPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => ConfirmDeliveryLocationPage(
+          initialLocation: state.extra as AddressLocationEntity,
         ),
       ),
       GoRoute(

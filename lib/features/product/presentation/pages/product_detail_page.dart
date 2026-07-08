@@ -17,6 +17,7 @@ import 'package:m_o_b_demand_side/shared/product_cart_action_button.dart';
 import 'package:m_o_b_demand_side/shared/variant_selection_sheet.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/product/domain/entities/product_entity.dart';
+import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/bloc/product_bloc.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/widgets/product_detail_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
@@ -71,11 +72,22 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       if (mounted) context.go(LoginpageWidget.routePath);
       return;
     }
+    final productId = int.tryParse(product.id);
+    final phoneNumber = AuthSession.instance.phoneNumber;
+    if (productId == null || phoneNumber == null) return;
+    final (success, failure) = await sl<ProductRepository>().notifyOutOfStock(
+      productId: productId,
+      phoneNumber: phoneNumber,
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Notify feature will be enabled soon.'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(
+          success
+              ? "We'll notify you when this is back in stock."
+              : failure?.message ?? 'Unable to set up notification.',
+        ),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -336,6 +348,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                     ),
                                     SimilarProductsSection(
                                       products: similarProducts,
+                                      quantityResolver: (productId) =>
+                                          cartQtyByProductId[productId] ?? 0,
+                                      isUpdatingResolver: (productId) =>
+                                          cartUpdatingKey == productId,
                                       onCartQuantityChanged:
                                           _changeProductQuantity,
                                       onNotifyTap: _handleNotifyTap,

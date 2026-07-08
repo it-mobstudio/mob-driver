@@ -45,4 +45,11 @@ abstract interface class ProductRepository {
     String? sortBy,
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
   });
+
+  /// Registers the signed-in user's phone number to be notified when an
+  /// out-of-stock product becomes available again.
+  Future<(bool, AppFailure?)> notifyOutOfStock({
+    required int productId,
+    required String phoneNumber,
+  });
 }

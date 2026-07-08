@@ -10,14 +10,19 @@ import 'package:m_o_b_demand_side/features/address/data/local/selected_address_s
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
-import 'package:m_o_b_demand_side/features/address/presentation/pages/map_location_widget.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/add_address_detail_page.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/maps_link_sheet.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
+import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
 
 class AddressSelectionWidget extends StatefulWidget {
   const AddressSelectionWidget({
     super.key,
     this.returnToHome = false,
     this.showReferralBonus = false,
+    this.showSearch = true,
+    this.title,
   });
 
   static const String routeName = 'AddressSelection';
@@ -26,17 +31,27 @@ class AddressSelectionWidget extends StatefulWidget {
   final bool returnToHome;
   final bool showReferralBonus;
 
+  /// My Account's "Addresses" menu and the RFQ "Recheck prices" flow reuse
+  /// this same page but as a plain address-book manager — no live location
+  /// search/quick-pick pills, just "Add new address" + the saved list. The
+  /// nav bar entry point keeps both (the default).
+  final bool showSearch;
+
+  /// Overrides the default title (which otherwise falls back to
+  /// 'Search location' / 'Addresses' based on [showSearch]).
+  final String? title;
+
   @override
   State<AddressSelectionWidget> createState() => _AddressSelectionWidgetState();
 }
 
 class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
-  static const _navy = Color(0xFF0A243F);
   late final AddressBloc _addressBloc;
   late final AddressRepository _addressRepository;
   final _searchController = TextEditingController();
   Timer? _debounce;
   List<AddressEntity> _addresses = const [];
+  bool _loadingAddresses = true;
   bool _detectingLocation = false;
 
   @override
@@ -61,17 +76,18 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
       child: BlocConsumer<AddressBloc, AddressState>(
         listener: _onStateChanged,
         builder: (context, state) {
-          final suggestions = state is AddressSearchLoaded
+          final suggestions = widget.showSearch && state is AddressSearchLoaded
               ? state.suggestions
               : const <AddressSuggestionEntity>[];
           return Scaffold(
             backgroundColor: const Color(0xFFF7F7F7),
             appBar: AppBar(
               backgroundColor: Colors.white,
-              foregroundColor: _navy,
+              foregroundColor: const Color(0xFF0A243F),
               elevation: 0,
               title: Text(
-                'Search location',
+                widget.title ??
+                    (widget.showSearch ? 'Search location' : 'Addresses'),
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -79,47 +95,26 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
               ),
             ),
             body: SafeArea(
-              child: Column(
-                children: [
-                  Container(
-                    color: Colors.white,
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
-                      decoration: InputDecoration(
-                        hintText: 'Search for area, street name..',
-                        hintStyle: GoogleFonts.inter(
-                          color: const Color(0xFFAFB4C0),
-                          fontSize: 14,
-                        ),
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _searchController.text.isEmpty
-                            ? null
-                            : IconButton(
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {});
-                                  _addressBloc.add(AddressLoadRequested());
-                                },
-                                icon: const Icon(Icons.close),
-                              ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: _border(),
-                        enabledBorder: _border(),
-                        focusedBorder: _border(color: const Color(0xFF0360E5)),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: state is AddressLoading || state is AddressSearching
-                        ? const Center(child: CircularProgressIndicator())
-                        : suggestions.isNotEmpty
-                            ? _suggestionsList(suggestions)
-                            : _savedAddressContent(),
-                  ),
-                ],
+              child: AddressPickerBody(
+                addresses: _addresses,
+                selectedAddressId: SelectedAddressStore.cached?.id,
+                isLoadingAddresses: _loadingAddresses,
+                showSearch: widget.showSearch,
+                showQuickActions: widget.showSearch,
+                searchController: _searchController,
+                onSearchChanged: _onSearchChanged,
+                suggestions: suggestions,
+                isSearching: state is AddressSearching,
+                onSelectSuggestion: (suggestion) => _addressBloc.add(
+                  AddressLocationDetailsRequested(suggestion.placeId),
+                ),
+                detectingCurrentLocation: _detectingLocation,
+                onCurrentLocation: _detectCurrentLocation,
+                onMapsLink: _openMapsLinkSheet,
+                onAddNewAddress: _openMap,
+                onSelectAddress: _completeSelection,
+                onEditAddress: _editAddress,
+                onDeleteAddress: _deleteAddress,
               ),
             ),
           );
@@ -128,222 +123,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     );
   }
 
-  Widget _savedAddressContent() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _actionTile(
-          icon: Icons.my_location,
-          title: 'Detect my location',
-          subtitle: 'Use your current GPS location',
-          onTap: _detectCurrentLocation,
-          loading: _detectingLocation,
-        ),
-        const SizedBox(height: 10),
-        _actionTile(
-          icon: Icons.add,
-          title: 'Add new address',
-          onTap: _openMap,
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Your saved address',
-          style: GoogleFonts.inter(
-            color: _navy,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (_addresses.isEmpty)
-          const _EmptyAddress()
-        else
-          ..._addresses.map(_savedAddressCard),
-      ],
-    );
-  }
-
-  Widget _suggestionsList(List<AddressSuggestionEntity> suggestions) {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: suggestions.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final suggestion = suggestions[index];
-        return ListTile(
-          leading: const Icon(Icons.location_on_outlined, color: _navy),
-          title: Text(
-            suggestion.primaryText,
-            style: GoogleFonts.inter(
-              color: _navy,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          subtitle: suggestion.secondaryText.isEmpty
-              ? null
-              : Text(
-                  suggestion.secondaryText,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF767C8F),
-                    fontSize: 12,
-                  ),
-                ),
-          onTap: () => _addressBloc.add(
-            AddressLocationDetailsRequested(suggestion.placeId),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _actionTile({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    String? subtitle,
-    bool loading = false,
-  }) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: loading ? null : onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFDFE4EC)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: const Color(0xFF0360E5)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        color: _navy,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.inter(
-                          color: const Color(0xFF767C8F),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              loading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.chevron_right, color: Color(0xFF767C8F)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _savedAddressCard(AddressEntity address) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: () => _completeSelection(address),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFDFE4EC)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on,
-                      color: Color(0xFF00B878),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        address.name.isNotEmpty
-                            ? address.name
-                            : address.locationName,
-                        style: GoogleFonts.inter(
-                          color: _navy,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (address.addressTag.isNotEmpty) _tag(address.addressTag),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  address.displayAddress,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF596378),
-                    fontSize: 12,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _tag(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0x0F0360E5),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: GoogleFonts.inter(
-          color: const Color(0xFF0360E5),
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  OutlineInputBorder _border({Color color = const Color(0xFFDFE4EC)}) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: color),
-    );
-  }
-
   void _onSearchChanged(String value) {
-    setState(() {});
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
@@ -357,51 +137,118 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
 
   void _onStateChanged(BuildContext context, AddressState state) {
     if (state is AddressListLoaded) {
-      setState(() => _addresses = state.addresses);
+      setState(() {
+        _addresses = state.addresses;
+        _loadingAddresses = false;
+      });
     } else if (state is AddressLocationResolved) {
-      _completeSelection(_addressFromLocation(state.location));
+      _confirmOnMap(state.location);
     } else if (state is AddressError) {
+      setState(() => _loadingAddresses = false);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(state.message)));
     }
   }
 
+  /// "Add new address" — confirm a pin on the map, then collect receiver
+  /// details and actually save it to the address book (unlike
+  /// [_confirmOnMap], which only sets the nav bar's browsing location).
+  /// Defaults to a Bengaluru city-center pin when no location is already
+  /// known; [ConfirmDeliveryLocationPage] resolves the real address for it
+  /// as soon as the map loads.
   Future<void> _openMap([AddressLocationEntity? location]) async {
+    final confirmed = await context.push<AddressEntity>(
+      ConfirmDeliveryLocationPage.routePath,
+      extra: location ??
+          const AddressLocationEntity(
+            latitude: 12.9716,
+            longitude: 77.5946,
+            formattedAddress: '',
+            city: '',
+            state: '',
+            pincode: '',
+            sublocality: '',
+            locationName: '',
+          ),
+    );
+    if (!mounted || confirmed == null) return;
     final savedAddress = await context.push<AddressEntity>(
-      MapLocationWidget.routePath,
-      extra: location,
+      AddAddressDetailPage.routePath,
+      extra: confirmed,
     );
     if (!mounted || savedAddress == null) return;
+    setState(() => _addresses = [..._addresses, savedAddress]);
     await _completeSelection(savedAddress);
   }
 
-  /// Builds a lightweight [AddressEntity] purely for setting the active
-  /// delivery location (top nav bar / browsing context). Contact fields
-  /// (name, phone, email, site person) are intentionally left blank — those
-  /// are only collected when the user explicitly adds a new address via the
-  /// "Add new address" button, which opens [MapLocationWidget].
-  AddressEntity _addressFromLocation(AddressLocationEntity location) {
-    return AddressEntity(
-      latitude: location.latitude,
-      longitude: location.longitude,
-      googleMapLink:
-          'https://www.google.com/maps?q=${location.latitude},${location.longitude}',
-      formattedAddress: location.formattedAddress,
-      city: location.city,
-      state: location.state,
-      pincode: location.pincode,
-      sublocality: location.sublocality,
-      locationName: location.locationName,
-      name: '',
-      email: '',
-      addressLine1: '',
-      addressLine2: '',
-      sitePerson: '',
-      sitePersonMobile: '',
-      addressTag: '',
-      phoneNumber: '',
+  Future<void> _editAddress(AddressEntity address) async {
+    final updated = await context.push<AddressEntity>(
+      AddAddressDetailPage.routePath,
+      extra: address,
     );
+    if (!mounted || updated == null) return;
+    setState(() {
+      _addresses = [
+        for (final existing in _addresses)
+          if (existing.id == updated.id) updated else existing,
+      ];
+    });
+    if (SelectedAddressStore.cached?.id == updated.id) {
+      await SelectedAddressStore.save(updated);
+    }
+  }
+
+  Future<void> _deleteAddress(AddressEntity address) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete address?'),
+        content: const Text('Are you sure you want to delete this address?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final (success, failure) = await _addressRepository.deleteAddress(address.id);
+    if (!mounted) return;
+    if (!success) {
+      _showError(failure?.message ?? 'Unable to delete address.');
+      return;
+    }
+    setState(() {
+      _addresses = _addresses.where((a) => a.id != address.id).toList();
+    });
+    if (SelectedAddressStore.cached?.id == address.id) {
+      await SelectedAddressStore.clear();
+    }
+  }
+
+  /// Lets the user confirm/adjust the pin on the map before it's applied as
+  /// the active delivery location — used for both "detect my location" and
+  /// picking a search suggestion, so a resolved GPS/place lookup never
+  /// silently takes effect without the user seeing and confirming it first.
+  Future<void> _confirmOnMap(AddressLocationEntity location) async {
+    final confirmed = await context.push<AddressEntity>(
+      ConfirmDeliveryLocationPage.routePath,
+      extra: location,
+    );
+    if (!mounted || confirmed == null) return;
+    await _completeSelection(confirmed);
+  }
+
+  Future<void> _openMapsLinkSheet() async {
+    final location = await showMapsLinkSheet(context);
+    if (!mounted || location == null) return;
+    await _confirmOnMap(location);
   }
 
   Future<void> _detectCurrentLocation() async {
@@ -431,41 +278,12 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
         _showError(failure?.message ?? 'Unable to resolve your current address.');
         return;
       }
-      final address = AddressEntity(
-        latitude: location.latitude,
-        longitude: location.longitude,
-        googleMapLink:
-            'https://www.google.com/maps?q=${location.latitude},${location.longitude}',
-        formattedAddress: location.formattedAddress,
-        city: location.city,
-        state: location.state,
-        pincode: _resolvePincode(location.pincode, location.formattedAddress),
-        sublocality: location.sublocality,
-        locationName: location.locationName.trim().isEmpty
-            ? 'Current location'
-            : location.locationName.trim(),
-        name: '',
-        email: '',
-        addressLine1: '',
-        addressLine2: '',
-        sitePerson: '',
-        sitePersonMobile: '',
-        addressTag: '',
-        phoneNumber: '',
-      );
-      if (!mounted) return;
-      await _completeSelection(address);
+      await _confirmOnMap(location);
     } catch (_) {
       _showError('Unable to detect your current location.');
     } finally {
       if (mounted) setState(() => _detectingLocation = false);
     }
-  }
-
-  String _resolvePincode(String? postalCode, String address) {
-    final direct = postalCode?.trim() ?? '';
-    if (RegExp(r'^[1-9][0-9]{5}$').hasMatch(direct)) return direct;
-    return RegExp(r'\b[1-9][0-9]{5}\b').firstMatch(address)?.group(0) ?? '';
   }
 
   void _showError(String message) {
@@ -486,22 +304,5 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     } else {
       context.pop(address);
     }
-  }
-}
-
-class _EmptyAddress extends StatelessWidget {
-  const _EmptyAddress();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 36),
-      child: Center(
-        child: Text(
-          'No saved addresses yet.',
-          style: GoogleFonts.inter(color: const Color(0xFF767C8F)),
-        ),
-      ),
-    );
   }
 }
