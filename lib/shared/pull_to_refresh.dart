@@ -1,9 +1,10 @@
 // lib/shared/pull_to_refresh.dart
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-/// Wraps [child] in a [RefreshIndicator], replacing the default Material
-/// spinner with a small branded dot animation and a fade-in once the new
-/// content lands.
+import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
+
 class PullToRefresh extends StatefulWidget {
   const PullToRefresh({
     super.key,
@@ -21,6 +22,8 @@ class PullToRefresh extends StatefulWidget {
 class _PullToRefreshState extends State<PullToRefresh>
     with SingleTickerProviderStateMixin {
   late final AnimationController _spinController;
+  final AudioPlayer _soundPlayer = AudioPlayer();
+  bool _soundReady = false;
 
   bool _refreshing = false;
 
@@ -31,9 +34,27 @@ class _PullToRefreshState extends State<PullToRefresh>
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     );
+    _preloadSound();
+  }
+
+  // Preload so playback is instant once a refresh actually triggers, instead
+  // of buffering audibly on the first pull. A missing/unsupported asset must
+  // never break pull-to-refresh itself, hence the swallow.
+  Future<void> _preloadSound() async {
+    try {
+      await _soundPlayer.setAsset('assets/audios/pull_to_refresh.mp3');
+      _soundReady = true;
+    } catch (_) {
+      _soundReady = false;
+    }
   }
 
   Future<void> _handleRefresh() async {
+    AppHaptics.lightTap();
+    if (_soundReady) {
+      unawaited(_soundPlayer.seek(Duration.zero));
+      unawaited(_soundPlayer.play());
+    }
     setState(() => _refreshing = true);
     _spinController.repeat();
     try {
@@ -47,6 +68,7 @@ class _PullToRefreshState extends State<PullToRefresh>
   @override
   void dispose() {
     _spinController.dispose();
+    _soundPlayer.dispose();
     super.dispose();
   }
 

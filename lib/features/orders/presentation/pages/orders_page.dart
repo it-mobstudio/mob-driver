@@ -12,6 +12,7 @@ import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.d
 import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
+import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'order_detail_page.dart';
 import 'order_tracking_page.dart';
@@ -149,73 +150,83 @@ class _OrdersPageState extends State<OrdersPage> {
                             ),
                           ),
                         OrdersLoaded(:final orders, :final isLoadingMore) =>
-                          ListView(
-                            controller: _scrollController,
-                            padding: EdgeInsets.fromLTRB(
-                              16,
-                              12,
-                              16,
-                              24 +
-                                  kBottomNavBarHeight +
-                                  MediaQuery.paddingOf(context).bottom,
-                            ),
-                            children: [
-                              _OrdersSearch(
-                                controller: _searchController,
-                                onChanged: _onSearchChanged,
-                                onCleared: _onSearchCleared,
+                          PullToRefresh(
+                            onRefresh: () async {
+                              _ordersBloc.add(OrdersRefreshRequested());
+                              await _ordersBloc.stream.firstWhere(
+                                (s) => s is OrdersLoaded || s is OrdersError,
+                              );
+                            },
+                            child: ListView(
+                              controller: _scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.fromLTRB(
+                                16,
+                                12,
+                                16,
+                                24 +
+                                    kBottomNavBarHeight +
+                                    MediaQuery.paddingOf(context).bottom,
                               ),
-                              const SizedBox(height: 12),
-                              _FilterButton(
-                                activeLabel: _activeFilterLabel,
-                                onTap: _openFilterSheet,
-                              ),
-                              const SizedBox(height: 16),
-                              if (orders.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 48,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'No orders yet.',
-                                      style: GoogleFonts.inter(
-                                        color: const Color(0xFF596378),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              else ...[
-                                ...orders.map(
-                                  (order) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: _OrderCard(
-                                      order: order,
-                                      onTap: () => context.push(
-                                        OrderDetailPage.routePath,
-                                        extra: order.id,
-                                      ),
-                                    ),
-                                  ),
+                              children: [
+                                _OrdersSearch(
+                                  controller: _searchController,
+                                  onChanged: _onSearchChanged,
+                                  onCleared: _onSearchCleared,
                                 ),
-                                if (isLoadingMore)
-                                  const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 16,
+                                const SizedBox(height: 12),
+                                _FilterButton(
+                                  activeLabel: _activeFilterLabel,
+                                  onTap: _openFilterSheet,
+                                ),
+                                const SizedBox(height: 16),
+                                if (orders.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 48,
                                     ),
                                     child: Center(
-                                      child: SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                                      child: Text(
+                                        'No orders yet.',
+                                        style: GoogleFonts.inter(
+                                          color: const Color(0xFF596378),
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else ...[
+                                  ...orders.map(
+                                    (order) => Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 16),
+                                      child: _OrderCard(
+                                        order: order,
+                                        onTap: () => context.push(
+                                          OrderDetailPage.routePath,
+                                          extra: order.id,
                                         ),
                                       ),
                                     ),
                                   ),
+                                  if (isLoadingMore)
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         _ => const SizedBox.shrink(),
                       };

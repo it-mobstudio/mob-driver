@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class MyProjectsPage extends StatelessWidget {
@@ -95,8 +96,7 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
                 final projects = list.projects.where(_matchesFilters).toList();
                 final cities = _citiesFrom(list.projects);
 
-                return RefreshIndicator(
-                  color: _ProjectColors.blue,
+                return PullToRefresh(
                   onRefresh: _refresh,
                   child: CustomScrollView(
                     controller: _scrollController,

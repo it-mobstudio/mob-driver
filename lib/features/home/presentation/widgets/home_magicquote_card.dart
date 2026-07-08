@@ -31,7 +31,7 @@ class HomeMagicQuoteCard extends StatelessWidget {
               children: [
                 Positioned(
                   right: 8,
-                  bottom: 8,
+                  bottom: 0,
                   child: SvgPicture.asset(
                     'assets/images/magic-quote-ad.svg',
                     width: 130,
@@ -42,7 +42,7 @@ class HomeMagicQuoteCard extends StatelessWidget {
                 Positioned(
                   left: 16,
                   top: 16,
-                  width: 190,
+                  width: 175,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -59,7 +59,7 @@ class HomeMagicQuoteCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      // const SizedBox(width: 2),
                       SvgPicture.asset(
                         'assets/images/magicquote-star.svg',
                         width: 18,

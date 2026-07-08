@@ -102,9 +102,13 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                   builder: (context, state) {
                     return switch (state) {
                       HomeLoaded(:final data) => PullToRefresh(
-                          onRefresh: () async => context
-                              .read<HomeBloc>()
-                              .add(HomeRefreshRequested()),
+                          onRefresh: () async {
+                            final bloc = context.read<HomeBloc>();
+                            bloc.add(HomeRefreshRequested());
+                            await bloc.stream.firstWhere(
+                              (s) => s is HomeLoaded || s is HomeError,
+                            );
+                          },
                           child: CustomScrollView(
                             controller: _scrollController,
                             slivers: [
@@ -172,9 +176,13 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                       HomeInitial() =>
                         const _HomeLoadingSkeleton(),
                       HomeError(:final message) => PullToRefresh(
-                          onRefresh: () async => context
-                              .read<HomeBloc>()
-                              .add(HomeRefreshRequested()),
+                          onRefresh: () async {
+                            final bloc = context.read<HomeBloc>();
+                            bloc.add(HomeRefreshRequested());
+                            await bloc.stream.firstWhere(
+                              (s) => s is HomeLoaded || s is HomeError,
+                            );
+                          },
                           child: CustomScrollView(
                             slivers: [
                               const SliverToBoxAdapter(child: HomeHeader()),

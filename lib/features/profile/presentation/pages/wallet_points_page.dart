@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class WalletPointsPage extends StatelessWidget {
@@ -57,8 +58,7 @@ class _WalletView extends StatelessWidget {
             }
 
             final wallet = state is WalletHistoryLoaded ? state.wallet : null;
-            return RefreshIndicator(
-              color: const Color(0xFF0360E5),
+            return PullToRefresh(
               onRefresh: () async {
                 context.read<ProfileBloc>().add(WalletHistoryLoadRequested());
                 await context.read<ProfileBloc>().stream.firstWhere(

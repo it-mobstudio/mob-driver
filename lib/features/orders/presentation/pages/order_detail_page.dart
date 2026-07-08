@@ -32,7 +32,6 @@ class OrderDetailPage extends StatefulWidget {
 class _OrderDetailPageState extends State<OrderDetailPage> {
   late final OrdersBloc _ordersBloc;
   bool _initialized = false;
-  bool _navigatingBack = false;
 
   @override
   void initState() {
@@ -66,18 +65,16 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      // Only intercept the pop when there's genuinely nowhere to pop to
+      // (e.g. deep-linked straight into this page) — canPop: false
+      // unconditionally would also disable iOS's edge-swipe-to-pop gesture
+      // (CupertinoPageTransitionsBuilder refuses to attach it whenever a
+      // route reports it can't pop), even on the common path where this
+      // page was simply pushed from the orders list.
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop || _navigatingBack) return;
-        _navigatingBack = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!context.mounted) return;
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go('/homepage');
-          }
-        });
+        if (didPop) return;
+        context.go('/homepage');
       },
       child: BlocProvider<OrdersBloc>.value(
         value: _ordersBloc,

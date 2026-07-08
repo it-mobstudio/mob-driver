@@ -119,7 +119,11 @@ class _CategoriesContent extends StatelessWidget {
 
     return PullToRefresh(
       onRefresh: () async {
-        context.read<HomeBloc>().add(HomeRefreshRequested());
+        final bloc = context.read<HomeBloc>();
+        bloc.add(HomeRefreshRequested());
+        await bloc.stream.firstWhere(
+          (s) => s is HomeLoaded || s is HomeError,
+        );
       },
       child: GridView.builder(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),

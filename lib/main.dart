@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -227,11 +228,22 @@ class MyAppState extends State<MyApp> {
           ),
           pageTransitionsTheme: const PageTransitionsTheme(
             builders: {
-              TargetPlatform.iOS: _MobPageTransitionsBuilder(),
+              // Stock CupertinoPageTransitionsBuilder — not the custom
+              // builder below — because it's the one that wires up
+              // Cupertino's left-edge swipe-to-pop gesture detector
+              // (_CupertinoBackGestureDetector). The custom builder only
+              // painted a slide animation and silently dropped that gesture
+              // handling, which is why swipe-back stopped working on iOS
+              // while the AppBar/system back button (Navigator.pop, unrelated
+              // to page transitions) kept working fine.
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
               TargetPlatform.android: _MobPageTransitionsBuilder(),
             },
           ),
         ),
+        // themeMode is pinned to ThemeMode.light below, so darkTheme isn't
+        // actually reachable right now — left as-is (not touched by the
+        // gesture fix) since dark theme is being implemented separately.
         darkTheme: ThemeData(
           brightness: Brightness.dark,
           fontFamily: 'Inter',
