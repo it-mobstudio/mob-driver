@@ -251,101 +251,41 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     if (!mounted || location == null) return;
     await _confirmOnMap(location);
   }
+
   Future<void> _detectCurrentLocation() async {
-  if (_detectingLocation) return;
-
-  setState(() => _detectingLocation = true);
-
-  try {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-
-    if (!serviceEnabled) {
-      _showError('Please enable location services.');
-      return;
-    }
-
-    var permission = await Geolocator.checkPermission();
-
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied) {
-      _showError('Location permission is required.');
-      return;
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      _showError('Location permission is permanently denied. Enable it from app settings.');
-      await Geolocator.openAppSettings();
-      return;
-    }
-
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 15),
-      ),
-    );
-
-    final (location, failure) = await _addressRepository.reverseGeocode(
-      position.latitude,
-      position.longitude,
-    );
-
-    if (!mounted) return;
-
-    if (failure != null || location == null) {
-      _showError(failure?.message ?? 'Unable to resolve your current address.');
-      return;
-    }
-
-    await _confirmOnMap(location);
-  } catch (e) {
-    debugPrint('Current location error: $e');
-    if (!mounted) return;
-    _showError('Unable to detect your current location.');
-  } finally {
-    if (mounted) {
-      setState(() => _detectingLocation = false);
+    if (_detectingLocation) return;
+    setState(() => _detectingLocation = true);
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _showError('Location permission is required.');
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      final (location, failure) = await _addressRepository.reverseGeocode(
+        position.latitude,
+        position.longitude,
+      );
+      if (!mounted) return;
+      if (failure != null || location == null) {
+        _showError(failure?.message ?? 'Unable to resolve your current address.');
+        return;
+      }
+      await _confirmOnMap(location);
+    } catch (_) {
+      _showError('Unable to detect your current location.');
+    } finally {
+      if (mounted) setState(() => _detectingLocation = false);
     }
   }
-}
-
-  // Future<void> _detectCurrentLocation() async {
-  //   if (_detectingLocation) return;
-  //   setState(() => _detectingLocation = true);
-  //   try {
-  //     var permission = await Geolocator.checkPermission();
-  //     if (permission == LocationPermission.denied) {
-  //       permission = await Geolocator.requestPermission();
-  //     }
-  //     if (permission == LocationPermission.denied ||
-  //         permission == LocationPermission.deniedForever) {
-  //       _showError('Location permission is required.');
-  //       return;
-  //     }
-  //     final position = await Geolocator.getCurrentPosition(
-  //       locationSettings: const LocationSettings(
-  //         accuracy: LocationAccuracy.high,
-  //       ),
-  //     );
-  //     final (location, failure) = await _addressRepository.reverseGeocode(
-  //       position.latitude,
-  //       position.longitude,
-  //     );
-  //     if (!mounted) return;
-  //     if (failure != null || location == null) {
-  //       _showError(failure?.message ?? 'Unable to resolve your current address.');
-  //       return;
-  //     }
-  //     await _confirmOnMap(location);
-  //   } catch (_) {
-  //     _showError('Unable to detect your current location.');
-  //   } finally {
-  //     if (mounted) setState(() => _detectingLocation = false);
-  //   }
-  // }
 
   void _showError(String message) {
     if (!mounted) return;
