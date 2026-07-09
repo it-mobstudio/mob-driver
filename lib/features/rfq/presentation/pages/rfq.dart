@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/rfq/domain/entities/rfq_entity.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
+import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 import 'rfq_details_page.dart';
@@ -194,29 +195,40 @@ class _RfqBody extends StatelessWidget {
                   ),
                 RfqListLoaded(:final rfqs, :final isLoadingMore) => ColoredBox(
                     color: const Color(0xFFF0F0F0),
-                    child: ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      itemCount: rfqs.length + (isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index >= rfqs.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                          );
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _RfqCard(item: rfqs[index]),
+                    child: PullToRefresh(
+                      onRefresh: () async {
+                        final bloc = context.read<RfqBloc>();
+                        bloc.add(RfqListRefreshRequested());
+                        await bloc.stream.firstWhere(
+                          (s) => s is RfqListLoaded || s is RfqError,
                         );
                       },
+                      child: ListView.builder(
+                        controller: scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        itemCount: rfqs.length + (isLoadingMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index >= rfqs.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _RfqCard(item: rfqs[index]),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 _ => const SizedBox.shrink(),

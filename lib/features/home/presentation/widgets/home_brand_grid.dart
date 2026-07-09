@@ -55,7 +55,7 @@ class HomeBrandGrid extends StatelessWidget {
           childAspectRatio: 104 / 160,
         ),
         itemBuilder: (context, index) {
-          return HomeBrandTile(
+          return _HomeBrandTile(
             brand: _brands[index],
           );
         },
@@ -64,9 +64,8 @@ class HomeBrandGrid extends StatelessWidget {
   }
 }
 
-class HomeBrandTile extends StatelessWidget {
-  const HomeBrandTile({
-    super.key,
+class _HomeBrandTile extends StatelessWidget {
+  const _HomeBrandTile({
     required this.brand,
   });
 

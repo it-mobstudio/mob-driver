@@ -151,9 +151,7 @@ class MagicQuoteBloc extends Bloc<MagicQuoteEvent, MagicQuoteState> {
       onError: (error, _) {
         AppHaptics.error();
         return MagicQuoteError(
-          error is StateError
-              ? error.message
-              : 'Magic Quote updates failed.',
+          error is StateError ? error.message : 'Magic Quote updates failed.',
         );
       },
     );

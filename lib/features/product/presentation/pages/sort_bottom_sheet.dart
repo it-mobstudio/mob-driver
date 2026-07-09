@@ -154,7 +154,8 @@ class _SortOptionIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (option) {
       case ProductSortOption.popularity:
-        return Icon(Icons.local_fire_department_outlined, size: 16, color: color);
+        return Icon(Icons.local_fire_department_outlined,
+            size: 16, color: color);
       case ProductSortOption.priceLowToHigh:
         return _RupeeArrowIcon(color: color, upward: false);
       case ProductSortOption.priceHighToLow:

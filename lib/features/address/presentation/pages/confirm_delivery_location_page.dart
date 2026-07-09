@@ -140,7 +140,7 @@ class _ConfirmDeliveryLocationPageState
                 _tooltip(),
                 const SizedBox(height: 8),
                 Transform.translate(
-                  offset: Offset(0, -2),
+                  offset: const Offset(0, -2),
                   child: const _MapPin(),
                 ),
               ],

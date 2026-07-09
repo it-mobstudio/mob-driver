@@ -1,9 +1,16 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart'
+    show kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:m_o_b_demand_side/core/app_runtime/app_version_checker.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
@@ -12,6 +19,7 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_dashboard_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/dev_info_page.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
@@ -23,6 +31,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_poi
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 import 'package:m_o_b_demand_side/shared/mob_credit.dart';
+import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 
 class MyAccountWidget extends StatefulWidget {
@@ -39,6 +48,8 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
   late final ProfileBloc _profileBloc;
   final _scrollController = ScrollController();
   bool _frosted = false;
+  AppVersionInfo? _versionInfo;
+  bool _updateAvailable = false;
 
   @override
   void initState() {
@@ -49,6 +60,19 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
       context.read<CartBloc>().add(CartLoadRequested());
     });
     _scrollController.addListener(_onScroll);
+    _checkAppVersion();
+  }
+
+  Future<void> _checkAppVersion() async {
+    final info = await fetchAppVersionInfo();
+    if (!mounted || info == null || info.latestVersion.trim().isEmpty) return;
+    final packageInfo = await PackageInfo.fromPlatform();
+    final outdated = isVersionOlder(packageInfo.version, info.latestVersion);
+    if (!mounted || !outdated) return;
+    setState(() {
+      _versionInfo = info;
+      _updateAvailable = true;
+    });
   }
 
   void _onScroll() {
@@ -72,7 +96,11 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
         backgroundColor: _ProfileColors.background,
         body: Stack(
           children: [
-            _ProfileBody(scrollController: _scrollController),
+            _ProfileBody(
+              scrollController: _scrollController,
+              updateAvailable: _updateAvailable,
+              versionInfo: _versionInfo,
+            ),
             FrostedNavBar(
               frosted: _frosted,
               onBack: () => context.go('/homepage'),
@@ -85,9 +113,15 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
 }
 
 class _ProfileBody extends StatelessWidget {
-  const _ProfileBody({required this.scrollController});
+  const _ProfileBody({
+    required this.scrollController,
+    required this.updateAvailable,
+    required this.versionInfo,
+  });
 
   final ScrollController scrollController;
+  final bool updateAvailable;
+  final AppVersionInfo? versionInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -165,10 +199,13 @@ class _ProfileBody extends StatelessWidget {
                       _ReferralCard(
                         onTap: () => context.push(ReferralPage.routePath),
                       ),
-                      const SizedBox(height: 16),
-                      _UpdateAvailableCard(
-                        onTap: () => _showUpdateAvailable(context),
-                      ),
+                      if (updateAvailable) ...[
+                        const SizedBox(height: 16),
+                        _UpdateAvailableCard(
+                          onTap: () =>
+                              _showUpdateAvailable(context, versionInfo),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       _MenuCard(
                         items: [
@@ -265,6 +302,16 @@ class _ProfileBody extends StatelessWidget {
                         ],
                       ),
                       const _VersionFooter(),
+                      // This page's bottom nav bar never auto-hides while
+                      // scrolling (unlike the home feed, this page doesn't
+                      // drive navBarVisible), so it stays permanently
+                      // docked over the Scaffold's extendBody content —
+                      // without this the version footer renders half
+                      // hidden underneath it.
+                      SizedBox(
+                        height: kBottomNavBarHeight +
+                            MediaQuery.paddingOf(context).bottom,
+                      ),
                     ],
                   ),
                 ),
@@ -296,9 +343,55 @@ class _ProfileBody extends StatelessWidget {
     }
   }
 
-  static void _showUpdateAvailable(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('App update available')),
+  static const _androidPackageId = 'com.madoverbuildings.mobileapp';
+
+  static Future<void> _openAppStore() async {
+    final Uri uri;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      // TODO: swap for the real numeric App Store id once this app is
+      // published on the App Store — falls back to the store's search page
+      // for now so this can never link to the wrong app's listing.
+      uri = Uri.parse('https://apps.apple.com/search?term=MOB');
+    } else {
+      uri = Uri.parse(
+        'https://play.google.com/store/apps/details?id=$_androidPackageId',
+      );
+    }
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  static void _showUpdateAvailable(
+    BuildContext context,
+    AppVersionInfo? info,
+  ) {
+    final forceUpdate = info?.forceUpdate ?? false;
+    final message = info?.message.trim().isNotEmpty ?? false
+        ? info!.message.trim()
+        : 'A new version of the app is available.';
+    showDialog<void>(
+      context: context,
+      barrierDismissible: !forceUpdate,
+      builder: (dialogContext) => PopScope(
+        canPop: !forceUpdate,
+        child: AlertDialog(
+          title: const Text('Update available'),
+          content: Text(message),
+          actions: [
+            if (!forceUpdate)
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Later'),
+              ),
+            TextButton(
+              onPressed: () {
+                if (!forceUpdate) Navigator.of(dialogContext).pop();
+                _openAppStore();
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -346,8 +439,8 @@ class _MyAccountSkeleton extends StatelessWidget {
             children: [
               const SkeletonBox(height: 96, borderRadius: 16),
               const SizedBox(height: 16),
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Expanded(child: SkeletonBox(height: 112, borderRadius: 16)),
                   SizedBox(width: 15),
                   Expanded(child: SkeletonBox(height: 112, borderRadius: 16)),
@@ -372,24 +465,24 @@ class _MyAccountSkeleton extends StatelessWidget {
   }
 
   Widget _headerSkeleton() {
-    return ColoredBox(
+    return const ColoredBox(
       color: _ProfileColors.navy,
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          padding: EdgeInsets.fromLTRB(16, 10, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 56),
+              SizedBox(height: 56),
               Row(
                 children: [
-                  const SkeletonBox(width: 56, height: 56, borderRadius: 28),
-                  const SizedBox(width: 14),
+                  SkeletonBox(width: 56, height: 56, borderRadius: 28),
+                  SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         SkeletonBox(width: 160, height: 20, borderRadius: 6),
                         SizedBox(height: 8),
                         SkeletonBox(width: 110, height: 14, borderRadius: 6),
@@ -398,8 +491,8 @@ class _MyAccountSkeleton extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              const SkeletonBox(height: 58, borderRadius: 16),
+              SizedBox(height: 24),
+              SkeletonBox(height: 58, borderRadius: 16),
             ],
           ),
         ),
@@ -415,12 +508,12 @@ class _MyAccountSkeleton extends StatelessWidget {
         child: Column(
           children: [
             for (var i = 0; i < rowCount; i++) ...[
-              SizedBox(
+              const SizedBox(
                 height: 56,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
-                    children: const [
+                    children: [
                       SkeletonBox(width: 24, height: 24, borderRadius: 6),
                       SizedBox(width: 16),
                       Expanded(
@@ -888,35 +981,108 @@ class _MenuRow extends StatelessWidget {
   }
 }
 
-class _VersionFooter extends StatelessWidget {
+class _VersionFooter extends StatefulWidget {
   const _VersionFooter();
+
+  @override
+  State<_VersionFooter> createState() => _VersionFooterState();
+}
+
+class _VersionFooterState extends State<_VersionFooter> {
+  static const _tapsToUnlock = 6;
+  static const _tapWindow = Duration(seconds: 3);
+
+  int _tapCount = 0;
+  Timer? _resetTimer;
+
+  @override
+  void dispose() {
+    _resetTimer?.cancel();
+    super.dispose();
+  }
+
+  // Secret dev-info screen — tap the version footer several times in a row.
+  // Hidden from normal users, but gives QA/support exact build + environment
+  // info without needing a separate debug build.
+  void _onSecretTap() {
+    _resetTimer?.cancel();
+    _tapCount++;
+    if (_tapCount >= _tapsToUnlock) {
+      _tapCount = 0;
+      context.push(DevInfoPage.routePath);
+      return;
+    }
+    _resetTimer = Timer(_tapWindow, () => _tapCount = 0);
+  }
+
+  void _copyVersion(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Version copied'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 26, 0, 16),
-      child: Column(
-        children: [
-          SvgPicture.asset(
-            'assets/images/moblogo.svg',
-            width: 88,
-            height: 24,
-            colorFilter: const ColorFilter.mode(
-              Color(0xFFD2D4D8),
-              BlendMode.srcIn,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _onSecretTap,
+        child: Column(
+          children: [
+            SvgPicture.asset(
+              'assets/images/moblogo.svg',
+              width: 88,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                Color(0xFFD2D4D8),
+                BlendMode.srcIn,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'APP VERSION 0.2.456',
-            style: GoogleFonts.inter(
-              color: const Color(0xFF9FA4AA),
-              fontSize: 11,
-              fontWeight: FontWeight.w400,
-              height: 16 / 11,
+            const SizedBox(height: 2),
+            FutureBuilder<PackageInfo>(
+              future: PackageInfo.fromPlatform(),
+              builder: (context, snapshot) {
+                final info = snapshot.data;
+                final versionText = info == null
+                    ? ''
+                    : 'v${info.version} (${info.buildNumber})';
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      versionText.isEmpty ? 'APP VERSION' : versionText,
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF9FA4AA),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                        height: 16 / 11,
+                      ),
+                    ),
+                    if (versionText.isNotEmpty) ...[
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _copyVersion(versionText),
+                        child: const Icon(
+                          Icons.copy_rounded,
+                          size: 12,
+                          color: Color(0xFF9FA4AA),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

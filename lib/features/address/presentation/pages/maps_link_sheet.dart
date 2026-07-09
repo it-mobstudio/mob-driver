@@ -145,9 +145,7 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: serviceable
-            ? const Color(0xFFE3F7EC)
-            : const Color(0xFFFFE9E9),
+        color: serviceable ? const Color(0xFFE3F7EC) : const Color(0xFFFFE9E9),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -206,8 +204,7 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
         });
         return;
       }
-      final (location, failure) =
-          await sl<AddressRepository>().reverseGeocode(
+      final (location, failure) = await sl<AddressRepository>().reverseGeocode(
         coordinates.$1,
         coordinates.$2,
       );
@@ -250,8 +247,7 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
   /// marks the exact dropped pin, while `@lat,lng` is only the camera
   /// center (can drift from the actual pin on a place page).
   (double, double)? _extractLatLng(String url) {
-    final pinMatch =
-        RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)').firstMatch(url);
+    final pinMatch = RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)').firstMatch(url);
     if (pinMatch != null) {
       final lat = double.tryParse(pinMatch.group(1)!);
       final lng = double.tryParse(pinMatch.group(2)!);

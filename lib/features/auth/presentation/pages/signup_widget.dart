@@ -102,115 +102,115 @@ class _SignupWidgetState extends State<SignupWidget> {
       builder: (context, state) {
         final isLoading = state is AuthLoading;
         return GestureDetector(
-  onTap: () => FocusScope.of(context).unfocus(),
-  child: Scaffold(
-    backgroundColor: Colors.white,
-    body: SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    IconButton(
-                      onPressed: _handleBack,
-                      icon: const AppBackIcon(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Scaffold(
+            backgroundColor: Colors.white,
+            body: SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            IconButton(
+                              onPressed: _handleBack,
+                              icon: const AppBackIcon(),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
 
-                    // 16 top padding + 36 back icon height = 52 from top
-                    const SizedBox(height: 16),
+                            // 16 top padding + 36 back icon height = 52 from top
+                            const SizedBox(height: 16),
 
-                    Text(
-                      'Welcome to mob',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        height: 32 / 24,
+                            Text(
+                              'Welcome to mob',
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF0A243F),
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                height: 32 / 24,
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            AppTextField(
+                              label: 'Name*',
+                              controller: _nameController,
+                              textInputAction: TextInputAction.next,
+                              validator: (value) {
+                                final name = value?.trim() ?? '';
+                                if (name.isEmpty) {
+                                  return 'Name is required';
+                                }
+                                if (name.length < 3) {
+                                  return 'Enter valid name';
+                                }
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            AppTextField(
+                              label: 'Email id',
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              validator: (value) {
+                                final email = value?.trim() ?? '';
+                                if (email.isEmpty) return null;
+
+                                final emailRegex = RegExp(
+                                  r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                );
+
+                                if (!emailRegex.hasMatch(email)) {
+                                  return 'Enter valid email';
+                                }
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            AppTextField(
+                              controller: _referralController,
+                              hintText: 'Have a referral code?',
+                              textInputAction: TextInputAction.done,
+                              textCapitalization: TextCapitalization.characters,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[a-zA-Z0-9]'),
+                                ),
+                              ],
+                              onFieldSubmitted: (_) {
+                                if (!isLoading) _submit();
+                              },
+                            ),
+
+                            const SizedBox(height: 2),
+                            const WalletRewardBanner(amount: 1000),
+                          ],
+                        ),
                       ),
                     ),
-
-                    const SizedBox(height: 24),
-
-                    AppTextField(
-                      label: 'Name*',
-                      controller: _nameController,
-                      textInputAction: TextInputAction.next,
-                      validator: (value) {
-                        final name = value?.trim() ?? '';
-                        if (name.isEmpty) {
-                          return 'Name is required';
-                        }
-                        if (name.length < 3) {
-                          return 'Enter valid name';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    AppTextField(
-                      label: 'Email id',
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      validator: (value) {
-                        final email = value?.trim() ?? '';
-                        if (email.isEmpty) return null;
-
-                        final emailRegex = RegExp(
-                          r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
-                        );
-
-                        if (!emailRegex.hasMatch(email)) {
-                          return 'Enter valid email';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    AppTextField(
-                      controller: _referralController,
-                      hintText: 'Have a referral code?',
-                      textInputAction: TextInputAction.done,
-                      textCapitalization: TextCapitalization.characters,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[a-zA-Z0-9]'),
-                        ),
-                      ],
-                      onFieldSubmitted: (_) {
-                        if (!isLoading) _submit();
-                      },
-                    ),
-
-                    const SizedBox(height: 2),
-                    const WalletRewardBanner(amount: 1000),
-                  ],
-                ),
+                  ),
+                  _SignupBottomBar(
+                    isLoading: isLoading,
+                    onPressed: isLoading ? null : _submit,
+                  ),
+                ],
               ),
             ),
           ),
-
-          _SignupBottomBar(
-            isLoading: isLoading,
-            onPressed: isLoading ? null : _submit,
-          ),
-        ],
-      ),
-    ),
-  ),
-);
+        );
       },
     );
   }

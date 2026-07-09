@@ -10,6 +10,7 @@ import 'package:m_o_b_demand_side/features/product/domain/repositories/product_r
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
+import 'package:m_o_b_demand_side/shared/rotating_search_hint.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -193,42 +194,65 @@ class _SearchPageState extends State<SearchPage> {
             onPressed: () => Navigator.of(context).pop(),
           ),
           Expanded(
-            child: TextField(
-              controller: _controller,
-              autofocus: true,
-              textInputAction: TextInputAction.search,
-              onChanged: (val) {
-                setState(() => query = val);
-                _debounce?.cancel();
-                _debounce = Timer(const Duration(milliseconds: 350), () {
-                  _loadSuggestions(val);
-                });
-              },
-              onSubmitted: _submitSearch,
-              decoration: InputDecoration(
-                hintText: 'Search for product, category, brand..',
-                filled: true,
-                fillColor: const Color(0xFFF2F6F9),
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _controller.clear();
-                          setState(() {
-                            query = '';
-                            _suggestions = [];
-                            _brandSuggestions = [];
-                            _error = null;
-                            _loading = false;
-                          });
-                        },
-                      )
-                    : const Icon(Icons.mic_none),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2F6F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    // The rotating hint can't live in TextField.hintText
+                    // (that only accepts a plain String), so it's laid
+                    // over an otherwise-identical, borderless field and
+                    // hidden the instant there's real text.
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        if (query.isEmpty) const RotatingSearchHint(),
+                        TextField(
+                          controller: _controller,
+                          autofocus: true,
+                          textInputAction: TextInputAction.search,
+                          onChanged: (val) {
+                            setState(() => query = val);
+                            _debounce?.cancel();
+                            _debounce =
+                                Timer(const Duration(milliseconds: 350), () {
+                              _loadSuggestions(val);
+                            });
+                          },
+                          onSubmitted: _submitSearch,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            isDense: true,
+                            isCollapsed: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  query.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _controller.clear();
+                            setState(() {
+                              query = '';
+                              _suggestions = [];
+                              _brandSuggestions = [];
+                              _error = null;
+                              _loading = false;
+                            });
+                          },
+                        )
+                      : const Icon(Icons.mic_none),
+                ],
               ),
             ),
           ),

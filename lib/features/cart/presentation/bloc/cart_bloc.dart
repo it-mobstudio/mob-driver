@@ -77,8 +77,7 @@ final class CartLoaded extends CartState {
           if (item.vendorProductId.isNotEmpty) item.vendorProductId: item.qty,
       };
 
-  int quantityFor(String vendorProductId) =>
-      quantityMap[vendorProductId] ?? 0;
+  int quantityFor(String vendorProductId) => quantityMap[vendorProductId] ?? 0;
 
   bool isUpdatingFor(String vendorProductId) =>
       updatingItemKey != null && updatingItemKey == vendorProductId;
@@ -98,9 +97,8 @@ final class CartLoaded extends CartState {
       actionError: clearActionError ? null : (actionError ?? this.actionError),
       updatingItemKey:
           clearUpdatingKey ? null : (updatingItemKey ?? this.updatingItemKey),
-      successMessage: clearSuccessMessage
-          ? null
-          : (successMessage ?? this.successMessage),
+      successMessage:
+          clearSuccessMessage ? null : (successMessage ?? this.successMessage),
       isRedeemUpdating: isRedeemUpdating ?? this.isRedeemUpdating,
     );
   }
@@ -132,7 +130,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       return;
     }
     emit(CartLoading());
-    final (summary, failure) = await _repository.getCart(outOfStock: event.outOfStock);
+    final (summary, failure) =
+        await _repository.getCart(outOfStock: event.outOfStock);
     if (failure != null) {
       AppHaptics.error();
       emit(CartError(failure.message));

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
@@ -219,7 +218,8 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    final (success, failure) = await _addressRepository.deleteAddress(address.id);
+    final (success, failure) =
+        await _addressRepository.deleteAddress(address.id);
     if (!mounted) return;
     if (!success) {
       _showError(failure?.message ?? 'Unable to delete address.');
@@ -276,7 +276,8 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
       );
       if (!mounted) return;
       if (failure != null || location == null) {
-        _showError(failure?.message ?? 'Unable to resolve your current address.');
+        _showError(
+            failure?.message ?? 'Unable to resolve your current address.');
         return;
       }
       await _confirmOnMap(location);

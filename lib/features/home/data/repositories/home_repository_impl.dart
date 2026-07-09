@@ -23,7 +23,10 @@ class HomeRepositoryImpl implements HomeRepository {
       final categories = _parseCategories(homeBody);
       final sections = _parseProductSections(sectionsRaw);
 
-      return (HomeEntity(categories: categories, productSections: sections), null);
+      return (
+        HomeEntity(categories: categories, productSections: sections),
+        null
+      );
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {
@@ -54,7 +57,8 @@ class HomeRepositoryImpl implements HomeRepository {
     final data = body['data'] is Map
         ? Map<String, dynamic>.from(body['data'] as Map)
         : <String, dynamic>{};
-    final raw = data['categories'] is List ? data['categories'] as List : <dynamic>[];
+    final raw =
+        data['categories'] is List ? data['categories'] as List : <dynamic>[];
     return raw
         .whereType<Map>()
         .map((e) => HomeCategoryModel.fromMap(Map<String, dynamic>.from(e)))
@@ -66,7 +70,8 @@ class HomeRepositoryImpl implements HomeRepository {
     final list = _extractSectionsList(jsonBody);
     return list
         .whereType<Map>()
-        .map((e) => HomeProductSectionModel.fromMap(Map<String, dynamic>.from(e)))
+        .map((e) =>
+            HomeProductSectionModel.fromMap(Map<String, dynamic>.from(e)))
         .where((s) => s.title.isNotEmpty && s.products.isNotEmpty)
         .toList();
   }
@@ -86,9 +91,10 @@ class HomeRepositoryImpl implements HomeRepository {
       if (dm['homepageProductsData'] is List) {
         return List<dynamic>.from(dm['homepageProductsData'] as List);
       }
-      if (dm['results'] is List) return List<dynamic>.from(dm['results'] as List);
+      if (dm['results'] is List) {
+        return List<dynamic>.from(dm['results'] as List);
+      }
     }
     return const [];
   }
 }
-

@@ -9,6 +9,13 @@ sealed class RfqEvent {}
 
 final class RfqListRequested extends RfqEvent {}
 
+/// Pull-to-refresh — reloads page 1 with whatever search query is
+/// currently active, without emitting [RfqLoading] first (unlike
+/// [RfqListRequested]/[RfqQueryChanged]), so the existing list stays
+/// visible under the pull-to-refresh indicator instead of being replaced
+/// by a full-page spinner.
+final class RfqListRefreshRequested extends RfqEvent {}
+
 final class RfqQueryChanged extends RfqEvent {
   RfqQueryChanged(this.query);
   final String query;
@@ -110,6 +117,7 @@ final class CartRfqError extends RfqState {
 class RfqBloc extends Bloc<RfqEvent, RfqState> {
   RfqBloc(this._repository) : super(RfqInitial()) {
     on<RfqListRequested>(_onList);
+    on<RfqListRefreshRequested>(_onRefresh);
     on<RfqQueryChanged>(_onQueryChanged);
     on<RfqNextPageRequested>(_onNextPage);
     on<RfqDetailRequested>(_onDetail);
@@ -132,6 +140,24 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     }
   }
 
+  Future<void> _onRefresh(
+    RfqListRefreshRequested event,
+    Emitter<RfqState> emit,
+  ) async {
+    final current = state;
+    final query = current is RfqListLoaded ? current.query : '';
+    final (rfqs, hasMore, failure) =
+        await _repository.getRfqList(page: 1, search: query);
+    if (failure != null) {
+      AppHaptics.error();
+      // Keep whatever was already on screen — only surface the error state
+      // if there was nothing showing yet.
+      if (current is! RfqListLoaded) emit(RfqError(failure.message));
+      return;
+    }
+    emit(RfqListLoaded(rfqs!, query: query, page: 1, hasMore: hasMore));
+  }
+
   Future<void> _onQueryChanged(
     RfqQueryChanged event,
     Emitter<RfqState> emit,
@@ -152,7 +178,9 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     Emitter<RfqState> emit,
   ) async {
     final current = state;
-    if (current is! RfqListLoaded || !current.hasMore || current.isLoadingMore) {
+    if (current is! RfqListLoaded ||
+        !current.hasMore ||
+        current.isLoadingMore) {
       return;
     }
     emit(current.copyWith(isLoadingMore: true));

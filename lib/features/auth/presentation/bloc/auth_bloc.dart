@@ -1,3 +1,5 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
@@ -123,6 +125,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
+    final fcmToken = await _currentFcmToken();
     final (success, failure) = await _repository.registerUser(
       name: event.name,
       phone: event.phone,
@@ -130,6 +133,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       gstin: event.gstin,
       businessName: event.businessName,
       referralCode: event.referralCode,
+      fcmToken: fcmToken,
     );
     if (failure != null) {
       AppHaptics.error();
@@ -151,5 +155,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // logging in next on this device must not inherit it.
     await AuthSession.instance.signOut();
     emit(AuthSignedOut());
+  }
+
+  // Best-effort — registration must never fail or stall because the FCM
+  // token isn't available (web has no VAPID key configured, permission may
+  // not be resolved yet, etc.). Returning null here is exactly the "don't
+  // pass this param" case the datasource already handles.
+  Future<String?> _currentFcmToken() async {
+    if (kIsWeb) return null;
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (_) {
+      return null;
+    }
   }
 }

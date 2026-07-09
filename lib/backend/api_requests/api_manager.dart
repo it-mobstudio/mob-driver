@@ -245,6 +245,7 @@ class ApiManager {
     _refreshAccessTokenHandler = refreshAccessToken;
     _onAuthFailedHandler = onAuthFailed;
   }
+
   // You may want to call this if, for example, you make a change to the
   // database and no longer want the cached result of a call that may
   // have changed.

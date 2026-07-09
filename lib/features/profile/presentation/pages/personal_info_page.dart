@@ -335,7 +335,6 @@ class _ProfileField extends StatelessWidget {
     required this.controller,
     this.keyboardType,
     this.textInputAction,
-    this.validator,
     this.readOnly = false,
   });
 
@@ -343,7 +342,6 @@ class _ProfileField extends StatelessWidget {
   final TextEditingController controller;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
-  final String? Function(String?)? validator;
   final bool readOnly;
 
   @override
@@ -353,7 +351,6 @@ class _ProfileField extends StatelessWidget {
       readOnly: readOnly,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
-      validator: validator,
       style: GoogleFonts.inter(
         color: readOnly ? const Color(0x7F0A243F) : const Color(0xFF0A243F),
         fontSize: readOnly ? 14 : 12,

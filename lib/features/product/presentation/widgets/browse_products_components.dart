@@ -155,9 +155,9 @@ class SideSubCategoryRail extends StatelessWidget {
 
     return Container(
       width: 80,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        border: const Border(
+        border: Border(
           right: BorderSide(
             color: Color(0xFFE7EAF0),
             width: 1,
@@ -167,7 +167,7 @@ class SideSubCategoryRail extends StatelessWidget {
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(4, 8, 4, 24),
         itemCount: visibleSubs.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 34),
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
         itemBuilder: (context, index) {
           return _SubCategoryTile(
             sub: visibleSubs[index],
@@ -250,6 +250,10 @@ class BrowseProductFeed extends StatelessWidget {
 
     return ListView.builder(
       controller: scrollController,
+      // Lets pull-to-refresh arm even when there aren't enough products to
+      // fill the viewport (otherwise a short/filtered result list can't be
+      // overscrolled at all, so the gesture never triggers).
+      physics: const AlwaysScrollableScrollPhysics(),
       // Horizontal padding lives on each row individually now (see below)
       // rather than here, so the product-type rail can bleed to the true
       // screen edges while everything else keeps a 10px inset. A shared
@@ -381,7 +385,7 @@ class FloatingCartSummary extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.18),
+                  color: Colors.black.withValues(alpha: 0.18),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -422,7 +426,7 @@ class FloatingCartSummary extends StatelessWidget {
                       Text(
                         '$totalItems ${totalItems == 1 ? 'item' : 'items'}',
                         style: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           height: 18 / 12,
@@ -489,7 +493,7 @@ class BrowseRequestCard extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
                     height: 20 / 11,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
                 const Spacer(),
@@ -653,7 +657,7 @@ class _ProductTypeRail extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF0A243F).withOpacity(0.08)
+                      ? const Color(0xFF0A243F).withValues(alpha: 0.08)
                       : Colors.white,
                   border: Border.all(
                     color: isSelected
@@ -680,6 +684,9 @@ class _ProductTypeRail extends StatelessWidget {
   }
 }
 
+// Hidden for now (see the commented-out call site above) — kept ready for a
+// one-line uncomment rather than a rebuild.
+// ignore: unused_element
 class _BrandRail extends StatelessWidget {
   const _BrandRail({required this.brands});
 
@@ -805,8 +812,11 @@ class _SubCategoryTile extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: SizedBox(
+        // Label sits at top:69 with height:28 (bottom edge at 97) — Stack
+        // clips by default, so a shorter box here was silently cutting off
+        // the second line of longer names instead of wrapping to it.
         width: 65,
-        height: 83,
+        height: 98,
         child: Stack(
           children: [
             Positioned(

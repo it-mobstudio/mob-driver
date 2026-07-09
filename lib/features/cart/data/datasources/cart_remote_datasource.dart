@@ -62,7 +62,8 @@ class CartRemoteDatasourceImpl implements CartRemoteDatasource {
   }
 
   @override
-  Future<Map<String, dynamic>> updateCartRedeem(Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> updateCartRedeem(
+      Map<String, dynamic> payload) async {
     final response = await _dio.put<dynamic>(
       '/orders/cart/update_cart/',
       data: payload,

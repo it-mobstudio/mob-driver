@@ -46,8 +46,12 @@ abstract interface class MagicQuoteRepository {
   /// refreshed `{rfq_order, quote, items}` payload when present; otherwise
   /// [addedItem] carries just the single new line item for the caller to
   /// merge into local state.
-  Future<(Map<String, dynamic>? payload, Map<String, dynamic>? addedItem, AppFailure? failure)>
-      addMagicQuoteItem({
+  Future<
+      (
+        Map<String, dynamic>? payload,
+        Map<String, dynamic>? addedItem,
+        AppFailure? failure
+      )> addMagicQuoteItem({
     required String quoteId,
     required String mobSku,
   });

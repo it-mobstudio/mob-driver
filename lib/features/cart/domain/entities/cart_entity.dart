@@ -22,6 +22,7 @@ class CartAddressEntity {
   final String tag;
   final String project;
   final String gstNumber;
+
   /// Mirrors AddressEntity.mobCredit — the address designated as this
   /// user's mobCREDIT/billing address, used to auto-pick a billing address.
   final bool isMobCredit;
@@ -201,6 +202,7 @@ class CartSummaryEntity {
   final double tax;
   final double savings;
   final double total;
+
   /// Redeemable mobstar points the user currently holds.
   final int rewardPoints;
 
@@ -327,7 +329,8 @@ String _entityStr(
   return fallback;
 }
 
-int _entityInt(Map<String, dynamic> map, List<String> keys, {int fallback = 0}) {
+int _entityInt(Map<String, dynamic> map, List<String> keys,
+    {int fallback = 0}) {
   for (final key in keys) {
     final value = map[key];
     if (value is int) return value;
@@ -337,7 +340,8 @@ int _entityInt(Map<String, dynamic> map, List<String> keys, {int fallback = 0}) 
   return fallback;
 }
 
-num _entityNum(Map<String, dynamic> map, List<String> keys, {num fallback = 0}) {
+num _entityNum(Map<String, dynamic> map, List<String> keys,
+    {num fallback = 0}) {
   for (final key in keys) {
     final value = map[key];
     if (value is num) return value;

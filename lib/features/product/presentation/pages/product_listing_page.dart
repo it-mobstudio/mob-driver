@@ -19,6 +19,7 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_
 import 'package:m_o_b_demand_side/shared/back_to_top_button.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
+import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 
@@ -65,12 +66,13 @@ class _ProductListingPageState extends State<ProductListingPage> {
     super.initState();
     _selectedSubCategorySlug = widget.initialSubCategorySlug;
     _selectedSubCategoryName = widget.initialSubCategoryName;
-    _productBloc = sl<ProductBloc>()..add(
-      ProductListRequested(
-        categorySlug: widget.slug,
-        subCategory: _selectedSubCategorySlug,
-      ),
-    );
+    _productBloc = sl<ProductBloc>()
+      ..add(
+        ProductListRequested(
+          categorySlug: widget.slug,
+          subCategory: _selectedSubCategorySlug,
+        ),
+      );
     _scrollController.addListener(_onScroll);
   }
 
@@ -90,8 +92,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
       navBarVisible.value = true;
     }
     // Hide while user is actively scrolling up (toward top)
-    final show = pixels > _scrollThreshold &&
-        direction != ScrollDirection.forward;
+    final show =
+        pixels > _scrollThreshold && direction != ScrollDirection.forward;
     if (show != _showBackToTop) setState(() => _showBackToTop = show);
 
     final state = _productBloc.state;
@@ -114,8 +116,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
   void _selectSubCategory(int index, SubCategoryModel subCategory) {
     final isAllSelection = index == 0;
     final nextSlug = isAllSelection ? null : subCategory.browseSlug;
-    final isSameSelection =
-        _selectedSubCategoryIndex == index &&
+    final isSameSelection = _selectedSubCategoryIndex == index &&
         _selectedSubCategorySlug == nextSlug;
     if (isSameSelection) return;
 
@@ -166,8 +167,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
       vendorProductId: product.addToCartProductId,
     );
     context.read<CartBloc>().add(
-      CartQuantityUpdateRequested(item: cartItem, newQty: quantity),
-    );
+          CartQuantityUpdateRequested(item: cartItem, newQty: quantity),
+        );
   }
 
   Future<void> _handleNotifyTap(ProductModel product) async {
@@ -200,16 +201,6 @@ class _ProductListingPageState extends State<ProductListingPage> {
   BrowseFilterSection? _filterSectionForKey(String key) {
     for (final section in _filterSections) {
       if (section.key == key) return section;
-    }
-    return null;
-  }
-
-  BrowseFilterOption? _filterOptionForValue(
-    BrowseFilterSection section,
-    String value,
-  ) {
-    for (final option in section.options) {
-      if (option.value == value) return option;
     }
     return null;
   }
@@ -292,10 +283,9 @@ class _ProductListingPageState extends State<ProductListingPage> {
       final sectionKey = section.key.toLowerCase();
       final sectionLabel = section.label.toLowerCase();
       final matchesKnownKey = normalizedKeys.contains(sectionKey);
-      final matchesSemanticLabel =
-          normalizedKeys.contains('brand_segment') &&
-              (sectionLabel == 'product type' ||
-                  sectionLabel.contains('product type'));
+      final matchesSemanticLabel = normalizedKeys.contains('brand_segment') &&
+          (sectionLabel == 'product type' ||
+              sectionLabel.contains('product type'));
 
       if (matchesKnownKey || matchesSemanticLabel) {
         labels.addAll(
@@ -337,10 +327,11 @@ class _ProductListingPageState extends State<ProductListingPage> {
             candidateKeys.any((candidate) => key == candidate.toLowerCase());
         final matchesTypeLabel = candidateKeys.contains('brand_segment') &&
             (title == 'product type' || title.contains('product type'));
-        final matchesSubTypeLabel = candidateKeys.contains('brand_sub_segment') &&
-            (title == 'product sub type' ||
-                title.contains('product sub type') ||
-                title.contains('sub type'));
+        final matchesSubTypeLabel =
+            candidateKeys.contains('brand_sub_segment') &&
+                (title == 'product sub type' ||
+                    title.contains('product sub type') ||
+                    title.contains('sub type'));
         return matchesKey || matchesTypeLabel || matchesSubTypeLabel;
       },
       orElse: () => const BrowseFilterSection(
@@ -357,7 +348,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
     }
 
     final matchingOption = targetSection.options.firstWhere(
-      (option) => option.label.trim().toLowerCase() == normalizedLabel.toLowerCase(),
+      (option) =>
+          option.label.trim().toLowerCase() == normalizedLabel.toLowerCase(),
       orElse: () => BrowseFilterOption(
         value: normalizedLabel,
         label: normalizedLabel,
@@ -365,8 +357,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
       ),
     );
 
-    final selectedValues =
-        Set<String>.from(_selectedFilterValuesByKey[targetSection.key] ?? <String>{});
+    final selectedValues = Set<String>.from(
+        _selectedFilterValuesByKey[targetSection.key] ?? <String>{});
     final optionValue = matchingOption.value.trim().isNotEmpty
         ? matchingOption.value.trim()
         : matchingOption.label.trim();
@@ -445,30 +437,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
     );
   }
 
-  Future<void> _showBrandFilters() async {
-    await _showFilters(initialSectionKey: 'brand');
-  }
-
-  Future<void> _showPriceFilters() async {
-    await _showFilters(initialSectionKey: _priceFilterKey());
-  }
-
   Future<void> _showFilterSection(BrowseFilterSection section) async {
     await _showFilters(initialSectionKey: section.key);
-  }
-
-  String _priceFilterKey() {
-    for (final section in _filterSections) {
-      final key = section.key.toLowerCase();
-      final label = section.label.toLowerCase();
-      if (key == 'price' ||
-          key.contains('price') ||
-          label == 'price' ||
-          label.contains('price')) {
-        return section.key;
-      }
-    }
-    return 'price';
   }
 
   Future<void> _showSortOptions() async {
@@ -527,7 +497,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
               if (current.filters.isNotEmpty && previous.filters.isEmpty) {
                 return true;
               }
-              if (current.subCategories.length != previous.subCategories.length) {
+              if (current.subCategories.length !=
+                  previous.subCategories.length) {
                 return true;
               }
               return false;
@@ -698,31 +669,38 @@ class _ProductListingPageState extends State<ProductListingPage> {
       );
     }
 
-    return BrowseProductFeed(
-      scrollController: _scrollController,
-      products: visibleProducts,
-      subCategories: _subCategories,
-      brandOptions: _filterOptionLabels('brand'),
-      productTypeOptions:
-          _filterOptionLabelsForKeys(const ['brand_segment']),
-      selectedProductTypeOptions: _selectedValuesForKeys(
-        const ['brand_segment'],
-      ),
-      category: _selectedSubCategoryName ?? widget.category,
-      categorySlug: widget.slug,
-      hasMore: hasMore,
-      isLoading: isLoadingMore,
-      loadMoreFailed: false,
-      cartQtyByProductId: cartQtyByProductId,
-      cartUpdatingProductId: cartUpdatingKey,
-      onRetryLoadMore: () => _productBloc.add(ProductListNextPageRequested()),
-      onProductTap: (product) {
-        context.push('${ProductDetailPage.routePath}/${product.slug}');
+    return PullToRefresh(
+      onRefresh: () async {
+        _productBloc.add(ProductListRefreshRequested());
+        await _productBloc.stream.firstWhere(
+          (s) => s is ProductListLoaded || s is ProductError,
+        );
       },
-      onCartQuantityChanged: _changeProductQuantity,
-      onNotifyTap: _handleNotifyTap,
-      onProductTypeTap: _toggleInlineProductType,
-      onRequestTap: () => context.push(MagicAiQuotePage.routePath),
+      child: BrowseProductFeed(
+        scrollController: _scrollController,
+        products: visibleProducts,
+        subCategories: _subCategories,
+        brandOptions: _filterOptionLabels('brand'),
+        productTypeOptions: _filterOptionLabelsForKeys(const ['brand_segment']),
+        selectedProductTypeOptions: _selectedValuesForKeys(
+          const ['brand_segment'],
+        ),
+        category: _selectedSubCategoryName ?? widget.category,
+        categorySlug: widget.slug,
+        hasMore: hasMore,
+        isLoading: isLoadingMore,
+        loadMoreFailed: false,
+        cartQtyByProductId: cartQtyByProductId,
+        cartUpdatingProductId: cartUpdatingKey,
+        onRetryLoadMore: () => _productBloc.add(ProductListNextPageRequested()),
+        onProductTap: (product) {
+          context.push('${ProductDetailPage.routePath}/${product.slug}');
+        },
+        onCartQuantityChanged: _changeProductQuantity,
+        onNotifyTap: _handleNotifyTap,
+        onProductTypeTap: _toggleInlineProductType,
+        onRequestTap: () => context.push(MagicAiQuotePage.routePath),
+      ),
     );
   }
 }
@@ -736,10 +714,10 @@ class _ProductListingPageSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Column(
+        const Column(
           children: [
-            const _ProductListingHeaderSkeleton(),
-            const Expanded(
+            _ProductListingHeaderSkeleton(),
+            Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

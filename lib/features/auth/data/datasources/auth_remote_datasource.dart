@@ -18,9 +18,15 @@ abstract interface class AuthRemoteDatasource {
     String? gstin,
     String? businessName,
     String? referralCode,
+    String? fcmToken,
   });
 
   Future<Map<String, dynamic>> checkReferralCode({required String code});
+
+  Future<Map<String, dynamic>> updateFcmToken({
+    required String emailOrPhone,
+    required String fcmToken,
+  });
 }
 
 class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
@@ -60,14 +66,18 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
     String? gstin,
     String? businessName,
     String? referralCode,
+    String? fcmToken,
   }) async {
     final formData = FormData.fromMap({
       'full_name': name,
       if (phone != null && phone.isNotEmpty) 'email_or_phone': phone,
       if (email != null && email.isNotEmpty) 'email': email,
       if (gstin != null && gstin.isNotEmpty) 'gstin': gstin,
-      if (businessName != null && businessName.isNotEmpty) 'business_name': businessName,
-      if (referralCode != null && referralCode.isNotEmpty) 'referral_code': referralCode,
+      if (businessName != null && businessName.isNotEmpty)
+        'business_name': businessName,
+      if (referralCode != null && referralCode.isNotEmpty)
+        'referral_code': referralCode,
+      if (fcmToken != null && fcmToken.isNotEmpty) 'fcm_token': fcmToken,
     });
     final response = await _dio.post<dynamic>(
       '/accounts/mob_user/auth/update_user/',
@@ -81,6 +91,18 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
     final response = await _dio.get<dynamic>(
       '/accounts/referral-code-checker/',
       queryParameters: {'referral_code': code},
+    );
+    return _body(response.data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateFcmToken({
+    required String emailOrPhone,
+    required String fcmToken,
+  }) async {
+    final response = await _dio.post<dynamic>(
+      '/accounts/mob_user/auth/update_user/',
+      data: {'email_or_phone': emailOrPhone, 'fcm_token': fcmToken},
     );
     return _body(response.data);
   }

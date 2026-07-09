@@ -61,7 +61,8 @@ class ProductRepositoryImpl implements ProductRepository {
 
   BrowseProductsResult _parseBrowseResult(Map<String, dynamic> body, int page) {
     final data = _data(body);
-    final productsRaw = _list(data['results'] ?? data['products'] ?? data['data']);
+    final productsRaw =
+        _list(data['results'] ?? data['products'] ?? data['data']);
     final subCatsRaw = _list(data['sub_categories'] ?? data['subCategories']);
     final paginationMap = data['pagination'] is Map
         ? Map<String, dynamic>.from(data['pagination'] as Map)
@@ -134,13 +135,14 @@ class ProductRepositoryImpl implements ProductRepository {
     String? mobSku,
   }) async {
     try {
-      final body = await _datasource.getProductDetail(slug: slug, mobSku: mobSku);
+      final body =
+          await _datasource.getProductDetail(slug: slug, mobSku: mobSku);
       final data = _data(body);
       final productRaw = data['product'];
-      final productMap = productRaw is Map
-          ? Map<String, dynamic>.from(productRaw)
-          : data;
-      final similarRaw = _list(data['similar_products'] ?? data['similarProducts']);
+      final productMap =
+          productRaw is Map ? Map<String, dynamic>.from(productRaw) : data;
+      final similarRaw =
+          _list(data['similar_products'] ?? data['similarProducts']);
       return (
         ProductDetailsResult(
           product: ProductModel.fromMap(productMap),
@@ -165,9 +167,11 @@ class ProductRepositoryImpl implements ProductRepository {
   }) async {
     try {
       final raw = await _datasource.searchProducts(query: query, page: page);
-      final body = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+      final body =
+          raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
       final data = _data(body);
-      final list = _list(data['results'] ?? data['products'] ?? data['data'] ?? data);
+      final list =
+          _list(data['results'] ?? data['products'] ?? data['data'] ?? data);
       final products = list
           .whereType<Map>()
           .map((e) => ProductModel.fromMap(Map<String, dynamic>.from(e)))
@@ -186,9 +190,11 @@ class ProductRepositoryImpl implements ProductRepository {
   }) async {
     try {
       final raw = await _datasource.searchProducts(query: query);
-      final body = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+      final body =
+          raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
       final data = _data(body);
-      final productsRaw = _list(data['results'] ?? data['products'] ?? data['data']);
+      final productsRaw =
+          _list(data['results'] ?? data['products'] ?? data['data']);
       final brandsRaw = _list(data['brands']);
       return (
         ProductSearchSuggestions(
@@ -230,7 +236,9 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   Map<String, dynamic> _data(Map<String, dynamic> body) {
-    if (body['data'] is Map) return Map<String, dynamic>.from(body['data'] as Map);
+    if (body['data'] is Map) {
+      return Map<String, dynamic>.from(body['data'] as Map);
+    }
     return body;
   }
 

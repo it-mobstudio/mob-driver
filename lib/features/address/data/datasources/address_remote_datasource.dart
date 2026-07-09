@@ -8,7 +8,8 @@ abstract interface class AddressRemoteDatasource {
   Future<Map<String, dynamic>> deleteAddress(String addressId);
   Future<Map<String, dynamic>> searchLocations(String query);
   Future<Map<String, dynamic>> getLocationDetails(String placeId);
-  Future<Map<String, dynamic>> reverseGeocode(double latitude, double longitude);
+  Future<Map<String, dynamic>> reverseGeocode(
+      double latitude, double longitude);
 }
 
 class AddressRemoteDatasourceImpl implements AddressRemoteDatasource {

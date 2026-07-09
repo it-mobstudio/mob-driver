@@ -102,7 +102,8 @@ class CreditBloc extends Bloc<CreditEvent, CreditState> {
     );
     if (failure != null || !success) {
       AppHaptics.error();
-      emit(CreditApplyError(failure?.message ?? 'Failed to submit your request.'));
+      emit(CreditApplyError(
+          failure?.message ?? 'Failed to submit your request.'));
     } else {
       AppHaptics.success();
       emit(CreditApplySubmitted());

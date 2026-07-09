@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
@@ -358,58 +360,77 @@ class _TransactionRow extends StatelessWidget {
     final pointsColor =
         credited ? const Color(0xFF07AD61) : _MobstarPointsView._primary;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: RichText(
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  text: TextSpan(
-                    style: GoogleFonts.inter(
-                      color: _MobstarPointsView._primary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      height: 20 / 14,
-                    ),
-                    children: [
-                      const TextSpan(text: 'Order ID: '),
-                      TextSpan(
-                        text: transaction.orderId.isEmpty
-                            ? transaction.notes
-                            : transaction.orderId,
-                        style: const TextStyle(color: Color(0xFF0360E5)),
+    return InkWell(
+      onTap: transaction.orderId.isEmpty
+          ? null
+          : () => context.push(
+                OrderDetailPage.routePath,
+                extra: OrderEntity.baseOrderId(transaction.orderId),
+              ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: RichText(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      style: GoogleFonts.inter(
+                        color: _MobstarPointsView._primary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 20 / 14,
                       ),
-                    ],
+                      children: [
+                        const TextSpan(text: 'Order ID: '),
+                        TextSpan(
+                          text: transaction.orderId.isEmpty
+                              ? transaction.notes
+                              : transaction.orderId,
+                          style: const TextStyle(color: Color(0xFF0360E5)),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '$sign${absolutePoints}P',
-                textAlign: TextAlign.right,
-                style: GoogleFonts.inter(
-                  color: pointsColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  height: 20 / 14,
+                const SizedBox(width: 12),
+                Text(
+                  '$sign${absolutePoints}P',
+                  textAlign: TextAlign.right,
+                  style: GoogleFonts.inter(
+                    color: pointsColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    height: 20 / 14,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  details,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    details,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: _MobstarPointsView._muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      height: 16 / 11,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '$sign$amount',
+                  textAlign: TextAlign.right,
                   style: GoogleFonts.inter(
                     color: _MobstarPointsView._muted,
                     fontSize: 11,
@@ -417,21 +438,10 @@ class _TransactionRow extends StatelessWidget {
                     height: 16 / 11,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '$sign$amount',
-                textAlign: TextAlign.right,
-                style: GoogleFonts.inter(
-                  color: _MobstarPointsView._muted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                  height: 16 / 11,
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

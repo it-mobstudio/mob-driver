@@ -10,6 +10,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'backend/analytics/analytics_service.dart';
 import 'backend/firebase/firebase_config.dart';
+import 'core/app_runtime/fcm_token_sync.dart';
+import 'core/app_runtime/push_notification_service.dart';
 import 'core/auth/auth_session.dart';
 import 'core/di/injection.dart';
 import 'features/address/data/local/selected_address_store.dart';
@@ -103,6 +105,14 @@ class _AppBootstrapState extends State<AppBootstrap> {
       SelectedAddressStore.initialize().catchError((_) {}),
     ]);
 
+    // Local setup (channel + listeners) is awaited since it's fast and
+    // synchronous; the permission prompt inside it is fire-and-forget since
+    // it can sit unanswered indefinitely.
+    await PushNotificationService.instance.initialize().catchError((_) {});
+    // Fire-and-forget — syncs the device's FCM token for the restored
+    // session (if any) without blocking the splash screen.
+    unawaited(FcmTokenSync.instance.start());
+
     await splashDelay;
   }
 
@@ -176,6 +186,12 @@ class MyAppState extends State<MyApp> {
     final nextIsAuthenticated = AuthSession.instance.isAuthenticated;
     if (nextIsAuthenticated == _isAuthenticated || !mounted) return;
     _isAuthenticated = nextIsAuthenticated;
+    // A fresh login only makes the signed-in identifier known at this
+    // point — re-sync so the backend gets the (user, token) pairing
+    // promptly instead of waiting for the next cold start.
+    if (nextIsAuthenticated) {
+      unawaited(FcmTokenSync.instance.syncCurrentToken());
+    }
     setState(() {
       _router.dispose();
       appNavigatorKey = GlobalKey<NavigatorState>();

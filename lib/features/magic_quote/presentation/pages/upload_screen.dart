@@ -493,7 +493,12 @@ class _UploadDropZoneState extends State<_UploadDropZone> {
                 height: 54,
                 transformAlignment: Alignment.center,
                 transform: Matrix4.identity()
-                  ..scale(_active ? 1.05 : 1.0)
+                  ..scaleByDouble(
+                    _active ? 1.05 : 1.0,
+                    _active ? 1.05 : 1.0,
+                    _active ? 1.05 : 1.0,
+                    1.0,
+                  )
                   ..rotateZ(_active ? math.pi / 2 : 0),
                 decoration: BoxDecoration(
                   color:

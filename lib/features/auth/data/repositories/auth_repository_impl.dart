@@ -62,7 +62,10 @@ class AuthRepositoryImpl implements AuthRepository {
       ]);
 
       if (accessToken == null || accessToken.isEmpty) {
-        return (null, const BusinessFailure('Invalid OTP response from server.'));
+        return (
+          null,
+          const BusinessFailure('Invalid OTP response from server.')
+        );
       }
 
       final userDetailsRaw = payload['data'] is Map
@@ -103,6 +106,7 @@ class AuthRepositoryImpl implements AuthRepository {
     String? gstin,
     String? businessName,
     String? referralCode,
+    String? fcmToken,
   }) async {
     try {
       final body = await _datasource.registerUser(
@@ -112,6 +116,7 @@ class AuthRepositoryImpl implements AuthRepository {
         gstin: gstin,
         businessName: businessName,
         referralCode: referralCode,
+        fcmToken: fcmToken,
       );
       if (body['status'] == false) {
         final msg = body['message']?.toString() ?? 'Registration failed.';
@@ -168,8 +173,8 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final body = await _datasource.checkReferralCode(code: code);
       final hasExistsFlag = body.containsKey('exists');
-      final isValid = body['status'] == true &&
-          (!hasExistsFlag || body['exists'] == true);
+      final isValid =
+          body['status'] == true && (!hasExistsFlag || body['exists'] == true);
       final message = body['message']?.toString() ??
           (isValid ? 'Valid referral code' : 'Invalid referral code');
       return (isValid, message, null);
@@ -177,6 +182,29 @@ class AuthRepositoryImpl implements AuthRepository {
       return (false, '', e.toAppFailure());
     } catch (e) {
       return (false, '', UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(bool, AppFailure?)> updateFcmToken({
+    required String emailOrPhone,
+    required String fcmToken,
+  }) async {
+    try {
+      final body = await _datasource.updateFcmToken(
+        emailOrPhone: emailOrPhone,
+        fcmToken: fcmToken,
+      );
+      if (body['status'] == false) {
+        final msg =
+            body['message']?.toString() ?? 'Unable to update FCM token.';
+        return (false, BusinessFailure(msg));
+      }
+      return (true, null);
+    } on DioException catch (e) {
+      return (false, e.toAppFailure());
+    } catch (e) {
+      return (false, UnknownFailure(e.toString()));
     }
   }
 
@@ -189,12 +217,14 @@ class AuthRepositoryImpl implements AuthRepository {
   ];
 
   Map<String, dynamic> _resolveAuthPayload(Map<String, dynamic> body) {
-    if (body.containsKey('newAccount') || _readToken(body, _tokenKeys) != null) {
+    if (body.containsKey('newAccount') ||
+        _readToken(body, _tokenKeys) != null) {
       return body;
     }
     if (body['data'] is Map) {
       final nested = Map<String, dynamic>.from(body['data'] as Map);
-      if (nested.containsKey('newAccount') || _readToken(nested, _tokenKeys) != null) {
+      if (nested.containsKey('newAccount') ||
+          _readToken(nested, _tokenKeys) != null) {
         return nested;
       }
     }

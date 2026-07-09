@@ -48,10 +48,7 @@ class OrderItemEntity {
               '')
           .toString(),
       imageUrl: sanitizeImageUrl(
-        (map['image'] ??
-                map['product_image'] ??
-                product['product_image'] ??
-                '')
+        (map['image'] ?? map['product_image'] ?? product['product_image'] ?? '')
             .toString(),
       ),
       qty: int.tryParse(map['quantity']?.toString() ?? '1') ?? 1,
@@ -360,4 +357,12 @@ class OrderEntity {
       isStoreOrder: map['is_store_order'] == true,
     );
   }
+
+  /// Wallet/mobSTAR transaction history references a specific shipment
+  /// within an order (e.g. "OD20260520004948_01"), but the order-detail
+  /// screen is keyed by the parent order id — strip the "_01"/"_02"
+  /// suborder suffix so navigating there from a transaction row still
+  /// resolves to the right order.
+  static String baseOrderId(String raw) =>
+      raw.replaceFirst(RegExp(r'_\d+$'), '');
 }

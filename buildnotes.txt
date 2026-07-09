@@ -11,7 +11,8 @@ flutter test
 
 Build Android
 >>flutter build apk
->>flutter build appbundle --release
+>>flutter build appbundle --release (live release for playstore)
+>>flutter build apk --debug
 
 Clean Logs
 >>git rm -r --cached .dart_tool

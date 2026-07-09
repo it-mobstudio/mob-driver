@@ -11,13 +11,15 @@ class CreditRepositoryImpl implements CreditRepository {
   final CreditRemoteDatasource _datasource;
 
   @override
-  Future<(List<BusinessSegmentEntity>?, AppFailure?)> getBusinessSegments() async {
+  Future<(List<BusinessSegmentEntity>?, AppFailure?)>
+      getBusinessSegments() async {
     try {
       final raw = await _datasource.getBusinessSegments();
       final list = _extractList(raw);
       final segments = list
           .whereType<Map>()
-          .map((e) => BusinessSegmentEntity.fromMap(Map<String, dynamic>.from(e)))
+          .map((e) =>
+              BusinessSegmentEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList();
       return (segments, null);
     } on DioException catch (e) {
@@ -50,7 +52,8 @@ class CreditRepositoryImpl implements CreditRepository {
   }
 
   @override
-  Future<(List<CreditTransactionEntity>?, AppFailure?)> getCreditHistory() async {
+  Future<(List<CreditTransactionEntity>?, AppFailure?)>
+      getCreditHistory() async {
     try {
       final raw = await _datasource.getCreditHistory();
       final list = _extractList(raw);

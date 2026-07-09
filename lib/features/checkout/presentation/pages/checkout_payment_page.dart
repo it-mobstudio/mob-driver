@@ -967,8 +967,9 @@ class _MobCreditPaymentCard extends StatelessWidget {
 
   String get _disabledMessage {
     if (total <= 0) return 'No payable amount for mobCREDIT.';
-    if (status == 'AMOUNT_DUE')
+    if (status == 'AMOUNT_DUE') {
       return 'Clear your outstanding due to use mobCREDIT.';
+    }
     if (status != 'ACTIVE') return 'mobCREDIT is not active for this account.';
     if (total > mobCreditBalance) {
       return 'Order amount exceeds your mobCREDIT balance.';

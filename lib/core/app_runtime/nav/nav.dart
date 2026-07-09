@@ -32,6 +32,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_i
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/dev_info_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_points_page.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_page.dart';
@@ -512,6 +513,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         path: WalletPointsPage.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) => const WalletPointsPage(),
+      ),
+      GoRoute(
+        name: DevInfoPage.routeName,
+        path: DevInfoPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const DevInfoPage(),
       ),
       GoRoute(
         name: MobstarPage.routeName,

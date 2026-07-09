@@ -16,6 +16,7 @@ import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_wid
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/rotating_search_hint.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
@@ -114,8 +115,9 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
   Future<void> _changeProductQuantity(
       ProductModel product, int quantity) async {
     if (product.hasVariants && product.mobSku.isEmpty) {
-      if (mounted)
+      if (mounted) {
         context.push('${ProductDetailPage.routePath}/${product.slug}');
+      }
       return;
     }
     if (quantity < 0) return;
@@ -492,8 +494,8 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
                                         onNotifyTap: _handleNotifyTap,
                                         onProductTypeTap:
                                             _toggleInlineProductType,
-                                        onRequestTap: () =>
-                                            context.push(MagicAiQuotePage.routePath),
+                                        onRequestTap: () => context
+                                            .push(MagicAiQuotePage.routePath),
                                       ),
                       ),
                     ],
@@ -532,21 +534,45 @@ class _SearchHeader extends StatelessWidget {
             icon: const AppBackIcon(),
           ),
           Expanded(
-            child: TextField(
-              controller: controller,
-              textInputAction: TextInputAction.search,
-              onSubmitted: onSubmitted,
-              decoration: InputDecoration(
-                hintText: 'Search for product, category, brand..',
-                filled: true,
-                fillColor: const Color(0xFFF2F6F9),
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: const Icon(Icons.mic_none),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2F6F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    // The rotating hint can't live in TextField.hintText
+                    // (that only accepts a plain String), so it's laid
+                    // over an otherwise-identical, borderless field and
+                    // hidden the instant there's real text.
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: controller,
+                      builder: (context, value, _) => Stack(
+                        alignment: Alignment.centerLeft,
+                        children: [
+                          if (value.text.isEmpty) const RotatingSearchHint(),
+                          TextField(
+                            controller: controller,
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: onSubmitted,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                              isCollapsed: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.mic_none),
+                ],
               ),
             ),
           ),

@@ -20,8 +20,7 @@ class OrdersRemoteDatasourceImpl implements OrdersRemoteDatasource {
       '/orders/customer-orders/get_orders/',
       queryParameters: {
         'page': page,
-        if (search != null && search.trim().isNotEmpty)
-          'search': search.trim(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
     return response.data;

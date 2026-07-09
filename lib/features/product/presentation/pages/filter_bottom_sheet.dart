@@ -32,7 +32,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   @override
   void initState() {
     super.initState();
-    _selectedTab = _preferredInitialTab(widget.sections, widget.initialSectionKey);
+    _selectedTab =
+        _preferredInitialTab(widget.sections, widget.initialSectionKey);
     _selectedValuesByKey.addAll(
       widget.selectedValuesByKey.map(
         (key, value) => MapEntry(key, Set<String>.from(value)),
@@ -44,7 +45,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   void didUpdateWidget(covariant FilterBottomSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_selectedTab >= widget.sections.length) {
-      _selectedTab = _preferredInitialTab(widget.sections, widget.initialSectionKey);
+      _selectedTab =
+          _preferredInitialTab(widget.sections, widget.initialSectionKey);
     }
   }
 
@@ -109,49 +111,50 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   title: widget.title,
                   onClose: () => Navigator.pop(context),
                 ),
-                const Divider(height: 1, thickness: 1, color: Color(0xFFE7E7E7)),
+                const Divider(
+                    height: 1, thickness: 1, color: Color(0xFFE7E7E7)),
                 Expanded(
                   child: sections.isEmpty
                       ? const _EmptyFilters()
                       : widget.showSidebar
                           ? Row(
-                          children: [
-                            _FilterSidebar(
-                              sections: sections,
-                              selectedTab: _selectedTab,
-                              onSelected: (index) {
-                                setState(() {
-                                  _selectedTab = index;
-                                  _searchQuery = '';
-                                });
-                              },
-                            ),
-                            Expanded(
-                              child: _FilterOptionsPane(
-                                section: selectedSection!,
-                                scrollController: scrollController,
-                                searchQuery: _searchQuery,
-                                selectedValues:
-                                    _selectedValuesByKey[selectedSection.key] ??
+                              children: [
+                                _FilterSidebar(
+                                  sections: sections,
+                                  selectedTab: _selectedTab,
+                                  onSelected: (index) {
+                                    setState(() {
+                                      _selectedTab = index;
+                                      _searchQuery = '';
+                                    });
+                                  },
+                                ),
+                                Expanded(
+                                  child: _FilterOptionsPane(
+                                    section: selectedSection!,
+                                    scrollController: scrollController,
+                                    searchQuery: _searchQuery,
+                                    selectedValues: _selectedValuesByKey[
+                                            selectedSection.key] ??
                                         <String>{},
-                                onSearchChanged: (value) {
-                                  setState(() {
-                                    _searchQuery = value;
-                                  });
-                                },
-                                onOptionChanged: (option, selected) {
-                                  setState(() {
-                                    _setOptionSelected(
-                                      selectedSection.key,
-                                      option.value,
-                                      selected,
-                                    );
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        )
+                                    onSearchChanged: (value) {
+                                      setState(() {
+                                        _searchQuery = value;
+                                      });
+                                    },
+                                    onOptionChanged: (option, selected) {
+                                      setState(() {
+                                        _setOptionSelected(
+                                          selectedSection.key,
+                                          option.value,
+                                          selected,
+                                        );
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            )
                           : _FilterOptionsPane(
                               section: selectedSection!,
                               scrollController: scrollController,
@@ -556,7 +559,9 @@ class _FilterOptionRow extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                option.count > 0 ? '${option.label} (${option.count})' : option.label,
+                option.count > 0
+                    ? '${option.label} (${option.count})'
+                    : option.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(

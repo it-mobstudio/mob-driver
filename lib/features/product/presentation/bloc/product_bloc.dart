@@ -13,6 +13,16 @@ final class ProductDetailRequested extends ProductEvent {
   final String? mobSku;
 }
 
+/// Pull-to-refresh — reloads the same product without emitting
+/// [ProductLoading] first (unlike [ProductDetailRequested]), so the
+/// existing page stays visible under the pull-to-refresh indicator instead
+/// of being replaced by the full-page skeleton.
+final class ProductDetailRefreshRequested extends ProductEvent {
+  ProductDetailRefreshRequested({required this.slug, this.mobSku});
+  final String slug;
+  final String? mobSku;
+}
+
 final class ProductListRequested extends ProductEvent {
   ProductListRequested({
     this.categorySlug,
@@ -41,6 +51,13 @@ final class ProductListRequested extends ProductEvent {
 }
 
 final class ProductListNextPageRequested extends ProductEvent {}
+
+/// Pull-to-refresh — reloads page 1 with whatever category/subcategory/
+/// filters/sort are currently active, without emitting [ProductLoading]
+/// first (unlike [ProductListRequested]), so the existing grid stays
+/// visible under the pull-to-refresh indicator instead of being replaced
+/// by the full-page skeleton.
+final class ProductListRefreshRequested extends ProductEvent {}
 
 final class ProductFiltersRequested extends ProductEvent {
   ProductFiltersRequested({
@@ -148,7 +165,9 @@ final class ProductError extends ProductState {
 class ProductBloc extends Bloc<ProductEvent, ProductState> {
   ProductBloc(this._repository) : super(ProductInitial()) {
     on<ProductDetailRequested>(_onDetail);
+    on<ProductDetailRefreshRequested>(_onDetailRefresh);
     on<ProductListRequested>(_onList);
+    on<ProductListRefreshRequested>(_onRefresh);
     on<ProductListNextPageRequested>(_onNextPage);
     on<ProductFiltersRequested>(_onFilters);
     on<ProductSearchRequested>(_onSearch);
@@ -174,6 +193,25 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         similarProducts: result.similarProducts,
       ));
     }
+  }
+
+  Future<void> _onDetailRefresh(
+    ProductDetailRefreshRequested event,
+    Emitter<ProductState> emit,
+  ) async {
+    final (result, failure) = await _repository.getProductDetail(
+      slug: event.slug,
+      mobSku: event.mobSku,
+    );
+    if (failure != null) {
+      AppHaptics.error();
+      // Keep showing whatever was already on screen on a failed refresh.
+      return;
+    }
+    emit(ProductDetailLoaded(
+      product: result!.product,
+      similarProducts: result.similarProducts,
+    ));
   }
 
   Future<void> _onList(
@@ -213,6 +251,45 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         queryParameters: event.queryParameters,
       ));
     }
+  }
+
+  Future<void> _onRefresh(
+    ProductListRefreshRequested event,
+    Emitter<ProductState> emit,
+  ) async {
+    final current = state;
+    if (current is! ProductListLoaded) return;
+    final (result, failure) = current.isSearchMode
+        ? await _repository.searchCatalog(
+            query: current.searchQuery!,
+            page: 1,
+            sortBy: current.sortBy,
+            queryParameters: current.queryParameters,
+          )
+        : await _repository.browseProducts(
+            categorySlug: current.categorySlug!,
+            subCategory: current.subCategory,
+            page: 1,
+            sortBy: current.sortBy,
+            queryParameters: current.queryParameters,
+          );
+    if (failure != null) {
+      AppHaptics.error();
+      // Keep showing whatever was already on screen on a failed refresh.
+      return;
+    }
+    emit(ProductListLoaded(
+      products: result!.products,
+      subCategories: result.subCategories,
+      pagination: result.pagination,
+      categorySlug: current.categorySlug,
+      searchQuery: current.searchQuery,
+      subCategory: current.subCategory,
+      currentPage: 1,
+      filters: current.filters,
+      sortBy: current.sortBy,
+      queryParameters: current.queryParameters,
+    ));
   }
 
   Future<void> _onNextPage(

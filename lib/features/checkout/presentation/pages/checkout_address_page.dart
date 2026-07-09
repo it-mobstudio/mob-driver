@@ -348,14 +348,13 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                       _DeliveryAddressCard(
                                         name: _selectedDelivery?.name ??
                                             summary.shippingRecipientName,
-                                        address: _selectedDelivery
-                                                ?.displayAddress ??
-                                            summary.shippingAddress,
-                                        phone: _selectedDelivery
-                                                ?.phoneNumber ??
+                                        address:
+                                            _selectedDelivery?.displayAddress ??
+                                                summary.shippingAddress,
+                                        phone: _selectedDelivery?.phoneNumber ??
                                             summary.shippingPhone,
-                                        tag: _selectedDelivery?.addressTag ??
-                                            '',
+                                        tag:
+                                            _selectedDelivery?.addressTag ?? '',
                                         project:
                                             _selectedDelivery?.projectName ??
                                                 '',
@@ -687,12 +686,12 @@ class _SameAddressRow extends StatelessWidget {
                 : null,
           ),
           const SizedBox(width: 9),
-          Expanded(
+          const Expanded(
             child: Text(
               'Use same address for delivery and billing',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Color(0xFF0A243F),
                 fontSize: 11,
                 fontFamily: 'Inter',

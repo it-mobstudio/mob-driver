@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
@@ -335,64 +338,73 @@ class _TransactionRow extends StatelessWidget {
         : DateFormat('dd MMM hh:mm a').format(transaction.createdAt!.toLocal());
     final order = transaction.orderNumber;
 
-    return Container(
-      height: 74,
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(text: 'Order ID: '),
-                      TextSpan(
-                        text: order.isEmpty ? '—' : order,
-                        style: const TextStyle(color: Color(0xFF0360E5)),
-                      ),
-                    ],
+    return InkWell(
+      onTap: order.isEmpty
+          ? null
+          : () => context.push(
+                OrderDetailPage.routePath,
+                extra: OrderEntity.baseOrderId(order),
+              ),
+      child: Container(
+        height: 74,
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(text: 'Order ID: '),
+                        TextSpan(
+                          text: order.isEmpty ? '—' : order,
+                          style: const TextStyle(color: Color(0xFF0360E5)),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 20 / 14,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    height: 20 / 14,
+                  const SizedBox(height: 6),
+                  Text(
+                    '${transaction.transactionType.toUpperCase()}${date.isEmpty ? '' : ' on $date'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF596378),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      height: 16 / 11,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${transaction.transactionType.toUpperCase()}${date.isEmpty ? '' : ' on $date'}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF596378),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    height: 16 / 11,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '${debit ? '-' : '+'}₹$amount',
-            textAlign: TextAlign.right,
-            style: GoogleFonts.inter(
-              color: debit ? const Color(0xFF0A243F) : const Color(0xFF07AD61),
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              height: 20 / 14,
+            const SizedBox(width: 8),
+            Text(
+              '${debit ? '-' : '+'}₹$amount',
+              textAlign: TextAlign.right,
+              style: GoogleFonts.inter(
+                color:
+                    debit ? const Color(0xFF0A243F) : const Color(0xFF07AD61),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                height: 20 / 14,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

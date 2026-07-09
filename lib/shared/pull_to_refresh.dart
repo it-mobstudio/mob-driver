@@ -1,5 +1,6 @@
 // lib/shared/pull_to_refresh.dart
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -27,6 +28,11 @@ class _PullToRefreshState extends State<PullToRefresh>
 
   bool _refreshing = false;
 
+  // Tracks whether the in-progress touch gesture is an actual pull-down
+  // (top → refresh) versus a normal scroll that merely started at the top
+  // edge. null = not yet decided for the current gesture.
+  bool? _currentGestureIsPull;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +53,43 @@ class _PullToRefreshState extends State<PullToRefresh>
     } catch (_) {
       _soundReady = false;
     }
+  }
+
+  // RefreshIndicator arms as soon as a drag *starts* while the scrollable is
+  // already at its top edge — regardless of which direction that drag then
+  // moves in. Combined with AlwaysScrollableScrollPhysics (needed so short
+  // lists can still be refreshed), that means an ordinary scroll gesture
+  // that merely begins at the top — e.g. a short/filtered list, or grabbing
+  // a list right as it decelerates to the top — can accidentally arm and
+  // fire a refresh even though the user is scrolling down through content,
+  // not pulling down. We disambiguate using the direction of the gesture's
+  // first real movement and suppress notifications for non-pull gestures so
+  // RefreshIndicator never arms for them.
+  bool _shouldForwardScrollNotification(ScrollNotification notification) {
+    if (!defaultScrollNotificationPredicate(notification)) return false;
+
+    if (notification is ScrollStartNotification) {
+      _currentGestureIsPull = null;
+      return true;
+    }
+    if (notification is ScrollEndNotification) {
+      return true;
+    }
+
+    if (_currentGestureIsPull == null) {
+      if (notification is OverscrollNotification) {
+        // Negative overscroll = trying to move past the top (a pull).
+        _currentGestureIsPull = notification.overscroll < 0;
+      } else if (notification is ScrollUpdateNotification &&
+          notification.dragDetails != null &&
+          notification.scrollDelta != null &&
+          notification.scrollDelta != 0) {
+        // Negative scrollDelta = content moving toward the top (a pull).
+        _currentGestureIsPull = notification.scrollDelta! < 0;
+      }
+    }
+
+    return _currentGestureIsPull ?? true;
   }
 
   Future<void> _handleRefresh() async {
@@ -79,10 +122,12 @@ class _PullToRefreshState extends State<PullToRefresh>
       children: [
         RefreshIndicator(
           onRefresh: _handleRefresh,
+          notificationPredicate: _shouldForwardScrollNotification,
           color: Colors.transparent,
           backgroundColor: Colors.transparent,
           elevation: 0,
           strokeWidth: 0.01,
+          triggerMode: RefreshIndicatorTriggerMode.onEdge,
           child: AnimatedOpacity(
             opacity: _refreshing ? 0.5 : 1,
             duration: const Duration(milliseconds: 350),
@@ -93,19 +138,20 @@ class _PullToRefreshState extends State<PullToRefresh>
         if (_refreshing)
           Padding(
             padding: const EdgeInsets.only(top: 16),
-            child: _BouncingDots(animation: _spinController),
+            child: _RefreshSpinner(animation: _spinController),
           ),
       ],
     );
   }
 }
 
-class _BouncingDots extends StatelessWidget {
-  const _BouncingDots({required this.animation});
+/// A rotating gradient-tail arc on a light track — visually matches the
+/// brand blue used across buttons/CTAs, and reads as an active loading
+/// state at a glance rather than a static dot pattern.
+class _RefreshSpinner extends StatelessWidget {
+  const _RefreshSpinner({required this.animation});
 
   final Animation<double> animation;
-
-  static const _dotColor = Color(0xFF0A243F);
 
   @override
   Widget build(BuildContext context) {
@@ -116,35 +162,68 @@ class _BouncingDots extends StatelessWidget {
       child: SizedBox(
         width: 44,
         height: 44,
-        child: AnimatedBuilder(
-          animation: animation,
-          builder: (context, _) {
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(3, (i) {
-                final t = (animation.value + (i * 0.2)) % 1.0;
-                final scale =
-                    0.5 + 0.5 * (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0);
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: _dotColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            );
-          },
+        child: Padding(
+          padding: const EdgeInsets.all(11),
+          child: AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              return CustomPaint(
+                painter: _ArcSpinnerPainter(progress: animation.value),
+              );
+            },
+          ),
         ),
       ),
     );
   }
+}
+
+class _ArcSpinnerPainter extends CustomPainter {
+  _ArcSpinnerPainter({required this.progress});
+
+  final double progress;
+
+  static const _track = Color(0xFFE3ECFB);
+  static const _brand = Color(0xFF0360E5);
+  static const _sweep = 4.6; // ~264°, leaves a visible gap for a tail
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final startAngle = progress * 2 * pi;
+
+    canvas.drawArc(
+      rect,
+      0,
+      2 * pi,
+      false,
+      Paint()
+        ..color = _track
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+
+    canvas.drawArc(
+      rect,
+      startAngle,
+      _sweep,
+      false,
+      Paint()
+        ..shader = SweepGradient(
+          startAngle: 0,
+          endAngle: _sweep,
+          colors: const [Color(0x000360E5), _brand],
+          transform: GradientRotation(startAngle),
+        ).createShader(rect)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArcSpinnerPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }

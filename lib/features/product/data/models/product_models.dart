@@ -130,7 +130,8 @@ class ProductVariantCombination {
       slug: map['slug']?.toString() ?? '',
       productId: (map['product_id'] ?? map['id'] ?? '').toString(),
       stock: num.tryParse(map['stock']?.toString() ?? '0') ?? 0,
-      isAvailable: map['is_available'] == null || _parseBool(map['is_available']),
+      isAvailable:
+          map['is_available'] == null || _parseBool(map['is_available']),
       inStock: map['in_stock'] == null || _parseBool(map['in_stock']),
       stockStatus: map['stock_status']?.toString() ?? '',
     );
@@ -215,11 +216,14 @@ class ProductChildRef {
       imageUrl: sanitizeImageUrl(
           (map['image'] ?? map['primary_image'] ?? '').toString()),
       mobSku: map['mob_sku']?.toString() ?? '',
-      vendorProductId:
-          (map['vendor_product_id'] ?? vendorPricingMap['vendor_product_id'] ?? '')
-              .toString(),
+      vendorProductId: (map['vendor_product_id'] ??
+              vendorPricingMap['vendor_product_id'] ??
+              '')
+          .toString(),
       productPrice: num.tryParse(
-            (vendorPricingMap['vendor_selling_price'] ?? map['product_price'] ?? '0')
+            (vendorPricingMap['vendor_selling_price'] ??
+                    map['product_price'] ??
+                    '0')
                 .toString(),
           ) ??
           0,
@@ -233,7 +237,8 @@ class ProductChildRef {
           ) ??
           0,
       quickEcommerceEnabled: _parseBool(
-        map['quick_ecommerce_enabled'] ?? vendorPricingMap['quick_ecommerce_enabled'],
+        map['quick_ecommerce_enabled'] ??
+            vendorPricingMap['quick_ecommerce_enabled'],
       ),
       variantInfo: variantInfoRaw
           .whereType<Map>()
@@ -252,15 +257,17 @@ class ProductChildRef {
       slug: slug.isNotEmpty ? slug : parent.slug,
       title: title.isNotEmpty ? title : parent.title,
       mobSku: mobSku,
-      maximumRetailPrice:
-          maximumRetailPrice > 0 ? maximumRetailPrice : parent.maximumRetailPrice,
+      maximumRetailPrice: maximumRetailPrice > 0
+          ? maximumRetailPrice
+          : parent.maximumRetailPrice,
       rating: parent.rating,
       reviewCount: parent.reviewCount,
       productDescription: parent.productDescription,
       productBulletPoints: parent.productBulletPoints,
       vendorPricing: VendorPricing(
-        vendorSellingPrice:
-            productPrice > 0 ? productPrice : parent.vendorPricing.vendorSellingPrice,
+        vendorSellingPrice: productPrice > 0
+            ? productPrice
+            : parent.vendorPricing.vendorSellingPrice,
         discount: discount,
         fullfillmentLatency: parent.vendorPricing.fullfillmentLatency,
         vendorProductId: vendorProductId.isNotEmpty
@@ -379,8 +386,10 @@ class ProductModel {
     }
     return childProducts.length;
   }
-  String get addToCartProductId =>
-      vendorPricing.vendorProductId.isNotEmpty ? vendorPricing.vendorProductId : id;
+
+  String get addToCartProductId => vendorPricing.vendorProductId.isNotEmpty
+      ? vendorPricing.vendorProductId
+      : id;
   bool get isQuickEcommerceEnabled =>
       quickEcommerceEnabled || vendorPricing.quickEcommerceEnabled;
   bool get hasVariantLevelStock =>
@@ -390,6 +399,7 @@ class ProductModel {
     final parsed = stockDetailsStock > 0 ? stockDetailsStock : stock;
     return parsed > 0 ? parsed.toInt() : 0;
   }
+
   bool get isOutOfStockForQuickProduct =>
       isQuickEcommerceEnabled &&
       (hasVariants ? !hasVariantLevelStock : availableStock <= 0);
@@ -595,8 +605,7 @@ class PaginationModel {
     return PaginationModel(
       isNextPage: map['is_next_page'] == true,
       nextPage: int.tryParse(map['next_page']?.toString() ?? '0') ?? 0,
-      totalEntries:
-          int.tryParse(map['total_entries']?.toString() ?? '0') ?? 0,
+      totalEntries: int.tryParse(map['total_entries']?.toString() ?? '0') ?? 0,
     );
   }
 }
@@ -659,8 +668,9 @@ class BrowseFilterSection {
   final Map<String, dynamic> meta;
 
   factory BrowseFilterSection.fromMap(Map<String, dynamic> map) {
-    final optionsRaw =
-        map['options'] is List ? List<dynamic>.from(map['options'] as List) : <dynamic>[];
+    final optionsRaw = map['options'] is List
+        ? List<dynamic>.from(map['options'] as List)
+        : <dynamic>[];
     final metaMap = map['meta'] is Map
         ? Map<String, dynamic>.from(map['meta'] as Map)
         : <String, dynamic>{};

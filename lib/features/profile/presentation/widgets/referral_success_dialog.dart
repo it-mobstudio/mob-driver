@@ -70,13 +70,11 @@ class _ReferralSuccessSheet extends StatelessWidget {
       color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final maxWidth = constraints.maxWidth > 480
-              ? 480.0
-              : constraints.maxWidth;
+          final maxWidth =
+              constraints.maxWidth > 480 ? 480.0 : constraints.maxWidth;
           final sheetHeight =
               (constraints.maxHeight * 0.58).clamp(380.0, 430.0).toDouble();
-          final heroHeight =
-              (maxWidth * 0.42).clamp(128.0, 168.0).toDouble();
+          final heroHeight = (maxWidth * 0.42).clamp(128.0, 168.0).toDouble();
           const closeButtonSize = 44.0;
 
           return Align(

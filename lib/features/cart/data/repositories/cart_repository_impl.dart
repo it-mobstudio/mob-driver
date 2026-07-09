@@ -11,7 +11,8 @@ class CartRepositoryImpl implements CartRepository {
   final CartRemoteDatasource _datasource;
 
   @override
-  Future<(CartSummaryEntity?, AppFailure?)> getCart({bool outOfStock = false}) async {
+  Future<(CartSummaryEntity?, AppFailure?)> getCart(
+      {bool outOfStock = false}) async {
     try {
       final data = await _datasource.getCart(outOfStock: outOfStock);
       return (_buildSummary(data), null);
@@ -36,7 +37,8 @@ class CartRepositoryImpl implements CartRepository {
       // returns a full cart payload (would let CartBloc skip its extra
       // getCart() refetch on every quantity change).
       final builtSummary = _buildSummary(data);
-      debugPrint('🔵 ADD_TO_CART quick_commerce present: ${data['quick_commerce']}');
+      debugPrint(
+          '🔵 ADD_TO_CART quick_commerce present: ${data['quick_commerce']}');
       debugPrint(
           '🔵 ADD_TO_CART parsed items: ${builtSummary.items.map((i) => '${i.title} x${i.qty}').toList()}');
       return (builtSummary, null);
@@ -60,7 +62,8 @@ class CartRepositoryImpl implements CartRepository {
       // TEMP DIAGNOSTIC — remove once we've confirmed whether
       // remove_cart_item returns a full cart payload.
       final builtSummary = _buildSummary(data);
-      debugPrint('🔵 REMOVE_CART quick_commerce present: ${data['quick_commerce']}');
+      debugPrint(
+          '🔵 REMOVE_CART quick_commerce present: ${data['quick_commerce']}');
       debugPrint(
           '🔵 REMOVE_CART parsed items: ${builtSummary.items.map((i) => '${i.title} x${i.qty}').toList()}');
       return (builtSummary, null);
@@ -104,11 +107,13 @@ class CartRepositoryImpl implements CartRepository {
       const ['sub_cart_total', 'subTotal', 'subtotal'],
       fallback: items.fold<double>(0, (s, i) => s + i.lineTotal),
     );
-    final ship = _num(data, const ['shipping', 'shipping_charge', 'shippingCharges']);
+    final ship =
+        _num(data, const ['shipping', 'shipping_charge', 'shippingCharges']);
     final sav = _num(data, const ['savings', 'discount']);
 
     final shippingInfo = _parseShipping(data['user_details']);
-    final billingAddr = _parseBillingAddress(data, shippingInfo.address, shippingInfo.gst);
+    final billingAddr =
+        _parseBillingAddress(data, shippingInfo.address, shippingInfo.gst);
     final billingGst = _parseBillingGst(data, shippingInfo.gst);
     final billingId = _parseBillingAddressId(data, shippingInfo.id);
     final savedAddresses = _parseSavedAddresses(data, shippingInfo);
@@ -116,7 +121,8 @@ class CartRepositoryImpl implements CartRepository {
     final rfqCount = _rfqCount(data['quote_cart']);
 
     final ud = data['user_details'];
-    final udMap = ud is Map ? Map<String, dynamic>.from(ud) : <String, dynamic>{};
+    final udMap =
+        ud is Map ? Map<String, dynamic>.from(ud) : <String, dynamic>{};
     final account = CartAccountEntity.fromMap({...data, ...udMap});
 
     // Mob star tier nested inside user_details. The real field is
@@ -125,7 +131,13 @@ class CartRepositoryImpl implements CartRepository {
     // lookup always fell through to {} and checkout showed "No mobstar
     // points available" even when the user had a positive balance.
     final mobStarTier = _findNestedMap(udMap, const [
-      'mobStarPoints', 'mob_star', 'mob_star_tier', 'loyalty', 'loyalty_tier', 'tier', 'reward_tier',
+      'mobStarPoints',
+      'mob_star',
+      'mob_star_tier',
+      'loyalty',
+      'loyalty_tier',
+      'tier',
+      'reward_tier',
     ]);
 
     // mobCREDIT balance + account status — sourced entirely from
@@ -149,14 +161,14 @@ class CartRepositoryImpl implements CartRepository {
     String? mobCreditAccountStatus;
     if (mobCreditExists) {
       final isActivated = rupifiObj['is_activated'] != false;
-      final accountStatus =
-          (rupifiObj['account_status'] ?? rupifiObj['status'])
-              ?.toString()
-              .trim()
-              .toUpperCase();
+      final accountStatus = (rupifiObj['account_status'] ?? rupifiObj['status'])
+          ?.toString()
+          .trim()
+          .toUpperCase();
       final primaryStatus =
           rupifiObj['primary_status']?.toString().trim().toUpperCase();
-      final hasDue = accountStatus == 'AMOUNT_DUE' || primaryStatus == 'AMOUNT_DUE';
+      final hasDue =
+          accountStatus == 'AMOUNT_DUE' || primaryStatus == 'AMOUNT_DUE';
       final isAccountActive = accountStatus == 'ACTIVE';
       final isPrimaryActive = primaryStatus == 'ACTIVE';
       if (hasDue) {
@@ -168,12 +180,17 @@ class CartRepositoryImpl implements CartRepository {
 
     // Wallet nested object (e.g. mob_wallet, wallet, wallet_info)
     final walletObj = _findNestedMap(data, const [
-      'mob_wallet', 'wallet', 'wallet_info', 'wallet_details',
+      'mob_wallet',
+      'wallet',
+      'wallet_info',
+      'wallet_details',
     ]);
 
-    final walletBalance = _num(walletObj, const ['wallet_balance']).toDouble() != 0
-        ? _num(walletObj, const ['wallet_balance']).toDouble()
-        : _num(data, const ['wallet_balance', 'mob_wallet_balance']).toDouble();
+    final walletBalance =
+        _num(walletObj, const ['wallet_balance']).toDouble() != 0
+            ? _num(walletObj, const ['wallet_balance']).toDouble()
+            : _num(data, const ['wallet_balance', 'mob_wallet_balance'])
+                .toDouble();
 
     return CartSummaryEntity(
       items: items,
@@ -186,11 +203,13 @@ class CartRepositoryImpl implements CartRepository {
           .toDouble(),
       rewardPoints: _int(mobStarTier, const ['points']),
       mobstarAmount: _num(mobStarTier, const ['actual_money']).toDouble(),
-      earningPoints: _int(data, const ['earning_points', 'earn_points', 'points_to_earn']),
+      earningPoints:
+          _int(data, const ['earning_points', 'earn_points', 'points_to_earn']),
       walletBalance: walletBalance,
-      applicableWalletAmount: _num(walletObj, const ['applicable_wallet_amount']).toDouble() != 0
-          ? _num(walletObj, const ['applicable_wallet_amount']).toDouble()
-          : walletBalance,
+      applicableWalletAmount:
+          _num(walletObj, const ['applicable_wallet_amount']).toDouble() != 0
+              ? _num(walletObj, const ['applicable_wallet_amount']).toDouble()
+              : walletBalance,
       useWallet: data['use_wallet'] == true,
       usePoints: data['use_points'] == true,
       rfqItemCount: rfqCount,
@@ -214,7 +233,8 @@ class CartRepositoryImpl implements CartRepository {
       mobCreditAccountStatus: mobCreditAccountStatus,
       isReferralOnlyWallet: walletObj['is_referral_only_wallet'] == true,
       isWalletUsageLimited: walletObj['is_wallet_usage_limited'] == true,
-      walletNote: _str(walletObj, const ['note', 'message', 'info', 'wallet_note', 'restriction_note']),
+      walletNote: _str(walletObj,
+          const ['note', 'message', 'info', 'wallet_note', 'restriction_note']),
     );
   }
 
@@ -236,14 +256,16 @@ class CartRepositoryImpl implements CartRepository {
     return _fallbackItems(data);
   }
 
-  List<Map<String, dynamic>> _fromSubcarts(List<Map<String, dynamic>> subcarts) {
+  List<Map<String, dynamic>> _fromSubcarts(
+      List<Map<String, dynamic>> subcarts) {
     final result = <Map<String, dynamic>>[];
     for (final subcart in subcarts) {
       final vendor = subcart['vendor'] is Map
           ? Map<String, dynamic>.from(subcart['vendor'] as Map)
           : <String, dynamic>{};
-      final sellerCode =
-          _str(vendor, const ['bmp_id', 'seller_code', 'vendor_code'], fallback: 'STORE');
+      final sellerCode = _str(
+          vendor, const ['bmp_id', 'seller_code', 'vendor_code'],
+          fallback: 'STORE');
       for (final item in _mapList(subcart['items'])) {
         final product = item['product'] is Map
             ? Map<String, dynamic>.from(item['product'] as Map)
@@ -253,12 +275,15 @@ class CartRepositoryImpl implements CartRepository {
           ...item,
           'seller_code': item['seller_code'] ?? sellerCode,
           'quantity': item['quantity'] ?? item['qty'] ?? 1,
-          'vendor_product_id': item['vendor_product_id'] ?? product['vendor_product_id'],
+          'vendor_product_id':
+              item['vendor_product_id'] ?? product['vendor_product_id'],
           'cart_item_id': item['cart_item_id'] ?? item['id'],
           'vendor_selling_price':
               item['vendor_selling_price'] ?? product['vendor_selling_price'],
-          'item_name_title': item['item_name_title'] ?? product['item_name_title'],
-          'image': item['image'] ?? product['image'] ?? product['product_image'],
+          'item_name_title':
+              item['item_name_title'] ?? product['item_name_title'],
+          'image':
+              item['image'] ?? product['image'] ?? product['product_image'],
         });
       }
     }
@@ -285,9 +310,12 @@ class CartRepositoryImpl implements CartRepository {
     const titleKeys = ['item_name_title', 'title', 'name', 'product_name'];
     const qtyKeys = ['quantity', 'qty'];
     const priceKeys = ['vendor_selling_price', 'selling_price', 'price'];
-    final hasTitle = titleKeys.any((k) => (map[k]?.toString().trim() ?? '').isNotEmpty);
-    final hasQty = qtyKeys.any((k) => num.tryParse(map[k]?.toString() ?? '') != null);
-    final hasPrice = priceKeys.any((k) => num.tryParse(map[k]?.toString() ?? '') != null);
+    final hasTitle =
+        titleKeys.any((k) => (map[k]?.toString().trim() ?? '').isNotEmpty);
+    final hasQty =
+        qtyKeys.any((k) => num.tryParse(map[k]?.toString() ?? '') != null);
+    final hasPrice =
+        priceKeys.any((k) => num.tryParse(map[k]?.toString() ?? '') != null);
     return hasTitle || (hasQty && hasPrice);
   }
 
@@ -328,8 +356,9 @@ class CartRepositoryImpl implements CartRepository {
       );
     }
     final ud = Map<String, dynamic>.from(raw);
-    final project =
-        ud['project'] is Map ? Map<String, dynamic>.from(ud['project'] as Map) : <String, dynamic>{};
+    final project = ud['project'] is Map
+        ? Map<String, dynamic>.from(ud['project'] as Map)
+        : <String, dynamic>{};
     final projectName = _str(project, const ['project_name', 'name']);
     final name = _str(ud, const ['name', 'full_name', 'username']);
     final parts = [
@@ -347,15 +376,18 @@ class CartRepositoryImpl implements CartRepository {
       subtitle: parts.isNotEmpty ? addr : 'Add an address to continue',
       name: name,
       address: addr,
-      phone: _str(ud, const ['phone', 'phone_number', 'mobile', 'contact_number']),
-      gst: _str(ud, const ['gst_number', 'gst_no', 'gstin', 'gst', 'tax_number']),
+      phone:
+          _str(ud, const ['phone', 'phone_number', 'mobile', 'contact_number']),
+      gst: _str(
+          ud, const ['gst_number', 'gst_no', 'gstin', 'gst', 'tax_number']),
       id: _str(ud, const ['id', 'address_id', 'pk']),
       pincode: _str(ud, const ['pincode', 'zip', 'zip_code']),
     );
   }
 
   String _parseBillingAddressId(Map<String, dynamic> data, String fallback) {
-    final raw = data['billing_details'] ?? data['billing_address'] ?? data['billing'];
+    final raw =
+        data['billing_details'] ?? data['billing_address'] ?? data['billing'];
     if (raw is! Map) return fallback;
     final billing = Map<String, dynamic>.from(raw);
     return _str(billing, const ['id', 'address_id', 'pk'], fallback: fallback);
@@ -366,7 +398,8 @@ class CartRepositoryImpl implements CartRepository {
     String fallbackAddress,
     String fallbackGst,
   ) {
-    final raw = data['billing_details'] ?? data['billing_address'] ?? data['billing'];
+    final raw =
+        data['billing_details'] ?? data['billing_address'] ?? data['billing'];
     if (raw is! Map) return fallbackAddress;
     final billing = Map<String, dynamic>.from(raw);
     final parts = [
@@ -380,10 +413,12 @@ class CartRepositoryImpl implements CartRepository {
   }
 
   String _parseBillingGst(Map<String, dynamic> data, String fallback) {
-    final raw = data['billing_details'] ?? data['billing_address'] ?? data['billing'];
+    final raw =
+        data['billing_details'] ?? data['billing_address'] ?? data['billing'];
     if (raw is! Map) return fallback;
     final billing = Map<String, dynamic>.from(raw);
-    return _str(billing, const ['gst_number', 'gst_no', 'gstin', 'gst'], fallback: fallback);
+    return _str(billing, const ['gst_number', 'gst_no', 'gstin', 'gst'],
+        fallback: fallback);
   }
 
   List<CartAddressEntity> _parseSavedAddresses(
@@ -419,7 +454,8 @@ class CartRepositoryImpl implements CartRepository {
           address: parts.join(', '),
           pincode: _str(m, const ['pincode', 'zip_code', 'zip']),
           phone: _str(m, const ['phone', 'phone_number', 'mobile']),
-          tag: _str(m, const ['tag', 'type', 'address_type', 'label'], fallback: 'Address'),
+          tag: _str(m, const ['tag', 'type', 'address_type', 'label'],
+              fallback: 'Address'),
           project: _str(m, const ['project_name', 'project']),
           gstNumber: _str(m, const ['gst_number', 'gst_no', 'gstin']),
         ));
@@ -447,7 +483,8 @@ class CartRepositoryImpl implements CartRepository {
 
   // ── Primitive helpers ────────────────────────────────────────────────────
 
-  Map<String, dynamic> _findNestedMap(Map<String, dynamic> map, List<String> keys) {
+  Map<String, dynamic> _findNestedMap(
+      Map<String, dynamic> map, List<String> keys) {
     for (final k in keys) {
       final v = map[k];
       if (v is Map) return Map<String, dynamic>.from(v);
@@ -462,7 +499,8 @@ class CartRepositoryImpl implements CartRepository {
 
   int _listLen(dynamic v) => v is List ? v.length : 0;
 
-  String _str(Map<String, dynamic> map, List<String> keys, {String fallback = ''}) {
+  String _str(Map<String, dynamic> map, List<String> keys,
+      {String fallback = ''}) {
     for (final k in keys) {
       final v = map[k];
       if (v == null) continue;

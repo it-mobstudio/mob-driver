@@ -67,8 +67,8 @@ class _SavingsCardBody extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned(
-                  left: 160,
-                  top: 33,
+                  right: 8,
+                  bottom: 0,
                   child: SizedBox(
                     width: 219.47,
                     height: 219.50,
@@ -79,8 +79,8 @@ class _SavingsCardBody extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  right: 44,
-                  top: 81,
+                  right: 24,
+                  bottom: 0,
                   child: Image.asset(
                     'assets/images/mobcreditbannerimage.png',
                     width: 75,

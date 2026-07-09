@@ -23,8 +23,8 @@ class RfqItemEntity {
           int.tryParse((map['quantity'] ?? map['qty'] ?? '1').toString()) ?? 1,
       unit: (map['unit'] ?? map['uom'] ?? '').toString(),
       notes: (map['notes'] ?? map['description'] ?? '').toString(),
-      imageUrl:
-          sanitizeImageUrl((map['image'] ?? map['product_image'] ?? '').toString()),
+      imageUrl: sanitizeImageUrl(
+          (map['image'] ?? map['product_image'] ?? '').toString()),
     );
   }
 }
@@ -248,10 +248,9 @@ class RfqEntity {
         ? Map<String, dynamic>.from(order['project'] as Map)
         : <String, dynamic>{};
     final rawCity = (map['city'] ?? '').toString().trim();
-    final city =
-        rawCity.isEmpty || rawCity == 'N/A' || rawCity == 'undefined'
-            ? ''
-            : rawCity;
+    final city = rawCity.isEmpty || rawCity == 'N/A' || rawCity == 'undefined'
+        ? ''
+        : rawCity;
 
     final filesRaw = map['files'] is List ? map['files'] as List : <dynamic>[];
     final files = filesRaw
@@ -274,7 +273,8 @@ class RfqEntity {
             ))
         .toList();
 
-    final quotesRaw = map['quotes'] is List ? map['quotes'] as List : <dynamic>[];
+    final quotesRaw =
+        map['quotes'] is List ? map['quotes'] as List : <dynamic>[];
     final quotes = quotesRaw
         .whereType<Map>()
         .map((e) => RfqQuoteEntity.fromMap(Map<String, dynamic>.from(e)))

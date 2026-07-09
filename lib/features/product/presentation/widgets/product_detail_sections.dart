@@ -216,7 +216,7 @@ class _ProductImagePreviewOverlayState
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.14),
+                        color: Colors.black.withValues(alpha: 0.14),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -522,7 +522,7 @@ class ProductDeliverySection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionTitle(title: 'Delivery details'),
+          const _SectionTitle(title: 'Delivery details'),
           const SizedBox(height: 10),
           if (details.isNotEmpty) _DynamicDetailRow(item: details.first),
           if (details.length > 1) ...[
@@ -778,10 +778,10 @@ class ProductAssuranceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DetailCard(
-      padding: const EdgeInsets.fromLTRB(12, 18, 12, 18),
+    return const _DetailCard(
+      padding: EdgeInsets.fromLTRB(12, 18, 12, 18),
       child: Row(
-        children: const [
+        children: [
           SizedBox(
             width: 76,
             child: _WarrantyBadge(
@@ -852,7 +852,7 @@ class KeyFeaturesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionTitle(title: 'Product description'),
+          const _SectionTitle(title: 'Product description'),
           const SizedBox(height: 10),
           Text(
             _cleanHtmlText(description),

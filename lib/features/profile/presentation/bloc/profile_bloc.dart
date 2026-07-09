@@ -223,7 +223,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           hasReachedEnd: _hasReachedProjectsEnd(fetched),
         ));
       } else {
-        final merged = _mergeProjects(currentProjects.projects, fetched.projects);
+        final merged =
+            _mergeProjects(currentProjects.projects, fetched.projects);
         final totalCount = fetched.totalCount > 0
             ? fetched.totalCount
             : currentProjects.totalCount;

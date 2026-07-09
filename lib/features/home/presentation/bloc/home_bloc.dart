@@ -49,7 +49,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeRefreshRequested event,
     Emitter<HomeState> emit,
   ) async {
-    final previousData = state is HomeLoaded ? (state as HomeLoaded).data : null;
+    final previousData =
+        state is HomeLoaded ? (state as HomeLoaded).data : null;
     if (previousData == null) emit(HomeLoading());
 
     final (data, failure) = await _repository.getHomeData();

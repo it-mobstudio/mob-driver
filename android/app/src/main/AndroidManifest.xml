@@ -107,5 +107,16 @@
   android:name="com.google.android.geo.API_KEY"
   android:value="${GOOGLE_MAPS_API_KEY}"/>
 
+        <!-- Channel/icon FCM falls back to for notifications it displays
+             itself (app backgrounded/terminated) — must match the channel id
+             created in push_notification_service.dart so both paths look
+             the same. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="mob_default_channel" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/launcher_icon" />
+
     </application>
 </manifest>

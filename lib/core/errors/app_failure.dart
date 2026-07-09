@@ -7,29 +7,29 @@ sealed class AppFailure {
 
 final class NetworkFailure extends AppFailure {
   const NetworkFailure([
-    String message = 'No internet connection. Please check your network.',
-  ]) : super(message);
+    super.message = 'No internet connection. Please check your network.',
+  ]);
 }
 
 final class ServerFailure extends AppFailure {
-  const ServerFailure(String message, {this.statusCode}) : super(message);
+  const ServerFailure(super.message, {this.statusCode});
   final int? statusCode;
 }
 
 final class AuthFailure extends AppFailure {
   const AuthFailure([
-    String message = 'Authentication required. Please log in.',
-  ]) : super(message);
+    super.message = 'Authentication required. Please log in.',
+  ]);
 }
 
 final class BusinessFailure extends AppFailure {
-  const BusinessFailure(String message) : super(message);
+  const BusinessFailure(super.message);
 }
 
 final class UnknownFailure extends AppFailure {
   const UnknownFailure([
-    String message = 'An unexpected error occurred.',
-  ]) : super(message);
+    super.message = 'An unexpected error occurred.',
+  ]);
 }
 
 extension DioExceptionMapper on DioException {

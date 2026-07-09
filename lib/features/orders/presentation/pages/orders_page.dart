@@ -15,7 +15,6 @@ import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'order_detail_page.dart';
-import 'order_tracking_page.dart';
 
 part 'orders_page_cards.dart';
 part 'orders_page_controls.dart';

@@ -21,6 +21,7 @@ import 'package:m_o_b_demand_side/features/product/domain/repositories/product_r
 import 'package:m_o_b_demand_side/features/product/presentation/bloc/product_bloc.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/widgets/product_detail_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/similar_products_section.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -300,64 +301,83 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           Column(
                             children: [
                               Expanded(
-                                child: ListView(
-                                  padding: EdgeInsets.only(
-                                    bottom: bottomBarReservedHeight,
+                                child: PullToRefresh(
+                                  onRefresh: () async {
+                                    final bloc = context.read<ProductBloc>();
+                                    bloc.add(
+                                      ProductDetailRefreshRequested(
+                                        slug: widget.slug,
+                                      ),
+                                    );
+                                    await bloc.stream.firstWhere(
+                                      (s) =>
+                                          s is ProductDetailLoaded ||
+                                          s is ProductError,
+                                    );
+                                  },
+                                  child: ListView(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    padding: EdgeInsets.only(
+                                      bottom: bottomBarReservedHeight,
+                                    ),
+                                    children: [
+                                      ProductImagesCarousel(
+                                          images: product.images),
+                                      const SizedBox(height: 12),
+                                      ProductInfoBlock(
+                                        product: displayProduct,
+                                      ),
+                                      VariantOptionsSection(
+                                        product: product,
+                                        variants: product.variants,
+                                        selectedVariants: _selectedVariants,
+                                        onSelect: (key, option) =>
+                                            _selectVariant(
+                                                context, key, option),
+                                        onMoreOptions:
+                                            product.variantOptionCount > 8 ||
+                                                    product.childProducts
+                                                        .isNotEmpty
+                                                ? () => _showVariantSheet(
+                                                      context,
+                                                      product,
+                                                      cartQtyByProductId,
+                                                      cartUpdatingKey,
+                                                    )
+                                                : null,
+                                      ),
+                                      ProductDeliverySection(
+                                        product: displayProduct,
+                                        onViewOtherSellers:
+                                            product.sellers.length > 1
+                                                ? () => _showSellerSheet(
+                                                      context,
+                                                      product,
+                                                    )
+                                                : null,
+                                      ),
+                                      const MobCreditBannerSection(),
+                                      const ProductAssuranceSection(),
+                                      ProductLongDetailsSection(
+                                        description: product.productDescription,
+                                        features: product.features,
+                                        bulletPoints:
+                                            product.productBulletPoints,
+                                      ),
+                                      SimilarProductsSection(
+                                        products: similarProducts,
+                                        quantityResolver: (productId) =>
+                                            cartQtyByProductId[productId] ?? 0,
+                                        isUpdatingResolver: (productId) =>
+                                            cartUpdatingKey == productId,
+                                        onCartQuantityChanged:
+                                            _changeProductQuantity,
+                                        onNotifyTap: _handleNotifyTap,
+                                      ),
+                                      const SizedBox(height: 24),
+                                    ],
                                   ),
-                                  children: [
-                                    ProductImagesCarousel(
-                                        images: product.images),
-                                    const SizedBox(height: 12),
-                                    ProductInfoBlock(
-                                      product: displayProduct,
-                                    ),
-                                    VariantOptionsSection(
-                                      product: product,
-                                      variants: product.variants,
-                                      selectedVariants: _selectedVariants,
-                                      onSelect: (key, option) =>
-                                          _selectVariant(context, key, option),
-                                      onMoreOptions:
-                                          product.variantOptionCount > 8 ||
-                                                  product
-                                                      .childProducts.isNotEmpty
-                                              ? () => _showVariantSheet(
-                                                    context,
-                                                    product,
-                                                    cartQtyByProductId,
-                                                    cartUpdatingKey,
-                                                  )
-                                              : null,
-                                    ),
-                                    ProductDeliverySection(
-                                      product: displayProduct,
-                                      onViewOtherSellers:
-                                          product.sellers.length > 1
-                                              ? () => _showSellerSheet(
-                                                    context,
-                                                    product,
-                                                  )
-                                              : null,
-                                    ),
-                                    const MobCreditBannerSection(),
-                                    const ProductAssuranceSection(),
-                                    ProductLongDetailsSection(
-                                      description: product.productDescription,
-                                      features: product.features,
-                                      bulletPoints: product.productBulletPoints,
-                                    ),
-                                    SimilarProductsSection(
-                                      products: similarProducts,
-                                      quantityResolver: (productId) =>
-                                          cartQtyByProductId[productId] ?? 0,
-                                      isUpdatingResolver: (productId) =>
-                                          cartUpdatingKey == productId,
-                                      onCartQuantityChanged:
-                                          _changeProductQuantity,
-                                      onNotifyTap: _handleNotifyTap,
-                                    ),
-                                    const SizedBox(height: 24),
-                                  ],
                                 ),
                               ),
                             ],
@@ -498,10 +518,6 @@ class _HeaderIconButton extends StatelessWidget {
               'assets/images/Search.svg',
               width: 16,
               height: 16,
-            ),
-          _ => CustomPaint(
-              painter: _HeaderActionIconPainter(icon),
-              size: const Size.square(16),
             ),
         },
       ),
@@ -673,14 +689,12 @@ class _ShareOptionButton extends StatelessWidget {
   const _ShareOptionButton({
     required this.label,
     required this.iconAsset,
-    this.backgroundColor = const Color(0xFFF0F8F8),
     this.iconSize = 24,
     required this.onTap,
   });
 
   final String label;
   final String iconAsset;
-  final Color backgroundColor;
   final double iconSize;
   final VoidCallback onTap;
 
@@ -697,8 +711,8 @@ class _ShareOptionButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         child: Container(
           padding: const EdgeInsets.all(19),
-          decoration: BoxDecoration(
-            color: backgroundColor,
+          decoration: const BoxDecoration(
+            color: Color(0xFFF0F8F8),
             shape: BoxShape.circle,
           ),
           child: SvgPicture.asset(
@@ -789,84 +803,6 @@ class _CopyLinkButtonState extends State<_CopyLinkButton> {
   }
 }
 
-class _HeaderActionIconPainter extends CustomPainter {
-  const _HeaderActionIconPainter(this.icon);
-
-  final _HeaderActionIcon icon;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF0A243F)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    switch (icon) {
-      case _HeaderActionIcon.back:
-        final path = Path()
-          ..moveTo(size.width * 0.62, size.height * 0.18)
-          ..lineTo(size.width * 0.28, size.height * 0.50)
-          ..lineTo(size.width * 0.62, size.height * 0.82);
-        canvas.drawPath(path, paint);
-        break;
-      case _HeaderActionIcon.favorite:
-        final path = Path()
-          ..moveTo(size.width * 0.50, size.height * 0.84)
-          ..cubicTo(
-            size.width * 0.18,
-            size.height * 0.62,
-            size.width * 0.08,
-            size.height * 0.45,
-            size.width * 0.14,
-            size.height * 0.28,
-          )
-          ..cubicTo(
-            size.width * 0.20,
-            size.height * 0.10,
-            size.width * 0.40,
-            size.height * 0.12,
-            size.width * 0.50,
-            size.height * 0.30,
-          )
-          ..cubicTo(
-            size.width * 0.60,
-            size.height * 0.12,
-            size.width * 0.80,
-            size.height * 0.10,
-            size.width * 0.86,
-            size.height * 0.28,
-          )
-          ..cubicTo(
-            size.width * 0.92,
-            size.height * 0.45,
-            size.width * 0.82,
-            size.height * 0.62,
-            size.width * 0.50,
-            size.height * 0.84,
-          );
-        canvas.drawPath(path, paint);
-        break;
-      case _HeaderActionIcon.share:
-        final left = Offset(size.width * 0.25, size.height * 0.55);
-        final topRight = Offset(size.width * 0.72, size.height * 0.26);
-        final bottomRight = Offset(size.width * 0.72, size.height * 0.76);
-        canvas.drawLine(left, topRight, paint);
-        canvas.drawLine(left, bottomRight, paint);
-        canvas.drawCircle(left, 2.1, paint);
-        canvas.drawCircle(topRight, 2.1, paint);
-        canvas.drawCircle(bottomRight, 2.1, paint);
-        break;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _HeaderActionIconPainter oldDelegate) {
-    return oldDelegate.icon != icon;
-  }
-}
-
 class ProductDetailBottomBar extends StatelessWidget {
   const ProductDetailBottomBar({
     super.key,
@@ -900,7 +836,7 @@ class ProductDetailBottomBar extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 24,
           ),
         ],

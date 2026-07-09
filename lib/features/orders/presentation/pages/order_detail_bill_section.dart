@@ -105,14 +105,12 @@ class _SavedAmountBadge extends StatelessWidget {
 class _BillRow extends StatelessWidget {
   final String label;
   final String value;
-  final String? oldValue;
   final bool bold;
   final bool dottedUnderline;
 
   const _BillRow({
     required this.label,
     required this.value,
-    this.oldValue,
     this.bold = false,
     this.dottedUnderline = false,
   });
@@ -140,20 +138,6 @@ class _BillRow extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        if (oldValue != null) ...[
-          Text(
-            oldValue!,
-            style: GoogleFonts.inter(
-              color: const Color(0xFFA2AABA),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              height: 20 / 13,
-              decoration: TextDecoration.lineThrough,
-              decorationColor: const Color(0xFFA2AABA),
-            ),
-          ),
-          const SizedBox(width: 16),
-        ],
         Text(
           value,
           style: GoogleFonts.inter(

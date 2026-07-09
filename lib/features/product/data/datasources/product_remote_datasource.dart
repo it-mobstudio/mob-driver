@@ -61,7 +61,8 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
         ...queryParameters,
         'page': page,
         'is_professional': isProfessional,
-        if (sortBy != null && sortBy.trim().isNotEmpty) 'sort_by': sortBy.trim(),
+        if (sortBy != null && sortBy.trim().isNotEmpty)
+          'sort_by': sortBy.trim(),
         if (subCategory != null && subCategory.trim().isNotEmpty)
           'sub_category': subCategory.trim(),
       },
@@ -122,7 +123,8 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
         'search': query,
         'page': page,
         'is_professional': isProfessional,
-        if (sortBy != null && sortBy.trim().isNotEmpty) 'sort_by': sortBy.trim(),
+        if (sortBy != null && sortBy.trim().isNotEmpty)
+          'sort_by': sortBy.trim(),
       },
     );
     return _toMap(response.data);

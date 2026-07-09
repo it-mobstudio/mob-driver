@@ -20,8 +20,7 @@ class RfqRemoteDatasourceImpl implements RfqRemoteDatasource {
       '/rfq/get_rfqs/',
       queryParameters: {
         'page': page,
-        if (search != null && search.trim().isNotEmpty)
-          'search': search.trim(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
     return response.data;

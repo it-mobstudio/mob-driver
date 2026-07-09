@@ -32,9 +32,15 @@ abstract interface class AuthRepository {
     String? gstin,
     String? businessName,
     String? referralCode,
+    String? fcmToken,
   });
 
   Future<(bool, String, AppFailure?)> checkReferralCode({
     required String code,
+  });
+
+  Future<(bool, AppFailure?)> updateFcmToken({
+    required String emailOrPhone,
+    required String fcmToken,
   });
 }

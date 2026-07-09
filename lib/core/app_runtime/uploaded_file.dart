@@ -34,7 +34,8 @@ class FFUploadedFile {
     final serializedData = jsonDecode(val) as Map<String, dynamic>;
     final rawBytes = serializedData['bytes'];
     final parsedBytes = rawBytes is List
-        ? Uint8List.fromList(rawBytes.whereType<num>().map((e) => e.toInt()).toList())
+        ? Uint8List.fromList(
+            rawBytes.whereType<num>().map((e) => e.toInt()).toList())
         : (rawBytes is String
             ? Uint8List.fromList(base64Decode(rawBytes))
             : Uint8List(0));

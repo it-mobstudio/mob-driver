@@ -99,8 +99,8 @@ class MagicQuoteRepositoryImpl implements MagicQuoteRepository {
         'additional_instructions': additionalInstructions,
       });
       if (body['status'] == false) {
-        final message = body['message']?.toString() ??
-            'Failed to submit quote for review.';
+        final message =
+            body['message']?.toString() ?? 'Failed to submit quote for review.';
         return (false, BusinessFailure(message));
       }
       return (true, null);
@@ -122,8 +122,8 @@ class MagicQuoteRepositoryImpl implements MagicQuoteRepository {
         'action': increase ? 'increase' : 'decrease',
       });
       if (body['status'] == false) {
-        final message = body['message']?.toString() ??
-            'Failed to update quantity.';
+        final message =
+            body['message']?.toString() ?? 'Failed to update quantity.';
         return (null, BusinessFailure(message));
       }
       return (magicQuoteUpdatedPayloadOrNull(body), null);
@@ -145,8 +145,8 @@ class MagicQuoteRepositoryImpl implements MagicQuoteRepository {
         'mob_sku': mobSku,
       });
       if (body['status'] == false) {
-        final message = body['message']?.toString() ??
-            'Failed to replace product.';
+        final message =
+            body['message']?.toString() ?? 'Failed to replace product.';
         return (null, BusinessFailure(message));
       }
       return (magicQuoteUpdatedPayloadOrNull(body), null);
@@ -164,8 +164,7 @@ class MagicQuoteRepositoryImpl implements MagicQuoteRepository {
     try {
       final body = await _datasource.deleteMagicQuoteItem({'id': itemId});
       if (body['status'] == false) {
-        final message =
-            body['message']?.toString() ?? 'Failed to remove item.';
+        final message = body['message']?.toString() ?? 'Failed to remove item.';
         return (null, BusinessFailure(message));
       }
       return (magicQuoteUpdatedPayloadOrNull(body), null);
@@ -189,8 +188,7 @@ class MagicQuoteRepositoryImpl implements MagicQuoteRepository {
         'mob_sku': mobSku,
       });
       if (body['status'] == false) {
-        final message =
-            body['message']?.toString() ?? 'Failed to add product.';
+        final message = body['message']?.toString() ?? 'Failed to add product.';
         return (null, null, BusinessFailure(message));
       }
       final payload = magicQuoteUpdatedPayloadOrNull(body);

@@ -157,8 +157,9 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   }
 
   Widget _header() {
-    if (_screen == _MagicQuoteScreen.reviewSuccess)
+    if (_screen == _MagicQuoteScreen.reviewSuccess) {
       return const SizedBox.shrink();
+    }
     final title = switch (_screen) {
       _MagicQuoteScreen.upload => 'Magic AI Quote',
       _MagicQuoteScreen.generating => 'Reading your list...',
@@ -874,8 +875,9 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
     if (data is Map) {
       final nested = Map<String, dynamic>.from(data);
       final nestedData = nested['data'];
-      if (nestedData is Map)
+      if (nestedData is Map) {
         candidates.add(Map<String, dynamic>.from(nestedData));
+      }
       candidates.add(nested);
     }
     candidates.add(flat);

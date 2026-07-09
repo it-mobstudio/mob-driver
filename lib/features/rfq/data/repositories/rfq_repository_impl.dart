@@ -112,8 +112,8 @@ class RfqRepositoryImpl implements RfqRepository {
     try {
       final body = await _datasource.createCartQuoteRequest(payload);
       if (body['status'] == false) {
-        final msg = body['message']?.toString() ??
-            'Failed to create quote request.';
+        final msg =
+            body['message']?.toString() ?? 'Failed to create quote request.';
         return (null, BusinessFailure(msg));
       }
       final data = body['data'] is Map

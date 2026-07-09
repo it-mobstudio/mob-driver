@@ -100,16 +100,13 @@ class _ProductRailSectionState extends State<ProductRailSection> {
               // render. Each BlocBuilder is an independent subscriber.
               return BlocBuilder<CartBloc, CartState>(
                 builder: (context, cartState) {
-                  final cart =
-                      cartState is CartLoaded ? cartState : null;
+                  final cart = cartState is CartLoaded ? cartState : null;
                   return ItemCard(
                     product: product,
-                    quantityResolver: cart != null
-                        ? (id) => cart.quantityFor(id)
-                        : null,
-                    isUpdatingResolver: cart != null
-                        ? (id) => cart.isUpdatingFor(id)
-                        : null,
+                    quantityResolver:
+                        cart != null ? (id) => cart.quantityFor(id) : null,
+                    isUpdatingResolver:
+                        cart != null ? (id) => cart.isUpdatingFor(id) : null,
                     onCartQuantityChanged: (p, qty) async {
                       context.read<CartBloc>().add(
                             CartQuantityUpdateRequested(

@@ -76,8 +76,7 @@ class MobCreditCard extends StatelessWidget {
     final status = resolveMobCreditStatus(account);
     return switch (status) {
       MobCreditStatus.notApplied => _ApplyCard(onTap: onApply),
-      MobCreditStatus.active =>
-        _ActiveCard(account: account, onTap: onManage),
+      MobCreditStatus.active => _ActiveCard(account: account, onTap: onManage),
       MobCreditStatus.amountDue =>
         _AmountDueCard(account: account, onTap: onManage),
       MobCreditStatus.rejected => _StatusCard(

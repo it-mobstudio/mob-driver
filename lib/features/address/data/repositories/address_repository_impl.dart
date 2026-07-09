@@ -246,12 +246,10 @@ class AddressRepositoryImpl implements AddressRepository {
 
       return (
         AddressLocationEntity(
-          latitude: location['lat'] == null
-              ? latitude
-              : _toDouble(location['lat']),
-          longitude: location['lng'] == null
-              ? longitude
-              : _toDouble(location['lng']),
+          latitude:
+              location['lat'] == null ? latitude : _toDouble(location['lat']),
+          longitude:
+              location['lng'] == null ? longitude : _toDouble(location['lng']),
           formattedAddress: formattedAddress,
           city: _component(
             components,

@@ -315,64 +315,95 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
     );
   }
 
-Widget _segmentDropdown() {
-  return PopupMenuButton<BusinessSegmentEntity>(
-    offset: const Offset(0, 58),
-    constraints: const BoxConstraints(
-      maxHeight: 260,
-      minWidth: 300,
-    ),
-    color: Colors.white,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    onSelected: (value) {
-      setState(() => _selectedSegment = value);
-    },
-    itemBuilder: (context) => _segments.map((segment) {
-      return PopupMenuItem<BusinessSegmentEntity>(
-        value: segment,
-        child: Text(
-          segment.categoryName,
-          style: AppTextFieldStyles.inputText,
-          overflow: TextOverflow.ellipsis,
+  Widget _segmentDropdown() {
+    if (_segmentsError != null) {
+      return InputDecorator(
+        decoration: appTextFieldDecoration(
+          label: 'Business segment*',
+          floatingLabelBehavior: FloatingLabelBehavior.always,
         ),
-      );
-    }).toList(),
-    child: InputDecorator(
-      decoration: appTextFieldDecoration(
-        label: 'Business segment*',
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              _segmentsLoading
-                  ? 'Loading...'
-                  : (_selectedSegment?.categoryName ??
-                      'Select business segment'),
-              style: AppTextFieldStyles.inputText,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          RotatedBox(
-            quarterTurns: 1,
-            child: SvgPicture.asset(
-              'assets/images/Arrow.svg',
-              width: 18,
-              height: 18,
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF0A243F),
-                BlendMode.srcIn,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _segmentsError!,
+                style: AppTextFieldStyles.inputText.copyWith(
+                  color: AppTextFieldColors.error,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
-        ],
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _segmentsLoading = true;
+                  _segmentsError = null;
+                });
+                context.read<CreditBloc>().add(CreditSegmentsRequested());
+              },
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+    return PopupMenuButton<BusinessSegmentEntity>(
+      offset: const Offset(0, 58),
+      constraints: const BoxConstraints(
+        maxHeight: 260,
+        minWidth: 300,
       ),
-    ),
-  );
-}
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      onSelected: (value) {
+        setState(() => _selectedSegment = value);
+      },
+      itemBuilder: (context) => _segments.map((segment) {
+        return PopupMenuItem<BusinessSegmentEntity>(
+          value: segment,
+          child: Text(
+            segment.categoryName,
+            style: AppTextFieldStyles.inputText,
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+      }).toList(),
+      child: InputDecorator(
+        decoration: appTextFieldDecoration(
+          label: 'Business segment*',
+          floatingLabelBehavior: FloatingLabelBehavior.always,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _segmentsLoading
+                    ? 'Loading...'
+                    : (_selectedSegment?.categoryName ??
+                        'Select business segment'),
+                style: AppTextFieldStyles.inputText,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            RotatedBox(
+              quarterTurns: 1,
+              child: SvgPicture.asset(
+                'assets/images/Arrow.svg',
+                width: 18,
+                height: 18,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF0A243F),
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 TextStyle _sheetTextStyle({

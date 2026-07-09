@@ -66,8 +66,8 @@ class HomeSubCategoryModel {
               map['sub_category'] ??
               '')
           .toString(),
-      imageUrl: (map['image'] ?? map['image_url'] ?? map['icon'] ?? '')
-          .toString(),
+      imageUrl:
+          (map['image'] ?? map['image_url'] ?? map['icon'] ?? '').toString(),
       index: int.tryParse(map['index']?.toString() ?? '0') ?? 0,
     );
   }

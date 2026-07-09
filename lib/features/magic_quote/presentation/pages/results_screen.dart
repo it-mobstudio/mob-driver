@@ -7,7 +7,6 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/quote_item_row.dart';
 import 'package:m_o_b_demand_side/shared/image_url.dart';
 
-
 class ResultsScreen extends StatelessWidget {
   const ResultsScreen({
     super.key,
@@ -32,7 +31,8 @@ class ResultsScreen extends StatelessWidget {
   final bool hasUploadsContext;
   final String addingProductSku;
   final num Function(Map<String, dynamic> item) quantityOf;
-  final void Function(Map<String, dynamic> item, bool increase) onQuantityChange;
+  final void Function(Map<String, dynamic> item, bool increase)
+      onQuantityChange;
   final void Function(Map<String, dynamic> item) onDeleteItem;
   final void Function(Map<String, dynamic> item) onChangeItem;
   final void Function(String quoteId) onShowAddMoreItems;
@@ -48,7 +48,8 @@ class ResultsScreen extends StatelessWidget {
     final total = moneyValueOf(quote, const ['total', 'grand_total']);
     final subtotal = moneyValueOf(quote, const ['sub_total', 'subtotal']);
     final savings = moneyValueOf(quote, const ['discount']);
-    final tax = moneyValueOf(quote, const ['sgst']) + moneyValueOf(quote, const ['cgst']);
+    final tax = moneyValueOf(quote, const ['sgst']) +
+        moneyValueOf(quote, const ['cgst']);
     final quoteId = stringValueOf(quote, const ['id', 'quote_id']);
     final quoteTitle = quoteId.isEmpty ? 'Quote' : 'Quote $quoteId';
     final rfqNumber = stringValueOf(rfqOrder, const ['rfq_id', 'id']);
@@ -86,7 +87,8 @@ class ResultsScreen extends StatelessWidget {
               onShowUploads: onShowUploadsViewer,
             ),
             const SizedBox(height: 14),
-            _heroTotalCard(total: total, savings: savings, itemCount: items.length),
+            _heroTotalCard(
+                total: total, savings: savings, itemCount: items.length),
             if (noMatchNumbers.isNotEmpty) ...[
               const SizedBox(height: 14),
               _noMatchBanner(count: noMatchNumbers.length, list: noMatchList),
@@ -101,7 +103,8 @@ class ResultsScreen extends StatelessWidget {
                 child: MagicQuoteEmptyMessage(
                   icon: Icons.search_off,
                   title: 'No matched items',
-                  text: 'Your request was created, but no product match was returned.',
+                  text:
+                      'Your request was created, but no product match was returned.',
                 ),
               )
             else
@@ -125,7 +128,8 @@ class ResultsScreen extends StatelessWidget {
               _recommendedProductsSection(recommended),
             ],
             const SizedBox(height: 18),
-            _quoteDetailsCard(subtotal: subtotal, tax: tax, savings: savings, total: total),
+            _quoteDetailsCard(
+                subtotal: subtotal, tax: tax, savings: savings, total: total),
             const SizedBox(height: 14),
             _pointsStrip(items.length * 10),
             const SizedBox(height: 14),
@@ -216,11 +220,13 @@ class ResultsScreen extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.25)),
                 ),
                 child: Text(
                   '$itemCount items',
@@ -256,13 +262,15 @@ class ResultsScreen extends StatelessWidget {
                       ),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.sell, size: 16, color: MagicQuoteColors.navy),
+                    child: const Icon(Icons.sell,
+                        size: 16, color: MagicQuoteColors.navy),
                   ),
                   const SizedBox(width: 10),
                   Text.rich(
                     TextSpan(
                       text: "You're saving ",
-                      style: GoogleFonts.inter(color: Colors.white, fontSize: 12),
+                      style:
+                          GoogleFonts.inter(color: Colors.white, fontSize: 12),
                       children: [
                         TextSpan(
                           text: formatInr(savings),
@@ -307,7 +315,9 @@ class ResultsScreen extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                count == 1 ? '1 item match not found' : '$count items match not found',
+                count == 1
+                    ? '1 item match not found'
+                    : '$count items match not found',
                 style: GoogleFonts.inter(
                   color: const Color(0xFFB3261E),
                   fontWeight: FontWeight.w800,
@@ -380,7 +390,8 @@ class ResultsScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         'Please add note and submit for review',
-                        style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 12.5),
+                        style: GoogleFonts.inter(
+                            color: MagicQuoteColors.muted, fontSize: 12.5),
                       ),
                     ],
                   ),
@@ -411,7 +422,8 @@ class ResultsScreen extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
           side: const BorderSide(color: MagicQuoteColors.border),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
@@ -427,7 +439,8 @@ class ResultsScreen extends StatelessWidget {
     final quoteSkus = items
         .map((item) => firstNonEmptyOf([
               stringValueOf(item, const ['mob_sku', 'sku']),
-              stringValueOf(mapValueOf(item, 'product'), const ['mob_sku', 'sku']),
+              stringValueOf(
+                  mapValueOf(item, 'product'), const ['mob_sku', 'sku']),
             ]))
         .where((sku) => sku.isNotEmpty)
         .toSet();
@@ -493,7 +506,8 @@ class ResultsScreen extends StatelessWidget {
                   ),
                   Text(
                     'Common items others added with this list',
-                    style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 11),
+                    style: GoogleFonts.inter(
+                        color: MagicQuoteColors.muted, fontSize: 11),
                   ),
                 ],
               ),
@@ -507,7 +521,8 @@ class ResultsScreen extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             itemCount: recommended.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, index) => _recommendationCard(recommended[index]),
+            itemBuilder: (context, index) =>
+                _recommendationCard(recommended[index]),
           ),
         ),
       ],
@@ -543,12 +558,14 @@ class ResultsScreen extends StatelessWidget {
                   width: double.infinity,
                   color: const Color(0xFFF7F9FC),
                   child: img.isEmpty
-                      ? const Icon(Icons.inventory_2_outlined, color: MagicQuoteColors.navy)
+                      ? const Icon(Icons.inventory_2_outlined,
+                          color: MagicQuoteColors.navy)
                       : Image.network(
                           img,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.inventory_2_outlined, color: MagicQuoteColors.navy),
+                          errorBuilder: (_, __, ___) => const Icon(
+                              Icons.inventory_2_outlined,
+                              color: MagicQuoteColors.navy),
                         ),
                 ),
               ),
@@ -556,14 +573,18 @@ class ResultsScreen extends StatelessWidget {
                 right: 4,
                 bottom: 4,
                 child: GestureDetector(
-                  onTap: isAdded || isAdding ? null : () => onAddRecommended(sku),
+                  onTap:
+                      isAdded || isAdding ? null : () => onAddRecommended(sku),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
                       color: isAdded ? const Color(0xFF01A685) : Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: isAdded ? const Color(0xFF01A685) : MagicQuoteColors.blue,
+                        color: isAdded
+                            ? const Color(0xFF01A685)
+                            : MagicQuoteColors.blue,
                         width: 1.5,
                       ),
                     ),
@@ -605,7 +626,8 @@ class ResultsScreen extends StatelessWidget {
                 if (unit.isNotEmpty)
                   TextSpan(
                     text: ' / $unit',
-                    style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 11),
+                    style: GoogleFonts.inter(
+                        color: MagicQuoteColors.muted, fontSize: 11),
                   ),
               ],
             ),
@@ -629,7 +651,8 @@ class ResultsScreen extends StatelessWidget {
           const SizedBox(height: 12),
           MagicQuoteSummaryRow('Subtotal', subtotal),
           MagicQuoteSummaryRow('Total tax', tax),
-          MagicQuoteSummaryRow('Savings', savings, valueColor: const Color(0xFF169B58)),
+          MagicQuoteSummaryRow('Savings', savings,
+              valueColor: const Color(0xFF169B58)),
           const Divider(height: 24),
           MagicQuoteSummaryRow('Estimated total', total, strong: true),
         ],
@@ -652,11 +675,14 @@ class ResultsScreen extends StatelessWidget {
             child: Text.rich(
               TextSpan(
                 text: 'You will earn ',
-                style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontSize: 13),
+                style: GoogleFonts.inter(
+                    color: MagicQuoteColors.navy, fontSize: 13),
                 children: [
                   TextSpan(
                     text: '$points points',
-                    style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontWeight: FontWeight.w800),
+                    style: GoogleFonts.inter(
+                        color: MagicQuoteColors.navy,
+                        fontWeight: FontWeight.w800),
                   ),
                   const TextSpan(text: ' on this purchase'),
                 ],
@@ -687,22 +713,29 @@ class ResultsScreen extends StatelessWidget {
               color: Color(0xFFE6F0FE),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.bookmark_outline, color: MagicQuoteColors.blue, size: 16),
+            child: const Icon(Icons.bookmark_outline,
+                color: MagicQuoteColors.blue, size: 16),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 12, height: 1.4),
+                style: GoogleFonts.inter(
+                    color: MagicQuoteColors.muted, fontSize: 12, height: 1.4),
                 children: [
                   TextSpan(
                     text: 'Not ready to order? ',
-                    style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(
+                        color: MagicQuoteColors.navy,
+                        fontWeight: FontWeight.w600),
                   ),
-                  const TextSpan(text: 'No worries. Find this quote anytime in '),
+                  const TextSpan(
+                      text: 'No worries. Find this quote anytime in '),
                   TextSpan(
                     text: 'My RFQs',
-                    style: GoogleFonts.inter(color: MagicQuoteColors.blue, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.inter(
+                        color: MagicQuoteColors.blue,
+                        fontWeight: FontWeight.w700),
                     recognizer: TapGestureRecognizer()
                       ..onTap = () => context.push('/rfqs'),
                   ),
@@ -755,7 +788,8 @@ class ResultsScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       steps[i],
-                      style: GoogleFonts.inter(color: MagicQuoteColors.navy, fontSize: 13),
+                      style: GoogleFonts.inter(
+                          color: MagicQuoteColors.navy, fontSize: 13),
                     ),
                   ),
                 ],
