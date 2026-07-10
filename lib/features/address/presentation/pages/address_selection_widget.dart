@@ -85,12 +85,23 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF0A243F),
               elevation: 0,
+              leading: IconButton(
+                onPressed: () => context.pop(),
+                icon: SvgPicture.asset(
+                  'assets/images/Back.svg',
+                  width: 12,
+                  height: 12,
+                ),
+              ),
               title: Text(
                 widget.title ??
                     (widget.showSearch ? 'Search location' : 'Addresses'),
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+                style: const TextStyle(
+                  color: Color(0xFF0A243F),
+                  fontSize: 15,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                  height: 1.47,
                 ),
               ),
             ),

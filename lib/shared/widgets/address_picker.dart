@@ -114,7 +114,7 @@ class AddressPickerBody extends StatelessWidget {
           else
             ...addresses.map(
               (address) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: AddressPickerCard(
                   address: address,
                   isSelected: selectedAddressId != null &&
@@ -358,7 +358,7 @@ class AddressPickerCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 120),
+       // constraints: const BoxConstraints(minHeight: 120),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
