@@ -150,6 +150,14 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                                     setState(() => _hasReview = true),
                               ),
                             ],
+                            const SizedBox(height: 20),
+                            ReferralEarnCard(
+                              onTap: () {
+                                context.push('/refer-a-friend');
+                              },
+                              backgroundSvg: 'assets/images/giftboxbg.svg',
+                              foregroundSvg: 'assets/images/Giftbox.svg',
+                            ),
                             const SizedBox(height: 32),
                           ],
                         ),
@@ -590,10 +598,11 @@ class _DeliveryAddressCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _AssetRoundIcon(
-            assetPath: 'assets/images/vehicletracking.svg',
-            size: 48,
-          ),
+        
+          // const _AssetRoundIcon(
+          //   assetPath: 'assets/images/vehicletracking.svg',
+          //   size: 48,
+          // ),
           const SizedBox(width: 12),
           SizedBox(
             width: 204,
@@ -670,8 +679,8 @@ class _TrackingItemsCard extends StatelessWidget {
                 children: [
                   const _RoundIcon(
                     background: Color(0xFFDFF8F9),
-                    icon: Icons.inventory_2_rounded,
-                    iconColor: Color(0xFFD97745),
+                      svgAsset: 'assets/images/Mobitem.svg',
+                 offset:  Offset(0, -2),
                     size: 48,
                   ),
                   const SizedBox(width: 12),
@@ -708,14 +717,11 @@ class _TrackingItemsCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             GestureDetector(
-                              onTap: () => Clipboard.setData(
-                                  ClipboardData(text: orderNumber)),
-                              child: const Icon(
-                                Icons.copy_rounded,
-                                size: 16,
-                                color: Color(0xFF8A8A8A),
-                              ),
-                            ),
+                                onTap: () => Clipboard.setData(
+                                    ClipboardData(text: orderNumber)),
+                                child: SvgPicture.asset(
+                                  'assets/images/copy.svg',
+                                )),
                           ],
                         ),
                         const SizedBox(height: 20),
@@ -837,9 +843,8 @@ class _TrackingHelpCard extends StatelessWidget {
           children: [
             const _RoundIcon(
               background: Color(0xFFDFF8F9),
-              icon: Icons.support_agent_rounded,
-              iconColor: Color(0xFF0A243F),
-              size: 48,
+               svgAsset: 'assets/images/supportagent.svg',
+              size: 40,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1359,19 +1364,33 @@ class _TrackingCard extends StatelessWidget {
 
 class _RoundIcon extends StatelessWidget {
   const _RoundIcon({
+    super.key,
     required this.background,
-    required this.icon,
-    required this.iconColor,
     required this.size,
-  });
+    this.icon,
+    this.svgAsset,
+    this.iconColor,
+    this.iconScale = 0.52,
+    this.svgAlignment = Alignment.center,
+    this.offset = Offset.zero,
+  }) : assert(
+          icon != null || svgAsset != null,
+          'Provide either icon or svgAsset.',
+        );
 
   final Color background;
-  final IconData icon;
-  final Color iconColor;
+  final IconData? icon;
+  final String? svgAsset;
+  final Color? iconColor;
   final double size;
+  final double iconScale;
+  final Alignment svgAlignment;
+  final Offset offset;
 
   @override
   Widget build(BuildContext context) {
+    final innerSize = size * iconScale;
+
     return Container(
       width: size,
       height: size,
@@ -1379,26 +1398,32 @@ class _RoundIcon extends StatelessWidget {
         color: background,
         shape: BoxShape.circle,
       ),
-      child: Icon(icon, color: iconColor, size: size * 0.58),
-    );
-  }
-}
-
-class _AssetRoundIcon extends StatelessWidget {
-  const _AssetRoundIcon({
-    required this.assetPath,
-    required this.size,
-  });
-
-  final String assetPath;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return SvgPicture.asset(
-      assetPath,
-      width: size,
-      height: size,
+      child: Center(
+        child: Transform.translate(
+          offset: offset,
+          child: SizedBox(
+            width: innerSize,
+            height: innerSize,
+            child: svgAsset != null
+                ? SvgPicture.asset(
+                    svgAsset!,
+                    fit: BoxFit.contain,
+                    alignment: svgAlignment,
+                    colorFilter: iconColor == null
+                        ? null
+                        : ColorFilter.mode(
+                            iconColor!,
+                            BlendMode.srcIn,
+                          ),
+                  )
+                : Icon(
+                    icon,
+                    color: iconColor,
+                    size: innerSize,
+                  ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1425,6 +1450,158 @@ class _ProductThumb extends StatelessWidget {
                 errorWidget: (_, __, ___) => const ProductImagePlaceholder(),
               )
             : const ProductImagePlaceholder(),
+      ),
+    );
+  }
+}
+
+class ReferralEarnCard extends StatelessWidget {
+  const ReferralEarnCard({
+    super.key,
+    required this.onTap,
+    required this.backgroundSvg,
+    required this.foregroundSvg,
+  });
+
+  final VoidCallback onTap;
+  final String backgroundSvg;
+  final String foregroundSvg;
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 343 / 160,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+
+          return Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(20),
+              child: Ink(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Color(0xFF020202),
+                      Color(0xFF372114),
+                    ],
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: width * 0.047,
+                        top: height * 0.10,
+                        right: width * 0.34,
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Refer a friend & earn ',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.44,
+                                ),
+                              ),
+                              TextSpan(
+                                text: '₹1000',
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFFFACF5B),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.44,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' each',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.44,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      Positioned(
+                        left: width * 0.047,
+                        bottom: height * 0.10,
+                        child: Container(
+                          height: 32,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                          ),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            gradient: const LinearGradient(
+                              begin: Alignment.centerRight,
+                              end: Alignment.centerLeft,
+                              colors: [
+                                Color(0xFFFBCF5C),
+                                Color(0xFFEEA830),
+                              ],
+                            ),
+                          ),
+                          child: Text(
+                            'Refer & earn',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF0A243F),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              height: 1.50,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Background SVG
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        width: width * 0.43,
+                        height: height,
+                        child: SvgPicture.asset(
+                          backgroundSvg,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.bottomRight,
+                        ),
+                      ),
+
+                      // Gift box SVG above background SVG
+                      Positioned(
+                        right: width * 0.025,
+                        bottom: height * 0.03,
+                        width: width * 0.29,
+                        height: height * 0.75,
+                        child: SvgPicture.asset(
+                          foregroundSvg,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.bottomRight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

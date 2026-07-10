@@ -198,8 +198,8 @@ InputDecoration appTextFieldDecoration({
     // constraints: const BoxConstraints(minHeight: 48),
     suffixIcon: suffixIcon,
     prefixIcon: prefixIcon,
-    suffixIconConstraints: const BoxConstraints(minHeight: 48, minWidth: 40),
-    prefixIconConstraints: const BoxConstraints(minHeight: 48, minWidth: 40),
+    suffixIconConstraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+    prefixIconConstraints: const BoxConstraints(minHeight: 48, minWidth: 48),
     border: _inputBorder(),
     enabledBorder: _inputBorder(),
     focusedBorder: _inputBorder(

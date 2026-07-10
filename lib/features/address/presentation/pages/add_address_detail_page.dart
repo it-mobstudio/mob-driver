@@ -123,6 +123,7 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
               ),
             ),
             body: SafeArea(
+              bottom: false,
               child: Column(
                 children: [
                   Expanded(
@@ -283,9 +284,17 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _tagChip('Home', Icons.home_outlined),
-              const SizedBox(width: 12),
-              _tagChip('Project', Icons.apartment_outlined),
+              _tagChip(
+                label: 'Home',
+                selectedIcon: 'assets/images/homeaddselect.svg',
+                unselectedIcon: 'assets/images/homeadd.svg',
+              ),
+              const SizedBox(width: 10),
+              _tagChip(
+                label: 'Project',
+                selectedIcon: 'assets/images/projectselect.svg',
+                unselectedIcon: 'assets/images/project.svg',
+              ),
             ],
           ),
           if (_addressTag == 'Project') ...[
@@ -305,8 +314,13 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
     );
   }
 
-  Widget _tagChip(String label, IconData icon) {
+  Widget _tagChip({
+    required String label,
+    required String selectedIcon,
+    required String unselectedIcon,
+  }) {
     final selected = _addressTag == label;
+
     return InkWell(
       onTap: () => setState(() => _addressTag = label),
       borderRadius: BorderRadius.circular(10),
@@ -317,12 +331,19 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
         decoration: BoxDecoration(
           color: selected ? _navy : Colors.white,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: selected ? _navy : _border),
+          border: Border.all(
+            color: selected ? _navy : _border,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: selected ? Colors.white : _navy),
+            SvgPicture.asset(
+              selected ? selectedIcon : unselectedIcon,
+              width: 20,
+              height: 20,
+              fit: BoxFit.contain,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
@@ -366,7 +387,15 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(10),
             ],
-            suffixIcon: const Icon(Icons.contact_phone_outlined, size: 19),
+            suffixIcon: Padding(
+              padding: const EdgeInsets.all(14),
+              child: SvgPicture.asset(
+                'assets/images/receiverinumicon.svg',
+                width: 19,
+                height: 19,
+                fit: BoxFit.contain,
+              ),
+            ),
             validator: (value) => value == null || value.trim().length != 10
                 ? 'Enter a valid 10-digit number'
                 : null,
