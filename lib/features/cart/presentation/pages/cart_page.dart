@@ -65,57 +65,91 @@ class _CartPageState extends State<CartPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        child: BlocBuilder<CartBloc, CartState>(
-          builder: (context, state) {
-            return switch (state) {
-              CartInitial() || CartLoading() => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              CartError(:final message) => ErrorStateView(
-                  title: 'Unable to load cart',
-                  message: message,
-                  onRetry: () =>
-                      context.read<CartBloc>().add(CartLoadRequested()),
-                ),
-              CartRequiresLogin() => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.lock_outline, size: 40),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Login to access your cart',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
+        // actionError/successMessage on CartLoaded were already wired up in
+        // the bloc (quantity update / remove failures, "Added to cart") but
+        // nothing ever displayed them — a failed update just silently
+        // reverted with no feedback. This surfaces them once each via a
+        // snackbar; errors are then cleared so they don't reappear on the
+        // next unrelated rebuild.
+        child: BlocListener<CartBloc, CartState>(
+          listenWhen: (previous, current) {
+            if (current is! CartLoaded) return false;
+            final prevError =
+                previous is CartLoaded ? previous.actionError : null;
+            final prevSuccess =
+                previous is CartLoaded ? previous.successMessage : null;
+            return current.actionError != prevError ||
+                current.successMessage != prevSuccess;
+          },
+          listener: (context, state) {
+            if (state is! CartLoaded) return;
+            final messenger = ScaffoldMessenger.of(context);
+            if (state.actionError != null) {
+              messenger
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(content: Text(state.actionError!)));
+              context.read<CartBloc>().add(CartActionErrorCleared());
+            } else if (state.successMessage != null) {
+              messenger
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(content: Text(state.successMessage!)),
+                );
+            }
+          },
+          child: BlocBuilder<CartBloc, CartState>(
+            builder: (context, state) {
+              return switch (state) {
+                CartInitial() || CartLoading() => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                CartError(:final message) => ErrorStateView(
+                    title: 'Unable to load cart',
+                    message: message,
+                    onRetry: () =>
+                        context.read<CartBloc>().add(CartLoadRequested()),
+                  ),
+                CartRequiresLogin() => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.lock_outline, size: 40),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Login to access your cart',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: () =>
-                              context.go(LoginpageWidget.routePath),
-                          child: const Text('Go to Login'),
-                        ),
-                      ],
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: () =>
+                                context.go(LoginpageWidget.routePath),
+                            child: const Text('Go to Login'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              CartLoaded(:final summary, :final updatingItemKey) => summary
-                      .isEmpty
-                  ? EmptyCartBody(
-                      topBar: const CartTopBar(),
-                      shippingTile: ShippingTile(
-                        title: _deliveryName(summary),
-                        subtitle: _deliveryDetails(summary),
-                        hasAddress: _hasDeliveryAddress(summary),
-                        onAddressAction: () => _showAddressBottomSheet(summary),
-                      ),
-                    )
-                  : _buildCartWithItems(context, summary, updatingItemKey),
-            };
-          },
+                CartLoaded(:final summary, :final updatingItemKey) =>
+                  summary.isEmpty
+                      ? EmptyCartBody(
+                          topBar: const CartTopBar(),
+                          shippingTile: ShippingTile(
+                            title: _deliveryName(summary),
+                            subtitle: _deliveryDetails(summary),
+                            hasAddress: _hasDeliveryAddress(summary),
+                            onAddressAction: () =>
+                                _showAddressBottomSheet(summary),
+                          ),
+                        )
+                      : _buildCartWithItems(context, summary, updatingItemKey),
+              };
+            },
+          ),
         ),
       ),
     );

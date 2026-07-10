@@ -9,6 +9,7 @@ import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.d
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
 class MobstarPointsPage extends StatelessWidget {
@@ -38,6 +39,10 @@ class _MobstarPointsView extends StatelessWidget {
     final mobstar = context.select<ProfileBloc, MobstarEntity>((bloc) {
       final state = bloc.state;
       return state is MobstarLoaded ? state.mobstar : MobstarEntity.empty;
+    });
+    final errorMessage = context.select<ProfileBloc, String?>((bloc) {
+      final state = bloc.state;
+      return state is MobstarError ? state.message : null;
     });
     final points = mobstar.points;
     final valueText = mobstar.actualMoney % 1 == 0
@@ -119,23 +124,30 @@ class _MobstarPointsView extends StatelessWidget {
                   topRight: Radius.circular(20),
                 ),
               ),
-              child: transactions.isEmpty
-                  ? const _EmptyTransactionsScrollView()
-                  : ListView.separated(
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        16,
-                        16,
-                        40 + MediaQuery.paddingOf(context).bottom,
-                      ),
-                      itemCount: transactions.length,
-                      separatorBuilder: (context, index) =>
-                          const _TransactionDivider(),
-                      itemBuilder: (context, index) => _TransactionRow(
-                        transaction: transactions[index],
-                      ),
-                    ),
+              child: errorMessage != null
+                  ? ErrorStateView(
+                      message: errorMessage,
+                      onRetry: () => context
+                          .read<ProfileBloc>()
+                          .add(MobstarLoadRequested()),
+                    )
+                  : transactions.isEmpty
+                      ? const _EmptyTransactionsScrollView()
+                      : ListView.separated(
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            16,
+                            16,
+                            40 + MediaQuery.paddingOf(context).bottom,
+                          ),
+                          itemCount: transactions.length,
+                          separatorBuilder: (context, index) =>
+                              const _TransactionDivider(),
+                          itemBuilder: (context, index) => _TransactionRow(
+                            transaction: transactions[index],
+                          ),
+                        ),
             ),
           ),
         ],

@@ -470,6 +470,11 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
                                         products: products,
                                         subCategories: const [],
                                         crossAxisCount: 3,
+                                        // Row 2, 3rd column — fixed so the
+                                        // "can't find it?" quote card stays
+                                        // reliably visible instead of
+                                        // trailing after every result.
+                                        requestCardIndex: 5,
                                         brandOptions:
                                             _filterOptionLabels('brand'),
                                         productTypeOptions:

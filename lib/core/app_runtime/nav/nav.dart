@@ -402,6 +402,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: AddAddressDetailPage.routeName,
         path: AddAddressDetailPage.routePath,
         parentNavigatorKey: appNavigatorKey,
+        // Every in-app caller supplies `extra`, but this route is also a
+        // plausible deep-link/push-notification target (see
+        // PushNotificationService, which pushes routes straight from a
+        // backend payload with no `extra` at all) — fall back to the
+        // address picker instead of crashing on the cast below.
+        redirect: (context, state) => state.extra is AddressEntity
+            ? null
+            : AddressSelectionWidget.routePath,
         builder: (context, state) {
           final extra = state.extra as AddressEntity;
           // A non-empty id means this is an existing saved address being
@@ -418,6 +426,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: ConfirmDeliveryLocationPage.routeName,
         path: ConfirmDeliveryLocationPage.routePath,
         parentNavigatorKey: appNavigatorKey,
+        // Same fallback as above — this route also expects `extra` that a
+        // push-notification deep link would never supply.
+        redirect: (context, state) => state.extra is AddressLocationEntity
+            ? null
+            : AddressSelectionWidget.routePath,
         builder: (context, state) => ConfirmDeliveryLocationPage(
           initialLocation: state.extra as AddressLocationEntity,
         ),

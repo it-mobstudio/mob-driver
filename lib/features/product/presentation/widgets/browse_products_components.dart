@@ -203,6 +203,7 @@ class BrowseProductFeed extends StatelessWidget {
     required this.onProductTypeTap,
     required this.onRequestTap,
     this.crossAxisCount = 2,
+    this.requestCardIndex,
   });
 
   final ScrollController scrollController;
@@ -214,6 +215,11 @@ class BrowseProductFeed extends StatelessWidget {
   final String category;
   final String categorySlug;
   final int crossAxisCount;
+  // Flat grid-cell position for the "Can't find the brand/product?" quote
+  // card. Defaults to right after the last real result (see below); pass a
+  // fixed value to pin it at a specific cell instead (e.g. brand search
+  // results pin it at row 2 regardless of how many products load).
+  final int? requestCardIndex;
   final bool hasMore;
   final bool isLoading;
   final bool loadMoreFailed;
@@ -231,8 +237,12 @@ class BrowseProductFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final tileCount = products.length + 1;
     final rowCount = (tileCount / crossAxisCount).ceil();
-    // Last slot in the grid — after every real result, not interrupting them.
-    final requestCardIndex = products.length;
+    // Defaults to the last slot in the grid — after every real result, not
+    // interrupting them. A fixed index is clamped so it never sits past the
+    // last loaded product (which would otherwise leave a gap once more
+    // results actually load).
+    final requestCardIndex =
+        (this.requestCardIndex ?? products.length).clamp(0, products.length);
     final productTypeLabels = _productTypeLabels();
     final brands = brandOptions
         .where((option) => option.trim().isNotEmpty)

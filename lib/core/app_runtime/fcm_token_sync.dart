@@ -53,7 +53,7 @@ class FcmTokenSync {
   }
 
   Future<void> _sync(String token) async {
-    final emailOrPhone = _currentIdentifier();
+    final emailOrPhone = AuthSession.instance.emailOrPhone;
     if (emailOrPhone == null) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -67,23 +67,5 @@ class FcmTokenSync {
     if (success) {
       await prefs.setString(_prefsKey, marker);
     }
-  }
-
-  String? _currentIdentifier() {
-    final user = AuthSession.instance.userDetails;
-    if (user == null) return null;
-    for (final key in const [
-      'email_or_phone',
-      'phone_number',
-      'phone',
-      'mobile',
-      'email',
-    ]) {
-      final value = user[key];
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString().trim();
-      }
-    }
-    return null;
   }
 }

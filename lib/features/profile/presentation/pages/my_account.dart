@@ -26,12 +26,13 @@ import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_blo
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
-import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 import 'package:m_o_b_demand_side/shared/mob_credit.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
+import 'package:m_o_b_demand_side/shared/scaffold_with_nav_bar.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 
 class MyAccountWidget extends StatefulWidget {
@@ -197,15 +198,18 @@ class _ProfileBody extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       _ReferralCard(
-                        onTap: () => context.push(ReferralPage.routePath),
+                        onTap: () =>
+                            context.push(ReferralHistoryPage.routePath),
                       ),
-                      if (updateAvailable) ...[
-                        const SizedBox(height: 16),
-                        _UpdateAvailableCard(
-                          onTap: () =>
-                              _showUpdateAvailable(context, versionInfo),
-                        ),
-                      ],
+                      const SizedBox(height: 16),
+                      // Always visible — "App update available" opens the
+                      // update dialog; once there's nothing to update it
+                      // just shows the current app version instead, same as
+                      // Blinkit's account menu.
+                      _AppUpdateCard(
+                        updateAvailable: updateAvailable,
+                        onTap: () => _showUpdateAvailable(context, versionInfo),
+                      ),
                       const SizedBox(height: 16),
                       _MenuCard(
                         items: [
@@ -307,9 +311,17 @@ class _ProfileBody extends StatelessWidget {
                       // drive navBarVisible), so it stays permanently
                       // docked over the Scaffold's extendBody content —
                       // without this the version footer renders half
-                      // hidden underneath it.
+                      // hidden underneath it. But this page is also reached
+                      // via a standalone push (e.g. the Home avatar tap),
+                      // outside ScaffoldWithNavBar entirely — reserving the
+                      // nav bar's height there just leaves a blank gap, so
+                      // only add it when that ancestor is actually present.
                       SizedBox(
-                        height: kBottomNavBarHeight +
+                        height: (context.findAncestorWidgetOfExactType<
+                                        ScaffoldWithNavBar>() !=
+                                    null
+                                ? kBottomNavBarHeight
+                                : 0) +
                             MediaQuery.paddingOf(context).bottom,
                       ),
                     ],
@@ -826,9 +838,16 @@ class _ReferralCard extends StatelessWidget {
   }
 }
 
-class _UpdateAvailableCard extends StatelessWidget {
-  const _UpdateAvailableCard({required this.onTap});
+// Always visible — "App update available" opens the update dialog; once
+// there's nothing to update it just shows the current app version instead,
+// same as Blinkit's account menu, rather than disappearing entirely.
+class _AppUpdateCard extends StatelessWidget {
+  const _AppUpdateCard({
+    required this.updateAvailable,
+    required this.onTap,
+  });
 
+  final bool updateAvailable;
   final VoidCallback onTap;
 
   @override
@@ -838,7 +857,7 @@ class _UpdateAvailableCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
+        onTap: updateAvailable ? onTap : null,
         child: SizedBox(
           height: 58,
           child: Padding(
@@ -847,13 +866,32 @@ class _UpdateAvailableCard extends StatelessWidget {
               children: [
                 SvgPicture.asset(
                   'assets/images/updateavailable.svg',
-                  width: 24,
-                  height: 24,
+                  width: 32,
+                  height: 32,
                 ),
                 const SizedBox(width: 16),
-                Text('App update available', style: _labelStyle),
+                Text(
+                  updateAvailable ? 'App update available' : 'App update',
+                  style: _labelStyle,
+                ),
                 const Spacer(),
-                const _Chevron(),
+                if (!updateAvailable)
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (context, snapshot) {
+                      final version = snapshot.data?.version;
+                      return Text(
+                        version == null ? '' : 'v$version',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF9FA4AA),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      );
+                    },
+                  )
+                else
+                  const _Chevron(),
               ],
             ),
           ),

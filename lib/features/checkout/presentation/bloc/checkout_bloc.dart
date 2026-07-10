@@ -142,6 +142,14 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
 
   final CheckoutRepository _repository;
 
+  // flutter_bloc processes events of the same type concurrently by default,
+  // and the UI only disables the "Place order" button once CheckoutLoading
+  // has actually rebuilt the widget — a rapid double-tap can fire two
+  // CheckoutOrderPlaceRequested events before that happens, which would
+  // otherwise place the order twice. This flag makes the handler a no-op for
+  // any event that arrives while one is already in flight.
+  bool _isPlacingOrder = false;
+
   Future<void> _onUpdateAddress(
     CheckoutAddressUpdateRequested event,
     Emitter<CheckoutState> emit,
@@ -172,27 +180,35 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     CheckoutOrderPlaceRequested event,
     Emitter<CheckoutState> emit,
   ) async {
-    emit(CheckoutLoading());
-    final (order, failure) = await _repository.placeOrder(event.payload);
-    if (failure != null) {
-      AppHaptics.error();
-      emit(CheckoutError(failure.message));
-      return;
-    }
+    if (_isPlacingOrder) return;
+    _isPlacingOrder = true;
+    try {
+      emit(CheckoutLoading());
+      final (order, failure) = await _repository.placeOrder(event.payload);
+      if (failure != null) {
+        AppHaptics.error();
+        emit(CheckoutError(failure.message));
+        return;
+      }
 
-    // Order is already placed at this point — a failure fetching the richer
-    // suborder details below must not surface as a checkout error. Fall back
-    // to the lighter confirmation entity from place_direct_order instead.
-    final placedOrder = order!;
-    if (placedOrder.orderId.isEmpty) {
-      emit(CheckoutOrderPlaced(placedOrder));
-      return;
+      // Order is already placed at this point — a failure fetching the
+      // richer suborder details below must not surface as a checkout error.
+      // Fall back to the lighter confirmation entity from
+      // place_direct_order instead.
+      final placedOrder = order!;
+      if (placedOrder.orderId.isEmpty) {
+        emit(CheckoutOrderPlaced(placedOrder));
+        return;
+      }
+      final (detailedOrder, detailFailure) =
+          await _repository.getSuborderDetails(
+        platformOrderId: placedOrder.orderId,
+      );
+      emit(CheckoutOrderPlaced(
+          detailFailure != null ? placedOrder : detailedOrder!));
+    } finally {
+      _isPlacingOrder = false;
     }
-    final (detailedOrder, detailFailure) = await _repository.getSuborderDetails(
-      platformOrderId: placedOrder.orderId,
-    );
-    emit(CheckoutOrderPlaced(
-        detailFailure != null ? placedOrder : detailedOrder!));
   }
 
   Future<void> _onCreateRazorpayOrder(

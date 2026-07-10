@@ -59,6 +59,28 @@ class AuthSession extends ChangeNotifier {
     return null;
   }
 
+  /// The identifier several backend endpoints require as `email_or_phone`
+  /// (login/OTP, update_user, FCM token sync) — whichever of the login
+  /// credential or a phone/email fallback is actually present in
+  /// user_details.
+  String? get emailOrPhone {
+    final details = _userDetails;
+    if (details == null) return null;
+    for (final key in const [
+      'email_or_phone',
+      'phone_number',
+      'phone',
+      'mobile',
+      'email',
+    ]) {
+      final value = details[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return null;
+  }
+
   Future<bool> get isProFirstTime async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_isProFirstTimeKey) ?? true;

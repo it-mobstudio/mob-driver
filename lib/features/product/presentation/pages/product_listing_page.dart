@@ -680,6 +680,10 @@ class _ProductListingPageState extends State<ProductListingPage> {
         scrollController: _scrollController,
         products: visibleProducts,
         subCategories: _subCategories,
+        // Row 2, 2nd column (this page's default crossAxisCount is 2) —
+        // fixed so the "can't find it?" quote card stays reliably visible
+        // instead of trailing after every result.
+        requestCardIndex: 3,
         brandOptions: _filterOptionLabels('brand'),
         productTypeOptions: _filterOptionLabelsForKeys(const ['brand_segment']),
         selectedProductTypeOptions: _selectedValuesForKeys(

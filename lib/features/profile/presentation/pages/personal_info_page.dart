@@ -1,7 +1,13 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
@@ -38,12 +44,33 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
   bool _initialized = false;
   bool _submitting = false;
 
+  // Set only when the user picks a new photo this session — kept as bytes
+  // (rather than a File/path) so it previews the same way on web and mobile,
+  // and so we can tell "no change" apart from "picked, then re-picked the
+  // same file" when deciding whether to send profile_picture at all.
+  Uint8List? _pickedImageBytes;
+  String? _pickedImageName;
+
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (!mounted || picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted || bytes.isEmpty) return;
+    setState(() {
+      _pickedImageBytes = bytes;
+      _pickedImageName = picked.name;
+    });
   }
 
   @override
@@ -58,6 +85,11 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
             _initialized = true;
           } else if (_submitting) {
             _submitting = false;
+            // The freshly-saved profile_picture URL (if any) now lives in
+            // AuthSession — drop the local preview so the avatar switches
+            // over to the authoritative server copy.
+            _pickedImageBytes = null;
+            _pickedImageName = null;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Profile updated successfully')),
             );
@@ -113,14 +145,13 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
                       child: Column(
                         children: [
                           _ProfileAvatar(
-                            onEdit: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text('Profile image upload coming soon'),
-                                ),
-                              );
-                            },
+                            imageUrl: AppConfig.resolveMediaUrl(
+                              AuthSession
+                                  .instance.userDetails?['profile_picture']
+                                  ?.toString(),
+                            ),
+                            pickedImageBytes: _pickedImageBytes,
+                            onEdit: _pickImage,
                           ),
                           const SizedBox(height: 29),
                           _ProfileField(
@@ -205,12 +236,24 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
 
   void _updateProfile() {
     final email = _emailController.text.trim();
+    final emailOrPhone = AuthSession.instance.emailOrPhone;
+    final pickedBytes = _pickedImageBytes;
 
     setState(() => _submitting = true);
     context.read<ProfileBloc>().add(
           ProfileUpdateRequested({
+            // update_user requires this on every call, independent of what
+            // else is being changed.
+            if (emailOrPhone != null) 'email_or_phone': emailOrPhone,
             'full_name': _nameController.text.trim(),
             if (email.isNotEmpty) 'email': email,
+            // Only sent when the user actually picked a new photo this
+            // session — omitted entirely otherwise, never re-sent as-is.
+            if (pickedBytes != null)
+              'profile_picture': MultipartFile.fromBytes(
+                pickedBytes,
+                filename: _pickedImageName ?? 'profile-picture.jpg',
+              ),
           }),
         );
   }
@@ -218,9 +261,13 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
 
 class _ProfileAvatar extends StatelessWidget {
   const _ProfileAvatar({
+    required this.imageUrl,
+    required this.pickedImageBytes,
     required this.onEdit,
   });
 
+  final String imageUrl;
+  final Uint8List? pickedImageBytes;
   final VoidCallback onEdit;
 
   @override
@@ -238,14 +285,7 @@ class _ProfileAvatar extends StatelessWidget {
               shape: BoxShape.circle,
               color: Color(0xFFF0F0F0),
             ),
-            child: Center(
-              child: SvgPicture.asset(
-                'assets/images/grayprofile.svg',
-                width: 48,
-                height: 48,
-                fit: BoxFit.contain,
-              ),
-            ),
+            child: ClipOval(child: _image()),
           ),
           Positioned(
             right: -1,
@@ -279,54 +319,31 @@ class _ProfileAvatar extends StatelessWidget {
     );
   }
 
-// class _ProfileAvatar extends StatelessWidget {
-//   const _ProfileAvatar({required this.onEdit});
+  Widget _fallback() {
+    return Center(
+      child: SvgPicture.asset(
+        'assets/images/grayprofile.svg',
+        width: 48,
+        height: 48,
+        fit: BoxFit.contain,
+      ),
+    );
+  }
 
-//   final VoidCallback onEdit;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return SizedBox(
-//       width: 84,
-//       height: 84,
-//       child: Stack(
-//         clipBehavior: Clip.none,
-//         children: [
-//           const CircleAvatar(
-//             radius: 41,
-//             backgroundColor: Color(0xFFF0F0F0),
-//             child: Icon(
-//               Icons.person,
-//               color: Color(0xFF969696),
-//               size: 55,
-//             ),
-//           ),
-//           Positioned(
-//             right: -1,
-//             bottom: 1,
-//             child: InkWell(
-//               onTap: onEdit,
-//               customBorder: const CircleBorder(),
-//               child: Container(
-//                 width: 26,
-//                 height: 26,
-//                 decoration: BoxDecoration(
-//                   color: Colors.white,
-//                   shape: BoxShape.circle,
-//                   border: Border.all(color: const Color(0xFFCBD3DE)),
-//                 ),
-//                 child: const Icon(
-//                   Icons.edit,
-//                   size: 15,
-//                   color: Color(0xFF0A243F),
-//                 ),
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
+  Widget _image() {
+    final bytes = pickedImageBytes;
+    if (bytes != null) {
+      return Image.memory(bytes, width: 104, height: 104, fit: BoxFit.cover);
+    }
+    if (imageUrl.isEmpty) return _fallback();
+    return Image.network(
+      imageUrl,
+      width: 104,
+      height: 104,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _fallback(),
+    );
+  }
 }
 
 class _ProfileField extends StatelessWidget {

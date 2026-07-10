@@ -67,6 +67,27 @@ class ProfileRepositoryImpl implements ProfileRepository {
         final msg = body['message']?.toString() ?? 'Update failed.';
         return (false, BusinessFailure(msg));
       }
+
+      // update_user is the same endpoint that completes registration, which
+      // returns the refreshed user object under `data`/`user`. Persist it
+      // (merged over what's already cached, since a response may only
+      // include the fields that changed) so the new name/email/profile
+      // picture show immediately instead of only after a fresh login.
+      final envelope = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : body;
+      final updatedUser = envelope['user'] is Map
+          ? Map<String, dynamic>.from(envelope['user'] as Map)
+          : envelope['data'] is Map
+              ? Map<String, dynamic>.from(envelope['data'] as Map)
+              : envelope;
+      if (updatedUser.isNotEmpty) {
+        await AuthSession.instance.saveUserDetails({
+          ...?AuthSession.instance.userDetails,
+          ...updatedUser,
+        });
+      }
+
       return (true, null);
     } on DioException catch (e) {
       return (false, e.toAppFailure());

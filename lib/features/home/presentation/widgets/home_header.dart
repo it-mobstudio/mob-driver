@@ -232,21 +232,9 @@ class _HomeHeaderState extends State<HomeHeader> {
   }
 
   String _profilePictureUrl() {
-    final raw =
-        AuthSession.instance.userDetails?['profile_picture']?.toString().trim();
-    if (raw == null || raw.isEmpty || raw == 'null') return '';
-
-    final uri = Uri.tryParse(raw);
-    if (uri != null && uri.hasScheme) return raw;
-    if (raw.startsWith('//')) {
-      final scheme = Uri.parse(AppConfig.apiBaseUrl).scheme;
-      return '$scheme:$raw';
-    }
-    if (raw.startsWith('/')) {
-      final apiUri = Uri.parse(AppConfig.apiBaseUrl);
-      return '${apiUri.scheme}://${apiUri.authority}$raw';
-    }
-    return Uri.parse(AppConfig.apiBaseUrl).resolve(raw).toString();
+    return AppConfig.resolveMediaUrl(
+      AuthSession.instance.userDetails?['profile_picture']?.toString(),
+    );
   }
 
   Future<void> _selectAddress() async {

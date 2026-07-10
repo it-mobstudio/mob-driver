@@ -1,9 +1,9 @@
 // lib/shared/pull_to_refresh.dart
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 
 class PullToRefresh extends StatefulWidget {
@@ -20,9 +20,7 @@ class PullToRefresh extends StatefulWidget {
   State<PullToRefresh> createState() => _PullToRefreshState();
 }
 
-class _PullToRefreshState extends State<PullToRefresh>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _spinController;
+class _PullToRefreshState extends State<PullToRefresh> {
   final AudioPlayer _soundPlayer = AudioPlayer();
   bool _soundReady = false;
 
@@ -36,10 +34,6 @@ class _PullToRefreshState extends State<PullToRefresh>
   @override
   void initState() {
     super.initState();
-    _spinController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    );
     _preloadSound();
   }
 
@@ -99,18 +93,15 @@ class _PullToRefreshState extends State<PullToRefresh>
       unawaited(_soundPlayer.play());
     }
     setState(() => _refreshing = true);
-    _spinController.repeat();
     try {
       await widget.onRefresh();
     } finally {
-      _spinController.stop();
       if (mounted) setState(() => _refreshing = false);
     }
   }
 
   @override
   void dispose() {
-    _spinController.dispose();
     _soundPlayer.dispose();
     super.dispose();
   }
@@ -136,94 +127,25 @@ class _PullToRefreshState extends State<PullToRefresh>
           ),
         ),
         if (_refreshing)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: _RefreshSpinner(animation: _spinController),
+          const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: _RefreshSpinner(),
           ),
       ],
     );
   }
 }
 
-/// A rotating gradient-tail arc on a light track — visually matches the
-/// brand blue used across buttons/CTAs, and reads as an active loading
-/// state at a glance rather than a static dot pattern.
+/// Team-provided Lottie loader shown while a pull-to-refresh is in flight.
 class _RefreshSpinner extends StatelessWidget {
-  const _RefreshSpinner({required this.animation});
-
-  final Animation<double> animation;
+  const _RefreshSpinner();
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 3,
-      shape: const CircleBorder(),
-      color: Colors.white,
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: Padding(
-          padding: const EdgeInsets.all(11),
-          child: AnimatedBuilder(
-            animation: animation,
-            builder: (context, _) {
-              return CustomPaint(
-                painter: _ArcSpinnerPainter(progress: animation.value),
-              );
-            },
-          ),
-        ),
-      ),
+    return Lottie.asset(
+      'assets/lottiejson/Spinner_pull.json',
+      repeat: true,
+      animate: true,
     );
   }
-}
-
-class _ArcSpinnerPainter extends CustomPainter {
-  _ArcSpinnerPainter({required this.progress});
-
-  final double progress;
-
-  static const _track = Color(0xFFE3ECFB);
-  static const _brand = Color(0xFF0360E5);
-  static const _sweep = 4.6; // ~264°, leaves a visible gap for a tail
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.width / 2;
-    final rect = Rect.fromCircle(center: center, radius: radius);
-    final startAngle = progress * 2 * pi;
-
-    canvas.drawArc(
-      rect,
-      0,
-      2 * pi,
-      false,
-      Paint()
-        ..color = _track
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
-    );
-
-    canvas.drawArc(
-      rect,
-      startAngle,
-      _sweep,
-      false,
-      Paint()
-        ..shader = SweepGradient(
-          startAngle: 0,
-          endAngle: _sweep,
-          colors: const [Color(0x000360E5), _brand],
-          transform: GradientRotation(startAngle),
-        ).createShader(rect)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _ArcSpinnerPainter oldDelegate) =>
-      oldDelegate.progress != progress;
 }
