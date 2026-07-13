@@ -1,11 +1,32 @@
 import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// `getToken()` throws `apns-token-not-set` if called before iOS finishes
+/// delivering the APNs token — which happens asynchronously right after
+/// permission is requested, so a call right at app startup routinely loses
+/// this race. Android/web have no such handshake, so only iOS needs to wait.
+/// Polls briefly rather than failing outright, since the token typically
+/// shows up within a second or two of requesting notification permission.
+Future<String?> resolveFcmToken() async {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+    var apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+    var attempts = 0;
+    while (apnsToken == null && attempts < 10) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+      attempts++;
+    }
+    if (apnsToken == null) return null;
+  }
+  return FirebaseMessaging.instance.getToken();
+}
 
 /// Keeps the backend's `fcm_token` for the signed-in user in sync with the
 /// device's current Firebase token — without spamming `update_user` on
@@ -41,10 +62,9 @@ class FcmTokenSync {
     if (!AuthSession.instance.isAuthenticated) return;
     try {
       // Permission is requested by PushNotificationService — getToken()
-      // still resolves without it on Android, and on iOS it resolves as
-      // soon as any permission (including "not determined") has been
-      // asked, which bootstrap already triggers before this runs.
-      final token = await FirebaseMessaging.instance.getToken();
+      // still resolves without it on Android. On iOS it additionally needs
+      // the APNs token, which [resolveFcmToken] waits for.
+      final token = await resolveFcmToken();
       if (token == null || token.trim().isEmpty) return;
       await _sync(token.trim());
     } catch (_) {

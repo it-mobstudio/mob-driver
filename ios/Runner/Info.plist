@@ -55,8 +55,6 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>FlutterDeepLinkingEnabled</key>
 	<true/>
-	<key>GMSApiKey</key>
-	<string>$(GOOGLE_MAPS_API_KEY)</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>upi</string>
@@ -83,8 +81,6 @@
     <string>We use your location to detect your delivery address.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs the microphone for speech recognition.</string>
-	<key>GMSApiKey</key>
-    <string>...</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

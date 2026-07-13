@@ -1,10 +1,10 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart'
     show kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'package:m_o_b_demand_side/core/app_runtime/fcm_token_sync.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
@@ -40,7 +40,7 @@ class _DevInfoPageState extends State<DevInfoPage> {
     if (kIsWeb) {
       _fcmTokenLoaded = true;
     } else {
-      FirebaseMessaging.instance.getToken().then((token) {
+      resolveFcmToken().then((token) {
         if (!mounted) return;
         setState(() {
           _fcmToken = token;
