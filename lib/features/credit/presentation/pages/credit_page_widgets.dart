@@ -588,6 +588,16 @@ class CreditIndiaCard extends StatelessWidget {
                 ),
                 SizedBox(height: 6),
                 Text(
+                  'Use mobCREDIT across India',
+                  style: TextStyle(
+                    color: Color(0xFF0A243F),
+                    fontSize: 17,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    height: 1.41,
+                  ),
+                ),
+                Text(
                   'With any registered sellers',
                   style: TextStyle(
                     color: Color(0xFF053961),

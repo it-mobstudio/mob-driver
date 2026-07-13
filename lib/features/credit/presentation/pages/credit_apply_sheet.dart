@@ -37,15 +37,20 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
   final _businessName = TextEditingController();
   final _phone = TextEditingController();
   final _gst = TextEditingController();
+  final _businessNameFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  final _gstFocus = FocusNode();
 
   List<BusinessSegmentEntity> _segments = const [];
   bool _segmentsLoading = true;
-  String? _segmentsError;
   BusinessSegmentEntity? _selectedSegment;
   bool _submitting = false;
 
   @override
   void dispose() {
+    _businessNameFocus.dispose();
+    _phoneFocus.dispose();
+    _gstFocus.dispose();
     _businessName.dispose();
     _phone.dispose();
     _gst.dispose();
@@ -53,6 +58,7 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
   }
 
   void _submit(BuildContext blocContext) {
+    FocusScope.of(context).unfocus();
     if (_selectedSegment == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a business segment')),
@@ -91,17 +97,15 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
           case CreditSegmentsLoading():
             setState(() {
               _segmentsLoading = true;
-              _segmentsError = null;
             });
           case CreditSegmentsLoaded(segments: final segments):
             setState(() {
               _segmentsLoading = false;
               _segments = segments;
             });
-          case CreditSegmentsError(message: final message):
+          case CreditSegmentsError():
             setState(() {
               _segmentsLoading = false;
-              _segmentsError = message;
             });
           case CreditApplySubmitting():
             setState(() => _submitting = true);
@@ -178,11 +182,14 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                       const SizedBox(height: 32),
                                       AppTextField(
                                         controller: _businessName,
+                                        focusNode: _businessNameFocus,
                                         label: 'Business name*',
                                         showClearButton: false,
                                         floatingLabelBehavior:
                                             FloatingLabelBehavior.always,
                                         textInputAction: TextInputAction.next,
+                                        onFieldSubmitted: (_) =>
+                                            _phoneFocus.requestFocus(),
                                         validator: (value) => (value == null ||
                                                 value.trim().isEmpty)
                                             ? 'Business name is required'
@@ -191,9 +198,12 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                       const SizedBox(height: 20),
                                       AppTextField(
                                         controller: _phone,
+                                        focusNode: _phoneFocus,
                                         label: 'Business mobile (for OTP)*',
                                         keyboardType: TextInputType.phone,
                                         textInputAction: TextInputAction.next,
+                                        onFieldSubmitted: (_) =>
+                                            _gstFocus.requestFocus(),
                                         showClearButton: false,
                                         floatingLabelBehavior:
                                             FloatingLabelBehavior.always,
@@ -216,7 +226,10 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                       AppTextField(
                                         controller: _gst,
                                         label: 'GSTIN*',
-                                        textInputAction: TextInputAction.next,
+                                        focusNode: _gstFocus,
+                                        textInputAction: TextInputAction.done,
+                                        onFieldSubmitted: (_) =>
+                                            FocusScope.of(context).unfocus(),
                                         showClearButton: false,
                                         floatingLabelBehavior:
                                             FloatingLabelBehavior.always,
@@ -315,7 +328,7 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
     );
   }
 
-  Widget _segmentDropdown() {
+    Widget _segmentDropdown() {
     if (_segmentsError != null) {
       return InputDecorator(
         decoration: appTextFieldDecoration(
@@ -347,63 +360,67 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
         ),
       );
     }
+      final dropdownWidth = MediaQuery.sizeOf(context).width - 32;
     return PopupMenuButton<BusinessSegmentEntity>(
-      offset: const Offset(0, 58),
-      constraints: const BoxConstraints(
-        maxHeight: 260,
-        minWidth: 300,
-      ),
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      onSelected: (value) {
-        setState(() => _selectedSegment = value);
-      },
-      itemBuilder: (context) => _segments.map((segment) {
-        return PopupMenuItem<BusinessSegmentEntity>(
-          value: segment,
-          child: Text(
-            segment.categoryName,
-            style: AppTextFieldStyles.inputText,
-            overflow: TextOverflow.ellipsis,
-          ),
-        );
-      }).toList(),
-      child: InputDecorator(
-        decoration: appTextFieldDecoration(
-          label: 'Business segment*',
-          floatingLabelBehavior: FloatingLabelBehavior.always,
+        offset: const Offset(0, 58),
+        constraints: BoxConstraints(
+          maxHeight: 260,
+          minWidth: dropdownWidth,
+        maxWidth: dropdownWidth,
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                _segmentsLoading
-                    ? 'Loading...'
-                    : (_selectedSegment?.categoryName ??
-                        'Select business segment'),
-                style: AppTextFieldStyles.inputText,
-                overflow: TextOverflow.ellipsis,
-              ),
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        onOpened: () => FocusScope.of(context).unfocus(),
+      onSelected: (value) {
+          FocusScope.of(context).unfocus();
+        setState(() => _selectedSegment = value);
+        },
+        itemBuilder: (context) => _segments.map((segment) {
+          return PopupMenuItem<BusinessSegmentEntity>(
+            value: segment,
+            child: Text(
+              segment.categoryName,
+              style: AppTextFieldStyles.inputText,
+              overflow: TextOverflow.ellipsis,
             ),
-            RotatedBox(
-              quarterTurns: 1,
-              child: SvgPicture.asset(
-                'assets/images/Arrow.svg',
-                width: 18,
-                height: 18,
-                colorFilter: const ColorFilter.mode(
-                  Color(0xFF0A243F),
-                  BlendMode.srcIn,
+          );
+        }).toList(),
+        child: InputDecorator(
+          decoration: appTextFieldDecoration(
+            label: 'Business segment*',
+            floatingLabelBehavior: FloatingLabelBehavior.always,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _segmentsLoading
+                      ? 'Loading...'
+                      : (_selectedSegment?.categoryName ??
+                          'Select business segment'),
+                  style: AppTextFieldStyles.inputText,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-          ],
+              RotatedBox(
+                quarterTurns: 1,
+                child: SvgPicture.asset(
+                  'assets/images/Arrow.svg',
+                  width: 18,
+                  height: 18,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF0A243F),
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 }
 
 TextStyle _sheetTextStyle({

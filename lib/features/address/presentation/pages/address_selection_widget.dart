@@ -6,7 +6,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
-import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
@@ -261,7 +260,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   Future<void> _openMapsLinkSheet() async {
     final location = await showMapsLinkSheet(context);
     if (!mounted || location == null) return;
-    await _confirmOnMap(location);
+    await _openMap(location);
   }
 
   Future<void> _detectCurrentLocation() async {
@@ -292,7 +291,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
             failure?.message ?? 'Unable to resolve your current address.');
         return;
       }
-      await _confirmOnMap(location);
+      await _openMap(location);
     } catch (_) {
       _showError('Unable to detect your current location.');
     } finally {

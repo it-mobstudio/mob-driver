@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
@@ -35,6 +36,68 @@ class _SearchPageState extends State<SearchPage> {
 
   // --- local storage (recently searched)
   static const _historyKey = 'search_history_v1';
+  static const _defaultRecentSearches = <String>[
+    'Fevicol',
+    'Cement',
+    'Wall putty',
+    'Asian paints',
+    'Greenply',
+    'Greenply',
+    'Bricks',
+    'Kajaria tiles',
+  ];
+  static const _defaultCategorySuggestions = <String>[
+    'Cement',
+    'Cement mixer',
+    'Sustainable cement',
+    'White cement',
+    'Cement board',
+    'Ready mix cement',
+  ];
+  static const _defaultProductSuggestions = <_FallbackProductSuggestion>[
+    _FallbackProductSuggestion(
+      title: 'JK Cement White Max Portland',
+      asset: 'assets/images/Brands/zuari.webp',
+    ),
+    _FallbackProductSuggestion(
+      title: 'Ultratech Cement',
+      asset: 'assets/images/Brands/ultratech.webp',
+    ),
+    _FallbackProductSuggestion(
+      title: 'MOB Ready Mix Cement',
+      asset: 'assets/images/moblogo.svg',
+    ),
+    _FallbackProductSuggestion(
+      title: 'MOB Ultra Cement',
+      asset: 'assets/images/Mobitem.svg',
+    ),
+    _FallbackProductSuggestion(
+      title: 'Neoseal Solvent Cement',
+      asset: 'assets/images/Brands/Roff.webp',
+    ),
+  ];
+  static const _trendingItems = <_TrendingSearchItem>[
+    _TrendingSearchItem(
+      label: 'Ultratech\nCement',
+      asset: 'assets/images/Brands/ultratech.webp',
+    ),
+    _TrendingSearchItem(
+      label: 'Garden\nchair',
+      asset: 'assets/images/Brands/featherlite.webp',
+    ),
+    _TrendingSearchItem(
+      label: 'Cement',
+      asset: 'assets/images/Brands/zuari.webp',
+    ),
+    _TrendingSearchItem(
+      label: 'Coffee\ntable',
+      asset: 'assets/images/Brands/ikea-logo.webp',
+    ),
+    _TrendingSearchItem(
+      label: 'Indoor\nplants',
+      asset: 'assets/images/Brands/greenply.webp',
+    ),
+  ];
   List<String> history = [];
 
   Timer? _debounce;
@@ -169,181 +232,296 @@ class _SearchPageState extends State<SearchPage> {
 
   // ================= UI =================
 
+  void _onSearchChanged(String value) {
+    setState(() => query = value);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      _loadSuggestions(value);
+    });
+  }
+
+  void _clearQuery() {
+    _controller.clear();
+    _debounce?.cancel();
+    setState(() {
+      query = '';
+      _suggestions = [];
+      _brandSuggestions = [];
+      _error = null;
+      _loading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
+      body: Column(
+        children: [
+          _searchHeader(context),
+          if (query.isEmpty) _searchHistoryView() else _suggestionsView(),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFE8F2EF),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+          child: Row(
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.of(context).pop(),
+                child: const SizedBox(
+                  width: 20,
+                  height: 48,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: AppBackIcon(color: Color(0xFF0A243F)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    textInputAction: TextInputAction.search,
+                    onChanged: _onSearchChanged,
+                    onSubmitted: _submitSearch,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 20 / 14,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search for product, category, brand..',
+                      hintStyle: GoogleFonts.inter(
+                        color: const Color(0xFF767C8F),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        height: 20 / 14,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      suffixIcon: query.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.close,
+                                color: Color(0xFF767C8F),
+                                size: 18,
+                              ),
+                              onPressed: _clearQuery,
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFD0D4DC),
+                          width: 0.5,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFD0D4DC),
+                          width: 0.5,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFD0D4DC),
+                          width: 0.5,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _searchHistoryView() {
+    final recentSearches = history.isEmpty ? _defaultRecentSearches : history;
+    return Expanded(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 0, 24),
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _sectionTitle('Recently searched'),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _clearHistory,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      'Clear',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0360E5),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        height: 18 / 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: recentSearches.take(8).map(_recentChip).toList(),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: _sectionTitle('Trending in your area'),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 112,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 16),
+              itemCount: _trendingItems.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final item = _trendingItems[index];
+                return _trendingTile(item);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.inter(
+        color: const Color(0xFF0A243F),
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        height: 22 / 15,
+      ),
+    );
+  }
+
+  Widget _recentChip(String term) {
+    return GestureDetector(
+      onTap: () => _submitSearch(term),
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFDEDEDE)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _searchBar(context),
-            if (query.isEmpty) _searchHistoryView() else _suggestionsView(),
+            const Icon(
+              Icons.history,
+              size: 12,
+              color: Color(0xFF767C8F),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              term,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                height: 18 / 12,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _searchBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const AppBackIcon(),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          Expanded(
-            child: Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+  Widget _trendingTile(_TrendingSearchItem item) {
+    return GestureDetector(
+      onTap: () => _submitSearch(item.label.replaceAll('\n', ' ')),
+      child: SizedBox(
+        width: 68,
+        child: Column(
+          children: [
+            Container(
+              width: 68,
+              height: 68,
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F6F9),
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFDEDEDE)),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    // The rotating hint can't live in TextField.hintText
-                    // (that only accepts a plain String), so it's laid
-                    // over an otherwise-identical, borderless field and
-                    // hidden the instant there's real text.
-                    child: Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        if (query.isEmpty) const RotatingSearchHint(),
-                        TextField(
-                          controller: _controller,
-                          autofocus: true,
-                          textInputAction: TextInputAction.search,
-                          onChanged: (val) {
-                            setState(() => query = val);
-                            _debounce?.cancel();
-                            _debounce =
-                                Timer(const Duration(milliseconds: 350), () {
-                              _loadSuggestions(val);
-                            });
-                          },
-                          onSubmitted: _submitSearch,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            isCollapsed: true,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  query.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _controller.clear();
-                            setState(() {
-                              query = '';
-                              _suggestions = [];
-                              _brandSuggestions = [];
-                              _error = null;
-                              _loading = false;
-                            });
-                          },
-                        )
-                      : const Icon(Icons.mic_none),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _searchHistoryView() {
-    return Expanded(
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          if (history.isNotEmpty) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Recently searched',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  item.asset,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.image_outlined,
+                    color: Color(0xFF767C8F),
+                    size: 24,
                   ),
                 ),
-                GestureDetector(
-                  onTap: _clearHistory,
-                  child: Text(
-                    'Clear',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF0360E5),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: history
-                  .map(
-                    (term) => GestureDetector(
-                      onTap: () => _submitSearch(term),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF2F6F9),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.history,
-                              size: 14,
-                              color: Color(0xFF767C8F),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              term,
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF0A243F),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
+            const SizedBox(height: 8),
+            Text(
+              item.label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF0A243F),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                height: 18 / 12,
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
 
   Widget _suggestionsView() {
-    if (_loading) {
-      return const Expanded(
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
     if (_error != null) {
       return Expanded(
         child: Center(
@@ -356,121 +534,196 @@ class _SearchPageState extends State<SearchPage> {
       return const Expanded(child: SizedBox.shrink());
     }
 
-    if (_brandSuggestions.isEmpty && _suggestions.isEmpty) {
-      return Expanded(
-        child: Center(
-          child: Text(
-            'No matches for "$query".',
-            style: GoogleFonts.inter(color: const Color(0xFF767C8F)),
-          ),
-        ),
-      );
-    }
+    final showsBrandSuggestions = _brandSuggestions.isNotEmpty;
+    final categoryTerms = showsBrandSuggestions
+        ? _brandSuggestions.take(6).toList()
+        : _defaultCategorySuggestions;
 
     return Expanded(
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.zero,
         children: [
-          if (_brandSuggestions.isNotEmpty) ...[
-            _sectionLabel('Brands'),
-            ..._brandSuggestions.map(_brandTile),
-            const SizedBox(height: 8),
-          ],
+          if (_loading) const LinearProgressIndicator(minHeight: 1),
+          _suggestionSectionHeader('CATEGORIES'),
+          ...categoryTerms.map(
+            (term) => _categorySuggestionRow(
+              term,
+              onTap: showsBrandSuggestions
+                  ? () => _openBrand(term)
+                  : () => _submitSearch(term),
+            ),
+          ),
+          _suggestionSectionHeader('CATEGORIES'),
           if (_suggestions.isNotEmpty) ...[
-            _sectionLabel('Products'),
-            ..._suggestions.map(_productTile),
+            ..._suggestions.take(8).map(_productTile),
+          ] else ...[
+            ..._defaultProductSuggestions.map(_fallbackProductTile),
           ],
         ],
       ),
     );
   }
 
-  Widget _sectionLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+  Widget _suggestionSectionHeader(String label) {
+    return Container(
+      height: 32,
+      width: double.infinity,
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      color: const Color(0x4DDEDEDE),
       child: Text(
         label,
         style: GoogleFonts.inter(
-          color: const Color(0xFF767C8F),
+          color: const Color(0xFF0A243F),
           fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
+          fontWeight: FontWeight.w600,
+          height: 18 / 12,
         ),
       ),
     );
   }
 
-  Widget _brandTile(String name) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      onTap: () => _openBrand(name),
-      leading: Container(
-        width: 40,
+  Widget _categorySuggestionRow(String term, {required VoidCallback onTap}) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
         height: 40,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF2F6F9),
-          borderRadius: BorderRadius.circular(8),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                term,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0A243F),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  height: 20 / 14,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.search,
+              size: 16,
+              color: Color(0xFF767C8F),
+            ),
+          ],
         ),
-        child: const Icon(Icons.storefront_outlined, color: Color(0xFF767C8F)),
-      ),
-      title: Text(
-        name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: GoogleFonts.inter(
-          color: const Color(0xFF0A243F),
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      trailing: const Icon(
-        Icons.search,
-        size: 18,
-        color: Color(0xFF767C8F),
       ),
     );
   }
 
   Widget _productTile(ProductModel r) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
+    return _productSuggestionRow(
+      title: r.title,
+      image: r.primaryImageUrl.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: r.primaryImageUrl,
+                fit: BoxFit.cover,
+                memCacheWidth: 80,
+                placeholder: (_, __) => const ImageShimmer(),
+                errorWidget: (context, url, error) =>
+                    const Icon(Icons.image, color: Color(0xFF767C8F)),
+              ),
+            )
+          : const Icon(Icons.image_outlined, color: Color(0xFF767C8F)),
       onTap: () => _openProduct(r),
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF2F6F9),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: r.primaryImageUrl.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: CachedNetworkImage(
-                  imageUrl: r.primaryImageUrl,
-                  fit: BoxFit.cover,
-                  memCacheWidth: 80,
-                  placeholder: (_, __) => const ImageShimmer(),
-                  errorWidget: (context, url, error) =>
-                      const Icon(Icons.image, color: Colors.grey),
-                ),
+    );
+  }
+
+  Widget _fallbackProductTile(_FallbackProductSuggestion item) {
+    return _productSuggestionRow(
+      title: item.title,
+      image: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: item.asset.endsWith('.svg')
+            ? SvgPicture.asset(
+                item.asset,
+                fit: BoxFit.contain,
               )
-            : const Icon(Icons.image, color: Colors.grey),
+            : Image.asset(
+                item.asset,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.image_outlined,
+                  color: Color(0xFF767C8F),
+                ),
+              ),
       ),
-      title: Text(
-        r.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: GoogleFonts.inter(
-          color: const Color(0xFF0A243F),
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
+      onTap: () => _submitSearch(item.title),
+    );
+  }
+
+  Widget _productSuggestionRow({
+    required String title,
+    required Widget image,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: image,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0A243F),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  height: 20 / 14,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.search,
+              size: 16,
+              color: Color(0xFF767C8F),
+            ),
+          ],
         ),
-      ),
-      trailing: const Icon(
-        Icons.search,
-        size: 18,
-        color: Color(0xFF767C8F),
       ),
     );
   }
+}
+
+class _FallbackProductSuggestion {
+  const _FallbackProductSuggestion({
+    required this.title,
+    required this.asset,
+  });
+
+  final String title;
+  final String asset;
+}
+
+class _TrendingSearchItem {
+  const _TrendingSearchItem({
+    required this.label,
+    required this.asset,
+  });
+
+  final String label;
+  final String asset;
 }

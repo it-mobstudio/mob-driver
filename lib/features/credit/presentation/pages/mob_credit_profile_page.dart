@@ -1401,7 +1401,7 @@ class MobCreditIndiaCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Use mobCREDIT across India',
+                    'Use mobCREDIT\nacross India',
                     style: TextStyle(
                       color: Color(0xFF0A243F),
                       fontSize: 17,
