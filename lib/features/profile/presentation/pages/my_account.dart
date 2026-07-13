@@ -360,10 +360,15 @@ class _ProfileBody extends StatelessWidget {
   static Future<void> _openAppStore() async {
     final Uri uri;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-      // TODO: swap for the real numeric App Store id once this app is
-      // published on the App Store — falls back to the store's search page
-      // for now so this can never link to the wrong app's listing.
-      uri = Uri.parse('https://apps.apple.com/search?term=MOB');
+      // The app isn't published on the App Store yet — it's only
+      // distributed via TestFlight, so the App Store search page above
+      // never actually shows an update (there's nothing there to show).
+      // `itms-beta://` opens the TestFlight app itself, where an installed
+      // build's pending update actually lives.
+      // TODO: swap to the real numeric App Store id once this app is
+      // published there, since TestFlight builds get replaced by the
+      // public listing at that point.
+      uri = Uri.parse('itms-beta://');
     } else {
       uri = Uri.parse(
         'https://play.google.com/store/apps/details?id=$_androidPackageId',

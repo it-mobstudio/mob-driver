@@ -43,6 +43,7 @@ class _PullToRefreshState extends State<PullToRefresh> {
   Future<void> _preloadSound() async {
     try {
       await _soundPlayer.setAsset('assets/audios/pull_to_refresh.mp3');
+      await _soundPlayer.setVolume(0.4);
       _soundReady = true;
     } catch (_) {
       _soundReady = false;
