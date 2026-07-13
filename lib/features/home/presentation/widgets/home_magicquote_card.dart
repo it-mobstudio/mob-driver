@@ -30,13 +30,16 @@ class HomeMagicQuoteCard extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned(
-                  right: 8,
+                  right: 0,
                   bottom: 0,
-                  child: SvgPicture.asset(
-                    'assets/images/magic-quote-ad.svg',
-                    width: 130,
-                    height: 130,
-                    fit: BoxFit.contain,
+                  child: SizedBox(
+                    width: 150,
+                    height: 150,
+                    child: Image.asset(
+                      'assets/images/Magicquoteappimage.webp',
+                      fit: BoxFit.contain,
+                      alignment: Alignment.bottomRight,
+                    ),
                   ),
                 ),
                 Positioned(
