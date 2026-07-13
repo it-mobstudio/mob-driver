@@ -86,6 +86,15 @@ class _ItemCardState extends State<ItemCard> {
     });
   }
 
+  void _openProductDetail() {
+    final onTap = widget.onTap;
+    if (onTap != null) {
+      onTap();
+      return;
+    }
+    context.push('${ProductDetailPage.routePath}/${widget.product.slug}');
+  }
+
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
@@ -98,19 +107,18 @@ class _ItemCardState extends State<ItemCard> {
     return SizedBox(
       width: cardWidth,
       height: cardWidth + 140,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: cardWidth + 20,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                GestureDetector(
-                  onTap: widget.onTap ??
-                      () => context.push(
-                          '${ProductDetailPage.routePath}/${product.slug}'),
-                  child: Container(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _openProductDetail,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: cardWidth + 20,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
                     width: cardWidth,
                     height: cardWidth,
                     decoration: BoxDecoration(
@@ -135,144 +143,144 @@ class _ItemCardState extends State<ItemCard> {
                       ),
                     ),
                   ),
-                ),
-                if (shouldShowOutOfStock)
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFB5B5B5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Out of Stock',
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          height: 14 / 10,
+                  if (shouldShowOutOfStock)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFB5B5B5),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Out of Stock',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            height: 14 / 10,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: ProductCartActionButton(
-                    product: product,
-                    style: ProductCartActionButtonStyle.rail,
-                    showCounter: !product.hasVariants &&
-                        !product.shouldShowNotify &&
-                        _quantityFor(product) > 0,
-                    quantity:
-                        _quantityFor(product) > 0 ? _quantityFor(product) : 1,
-                    isFetchingCart: _isUpdating(product),
-                    onAdd: (_) async => _increment(),
-                    onAddForQuote: (_) async => _increment(),
-                    // Must send the absolute quantity, not translate to a
-                    // single +1/-1 step: ProductCartActionButton debounces
-                    // rapid taps into one call carrying the final settled
-                    // quantity, so a step-based translation here would only
-                    // ever move the real cart by one regardless of how many
-                    // taps the user made.
-                    onQuantityChanged: (quantity) {
-                      final callback = widget.onCartQuantityChanged;
-                      if (callback != null) {
-                        callback(product, quantity);
-                        return;
-                      }
-                      setState(() => _quantity = quantity);
-                    },
-                    onNotify: widget.onNotifyTap == null
-                        ? null
-                        : () => widget.onNotifyTap!(product),
-                    onVariantsTap: _openVariantSheet,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            child: Text(
-              product.title,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 16 / 12,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (discount > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE600),
-                borderRadius: BorderRadius.circular(4),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black,
-                    offset: Offset(-1, 1),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: ProductCartActionButton(
+                      product: product,
+                      style: ProductCartActionButtonStyle.rail,
+                      showCounter: !product.hasVariants &&
+                          !product.shouldShowNotify &&
+                          _quantityFor(product) > 0,
+                      quantity:
+                          _quantityFor(product) > 0 ? _quantityFor(product) : 1,
+                      isFetchingCart: _isUpdating(product),
+                      onAdd: (_) async => _increment(),
+                      onAddForQuote: (_) async => _increment(),
+                      // Must send the absolute quantity, not translate to a
+                      // single +1/-1 step: ProductCartActionButton debounces
+                      // rapid taps into one call carrying the final settled
+                      // quantity, so a step-based translation here would only
+                      // ever move the real cart by one regardless of how many
+                      // taps the user made.
+                      onQuantityChanged: (quantity) {
+                        final callback = widget.onCartQuantityChanged;
+                        if (callback != null) {
+                          callback(product, quantity);
+                          return;
+                        }
+                        setState(() => _quantity = quantity);
+                      },
+                      onNotify: widget.onNotifyTap == null
+                          ? null
+                          : () => widget.onNotifyTap!(product),
+                      onVariantsTap: _openVariantSheet,
+                    ),
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 48,
               child: Text(
-                '${discount.round()}% OFF',
+                product.title,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
                   color: const Color(0xFF0A243F),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  height: 14 / 10,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  height: 16 / 12,
                 ),
               ),
-            )
-          else
-            const SizedBox(height: 18),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 26,
-            child: Row(
-              children: [
-                Text(
-                  '\u20B9${price.round()}',
+            ),
+            const SizedBox(height: 8),
+            if (discount > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE600),
+                  borderRadius: BorderRadius.circular(4),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black,
+                      offset: Offset(-1, 1),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '${discount.round()}% OFF',
                   style: GoogleFonts.inter(
                     color: const Color(0xFF0A243F),
-                    fontSize: 16,
+                    fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    height: 24 / 16,
+                    height: 14 / 10,
                   ),
                 ),
-                const SizedBox(width: 12),
-                if (mrp > 0)
-                  Flexible(
-                    child: Text(
-                      '\u20B9${mrp.round()}',
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFFB5B5B5),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        height: 16 / 12,
-                        decoration: TextDecoration.lineThrough,
-                        decorationColor: const Color(0xFFB5B5B5),
-                        decorationThickness: 1,
-                      ),
+              )
+            else
+              const SizedBox(height: 18),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 26,
+              child: Row(
+                children: [
+                  Text(
+                    '\u20B9${price.round()}',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      height: 24 / 16,
                     ),
                   ),
-              ],
+                  const SizedBox(width: 12),
+                  if (mrp > 0)
+                    Flexible(
+                      child: Text(
+                        '\u20B9${mrp.round()}',
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFFB5B5B5),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          height: 16 / 12,
+                          decoration: TextDecoration.lineThrough,
+                          decorationColor: const Color(0xFFB5B5B5),
+                          decorationThickness: 1,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

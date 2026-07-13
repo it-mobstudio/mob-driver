@@ -155,8 +155,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                               onTap: () {
                                 context.push('/refer-a-friend');
                               },
-                              backgroundSvg: 'assets/images/giftboxbg.svg',
-                              foregroundSvg: 'assets/images/Giftbox.svg',
+                              backgroundSvg: 'assets/images/giftbox.webp',
                             ),
                             const SizedBox(height: 32),
                           ],
@@ -530,11 +529,14 @@ class _DeliveryAddressCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-        
-          // const _AssetRoundIcon(
-          //   assetPath: 'assets/images/vehicletracking.svg',
-          //   size: 48,
-          // ),
+          const _RoundIcon(
+            background: Color(0xFFDFF8F9),
+            svgAsset: 'assets/images/vehicletracking.svg',
+            size: 48,
+            imageWidth: 48,
+            imageHeight: 48,
+            svgAlignment: Alignment.centerLeft,
+          ),
           const SizedBox(width: 12),
           SizedBox(
             width: 204,
@@ -611,9 +613,11 @@ class _TrackingItemsCard extends StatelessWidget {
                 children: [
                   const _RoundIcon(
                     background: Color(0xFFDFF8F9),
-                      svgAsset: 'assets/images/Mobitem.svg',
-                 offset:  Offset(0, -2),
+                    svgAsset: 'assets/images/Mobitem.svg',
                     size: 48,
+                    imageWidth: 48,
+                    imageHeight: 48,
+                    svgAlignment: Alignment.bottomCenter,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -775,7 +779,7 @@ class _TrackingHelpCard extends StatelessWidget {
           children: [
             const _RoundIcon(
               background: Color(0xFFDFF8F9),
-               svgAsset: 'assets/images/supportagent.svg',
+              svgAsset: 'assets/images/supportagent.svg',
               size: 40,
             ),
             const SizedBox(width: 12),
@@ -1303,8 +1307,9 @@ class _RoundIcon extends StatelessWidget {
     this.svgAsset,
     this.iconColor,
     this.iconScale = 0.52,
+    this.imageWidth,
+    this.imageHeight,
     this.svgAlignment = Alignment.center,
-    this.offset = Offset.zero,
   }) : assert(
           icon != null || svgAsset != null,
           'Provide either icon or svgAsset.',
@@ -1316,8 +1321,12 @@ class _RoundIcon extends StatelessWidget {
   final Color? iconColor;
   final double size;
   final double iconScale;
+
+  /// Optional custom image size
+  final double? imageWidth;
+  final double? imageHeight;
+
   final Alignment svgAlignment;
-  final Offset offset;
 
   @override
   Widget build(BuildContext context) {
@@ -1331,29 +1340,28 @@ class _RoundIcon extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: Center(
-        child: Transform.translate(
-          offset: offset,
-          child: SizedBox(
-            width: innerSize,
-            height: innerSize,
-            child: svgAsset != null
-                ? SvgPicture.asset(
-                    svgAsset!,
-                    fit: BoxFit.contain,
-                    alignment: svgAlignment,
-                    colorFilter: iconColor == null
-                        ? null
-                        : ColorFilter.mode(
-                            iconColor!,
-                            BlendMode.srcIn,
-                          ),
-                  )
-                : Icon(
-                    icon,
-                    color: iconColor,
-                    size: innerSize,
-                  ),
-          ),
+        child: SizedBox(
+          width: imageWidth ?? innerSize,
+          height: imageHeight ?? innerSize,
+          child: svgAsset != null
+              ? SvgPicture.asset(
+                  svgAsset!,
+                  width: imageWidth ?? innerSize,
+                  height: imageHeight ?? innerSize,
+                  fit: BoxFit.contain,
+                  alignment: svgAlignment,
+                  colorFilter: iconColor == null
+                      ? null
+                      : ColorFilter.mode(
+                          iconColor!,
+                          BlendMode.srcIn,
+                        ),
+                )
+              : Icon(
+                  icon,
+                  color: iconColor,
+                  size: imageWidth ?? innerSize,
+                ),
         ),
       ),
     );
@@ -1392,12 +1400,10 @@ class ReferralEarnCard extends StatelessWidget {
     super.key,
     required this.onTap,
     required this.backgroundSvg,
-    required this.foregroundSvg,
   });
 
   final VoidCallback onTap;
   final String backgroundSvg;
-  final String foregroundSvg;
 
   @override
   Widget build(BuildContext context) {
@@ -1506,23 +1512,10 @@ class ReferralEarnCard extends StatelessWidget {
                       Positioned(
                         right: 0,
                         bottom: 0,
-                        width: width * 0.43,
+                        width: width * 0.45,
                         height: height,
-                        child: SvgPicture.asset(
+                        child: Image.asset(
                           backgroundSvg,
-                          fit: BoxFit.contain,
-                          alignment: Alignment.bottomRight,
-                        ),
-                      ),
-
-                      // Gift box SVG above background SVG
-                      Positioned(
-                        right: width * 0.025,
-                        bottom: height * 0.03,
-                        width: width * 0.29,
-                        height: height * 0.75,
-                        child: SvgPicture.asset(
-                          foregroundSvg,
                           fit: BoxFit.contain,
                           alignment: Alignment.bottomRight,
                         ),

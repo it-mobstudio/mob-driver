@@ -314,7 +314,7 @@ class _ReferralPromoSection extends StatelessWidget {
             right: 34,
             height: 205,
             child: Image.asset(
-              'assets/images/referral_hero.png',
+              'assets/images/Referandearnapp.webp',
               fit: BoxFit.contain,
             ),
           ),

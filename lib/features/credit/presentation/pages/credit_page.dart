@@ -106,17 +106,19 @@ class CreditPage extends StatelessWidget {
                     MobCreditSectionTitle('What our members say'),
                     const SizedBox(height: 12),
                     const MobCreditTestimonialsCarousel(),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
                     MobCreditSupportCard(
                       onChatTap: () => _chatWithUs(context),
                     ),
                     const SizedBox(height: 40),
                     MobCreditFaqRow(
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Coming soon')),
+                       onTap: () => _openExternal(
+                              context,
+                              'https://madoverbuildings.com/home/faq?key=faq',
+                            
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -198,4 +200,14 @@ class CreditPage extends StatelessWidget {
       );
     }
   }
+   static Future<void> _openExternal(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open link.')),
+      );
+    }
+  }
+
 }
