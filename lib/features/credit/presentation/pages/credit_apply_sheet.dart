@@ -43,6 +43,7 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
 
   List<BusinessSegmentEntity> _segments = const [];
   bool _segmentsLoading = true;
+  String? _segmentsError;
   BusinessSegmentEntity? _selectedSegment;
   bool _submitting = false;
 
@@ -102,10 +103,12 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
             setState(() {
               _segmentsLoading = false;
               _segments = segments;
+              _segmentsError = null;
             });
-          case CreditSegmentsError():
+          case CreditSegmentsError(message: final message):
             setState(() {
               _segmentsLoading = false;
+              _segmentsError = message;
             });
           case CreditApplySubmitting():
             setState(() => _submitting = true);

@@ -76,28 +76,29 @@ class _SearchPageState extends State<SearchPage> {
       asset: 'assets/images/Brands/Roff.webp',
     ),
   ];
-  static const _trendingItems = <_TrendingSearchItem>[
-    _TrendingSearchItem(
-      label: 'Ultratech\nCement',
-      asset: 'assets/images/Brands/ultratech.webp',
-    ),
-    _TrendingSearchItem(
-      label: 'Garden\nchair',
-      asset: 'assets/images/Brands/featherlite.webp',
-    ),
-    _TrendingSearchItem(
-      label: 'Cement',
-      asset: 'assets/images/Brands/zuari.webp',
-    ),
-    _TrendingSearchItem(
-      label: 'Coffee\ntable',
-      asset: 'assets/images/Brands/ikea-logo.webp',
-    ),
-    _TrendingSearchItem(
-      label: 'Indoor\nplants',
-      asset: 'assets/images/Brands/greenply.webp',
-    ),
-  ];
+  // "Trending in your area" — hidden for now, kept for easy restoration.
+  // static const _trendingItems = <_TrendingSearchItem>[
+  //   _TrendingSearchItem(
+  //     label: 'Ultratech\nCement',
+  //     asset: 'assets/images/Brands/ultratech.webp',
+  //   ),
+  //   _TrendingSearchItem(
+  //     label: 'Garden\nchair',
+  //     asset: 'assets/images/Brands/featherlite.webp',
+  //   ),
+  //   _TrendingSearchItem(
+  //     label: 'Cement',
+  //     asset: 'assets/images/Brands/zuari.webp',
+  //   ),
+  //   _TrendingSearchItem(
+  //     label: 'Coffee\ntable',
+  //     asset: 'assets/images/Brands/ikea-logo.webp',
+  //   ),
+  //   _TrendingSearchItem(
+  //     label: 'Indoor\nplants',
+  //     asset: 'assets/images/Brands/greenply.webp',
+  //   ),
+  // ];
   List<String> history = [];
 
   Timer? _debounce;
@@ -289,65 +290,65 @@ class _SearchPageState extends State<SearchPage> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: SizedBox(
+                child: Container(
                   height: 48,
-                  child: TextField(
-                    controller: _controller,
-                    autofocus: true,
-                    textInputAction: TextInputAction.search,
-                    onChanged: _onSearchChanged,
-                    onSubmitted: _submitSearch,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF0A243F),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      height: 20 / 14,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFD0D4DC),
+                      width: 0.5,
                     ),
-                    decoration: InputDecoration(
-                      hintText: 'Search for product, category, brand..',
-                      hintStyle: GoogleFonts.inter(
-                        color: const Color(0xFF767C8F),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        height: 20 / 14,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      suffixIcon: query.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                Icons.close,
-                                color: Color(0xFF767C8F),
-                                size: 18,
-                              ),
-                              onPressed: _clearQuery,
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFD0D4DC),
-                          width: 0.5,
+                  ),
+                  // RotatingSearchHint can't live in TextField.hintText
+                  // (that only accepts a plain String), so it's laid over
+                  // an otherwise-identical, borderless/unfilled field and
+                  // hidden the instant there's real text — same pattern as
+                  // brand_product_search_page.dart. The white fill/border
+                  // moved to this outer Container since the TextField's own
+                  // opaque `fillColor` would otherwise paint over the hint
+                  // stacked beneath it.
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _controller,
+                    builder: (context, value, _) => Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        if (value.text.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 16),
+                            child: RotatingSearchHint(),
+                          ),
+                        TextField(
+                          controller: _controller,
+                          autofocus: true,
+                          textInputAction: TextInputAction.search,
+                          onChanged: _onSearchChanged,
+                          onSubmitted: _submitSearch,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF0A243F),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            height: 20 / 14,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            suffixIcon: query.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Color(0xFF767C8F),
+                                      size: 18,
+                                    ),
+                                    onPressed: _clearQuery,
+                                  )
+                                : null,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
                         ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFD0D4DC),
-                          width: 0.5,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFD0D4DC),
-                          width: 0.5,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -402,25 +403,28 @@ class _SearchPageState extends State<SearchPage> {
               children: recentSearches.take(8).map(_recentChip).toList(),
             ),
           ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: _sectionTitle('Trending in your area'),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 112,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(right: 16),
-              itemCount: _trendingItems.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final item = _trendingItems[index];
-                return _trendingTile(item);
-              },
-            ),
-          ),
+          // "Trending in your area" — hidden for now, kept for easy
+          // restoration. Re-add _trendingItems/_trendingTile/
+          // _TrendingSearchItem (commented out below) to bring it back.
+          // const SizedBox(height: 24),
+          // Padding(
+          //   padding: const EdgeInsets.only(right: 16),
+          //   child: _sectionTitle('Trending in your area'),
+          // ),
+          // const SizedBox(height: 12),
+          // SizedBox(
+          //   height: 112,
+          //   child: ListView.separated(
+          //     scrollDirection: Axis.horizontal,
+          //     padding: const EdgeInsets.only(right: 16),
+          //     itemCount: _trendingItems.length,
+          //     separatorBuilder: (_, __) => const SizedBox(width: 12),
+          //     itemBuilder: (context, index) {
+          //       final item = _trendingItems[index];
+          //       return _trendingTile(item);
+          //     },
+          //   ),
+          // ),
         ],
       ),
     );
@@ -473,53 +477,54 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _trendingTile(_TrendingSearchItem item) {
-    return GestureDetector(
-      onTap: () => _submitSearch(item.label.replaceAll('\n', ' ')),
-      child: SizedBox(
-        width: 68,
-        child: Column(
-          children: [
-            Container(
-              width: 68,
-              height: 68,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFDEDEDE)),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  item.asset,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.image_outlined,
-                    color: Color(0xFF767C8F),
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              item.label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                height: 18 / 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // "Trending in your area" — hidden for now, kept for easy restoration.
+  // Widget _trendingTile(_TrendingSearchItem item) {
+  //   return GestureDetector(
+  //     onTap: () => _submitSearch(item.label.replaceAll('\n', ' ')),
+  //     child: SizedBox(
+  //       width: 68,
+  //       child: Column(
+  //         children: [
+  //           Container(
+  //             width: 68,
+  //             height: 68,
+  //             padding: const EdgeInsets.all(10),
+  //             decoration: BoxDecoration(
+  //               color: Colors.white,
+  //               borderRadius: BorderRadius.circular(16),
+  //               border: Border.all(color: const Color(0xFFDEDEDE)),
+  //             ),
+  //             child: ClipRRect(
+  //               borderRadius: BorderRadius.circular(8),
+  //               child: Image.asset(
+  //                 item.asset,
+  //                 fit: BoxFit.contain,
+  //                 errorBuilder: (_, __, ___) => const Icon(
+  //                   Icons.image_outlined,
+  //                   color: Color(0xFF767C8F),
+  //                   size: 24,
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //           const SizedBox(height: 8),
+  //           Text(
+  //             item.label,
+  //             maxLines: 2,
+  //             overflow: TextOverflow.ellipsis,
+  //             textAlign: TextAlign.center,
+  //             style: GoogleFonts.inter(
+  //               color: const Color(0xFF0A243F),
+  //               fontSize: 12,
+  //               fontWeight: FontWeight.w500,
+  //               height: 18 / 12,
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _suggestionsView() {
     if (_error != null) {
@@ -718,6 +723,7 @@ class _FallbackProductSuggestion {
   final String asset;
 }
 
+/* "Trending in your area" — hidden for now, kept for easy restoration.
 class _TrendingSearchItem {
   const _TrendingSearchItem({
     required this.label,
@@ -727,3 +733,4 @@ class _TrendingSearchItem {
   final String label;
   final String asset;
 }
+*/

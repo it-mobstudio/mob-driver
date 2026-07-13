@@ -30,12 +30,6 @@ class AppConfig {
     return query.map((key, value) => MapEntry(key, value.toString()));
   }
 
-  /// Resolves a media URL (e.g. `profile_picture`) that the backend may
-  /// return as an absolute URL, a scheme-less `//host/path`, a root-relative
-  /// `/media/...` path, or a bare relative path — always against
-  /// [apiBaseUrl] so callers never have to special-case which shape came
-  /// back. Returns '' for anything empty/null so callers can treat that as
-  /// "no image".
   static String resolveMediaUrl(String? raw) {
     final trimmed = raw?.trim() ?? '';
     if (trimmed.isEmpty || trimmed == 'null') return '';
