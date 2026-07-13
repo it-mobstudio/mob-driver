@@ -492,8 +492,8 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
                                         onNotifyTap: _handleNotifyTap,
                                         onProductTypeTap:
                                             _toggleInlineProductType,
-                                        onRequestTap: () =>
-                                            context.push(MagicAiQuotePage.routePath),
+                                        onRequestTap: () => context
+                                            .push(MagicAiQuotePage.routePath),
                                       ),
                       ),
                     ],

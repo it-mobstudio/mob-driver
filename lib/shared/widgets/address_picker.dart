@@ -72,7 +72,7 @@ class AddressPickerBody extends StatelessWidget {
             children: [
               Expanded(
                 child: _quickActionPill(
-                  icon: Icons.my_location,
+                  svgAsset: 'assets/images/currentlocation.svg',
                   label: 'Current location',
                   loading: detectingCurrentLocation,
                   onTap: onCurrentLocation,
@@ -81,7 +81,7 @@ class AddressPickerBody extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _quickActionPill(
-                  icon: Icons.map_outlined,
+                  svgAsset: 'assets/images/Maps icon app.png',
                   label: 'Maps link',
                   onTap: onMapsLink,
                 ),
@@ -134,29 +134,64 @@ class AddressPickerBody extends StatelessWidget {
     return TextField(
       controller: searchController,
       onChanged: onSearchChanged,
+      style: GoogleFonts.inter(
+        color: const Color(0xFF0A243F),
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
       decoration: InputDecoration(
         hintText: 'Search for area, street name..',
-        hintStyle:
-            GoogleFonts.inter(color: const Color(0xFFAFB4C0), fontSize: 14),
-        prefixIcon: Icon(Icons.search, color: _navy.withValues(alpha: 0.7)),
+        hintStyle: GoogleFonts.inter(
+          color: const Color(0xFFAFB4C0),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
         filled: true,
         fillColor: Colors.white,
-        border: _fieldBorder(),
-        enabledBorder: _fieldBorder(),
-        focusedBorder: _fieldBorder(color: _blue),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SvgPicture.asset(
+            'assets/images/Searchicon.svg',
+            width: 16,
+            height: 16,
+            fit: BoxFit.contain,
+          ),
+        ),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 48,
+          minHeight: 48,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFD0D4DC),
+            width: 0.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFD0D4DC),
+            width: 0.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF0360E5),
+            width: 1,
+          ),
+        ),
       ),
     );
   }
 
-  OutlineInputBorder _fieldBorder({Color color = _border}) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: color),
-    );
-  }
-
   Widget _quickActionPill({
-    required IconData icon,
+    required String svgAsset,
     required String label,
     required VoidCallback? onTap,
     bool loading = false,
@@ -168,24 +203,50 @@ class AddressPickerBody extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: loading ? null : onTap,
         child: Container(
-          height: 44,
+          width: double.infinity,
+          height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            border: Border.all(color: _border),
-            borderRadius: BorderRadius.circular(12),
+          decoration: ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(
+                width: 1,
+                color: Color(0xFFDFE1E7),
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (loading)
                 const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF596378),
+                  ),
                 )
               else
-                Icon(icon, color: _blue, size: 16),
+               SizedBox(
+  width: 16,
+  height: 16,
+  child: svgAsset.toLowerCase().endsWith('.svg')
+      ? SvgPicture.asset(
+          svgAsset,
+          width: 16,
+          height: 16,
+          fit: BoxFit.contain,
+        )
+      : Image.asset(
+          svgAsset,
+          width: 16,
+          height: 16,
+          fit: BoxFit.contain,
+        ),
+),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -193,9 +254,10 @@ class AddressPickerBody extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    color: _blue,
+                    color: const Color(0xFF596378),
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
+                    height: 20 / 13,
                   ),
                 ),
               ),
@@ -211,25 +273,42 @@ class AddressPickerBody extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: onAddNewAddress,
+        borderRadius: BorderRadius.circular(12),
         child: Container(
+          width: double.infinity,
           height: 52,
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            border: Border.all(color: _border),
-            borderRadius: BorderRadius.circular(12),
+          decoration: ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(
+                width: 1,
+                color: Color(0xFFDFE1E7),
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(Icons.add, color: _blue, size: 22),
+              const Icon(
+                Icons.add,
+                color: Color(0xFF2973F0),
+                size: 16,
+              ),
               const SizedBox(width: 12),
-              Text(
-                'Add new address',
-                style: GoogleFonts.inter(
-                  color: _blue,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  'Add new address',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF2973F0),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    height: 20 / 14,
+                  ),
                 ),
               ),
             ],
@@ -358,7 +437,7 @@ class AddressPickerCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-       // constraints: const BoxConstraints(minHeight: 120),
+        // constraints: const BoxConstraints(minHeight: 120),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,

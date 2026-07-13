@@ -112,13 +112,14 @@ class CreditPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 40),
                     MobCreditFaqRow(
-                       onTap: () => _openExternal(
-                              context,
-                              'https://madoverbuildings.com/home/faq?key=faq',
-                            
+                      onTap: () => _openExternal(
+                        context,
+                        'https://madoverbuildings.com/home/faq?key=faq',
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    showBackButton
+                        ? const SizedBox(height: 20)
+                        : const SizedBox(height: 70),
                   ],
                 ),
               ),
@@ -200,7 +201,8 @@ class CreditPage extends StatelessWidget {
       );
     }
   }
-   static Future<void> _openExternal(BuildContext context, String url) async {
+
+  static Future<void> _openExternal(BuildContext context, String url) async {
     final uri = Uri.parse(url);
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
@@ -209,5 +211,4 @@ class CreditPage extends StatelessWidget {
       );
     }
   }
-
 }

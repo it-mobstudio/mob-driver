@@ -44,6 +44,7 @@ class AddressEntity {
   final String addressTag;
   final String phoneNumber;
   final String projectName;
+
   /// Marks this saved address as the user's designated mobCREDIT/billing
   /// address (mirrors web's `address?.mob_credit`, used to auto-pick a
   /// billing address at checkout).
