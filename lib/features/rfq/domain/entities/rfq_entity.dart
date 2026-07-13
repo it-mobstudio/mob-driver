@@ -273,11 +273,21 @@ class RfqEntity {
             ))
         .toList();
 
+    final rfqOrderId = (order['order_id'] ?? '').toString();
     final quotesRaw =
         map['quotes'] is List ? map['quotes'] as List : <dynamic>[];
+    // Individual quote objects in the API's `quotes` array never carry their
+    // own `rfq_order` — the web app stitches the single RFQ-level `order`
+    // onto each quote before rendering (see mob-web's
+    // `[rfq-details].jsx` building `rfq_order: rfqDetails?.data?.order` and
+    // re-attaching it per quote). Mirror that here instead of reading a key
+    // that's never present on the raw quote map.
     final quotes = quotesRaw
         .whereType<Map>()
         .map((e) => RfqQuoteEntity.fromMap(Map<String, dynamic>.from(e)))
+        .map((quote) => quote.isConvertedToOrder && quote.orderId.isEmpty
+            ? quote.copyWith(orderId: rfqOrderId)
+            : quote)
         .toList();
 
     final quoteRequestedItemsRaw = map['quote_requesteditems'] is Map
@@ -329,7 +339,7 @@ class RfqEntity {
       deliveryInstructions: deliveryInstructions,
       files: files,
       quotes: quotes,
-      orderId: (order['order_id'] ?? '').toString(),
+      orderId: rfqOrderId,
       quoteRequestedItems: quoteRequestedItems,
     );
   }

@@ -108,6 +108,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                         state: trackingState,
                         deliveryDate: deliveryDate,
                         deliverySlot: deliverySlot,
+                        isQuickCommerceOrder:
+                            order?.isQuickCommerceOrder ?? false,
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
@@ -230,11 +232,13 @@ class _TrackingHeroSection extends StatelessWidget {
     required this.state,
     required this.deliveryDate,
     required this.deliverySlot,
+    required this.isQuickCommerceOrder,
   });
 
   final _TrackingState state;
   final String deliveryDate;
   final String deliverySlot;
+  final bool isQuickCommerceOrder;
 
   @override
   Widget build(BuildContext context) {
@@ -268,6 +272,7 @@ class _TrackingHeroSection extends StatelessWidget {
                   state: state,
                   deliveryDate: deliveryDate,
                   deliverySlot: deliverySlot,
+                  isQuickCommerceOrder: isQuickCommerceOrder,
                 ),
               ),
             ],
@@ -400,11 +405,13 @@ class _EtaCard extends StatelessWidget {
     required this.state,
     required this.deliveryDate,
     required this.deliverySlot,
+    required this.isQuickCommerceOrder,
   });
 
   final _TrackingState state;
   final String deliveryDate;
   final String deliverySlot;
+  final bool isQuickCommerceOrder;
 
   @override
   Widget build(BuildContext context) {
@@ -480,24 +487,25 @@ class _EtaCard extends StatelessWidget {
               ],
             ),
           ),
-          Positioned(
-            top: 19,
-            right: 16,
-            child: Container(
-              height: 26,
-              width: 86,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF6E6),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              alignment: Alignment.center,
-              child: SvgPicture.asset(
-                'assets/images/qwik.svg',
-                width: 54,
-                height: 14,
+          if (isQuickCommerceOrder)
+            Positioned(
+              top: 19,
+              right: 16,
+              child: Container(
+                height: 26,
+                width: 86,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF6E6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: SvgPicture.asset(
+                  'assets/images/qwik.svg',
+                  width: 54,
+                  height: 14,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

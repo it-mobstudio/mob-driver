@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
@@ -23,6 +25,42 @@ final class MobstarLoadRequested extends ProfileEvent {}
 final class ProjectsLoadRequested extends ProfileEvent {
   ProjectsLoadRequested({this.page = 1});
   final int page;
+}
+
+final class ProjectCreateRequested extends ProfileEvent {
+  ProjectCreateRequested({
+    required this.projectName,
+    required this.city,
+    this.siteDeliveryAddressId,
+    this.newAddress,
+    this.imageBytes,
+    this.imageFilename,
+  });
+
+  final String projectName;
+  final String city;
+  final int? siteDeliveryAddressId;
+  final Map<String, dynamic>? newAddress;
+  final Uint8List? imageBytes;
+  final String? imageFilename;
+}
+
+final class ProjectUpdateRequested extends ProfileEvent {
+  ProjectUpdateRequested({
+    required this.projectId,
+    required this.projectName,
+    required this.city,
+    required this.address,
+    this.imageBytes,
+    this.imageFilename,
+  });
+
+  final String projectId;
+  final String projectName;
+  final String city;
+  final Map<String, dynamic> address;
+  final Uint8List? imageBytes;
+  final String? imageFilename;
 }
 
 // ── States ───────────────────────────────────────────────────────────────────
@@ -97,6 +135,15 @@ final class ProjectsError extends ProfileState {
   final String message;
 }
 
+final class ProjectSaving extends ProfileState {}
+
+final class ProjectSaved extends ProfileState {}
+
+final class ProjectSaveError extends ProfileState {
+  ProjectSaveError(this.message);
+  final String message;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
@@ -107,6 +154,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<WalletHistoryLoadRequested>(_onLoadWalletHistory);
     on<MobstarLoadRequested>(_onLoadMobstar);
     on<ProjectsLoadRequested>(_onLoadProjects);
+    on<ProjectCreateRequested>(_onCreateProject);
+    on<ProjectUpdateRequested>(_onUpdateProject);
   }
 
   final ProfileRepository _repository;
@@ -238,6 +287,50 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
               (totalCount > 0 && merged.length >= totalCount),
         ));
       }
+    }
+  }
+
+  Future<void> _onCreateProject(
+    ProjectCreateRequested event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(ProjectSaving());
+    final (success, failure) = await _repository.createProject(
+      projectName: event.projectName,
+      city: event.city,
+      siteDeliveryAddressId: event.siteDeliveryAddressId,
+      newAddress: event.newAddress,
+      imageBytes: event.imageBytes,
+      imageFilename: event.imageFilename,
+    );
+    if (failure != null || !success) {
+      AppHaptics.error();
+      emit(ProjectSaveError(failure?.message ?? 'Unable to create project.'));
+    } else {
+      emit(ProjectSaved());
+      add(ProjectsLoadRequested());
+    }
+  }
+
+  Future<void> _onUpdateProject(
+    ProjectUpdateRequested event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(ProjectSaving());
+    final (success, failure) = await _repository.updateProject(
+      projectId: event.projectId,
+      projectName: event.projectName,
+      city: event.city,
+      address: event.address,
+      imageBytes: event.imageBytes,
+      imageFilename: event.imageFilename,
+    );
+    if (failure != null || !success) {
+      AppHaptics.error();
+      emit(ProjectSaveError(failure?.message ?? 'Unable to update project.'));
+    } else {
+      emit(ProjectSaved());
+      add(ProjectsLoadRequested());
     }
   }
 

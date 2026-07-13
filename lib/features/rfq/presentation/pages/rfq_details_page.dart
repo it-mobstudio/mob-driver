@@ -123,8 +123,6 @@ class _RfqDetailsBody extends StatelessWidget {
   final RfqEntity rfq;
 
   bool get _isMagicQuote => rfq.status == 'Magic Quote';
-  bool get _isOrderCreatedOrConverted =>
-      rfq.status == 'Order Created' || rfq.status == 'Order Converted';
 
   @override
   Widget build(BuildContext context) {
@@ -165,19 +163,6 @@ class _RfqDetailsBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _MetaLine(date: date, address: _rfqAddress(rfq)),
-                if (_isOrderCreatedOrConverted) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'Order has been created for this request. Please click '
-                    'on "View order" to check the order status',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF2D9955),
-                      height: 18 / 12,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 18),
                 progressCard,
                 for (final quote in rfq.convertedToOrderQuotes) ...[

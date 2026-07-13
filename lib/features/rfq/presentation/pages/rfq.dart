@@ -723,19 +723,12 @@ class _RfqCard extends StatelessWidget {
               height: 44,
               width: double.infinity,
               child: TextButton(
-                onPressed: () {
-                  if (displayStatus == _RfqDisplayStatus.convertedToOrder) {
-                    return;
-                  }
-                  context.push(
-                    RfqDetailsPage.routePath,
-                    extra: item.id,
-                  );
-                },
+                onPressed: () => context.push(
+                  RfqDetailsPage.routePath,
+                  extra: item.id,
+                ),
                 child: Text(
-                  displayStatus == _RfqDisplayStatus.convertedToOrder
-                      ? 'View order'
-                      : 'View quotation',
+                  'View quotation',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -752,7 +745,8 @@ class _RfqCard extends StatelessWidget {
 
     final opensDetails = displayStatus == _RfqDisplayStatus.requested ||
         displayStatus == _RfqDisplayStatus.quoteGenerated ||
-        displayStatus == _RfqDisplayStatus.quoteAccepted;
+        displayStatus == _RfqDisplayStatus.quoteAccepted ||
+        displayStatus == _RfqDisplayStatus.convertedToOrder;
 
     if (!opensDetails) {
       return card;

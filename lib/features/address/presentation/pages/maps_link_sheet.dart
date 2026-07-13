@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/network/dio_client.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
@@ -58,86 +59,109 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       padding: EdgeInsets.only(bottom: bottomInset),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Delivery google maps link',
-              style: GoogleFonts.inter(
-                color: _navy,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => Navigator.of(context).pop(),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: SvgPicture.asset(
+                  'assets/images/close.svg',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            AppTextField(
-              controller: _linkController,
-              label: 'Maps link*',
-              floatingLabelBehavior: FloatingLabelBehavior.always,
-              keyboardType: TextInputType.url,
-              onChanged: _onLinkChanged,
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            if (_resolving) ...[
-              const SizedBox(height: 16),
-              const Center(
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2.4),
-                ),
-              ),
-            ] else if (_error != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                style: GoogleFonts.inter(
-                  color: const Color(0xFFC13615),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ] else if (_resolvedLocation != null) ...[
-              const SizedBox(height: 16),
-              _serviceabilityBadge(),
-            ],
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _canSelect ? _select : null,
-                style: ElevatedButton.styleFrom(
-                  elevation: 0,
-                  backgroundColor: _blue,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFFDFE4EC),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Select',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Delivery google maps link',
                   style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    color: _navy,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
+                const SizedBox(height: 20),
+                AppTextField(
+                  controller: _linkController,
+                  label: 'Maps link*',
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  keyboardType: TextInputType.url,
+                  onChanged: _onLinkChanged,
+                ),
+                if (_resolving) ...[
+                  const SizedBox(height: 16),
+                  const Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
+                    ),
+                  ),
+                ] else if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFFC13615),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ] else if (_resolvedLocation != null) ...[
+                  const SizedBox(height: 16),
+                  _serviceabilityBadge(),
+                ],
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _canSelect ? _select : null,
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: _blue,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: const Color(0xFFDFE4EC),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Select',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  bool get _canSelect => _resolvedLocation != null && _serviceable == true;
+  // Serviceability only drives the informational badge below — selecting a
+  // pasted link is still allowed either way, matching the web app (which
+  // never disables its "Select" button on unserviceable addresses).
+  bool get _canSelect => _resolvedLocation != null;
 
   Widget _serviceabilityBadge() {
     final serviceable = _serviceable == true;
@@ -145,7 +169,7 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: serviceable ? const Color(0xFFE3F7EC) : const Color(0xFFFFE9E9),
+        color: serviceable ? const Color(0xFFE2F6DB) : const Color(0xFFFFE9E9),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

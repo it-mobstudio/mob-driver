@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/widgets/project_form_sheet.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
@@ -333,6 +334,28 @@ class _ProjectControls extends StatelessWidget {
   final List<String> cities;
   final ValueChanged<String> onCitySelected;
 
+  Widget _addProjectButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: ElevatedButton.icon(
+        onPressed: () => showProjectFormSheet(context),
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: _ProjectColors.blue,
+          foregroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: const Icon(Icons.add, size: 18),
+        label: Text(
+          'Add project',
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -420,6 +443,8 @@ class _ProjectControls extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          _addProjectButton(context),
+          const SizedBox(height: 12),
         ],
       ),
     );
@@ -480,18 +505,23 @@ class _ProjectCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFE4E7EC)),
-                    ),
-                    child: const Icon(
-                      Icons.more_horiz,
-                      color: _ProjectColors.navy,
-                      size: 18,
+                  InkWell(
+                    borderRadius: BorderRadius.circular(13),
+                    onTap: () =>
+                        showProjectFormSheet(context, existing: project),
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFE4E7EC)),
+                      ),
+                      child: const Icon(
+                        Icons.more_horiz,
+                        color: _ProjectColors.navy,
+                        size: 18,
+                      ),
                     ),
                   ),
                 ],

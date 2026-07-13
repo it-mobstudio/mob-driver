@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
@@ -40,6 +41,12 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
   static const _border = Color(0xFFDFE4EC);
 
   late final AddressBloc _addressBloc;
+
+  /// The pin location backing this form — starts as [AddAddressDetailPage.location]
+  /// but is replaced in place when "Change" resolves a different pin, so the
+  /// user edits the same form instead of losing their progress and being
+  /// bounced back out to the address list.
+  late AddressEntity _location = widget.location;
   final _formKey = GlobalKey<FormState>();
   final _houseFloorController = TextEditingController();
   final _buildingAreaController = TextEditingController();
@@ -66,11 +73,27 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
     _buildingAreaController.text = existing.addressLine2;
     _gstController.text = existing.gstNumber;
     if (existing.addressTag.trim().isNotEmpty) {
-      _addressTag = existing.addressTag.trim();
+      _addressTag = _normalizeAddressTag(existing.addressTag);
     }
     _projectNameController.text = existing.projectName;
     _receiverNameController.text = existing.name;
     _receiverPhoneController.text = existing.phoneNumber;
+  }
+
+  /// The API returns tags in whatever case they were originally stored in
+  /// (e.g. "HOME" from older/web-created addresses), but the chips below
+  /// compare against exact title-case labels — normalize so a saved address
+  /// still shows its tag as selected instead of matching neither chip.
+  static String _normalizeAddressTag(String tag) {
+    final trimmed = tag.trim();
+    switch (trimmed.toLowerCase()) {
+      case 'home':
+        return 'Home';
+      case 'project':
+        return 'Project';
+      default:
+        return trimmed;
+    }
   }
 
   @override
@@ -172,6 +195,48 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
     );
   }
 
+  /// Opens the map picker to adjust the pin, then applies the newly
+  /// confirmed location to this same form — rather than popping straight
+  /// back out to the address list, which is what a bare `context.pop()`
+  /// here used to do (there's no map page underneath in the edit flow,
+  /// since editing pushes straight to this page).
+  Future<void> _changeLocation() async {
+    final confirmed = await context.push<AddressEntity>(
+      ConfirmDeliveryLocationPage.routePath,
+      extra: AddressLocationEntity(
+        latitude: _location.latitude,
+        longitude: _location.longitude,
+        formattedAddress: _location.formattedAddress,
+        city: _location.city,
+        state: _location.state,
+        pincode: _location.pincode,
+        sublocality: _location.sublocality,
+        locationName: _location.locationName,
+      ),
+    );
+    if (!mounted || confirmed == null) return;
+    setState(() => _location = confirmed);
+  }
+
+  /// Editing a saved address (rather than a freshly-confirmed map pin) means
+  /// `locationName`/`formattedAddress` are usually empty — those are pin-drop
+  /// metadata that a stored address never carried — so fall back to the
+  /// contact name and the structured address fields, same as the saved
+  /// address list cards in `address_picker.dart`.
+  String get _locationTitle {
+    final name = _location.name.trim();
+    if (name.isNotEmpty) return name;
+    final locationName = _location.locationName.trim();
+    if (locationName.isNotEmpty) return locationName;
+    return 'Saved address';
+  }
+
+  String get _locationSubtitle {
+    final formatted = _location.formattedAddress.trim();
+    if (formatted.isNotEmpty) return formatted;
+    return _location.displayAddress;
+  }
+
   Widget _locationSummaryCard() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 18, 14, 18),
@@ -193,7 +258,7 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.location.locationName,
+                  _locationTitle,
                   style: GoogleFonts.inter(
                     color: _navy,
                     fontSize: 15,
@@ -202,7 +267,7 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  widget.location.formattedAddress,
+                  _locationSubtitle,
                   style: GoogleFonts.inter(
                     color: const Color(0xFF596378),
                     fontSize: 12,
@@ -214,7 +279,7 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
           ),
           const SizedBox(width: 8),
           OutlinedButton(
-            onPressed: () => context.pop(),
+            onPressed: _changeLocation,
             style: OutlinedButton.styleFrom(
               foregroundColor: _blue,
               side: const BorderSide(color: _blue),
@@ -453,15 +518,15 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
       AddressSaveRequested(
         AddressEntity(
           id: widget.existingAddress?.id ?? '',
-          latitude: widget.location.latitude,
-          longitude: widget.location.longitude,
-          googleMapLink: widget.location.googleMapLink,
-          formattedAddress: widget.location.formattedAddress,
-          city: widget.location.city,
-          state: widget.location.state,
-          pincode: widget.location.pincode,
-          sublocality: widget.location.sublocality,
-          locationName: widget.location.locationName,
+          latitude: _location.latitude,
+          longitude: _location.longitude,
+          googleMapLink: _location.googleMapLink,
+          formattedAddress: _location.formattedAddress,
+          city: _location.city,
+          state: _location.state,
+          pincode: _location.pincode,
+          sublocality: _location.sublocality,
+          locationName: _location.locationName,
           name: _receiverNameController.text.trim(),
           email: '',
           addressLine1: _houseFloorController.text.trim(),

@@ -99,6 +99,12 @@ class _MainBottomNavigationBar extends StatelessWidget {
     ),
   ];
 
+  // Width of the trailing Rufus/menu button slot (56 icon + 16 right
+  // padding) — subtracted from the row's width so the indicator bar is
+  // centered against the 4 equally-Expanded tabs only, not that slot.
+  static const _trailingSlotWidth = 72.0;
+  static const _indicatorWidth = 64.0;
+
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
@@ -116,61 +122,102 @@ class _MainBottomNavigationBar extends StatelessWidget {
         top: false,
         child: SizedBox(
           height: kBottomNavBarHeight,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ..._svgItems.asMap().entries.map((entry) {
-                final index = entry.key;
-                final item = entry.value;
-                final isSelected = currentIndex == index;
-                return Expanded(
-                  child: InkWell(
-                    onTap: () => onTap(index),
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 11),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset(
-                            isSelected ? item.selectedIcon : item.icon,
-                            width: 20,
-                            height: 20,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item.label,
-                            style: GoogleFonts.inter(
-                              color: isSelected
-                                  ? Colors.black
-                                  : const Color(0xFF8D8F91),
-                              fontSize: 11,
-                              height: 16 / 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final tabsWidth = constraints.maxWidth - _trailingSlotWidth;
+              final tabWidth = tabsWidth / _svgItems.length;
+              return Stack(
+                children: [
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    top: 0,
+                    left: tabWidth * currentIndex +
+                        (tabWidth - _indicatorWidth) / 2,
+                    width: _indicatorWidth,
+                    height: 4,
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.vertical(
+                          bottom: Radius.circular(3),
+                        ),
                       ),
                     ),
                   ),
-                );
-              }),
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: SizedBox(
-                  width: 56,
-                  child: InkWell(
-                    onTap: () {
-                      AppHaptics.tabSelection();
-                      context.push(ReferralPage.routePath);
-                    },
-                    child: const Align(
-                      alignment: Alignment.topCenter,
-                      child: _LottieMenuIcon(),
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ..._svgItems.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final item = entry.value;
+                        final isSelected = currentIndex == index;
+                        return Expanded(
+                          child: InkWell(
+                            onTap: () => onTap(index),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 11),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedSwitcher(
+                                    duration:
+                                        const Duration(milliseconds: 180),
+                                    transitionBuilder: (child, animation) =>
+                                        ScaleTransition(
+                                      scale: animation,
+                                      child: child,
+                                    ),
+                                    child: SvgPicture.asset(
+                                      isSelected
+                                          ? item.selectedIcon
+                                          : item.icon,
+                                      key: ValueKey(isSelected),
+                                      width: 20,
+                                      height: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  AnimatedDefaultTextStyle(
+                                    duration:
+                                        const Duration(milliseconds: 180),
+                                    style: GoogleFonts.inter(
+                                      color: isSelected
+                                          ? Colors.black
+                                          : const Color(0xFF8D8F91),
+                                      fontSize: 11,
+                                      height: 16 / 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    child: Text(item.label),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: SizedBox(
+                          width: 56,
+                          child: InkWell(
+                            onTap: () {
+                              AppHaptics.tabSelection();
+                              context.push(ReferralPage.routePath);
+                            },
+                            child: const Align(
+                              alignment: Alignment.topCenter,
+                              child: _LottieMenuIcon(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           ),
         ),
       ),

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
@@ -151,6 +154,82 @@ class ProfileRepositoryImpl implements ProfileRepository {
       return (null, e.toAppFailure());
     } catch (e) {
       return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(bool, AppFailure?)> createProject({
+    required String projectName,
+    required String city,
+    int? siteDeliveryAddressId,
+    Map<String, dynamic>? newAddress,
+    Uint8List? imageBytes,
+    String? imageFilename,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'project_name': projectName,
+        'city': city,
+        if (siteDeliveryAddressId != null)
+          'site_delivery': siteDeliveryAddressId.toString(),
+        if (newAddress != null) 'address': jsonEncode(newAddress),
+        if (imageBytes != null)
+          'project_image': MultipartFile.fromBytes(
+            imageBytes,
+            filename: imageFilename ?? 'project.jpg',
+          ),
+      };
+      final body = await _datasource.createProject(data);
+      if (body['status'] == false) {
+        return (
+          false,
+          BusinessFailure(
+              body['message']?.toString() ?? 'Unable to create project.'),
+        );
+      }
+      return (true, null);
+    } on DioException catch (e) {
+      return (false, e.toAppFailure());
+    } catch (e) {
+      return (false, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(bool, AppFailure?)> updateProject({
+    required String projectId,
+    required String projectName,
+    required String city,
+    required Map<String, dynamic> address,
+    Uint8List? imageBytes,
+    String? imageFilename,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'project_id': projectId,
+        'project_name': projectName,
+        'city': city,
+        'site_delivery': '0',
+        'address': jsonEncode(address),
+        if (imageBytes != null)
+          'project_image': MultipartFile.fromBytes(
+            imageBytes,
+            filename: imageFilename ?? 'project.jpg',
+          ),
+      };
+      final body = await _datasource.updateProject(data);
+      if (body['status'] == false) {
+        return (
+          false,
+          BusinessFailure(
+              body['message']?.toString() ?? 'Unable to update project.'),
+        );
+      }
+      return (true, null);
+    } on DioException catch (e) {
+      return (false, e.toAppFailure());
+    } catch (e) {
+      return (false, UnknownFailure(e.toString()));
     }
   }
 }

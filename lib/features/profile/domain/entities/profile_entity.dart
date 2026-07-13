@@ -397,6 +397,19 @@ class ProjectEntity {
     required this.rfqCount,
     required this.orderCount,
     required this.imageUrl,
+    this.siteDeliveryId = 0,
+    this.state = '',
+    this.pincode = '',
+    this.addressLine1 = '',
+    this.addressLine2 = '',
+    this.email = '',
+    this.gstNumber = '',
+    this.googleMapLink = '',
+    this.addressTag = '',
+    this.contactName = '',
+    this.contactPhone = '',
+    this.siteContactName = '',
+    this.siteContactPhone = '',
   });
 
   final int id;
@@ -409,6 +422,28 @@ class ProjectEntity {
   final int rfqCount;
   final int orderCount;
   final String imageUrl;
+
+  /// Fields below back the Edit-project form's address prefill — the card
+  /// view only needs the combined [address] string, but editing needs the
+  /// individual `site_delivery` fields the web app sends back as one object.
+  final int siteDeliveryId;
+  final String state;
+  final String pincode;
+  final String addressLine1;
+  final String addressLine2;
+  final String email;
+  final String gstNumber;
+  final String googleMapLink;
+  final String addressTag;
+
+  /// Precise (non-fallback-merged) counterparts of [sitePersonName]/[phone]
+  /// — those two are deliberately fuzzy for card display, but editing must
+  /// round-trip the exact underlying `site_delivery` fields without them
+  /// bleeding into each other.
+  final String contactName;
+  final String contactPhone;
+  final String siteContactName;
+  final String siteContactPhone;
 
   String get initials {
     final words = name
@@ -433,7 +468,8 @@ class ProjectEntity {
   factory ProjectEntity.fromMap(Map<String, dynamic> map) {
     final project = _asMap(map['project']);
     final addressMap = _asMap(
-      map['delivery_address'] ??
+      map['site_delivery'] ??
+          map['delivery_address'] ??
           map['address'] ??
           map['project_address'] ??
           project['address'],
@@ -480,6 +516,7 @@ class ProjectEntity {
         map['site_manager_name'],
         map['project_manager_name'],
         manager['name'],
+        addressMap['site_person'],
         addressMap['name'],
         addressMap['contact_person'],
       ]),
@@ -490,10 +527,12 @@ class ProjectEntity {
         map['site_manager_phone'],
         manager['phone'],
         manager['phone_number'],
+        addressMap['site_person_mobile'],
         addressMap['phone'],
         addressMap['phone_number'],
       ]),
       rfqCount: _countFrom(map, const [
+        'total_rfq',
         'rfq_count',
         'rfqs_count',
         'rfqCount',
@@ -501,6 +540,7 @@ class ProjectEntity {
         'rfqs',
       ]),
       orderCount: _countFrom(map, const [
+        'total_orders',
         'order_count',
         'orders_count',
         'orderCount',
@@ -514,6 +554,21 @@ class ProjectEntity {
         project['image'],
         project['image_url'],
       ]),
+      siteDeliveryId: _asInt(addressMap['id']),
+      state: _firstString([addressMap['state']]),
+      pincode: _firstString([addressMap['pincode'], addressMap['postal_code']]),
+      addressLine1: _firstString(
+          [addressMap['address_line_1'], addressMap['address_line1']]),
+      addressLine2: _firstString(
+          [addressMap['address_line_2'], addressMap['address_line2']]),
+      email: _firstString([addressMap['email']]),
+      gstNumber: _firstString([addressMap['gst_number']]),
+      googleMapLink: _firstString([addressMap['google_map_link']]),
+      addressTag: _firstString([addressMap['address_tag']]),
+      contactName: _firstString([addressMap['name']]),
+      contactPhone: _firstString([addressMap['phone_number']]),
+      siteContactName: _firstString([addressMap['site_person']]),
+      siteContactPhone: _firstString([addressMap['site_person_mobile']]),
     );
   }
 
@@ -556,8 +611,8 @@ class ProjectEntity {
     if (direct.isNotEmpty && !direct.startsWith('{')) return direct;
 
     return [
-      addressMap['address_line1'],
-      addressMap['address_line2'],
+      addressMap['address_line_1'] ?? addressMap['address_line1'],
+      addressMap['address_line_2'] ?? addressMap['address_line2'],
       addressMap['landmark'],
       addressMap['city'],
       addressMap['state'],

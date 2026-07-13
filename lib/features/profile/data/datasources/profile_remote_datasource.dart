@@ -6,6 +6,8 @@ abstract interface class ProfileRemoteDatasource {
   Future<Map<String, dynamic>> getWalletHistory();
   Future<Map<String, dynamic>> getMobstar();
   Future<Map<String, dynamic>> getProjects({int page = 1});
+  Future<Map<String, dynamic>> createProject(Map<String, dynamic> data);
+  Future<Map<String, dynamic>> updateProject(Map<String, dynamic> data);
 }
 
 class ProfileRemoteDatasourceImpl implements ProfileRemoteDatasource {
@@ -58,6 +60,28 @@ class ProfileRemoteDatasourceImpl implements ProfileRemoteDatasource {
     final response = await _dio.get<dynamic>(
       '/projects/',
       queryParameters: {'page': page},
+    );
+    final raw = response.data;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return {};
+  }
+
+  @override
+  Future<Map<String, dynamic>> createProject(Map<String, dynamic> data) async {
+    final response = await _dio.post<dynamic>(
+      '/projects/create_project/',
+      data: FormData.fromMap(data),
+    );
+    final raw = response.data;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return {};
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateProject(Map<String, dynamic> data) async {
+    final response = await _dio.patch<dynamic>(
+      '/projects/update_project/',
+      data: FormData.fromMap(data),
     );
     final raw = response.data;
     if (raw is Map) return Map<String, dynamic>.from(raw);
