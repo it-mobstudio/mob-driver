@@ -42,6 +42,7 @@ class _ConfirmDeliveryLocationPageState
   late AddressLocationEntity _resolved;
   bool _resolvingAddress = false;
   bool _detectingLocation = false;
+  bool _canShowUserLocation = false;
 
   @override
   void initState() {
@@ -117,7 +118,7 @@ class _ConfirmDeliveryLocationPageState
               target: _pickedLatLng,
               zoom: 16,
             ),
-            myLocationEnabled: true,
+            myLocationEnabled: _canShowUserLocation,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
             onMapCreated: (controller) => _mapController = controller,
@@ -140,7 +141,7 @@ class _ConfirmDeliveryLocationPageState
                 _tooltip(),
                 const SizedBox(height: 8),
                 Transform.translate(
-                  offset: Offset(0, -2),
+                  offset: const Offset(0, -2),
                   child: const _MapPin(),
                 ),
               ],
@@ -254,7 +255,7 @@ class _ConfirmDeliveryLocationPageState
 
   Widget _mapsLinkChip() {
     return _pillButton(
-      iconAsset: 'assets/images/googlemarker.svg',
+      iconAsset: 'assets/images/Maps icon app.png',
       label: 'Maps link',
       onTap: _openMapsLinkSheet,
     );
@@ -298,10 +299,22 @@ class _ConfirmDeliveryLocationPageState
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               else
-                SvgPicture.asset(
-                  iconAsset,
+                SizedBox(
                   width: 17,
                   height: 17,
+                  child: iconAsset.toLowerCase().endsWith('.svg')
+                      ? SvgPicture.asset(
+                          iconAsset,
+                          width: 17,
+                          height: 17,
+                          fit: BoxFit.contain,
+                        )
+                      : Image.asset(
+                          iconAsset,
+                          width: 17,
+                          height: 17,
+                          fit: BoxFit.contain,
+                        ),
                 ),
               const SizedBox(width: 7),
               Flexible(
@@ -453,6 +466,9 @@ class _ConfirmDeliveryLocationPageState
           permission == LocationPermission.deniedForever) {
         _showMessage('Location permission is required.');
         return;
+      }
+      if (mounted && !_canShowUserLocation) {
+        setState(() => _canShowUserLocation = true);
       }
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(

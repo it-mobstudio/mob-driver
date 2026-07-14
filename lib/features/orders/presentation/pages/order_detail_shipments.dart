@@ -118,7 +118,22 @@ class _ShipmentSection extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded, size: 24),
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F1F2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/images/Arrow.svg',
+                      width: 14,
+                      height: 14,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                )
               ],
             ),
           ),
