@@ -55,7 +55,6 @@ class AddressPickerBody extends StatelessWidget {
   static const _navy = Color(0xFF0A243F);
   static const _blue = Color(0xFF0360E5);
   static const _border = Color(0xFFDFE4EC);
-  static const _muted = Color(0xFF767C8F);
 
   @override
   Widget build(BuildContext context) {
@@ -331,57 +330,85 @@ class AddressPickerBody extends StatelessWidget {
         .map(
           (suggestion) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Material(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: onSelectSuggestion == null
-                    ? null
-                    : () => onSelectSuggestion!(suggestion),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined, color: _navy),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              suggestion.primaryText,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                color: _navy,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (suggestion.secondaryText.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                suggestion.secondaryText,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(
-                                  color: _muted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            child: AddressSuggestionTile(
+              suggestion: suggestion,
+              onTap: onSelectSuggestion == null
+                  ? null
+                  : () => onSelectSuggestion!(suggestion),
             ),
           ),
         )
         .toList();
+  }
+}
+
+/// A single search-result (or recent-search) row: a location icon, the
+/// place's primary/secondary text. Shared by [AddressPickerBody]'s inline
+/// suggestion list and `LocationSearchPage`'s dedicated search/recents list
+/// so both render identically.
+class AddressSuggestionTile extends StatelessWidget {
+  const AddressSuggestionTile({
+    super.key,
+    required this.suggestion,
+    required this.onTap,
+    this.icon = Icons.location_on_outlined,
+  });
+
+  final AddressSuggestionEntity suggestion;
+  final VoidCallback? onTap;
+  final IconData icon;
+
+  static const _navy = Color(0xFF0A243F);
+  static const _muted = Color(0xFF767C8F);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Icon(icon, color: _navy),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      suggestion.primaryText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: _navy,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (suggestion.secondaryText.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        suggestion.secondaryText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: _muted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

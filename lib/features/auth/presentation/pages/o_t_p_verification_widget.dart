@@ -42,6 +42,10 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
       });
     }
     _startResendTimer();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _otpFocusNodes.first.requestFocus();
+    });
   }
 
   @override

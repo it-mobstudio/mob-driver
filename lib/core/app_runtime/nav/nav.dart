@@ -5,6 +5,7 @@ import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/add_address_detail_page.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/location_search_page.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/splash_screen.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_page.dart';
@@ -188,6 +189,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
             title: extra['title']?.toString(),
           );
         },
+      ),
+      GoRoute(
+        name: LocationSearchPage.routeName,
+        path: LocationSearchPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const LocationSearchPage(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

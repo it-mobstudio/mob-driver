@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/core/location/location_permission_helper.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/location_search_page.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/maps_link_sheet.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
@@ -37,7 +41,7 @@ class _ConfirmDeliveryLocationPageState
   static const _bodyText = Color(0xFF596378);
 
   late final AddressRepository _addressRepository;
-  GoogleMapController? _mapController;
+  final Completer<GoogleMapController> _controllerReady = Completer();
   late LatLng _pickedLatLng;
   late AddressLocationEntity _resolved;
   bool _resolvingAddress = false;
@@ -63,7 +67,9 @@ class _ConfirmDeliveryLocationPageState
 
   @override
   void dispose() {
-    _mapController?.dispose();
+    if (_controllerReady.isCompleted) {
+      _controllerReady.future.then((controller) => controller.dispose());
+    }
     super.dispose();
   }
 
@@ -121,7 +127,7 @@ class _ConfirmDeliveryLocationPageState
             myLocationEnabled: _canShowUserLocation,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
-            onMapCreated: (controller) => _mapController = controller,
+            onMapCreated: (controller) => _controllerReady.complete(controller),
             onCameraMove: (position) => _pickedLatLng = position.target,
             onCameraIdle: () => _reverseGeocode(_pickedLatLng),
           ),
@@ -172,7 +178,7 @@ class _ConfirmDeliveryLocationPageState
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: () => context.pop(),
+        onTap: _openLocationSearchPage,
         child: Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -443,7 +449,8 @@ class _ConfirmDeliveryLocationPageState
       _resolved = location;
       _pickedLatLng = LatLng(location.latitude, location.longitude);
     });
-    await _mapController?.animateCamera(
+    final controller = await _controllerReady.future;
+    await controller.animateCamera(
       CameraUpdate.newLatLngZoom(_pickedLatLng, 16),
     );
   }
@@ -454,19 +461,22 @@ class _ConfirmDeliveryLocationPageState
     await _applyResolvedLocation(location);
   }
 
+  /// The search bar used to just pop this page back to the caller without
+  /// actually searching — now it opens the dedicated, autofocused search
+  /// page (with recent searches) and moves the pin to whatever gets picked.
+  Future<void> _openLocationSearchPage() async {
+    final location = await context.push<AddressLocationEntity>(
+      LocationSearchPage.routePath,
+    );
+    if (!mounted || location == null) return;
+    await _applyResolvedLocation(location);
+  }
+
   Future<void> _useCurrentLocation() async {
     if (_detectingLocation) return;
     setState(() => _detectingLocation = true);
     try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        _showMessage('Location permission is required.');
-        return;
-      }
+      if (!await ensureLocationPermission(context)) return;
       if (mounted && !_canShowUserLocation) {
         setState(() => _canShowUserLocation = true);
       }
@@ -477,7 +487,8 @@ class _ConfirmDeliveryLocationPageState
       );
       final location = LatLng(position.latitude, position.longitude);
       _pickedLatLng = location;
-      await _mapController?.animateCamera(
+      final controller = await _controllerReady.future;
+      await controller.animateCamera(
         CameraUpdate.newLatLngZoom(location, 16),
       );
       await _reverseGeocode(location);

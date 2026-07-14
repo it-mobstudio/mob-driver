@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/core/location/location_permission_helper.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
@@ -153,7 +154,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
         _loadingAddresses = false;
       });
     } else if (state is AddressLocationResolved) {
-      _confirmOnMap(state.location);
+      _completeSelection(_toAddressEntity(state.location));
     } else if (state is AddressError) {
       setState(() => _loadingAddresses = false);
       ScaffoldMessenger.of(context)
@@ -162,12 +163,12 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     }
   }
 
-  /// "Add new address" — confirm a pin on the map, then collect receiver
-  /// details and actually save it to the address book (unlike
-  /// [_confirmOnMap], which only sets the nav bar's browsing location).
-  /// Defaults to a Bengaluru city-center pin when no location is already
-  /// known; [ConfirmDeliveryLocationPage] resolves the real address for it
-  /// as soon as the map loads.
+  /// "Add new address" (and the pasted maps-link flow) — confirm a pin on
+  /// the map, then collect receiver details and actually save it to the
+  /// address book (unlike [_toAddressEntity]'s callers, which only set the
+  /// nav bar's browsing location). Defaults to a Bengaluru city-center pin
+  /// when no location is already known; [ConfirmDeliveryLocationPage]
+  /// resolves the real address for it as soon as the map loads.
   Future<void> _openMap([AddressLocationEntity? location]) async {
     final confirmed = await context.push<AddressEntity>(
       ConfirmDeliveryLocationPage.routePath,
@@ -244,17 +245,40 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     }
   }
 
-  /// Lets the user confirm/adjust the pin on the map before it's applied as
-  /// the active delivery location — used for both "detect my location" and
-  /// picking a search suggestion, so a resolved GPS/place lookup never
-  /// silently takes effect without the user seeing and confirming it first.
-  Future<void> _confirmOnMap(AddressLocationEntity location) async {
-    final confirmed = await context.push<AddressEntity>(
-      ConfirmDeliveryLocationPage.routePath,
-      extra: location,
+  /// Converts a resolved search/GPS lookup straight into an [AddressEntity]
+  /// for [_completeSelection] — mirrors the same conversion
+  /// [ConfirmDeliveryLocationPage._confirm] does, minus the interactive map
+  /// step: picking a suggestion or "Current location" should apply directly
+  /// to the nav bar, not detour through drag-to-confirm.
+  AddressEntity _toAddressEntity(AddressLocationEntity location) {
+    return AddressEntity(
+      latitude: location.latitude,
+      longitude: location.longitude,
+      googleMapLink:
+          'https://www.google.com/maps?q=${location.latitude},${location.longitude}',
+      formattedAddress: location.formattedAddress,
+      city: location.city,
+      state: location.state,
+      pincode: _resolvePincode(location.pincode, location.formattedAddress),
+      sublocality: location.sublocality,
+      locationName: location.locationName.trim().isEmpty
+          ? 'Selected location'
+          : location.locationName.trim(),
+      name: '',
+      email: '',
+      addressLine1: '',
+      addressLine2: '',
+      sitePerson: '',
+      sitePersonMobile: '',
+      addressTag: '',
+      phoneNumber: '',
     );
-    if (!mounted || confirmed == null) return;
-    await _completeSelection(confirmed);
+  }
+
+  String _resolvePincode(String? postalCode, String address) {
+    final direct = postalCode?.trim() ?? '';
+    if (RegExp(r'^[1-9][0-9]{5}$').hasMatch(direct)) return direct;
+    return RegExp(r'\b[1-9][0-9]{5}\b').firstMatch(address)?.group(0) ?? '';
   }
 
   Future<void> _openMapsLinkSheet() async {
@@ -267,15 +291,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     if (_detectingLocation) return;
     setState(() => _detectingLocation = true);
     try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        _showError('Location permission is required.');
-        return;
-      }
+      if (!await ensureLocationPermission(context)) return;
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
@@ -291,7 +307,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
             failure?.message ?? 'Unable to resolve your current address.');
         return;
       }
-      await _openMap(location);
+      await _completeSelection(_toAddressEntity(location));
     } catch (_) {
       _showError('Unable to detect your current location.');
     } finally {

@@ -10,13 +10,7 @@ import 'package:m_o_b_demand_side/features/address/domain/entities/address_entit
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
-/// Lets the user paste a Google Maps share link instead of dragging the pin
-/// or searching. Resolved entirely client-side: follow the link's redirects
-/// (short `maps.app.goo.gl` links only carry coordinates after redirecting)
-/// to find the lat/lng embedded in the final URL, reverse-geocode it via the
-/// same Google API the map screen already uses, then run the resolved
-/// pincode through the existing `/utility/serviceble/` check (the same one
-/// checkout uses) for the Serviceable/Unserviceable badge.
+
 Future<AddressLocationEntity?> showMapsLinkSheet(BuildContext context) {
   return showModalBottomSheet<AddressLocationEntity>(
     context: context,
@@ -78,7 +72,7 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 28, 16, 32),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -95,7 +89,7 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 28),
                 AppTextField(
                   controller: _linkController,
                   label: 'Maps link*',
@@ -126,10 +120,10 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
                   const SizedBox(height: 16),
                   _serviceabilityBadge(),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 28),
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 52,
                   child: ElevatedButton(
                     onPressed: _canSelect ? _select : null,
                     style: ElevatedButton.styleFrom(
@@ -218,16 +212,33 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
       _resolving = true;
       _error = null;
     });
+
+    // Two genuinely different failure modes were sharing one error message
+    // ("Couldn't read a location from that link"), which pointed at the
+    // wrong step whenever it was actually the reverse-geocode call that
+    // failed rather than the link parsing — split so the real cause shows.
+    (double, double)? coordinates;
     try {
       final finalUrl = await _followRedirects(link);
-      final coordinates = _extractLatLng(finalUrl);
-      if (coordinates == null) {
-        setState(() {
-          _error = "Couldn't read a location from that link.";
-          _resolving = false;
-        });
-        return;
-      }
+      coordinates = _extractLatLng(finalUrl);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = "Couldn't read a location from that link.";
+        _resolving = false;
+      });
+      return;
+    }
+    if (coordinates == null) {
+      if (!mounted) return;
+      setState(() {
+        _error = "Couldn't read a location from that link.";
+        _resolving = false;
+      });
+      return;
+    }
+
+    try {
       final (location, failure) = await sl<AddressRepository>().reverseGeocode(
         coordinates.$1,
         coordinates.$2,
@@ -242,14 +253,16 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
       }
       setState(() => _resolvedLocation = location);
       await _checkServiceability(location.pincode);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = "Couldn't read a location from that link.";
+        _error = 'Unable to resolve this address: $e';
+        _resolving = false;
       });
-    } finally {
-      if (mounted) setState(() => _resolving = false);
+      return;
     }
+
+    if (mounted) setState(() => _resolving = false);
   }
 
   Future<String> _followRedirects(String link) async {

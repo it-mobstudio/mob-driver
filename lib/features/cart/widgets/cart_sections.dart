@@ -504,6 +504,7 @@ class SellerSection extends StatelessWidget {
     super.key,
     required this.sellerCode,
     required this.sellerItems,
+    required this.deliveryLabel,
     required this.onQtyChanged,
     required this.onQtyInputChanged,
     required this.onRemove,
@@ -513,6 +514,7 @@ class SellerSection extends StatelessWidget {
 
   final String sellerCode;
   final List<CartItem> sellerItems;
+  final String deliveryLabel;
   final void Function(CartItem item, int quantity) onQtyChanged;
   final void Function(CartItem item, String quantityText) onQtyInputChanged;
   final void Function(CartItem item) onRemove;
@@ -591,26 +593,28 @@ class SellerSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SvgPicture.asset(
-                      'assets/images/qwik.svg',
-                      height: 14,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '1-4 hrs delivery',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0A243F),
-                        height: 20 / 13,
+                if (deliveryLabel.trim().isNotEmpty) ...[
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/images/qwik.svg',
+                        height: 14,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
+                      const SizedBox(width: 6),
+                      Text(
+                        deliveryLabel.trim(),
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0A243F),
+                          height: 20 / 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 for (var i = 0; i < sellerItems.length; i++) ...[
                   CartProductDetails(
                     index: i,

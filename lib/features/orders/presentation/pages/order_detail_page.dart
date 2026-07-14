@@ -12,6 +12,7 @@ import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 part 'order_detail_bill_section.dart';
 part 'order_detail_footer_section.dart';

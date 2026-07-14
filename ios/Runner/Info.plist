@@ -75,6 +75,8 @@
 	<string>We use your location to deliver to the right address.</string>
 	<key>NSCameraUsageDescription</key>
     <string>Allow access to your camera so you can capture and upload images.</string>
+	<key>NSContactsUsageDescription</key>
+    <string>Allow access to contacts so you can choose a receiver phone number.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
     <string>We need permission to save images to your photo library.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

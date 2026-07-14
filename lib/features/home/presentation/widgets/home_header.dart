@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/address/domain/repositories/address_r
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/home/domain/entities/home_entity.dart';
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
+import 'package:m_o_b_demand_side/features/home/domain/store_delivery_label.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
@@ -56,13 +57,7 @@ class _HomeHeaderState extends State<HomeHeader> {
         ? 'Tap to set your delivery address'
         : _selectedAddressText(selectedAddress);
 
-    final deliveryText = storeStatus == null
-        ? ''
-        : storeStatus.isOpen
-            ? (storeStatus.message.trim().isNotEmpty
-                ? '${storeStatus.message.trim()} delivery'
-                : '')
-            : 'Currently closed';
+    final deliveryText = storeDeliveryLabel(storeStatus);
     final deliveryIcon = storeStatus?.isOpen == false
         ? 'assets/images/timer-delivery.svg'
         : 'assets/images/thunder.svg';

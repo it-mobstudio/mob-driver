@@ -196,15 +196,12 @@ class _RfqDetailsBody extends StatelessWidget {
                 const SizedBox(height: 16),
                 if (_isMagicQuote || rfq.magicQuotes.isNotEmpty)
                   _MagicQuoteDescriptionRow()
+                else if (rfq.newQuotes.isNotEmpty)
+                  const _QuoteSupportInstruction()
                 else
                   Text(
-                    rfq.newQuotes.isNotEmpty
-                        ? 'Click on the "Accept" button to select the quote '
-                            'you want to proceed with. For any changes like '
-                            'quantity, partial order, etc. please contact mob '
-                            'support at +91 8660423608'
-                        : 'Our team is working on it. We will reach back to '
-                            'you within 24 hrs',
+                    'Our team is working on it. We will reach back to '
+                    'you within 24 hrs',
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,
@@ -291,12 +288,20 @@ class _MagicQuoteDescriptionRow extends StatelessWidget {
                 color: const Color(0xFF0A243F),
                 height: 18 / 12,
               ),
-              children: const [
-                TextSpan(text: 'We should reach out within 5 - 30 mins\n'),
-                TextSpan(text: 'or Call '),
-                TextSpan(
-                  text: '+918660423608',
-                  style: TextStyle(color: Color(0xFF0360E5)),
+              children: [
+                const TextSpan(text: 'We should reach out within 5 - 30 mins\n'),
+                const TextSpan(text: 'or Call '),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.baseline,
+                  baseline: TextBaseline.alphabetic,
+                  child: _SupportPhoneLink(
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF0360E5),
+                      height: 18 / 12,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1188,6 +1193,74 @@ class _QuoteMetric extends StatelessWidget {
       ],
     );
   }
+}
+
+class _QuoteSupportInstruction extends StatelessWidget {
+  const _QuoteSupportInstruction();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = GoogleFonts.inter(
+      fontSize: 13,
+      fontWeight: FontWeight.w400,
+      color: const Color(0xFF0A243F),
+      height: 20 / 13,
+    );
+    return RichText(
+      text: TextSpan(
+        style: style,
+        children: [
+          const TextSpan(
+            text: 'Click on the "Accept" button to select the quote '
+                'you want to proceed with. For any changes like '
+                'quantity, partial order, etc. please contact mob '
+                'support at ',
+          ),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: _SupportPhoneLink(
+              label: '+91 8660423608',
+              style: style.copyWith(color: const Color(0xFF0360E5)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SupportPhoneLink extends StatelessWidget {
+  const _SupportPhoneLink({
+    this.label = '+918660423608',
+    required this.style,
+  });
+
+  final String label;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Call $label',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _callSupport,
+        child: Text(
+          label,
+          style: style,
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _callSupport() async {
+  await launchUrl(
+    Uri.parse('tel:+918660423608'),
+    mode: LaunchMode.externalApplication,
+  );
 }
 
 /// Opens any URL in the platform's best available viewer — a browser tab on

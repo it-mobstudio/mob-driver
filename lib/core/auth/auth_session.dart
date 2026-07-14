@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '/backend/api_requests/api_manager.dart';
 import '/core/config/app_config.dart';
+import '/features/address/data/local/recent_address_searches_store.dart';
 import '/features/address/data/local/selected_address_store.dart';
 
 class AuthSession extends ChangeNotifier {
@@ -188,6 +189,7 @@ class AuthSession extends ChangeNotifier {
     // last signed in on this device — drop any address cached for the
     // previous identity so it doesn't leak into the new session.
     await SelectedAddressStore.clear();
+    await RecentAddressSearchesStore.clear();
 
     await _storage.write(key: _accessTokenKey, value: _accessToken);
     await prefs.setString(_prefsAccessTokenKey, _accessToken!);
@@ -264,6 +266,7 @@ class AuthSession extends ChangeNotifier {
     ApiManager.clearCache('browseProducts');
     ApiManager.clearCache('productDetails');
     await SelectedAddressStore.clear();
+    await RecentAddressSearchesStore.clear();
     notifyListeners();
   }
 

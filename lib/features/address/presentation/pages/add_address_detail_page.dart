@@ -39,6 +39,8 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
   static const _navy = Color(0xFF0A243F);
   static const _blue = Color(0xFF0360E5);
   static const _border = Color(0xFFDFE4EC);
+  static const _contactsChannel =
+      MethodChannel('m_o_b_demand_side/contact_picker');
 
   late final AddressBloc _addressBloc;
 
@@ -452,13 +454,39 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(10),
             ],
-            suffixIcon: Padding(
-              padding: const EdgeInsets.all(14),
-              child: SvgPicture.asset(
-                'assets/images/receiverinumicon.svg',
-                width: 19,
-                height: 19,
-                fit: BoxFit.contain,
+            showClearButton: false,
+            suffixIcon: SizedBox(
+              width: 88,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _receiverPhoneController.clear(),
+                    child: const SizedBox(
+                      width: 40,
+                      height: 48,
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: Color(0xFF767C8F),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _pickReceiverContact,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: SvgPicture.asset(
+                        'assets/images/receiverinumicon.svg',
+                        width: 19,
+                        height: 19,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             validator: (value) => value == null || value.trim().length != 10
@@ -542,6 +570,49 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _pickReceiverContact() async {
+    FocusScope.of(context).unfocus();
+    try {
+      final contact = await _contactsChannel.invokeMapMethod<String, String>(
+        'pickPhoneContact',
+      );
+      if (!mounted || contact == null) return;
+
+      final phone = _normalizePhone(contact['phone'] ?? '');
+      if (phone.isEmpty) {
+        _showMessage('Selected contact has no valid phone number.');
+        return;
+      }
+
+      setState(() {
+        _receiverPhoneController.text = phone;
+        final name = contact['name']?.trim() ?? '';
+        if (_receiverNameController.text.trim().isEmpty && name.isNotEmpty) {
+          _receiverNameController.text = name;
+        }
+      });
+    } on MissingPluginException {
+      if (!mounted) return;
+      _showMessage('Contact picker is available on mobile devices.');
+    } on PlatformException catch (e) {
+      if (!mounted || e.code == 'CANCELLED') return;
+      _showMessage(e.message ?? 'Unable to pick a contact.');
+    }
+  }
+
+  String _normalizePhone(String value) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits.length <= 10) return digits;
+    return digits.substring(digits.length - 10);
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _onStateChanged(BuildContext context, AddressState state) {

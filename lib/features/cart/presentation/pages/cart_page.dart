@@ -12,6 +12,8 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
+import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
+import 'package:m_o_b_demand_side/features/home/domain/store_delivery_label.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 
 class CartPage extends StatefulWidget {
@@ -28,12 +30,20 @@ class _CartPageState extends State<CartPage> {
   AddressEntity? _selectedDeliveryAddress;
   AddressEntity? _storedAddress;
   List<AddressEntity> _savedAddresses = const [];
+  String _deliveryLabel = '';
 
   @override
   void initState() {
     super.initState();
     _loadStoredAddress();
     _loadSavedAddresses();
+    _loadStoreDeliveryLabel();
+  }
+
+  Future<void> _loadStoreDeliveryLabel() async {
+    final (status, failure) = await sl<HomeRepository>().getStoreOpenStatus();
+    if (!mounted || failure != null) return;
+    setState(() => _deliveryLabel = storeDeliveryLabel(status));
   }
 
   Future<void> _loadStoredAddress() async {
@@ -189,6 +199,7 @@ class _CartPageState extends State<CartPage> {
                         child: SellerSection(
                           sellerCode: entry.key,
                           sellerItems: entry.value,
+                          deliveryLabel: _deliveryLabel,
                           isUpdatingCart: updatingItemKey != null,
                           updatingItemKey: updatingItemKey,
                           onQtyChanged: (item, qty) =>

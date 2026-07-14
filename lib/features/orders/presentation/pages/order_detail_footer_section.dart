@@ -3,60 +3,79 @@ part of 'order_detail_page.dart';
 class _HelpTile extends StatelessWidget {
   const _HelpTile();
 
+  static const _whatsappNumber = '918970415365';
+
+  Future<void> _openWhatsapp(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await launchUrl(
+      Uri.parse('https://wa.me/$_whatsappNumber'),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Unable to open WhatsApp.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 80,
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              color: Color(0xFFDFF8F9),
-              shape: BoxShape.circle,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openWhatsapp(context),
+      child: Container(
+        height: 80,
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                color: Color(0xFFDFF8F9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.support_agent_rounded,
+                color: Color(0xFF0A7D83),
+                size: 28,
+              ),
             ),
-            child: const Icon(
-              Icons.support_agent_rounded,
-              color: Color(0xFF0A7D83),
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Need help with your order?',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    height: 20 / 14,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Need help with your order?',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 20 / 14,
+                    ),
                   ),
-                ),
-                Text(
-                  'Contact us about any issues',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF8A8A8A),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    height: 18 / 12,
+                  Text(
+                    'Contact us about any issues',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF8A8A8A),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      height: 18 / 12,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            size: 24,
-            color: Color(0xFF0A243F),
-          ),
-        ],
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 24,
+              color: Color(0xFF0A243F),
+            ),
+          ],
+        ),
       ),
     );
   }

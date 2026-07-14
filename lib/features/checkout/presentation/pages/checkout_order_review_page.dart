@@ -10,6 +10,8 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
+import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
+import 'package:m_o_b_demand_side/features/home/domain/store_delivery_label.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/quantity_stepper.dart';
@@ -39,6 +41,7 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
   late final CheckoutBloc _checkoutBloc;
   late GoRouter _router;
   ScaffoldMessengerState? _scaffoldMessenger;
+  String _deliveryLabel = '';
 
   @override
   void didChangeDependencies() {
@@ -51,6 +54,13 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
   void initState() {
     super.initState();
     _checkoutBloc = sl<CheckoutBloc>();
+    _loadStoreDeliveryLabel();
+  }
+
+  Future<void> _loadStoreDeliveryLabel() async {
+    final (status, failure) = await sl<HomeRepository>().getStoreOpenStatus();
+    if (!mounted || failure != null) return;
+    setState(() => _deliveryLabel = storeDeliveryLabel(status));
   }
 
   @override
@@ -97,6 +107,7 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
           sellerCode: entry.key,
           items: entry.value,
           shipping: perSellerShipping,
+          deliveryLabel: _deliveryLabel,
           itemStartIndex:
               entries.take(i).fold<int>(0, (sum, e) => sum + e.value.length),
           onQtyChanged: (item, qty) => context.read<CartBloc>().add(
@@ -328,6 +339,7 @@ class _ReviewSellerCard extends StatelessWidget {
     required this.sellerCode,
     required this.items,
     required this.shipping,
+    required this.deliveryLabel,
     required this.itemStartIndex,
     required this.onQtyChanged,
     required this.onQtyInputChanged,
@@ -339,6 +351,7 @@ class _ReviewSellerCard extends StatelessWidget {
   final String sellerCode;
   final List<CartItem> items;
   final double shipping;
+  final String deliveryLabel;
   final int itemStartIndex;
   final void Function(CartItem item, int quantity) onQtyChanged;
   final void Function(CartItem item, String quantityText) onQtyInputChanged;
@@ -408,22 +421,24 @@ class _ReviewSellerCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SvgPicture.asset('assets/images/qwik.svg', height: 14),
-                    const SizedBox(width: 6),
-                    Text(
-                      '1-4 hrs delivery',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        height: 20 / 13,
+                if (deliveryLabel.trim().isNotEmpty) ...[
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset('assets/images/qwik.svg', height: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        deliveryLabel.trim(),
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          height: 20 / 13,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
                 const Divider(
                   height: 24,
                   color: Color(0xFFE5E8EE),

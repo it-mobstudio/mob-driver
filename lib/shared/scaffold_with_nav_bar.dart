@@ -138,7 +138,7 @@ class _MainBottomNavigationBar extends StatelessWidget {
                     height: 4,
                     child: const DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.black,
+                        color: Colors.white,
                         borderRadius: BorderRadius.vertical(
                           bottom: Radius.circular(3),
                         ),
