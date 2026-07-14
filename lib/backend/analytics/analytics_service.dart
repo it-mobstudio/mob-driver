@@ -53,6 +53,29 @@ class AnalyticsService {
     );
   }
 
+  Future<void> logLogin({required String method}) async {
+    await _analytics.logLogin(loginMethod: method);
+  }
+
+  Future<void> logBeginCheckout({double? value, int? itemCount}) async {
+    await _analytics.logBeginCheckout(
+      value: value,
+      currency: value != null ? 'INR' : null,
+      parameters: itemCount != null ? {'item_count': itemCount} : null,
+    );
+  }
+
+  Future<void> logPurchase({
+    required String orderId,
+    required double value,
+  }) async {
+    await _analytics.logPurchase(
+      transactionId: orderId,
+      value: value,
+      currency: 'INR',
+    );
+  }
+
   Future<void> logAddToCart({
     required String productId,
     required String slug,

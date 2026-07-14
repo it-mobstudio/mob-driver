@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
+import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/network/dio_client.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
@@ -48,6 +49,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.logBeginCheckout().catchError((_) {});
     _cartBloc = context.read<CartBloc>();
     _addressBloc = sl<AddressBloc>()..add(AddressLoadRequested());
     _loadSelectedAddress();

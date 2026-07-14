@@ -13,6 +13,17 @@ subprojects {
             project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
                 kotlinOptions {
                     jvmTarget = "1.8"
+                    // sentry_flutter 8.x hardcodes languageVersion "1.6" in its
+                    // own build.gradle, which this project's Kotlin Gradle
+                    // Plugin (2.2.20) no longer supports compiling with —
+                    // override it here (afterEvaluate runs after the plugin's
+                    // own script, so this wins). Scoped to just this module:
+                    // forcing it project-wide previously broke record_android,
+                    // which requires language version >= 1.9 (enum entries).
+                    if (project.name == "sentry_flutter") {
+                        languageVersion = "1.9"
+                        apiVersion = "1.9"
+                    }
                 }
             }
         }

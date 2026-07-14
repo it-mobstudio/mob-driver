@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' hide TextDirection;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart' show DateFormat;
 import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
@@ -31,6 +30,230 @@ Future<bool> showOrderRatingSheet(
   return submitted ?? false;
 }
 
+Future<void> _showOrderStatusSheet(
+  BuildContext context,
+  List<_TrackingTimelineItem> items,
+) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: false,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.6),
+    builder: (context) => _OrderStatusSheet(items: items),
+  );
+}
+
+String _mapString(
+  Map<String, dynamic>? map,
+  List<String> keys,
+) {
+  if (map == null) return '';
+  for (final key in keys) {
+    final value = map[key]?.toString().trim() ?? '';
+    if (value.isNotEmpty) return value;
+  }
+  return '';
+}
+
+Map<String, dynamic>? _trackOrderPayload(Map<String, dynamic>? map) {
+  if (map == null) return null;
+  for (final key in const ['data', 'result', 'tracking', 'track_order']) {
+    final value = map[key];
+    if (value is Map) return Map<String, dynamic>.from(value);
+  }
+  return map;
+}
+
+bool _isQuickOrderResponse(Map<String, dynamic>? map) {
+  final value = _mapString(
+    _trackOrderPayload(map),
+    const ['is_quick_order', 'isQuickOrder'],
+  ).toLowerCase();
+  if (value.isEmpty) return false;
+  return value != 'normal_order' &&
+      value != 'normal' &&
+      value != 'false' &&
+      value != '0';
+}
+
+String _formatTrackingDate(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  final day = date.day;
+  final suffix = switch (day) {
+    11 || 12 || 13 => 'th',
+    _ when day % 10 == 1 => 'st',
+    _ when day % 10 == 2 => 'nd',
+    _ when day % 10 == 3 => 'rd',
+    _ => 'th',
+  };
+  return '$day$suffix ${months[date.month - 1]}';
+}
+
+String _formatTrackingDateTime(String raw) {
+  final value = raw.trim();
+  if (value.isEmpty) return '';
+  try {
+    final date = DateTime.parse(value).toLocal();
+    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+    final minute = date.minute.toString().padLeft(2, '0');
+    final period = date.hour >= 12 ? 'pm' : 'am';
+    return 'on ${_formatTrackingDate(date)} at $hour:$minute$period';
+  } catch (_) {
+    return value;
+  }
+}
+
+enum _TrackingTimelineStage {
+  placed,
+  packing,
+  packed,
+  outForDelivery,
+  delivered;
+
+  String get label {
+    return switch (this) {
+      _TrackingTimelineStage.placed => 'Order placed',
+      _TrackingTimelineStage.packing => 'Packing your order',
+      _TrackingTimelineStage.packed => 'Your order is packed',
+      _TrackingTimelineStage.outForDelivery => 'Out for delivery',
+      _TrackingTimelineStage.delivered => 'Delivered',
+    };
+  }
+}
+
+class _TrackingTimelineItem {
+  const _TrackingTimelineItem({
+    required this.stage,
+    required this.timeText,
+    required this.completed,
+  });
+
+  final _TrackingTimelineStage stage;
+  final String timeText;
+  final bool completed;
+}
+
+_TrackingTimelineStage _timelineStageFromState(_TrackingState state) {
+  return switch (state) {
+    _TrackingState.packing => _TrackingTimelineStage.packing,
+    _TrackingState.packed => _TrackingTimelineStage.packed,
+    _TrackingState.outForDelivery => _TrackingTimelineStage.outForDelivery,
+    _TrackingState.delivered => _TrackingTimelineStage.delivered,
+  };
+}
+
+_TrackingTimelineStage? _timelineStageFromStatus(String status) {
+  final value =
+      status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+  final compactValue = value.replaceAll(' ', '');
+  if (value.isEmpty) return null;
+  if (value.contains('waiting') ||
+      value.contains('order placed') ||
+      compactValue == 'orderplaced') {
+    return _TrackingTimelineStage.placed;
+  }
+  if (value.contains('out of delivery') ||
+      value.contains('out for delivery') ||
+      compactValue.contains('outfordelivery') ||
+      compactValue.contains('outofdelivery') ||
+      value.contains('out for shipment') ||
+      value.contains('on the way')) {
+    return _TrackingTimelineStage.outForDelivery;
+  }
+  if (value.contains('delivered') ||
+      value.contains('completed') ||
+      value.contains('received') ||
+      value.contains('fulfilled') ||
+      compactValue == 'deliver') {
+    return _TrackingTimelineStage.delivered;
+  }
+  if (value.contains('order is packed') ||
+      value.contains('ready for pickup') ||
+      compactValue == 'readyforpickup' ||
+      value.contains('ready to ship') ||
+      value.contains('packed')) {
+    return _TrackingTimelineStage.packed;
+  }
+  if (value.contains('packing') ||
+      value.contains('processing') ||
+      value.contains('created')) {
+    return _TrackingTimelineStage.packing;
+  }
+  return null;
+}
+
+List<_TrackingTimelineItem> _buildTrackingTimeline({
+  required OrderEntity? order,
+  required OrderShipmentEntity? shipment,
+  required _TrackingState trackingState,
+}) {
+  final stageTimes = <_TrackingTimelineStage, String>{};
+  final orderCreatedAt = _formatTrackingDateTime(order?.createdAt ?? '');
+  if (orderCreatedAt.isNotEmpty) {
+    stageTimes[_TrackingTimelineStage.placed] = orderCreatedAt;
+  }
+
+  final shipmentCreatedAt = _formatTrackingDateTime(shipment?.createdAt ?? '');
+  final shipmentStage = _timelineStageFromStatus(shipment?.status ?? '');
+  if (shipmentStage != null && shipmentCreatedAt.isNotEmpty) {
+    stageTimes[shipmentStage] = shipmentCreatedAt;
+  }
+
+  for (final suborder in order?.shipments ?? const <OrderShipmentEntity>[]) {
+    final stage = _timelineStageFromStatus(suborder.status);
+    final timeText = _formatTrackingDateTime(suborder.createdAt);
+    if (stage != null && timeText.isNotEmpty) {
+      stageTimes[stage] = timeText;
+    }
+  }
+
+  final currentStage =
+      shipmentStage ?? _timelineStageFromStatus(order?.status ?? '') ??
+          _timelineStageFromState(trackingState);
+  final completedIndex =
+      currentStage.index < _TrackingTimelineStage.packing.index
+          ? _TrackingTimelineStage.placed.index
+          : currentStage.index;
+
+  return _TrackingTimelineStage.values
+      .map(
+        (stage) => _TrackingTimelineItem(
+          stage: stage,
+          timeText: stageTimes[stage] ?? '',
+          completed: stage.index <= completedIndex,
+        ),
+      )
+      .toList();
+}
+
+String _currentTrackingTimelineTime(
+  List<_TrackingTimelineItem> items,
+  _TrackingState state,
+) {
+  final stage = _timelineStageFromState(state);
+  for (final item in items) {
+    if (item.stage == stage && item.timeText.isNotEmpty) return item.timeText;
+  }
+  for (final item in items.reversed) {
+    if (item.completed && item.timeText.isNotEmpty) return item.timeText;
+  }
+  return '';
+}
+
 class OrderTrackingPage extends StatefulWidget {
   static const String routeName = 'OrderTrackingPage';
   static const String routePath = '/order-tracking';
@@ -50,6 +273,27 @@ class OrderTrackingPage extends StatefulWidget {
 
 class _OrderTrackingPageState extends State<OrderTrackingPage> {
   late bool _hasReview = widget.shipment?.hasReview ?? false;
+  Map<String, dynamic>? _trackOrderBody;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrackOrder();
+  }
+
+  Future<void> _loadTrackOrder() async {
+    final suborderId = widget.shipment?.id.trim() ?? '';
+    if (suborderId.isEmpty) return;
+
+    final (body, failure) = await sl<OrdersRepository>().trackOrder(suborderId);
+    if (!mounted) return;
+    if (failure != null) {
+      debugPrint('track_order failed: ${failure.message}');
+      return;
+    }
+    setState(() => _trackOrderBody = body);
+    debugPrint('track_order response: $_trackOrderBody');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,13 +325,27 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       final raw = shipment?.deliveryDate.trim() ?? '';
       if (raw.isEmpty) return '';
       try {
-        return DateFormat('dd MMM yyyy').format(DateTime.parse(raw).toLocal());
+        return _formatTrackingDate(DateTime.parse(raw).toLocal());
       } catch (_) {
         return raw;
       }
     }();
     final deliveryDate =
         formattedDeliveryDate.isNotEmpty ? formattedDeliveryDate : '';
+    final isQuickOrder = _trackOrderBody == null
+        ? order?.isQuickCommerceOrder ?? false
+        : _isQuickOrderResponse(_trackOrderBody);
+    final arrivingIn = _mapString(
+      _trackOrderPayload(_trackOrderBody),
+      const ['arriving_in', 'arrivingIn', 'eta'],
+    );
+    final timelineItems = _buildTrackingTimeline(
+      order: order,
+      shipment: shipment,
+      trackingState: trackingState,
+    );
+    final normalStatusTime =
+        _currentTrackingTimelineTime(timelineItems, trackingState);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F1F2),
@@ -108,8 +366,15 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                         state: trackingState,
                         deliveryDate: deliveryDate,
                         deliverySlot: deliverySlot,
-                        isQuickCommerceOrder:
-                            order?.isQuickCommerceOrder ?? false,
+                        isQuickOrder: isQuickOrder,
+                        arrivingIn: arrivingIn,
+                        normalStatusTime: normalStatusTime,
+                        onNormalStatusTap: isQuickOrder
+                            ? null
+                            : () => _showOrderStatusSheet(
+                                  context,
+                                  timelineItems,
+                                ),
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
@@ -232,13 +497,19 @@ class _TrackingHeroSection extends StatelessWidget {
     required this.state,
     required this.deliveryDate,
     required this.deliverySlot,
-    required this.isQuickCommerceOrder,
+    required this.isQuickOrder,
+    required this.arrivingIn,
+    required this.normalStatusTime,
+    required this.onNormalStatusTap,
   });
 
   final _TrackingState state;
   final String deliveryDate;
   final String deliverySlot;
-  final bool isQuickCommerceOrder;
+  final bool isQuickOrder;
+  final String arrivingIn;
+  final String normalStatusTime;
+  final VoidCallback? onNormalStatusTap;
 
   @override
   Widget build(BuildContext context) {
@@ -272,7 +543,10 @@ class _TrackingHeroSection extends StatelessWidget {
                   state: state,
                   deliveryDate: deliveryDate,
                   deliverySlot: deliverySlot,
-                  isQuickCommerceOrder: isQuickCommerceOrder,
+                  isQuickOrder: isQuickOrder,
+                  arrivingIn: arrivingIn,
+                  normalStatusTime: normalStatusTime,
+                  onTap: onNormalStatusTap,
                 ),
               ),
             ],
@@ -405,16 +679,97 @@ class _EtaCard extends StatelessWidget {
     required this.state,
     required this.deliveryDate,
     required this.deliverySlot,
-    required this.isQuickCommerceOrder,
+    required this.isQuickOrder,
+    required this.arrivingIn,
+    required this.normalStatusTime,
+    required this.onTap,
   });
 
   final _TrackingState state;
   final String deliveryDate;
   final String deliverySlot;
-  final bool isQuickCommerceOrder;
+  final bool isQuickOrder;
+  final String arrivingIn;
+  final String normalStatusTime;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    if (isQuickOrder) return _quickOrderCard();
+
+    final title = state.subtitle;
+    final scheduleText = _scheduleText();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 68),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFDEDEDE)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF010101),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      height: 30 / 24,
+                    ),
+                  ),
+                  if (scheduleText.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      scheduleText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0A243F),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        height: 20 / 14,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            SvgPicture.asset(
+              'assets/images/Track-Arrow.svg',
+              width: 24,
+              height: 24,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _quickOrderCard() {
+    final etaText = arrivingIn.trim().isNotEmpty ? arrivingIn.trim() : '--';
+
     return Container(
       height: 88,
       width: double.infinity,
@@ -456,7 +811,7 @@ class _EtaCard extends StatelessWidget {
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        state.isDelivered ? 'Delivered' : '3h 30mins',
+                        state.isDelivered ? 'Delivered' : etaText,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -487,28 +842,38 @@ class _EtaCard extends StatelessWidget {
               ],
             ),
           ),
-          if (isQuickCommerceOrder)
-            Positioned(
-              top: 19,
-              right: 16,
-              child: Container(
-                height: 26,
-                width: 86,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF6E6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: SvgPicture.asset(
-                  'assets/images/qwik.svg',
-                  width: 54,
-                  height: 14,
-                ),
+          Positioned(
+            top: 19,
+            right: 16,
+            child: Container(
+              height: 26,
+              width: 86,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF6E6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: SvgPicture.asset(
+                'assets/images/qwik.svg',
+                width: 54,
+                height: 14,
               ),
             ),
+          ),
         ],
       ),
     );
+  }
+
+  String _scheduleText() {
+    final statusTime = normalStatusTime.trim();
+    if (statusTime.isNotEmpty) return statusTime;
+    final date = deliveryDate.trim();
+    final slot = deliverySlot.trim();
+    if (date.isNotEmpty && slot.isNotEmpty) return 'on $date at $slot';
+    if (date.isNotEmpty) return 'on $date';
+    if (slot.isNotEmpty) return 'at $slot';
+    return '';
   }
 }
 
@@ -901,6 +1266,193 @@ class _TrackingRatingCard extends StatelessWidget {
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 height: 18 / 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderStatusSheet extends StatelessWidget {
+  const _OrderStatusSheet({required this.items});
+
+  final List<_TrackingTimelineItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final sheetHeight = 492.0 + bottomInset;
+    final completedCount = items.where((item) => item.completed).length;
+
+    return SizedBox(
+      height: sheetHeight + 72,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned(
+            top: 0,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => Navigator.of(context).pop(),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: Center(
+                  child: SvgPicture.asset(
+                    'assets/images/close-dark.svg',
+                    width: 44,
+                    height: 44,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              height: sheetHeight,
+              padding: EdgeInsets.fromLTRB(16, 26, 16, 24 + bottomInset),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(18),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Order status',
+                    style: GoogleFonts.inter(
+                      color: _TrackingColors.navy,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      height: 28 / 20,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  for (var i = 0; i < items.length; i++)
+                    _OrderStatusTimelineRow(
+                      item: items[i],
+                      isLast: i == items.length - 1,
+                      showCompletedConnector: completedCount > 1 &&
+                          items[i].completed &&
+                          i < items.length - 1,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderStatusTimelineRow extends StatelessWidget {
+  const _OrderStatusTimelineRow({
+    required this.item,
+    required this.isLast,
+    required this.showCompletedConnector,
+  });
+
+  final _TrackingTimelineItem item;
+  final bool isLast;
+  final bool showCompletedConnector;
+
+  @override
+  Widget build(BuildContext context) {
+    final completed = item.completed;
+    final circleColor =
+        completed ? const Color(0xFF35B971) : const Color(0xFFE1E1E1);
+    final textColor =
+        completed ? _TrackingColors.navy : const Color(0xFF67696D);
+
+    return SizedBox(
+      height: isLast ? 50 : 68,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 24,
+            height: isLast ? 50 : 68,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                if (!isLast)
+                  Positioned(
+                    top: 22,
+                    bottom: 0,
+                    child: Container(
+                      width: 4,
+                      color: const Color(0xFFDEDEDE),
+                    ),
+                  ),
+                if (showCompletedConnector)
+                  Positioned(
+                    top: 22,
+                    bottom: 0,
+                    child: Container(
+                      width: 4,
+                      color: const Color(0xFF35B971),
+                    ),
+                  ),
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: completed
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        )
+                      : null,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.stage.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 20 / 14,
+                    ),
+                  ),
+                  if (completed && item.timeText.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      item.timeText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF7D8492),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        height: 18 / 12,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -1556,7 +2108,9 @@ enum _TrackingState {
       return _TrackingState.packing;
     }
     if (value.contains('out for delivery') ||
+        value.contains('out of delivery') ||
         compactValue.contains('outfordelivery') ||
+        compactValue.contains('outofdelivery') ||
         value.contains('out for shipment') ||
         value.contains('on the way')) {
       return _TrackingState.outForDelivery;

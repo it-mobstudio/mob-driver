@@ -96,6 +96,7 @@ class OrderShipmentEntity {
     required this.status,
     required this.deliveryDate,
     required this.items,
+    this.createdAt = '',
     this.vendorName = '',
     this.deliverySlot = '',
     this.subTotal = 0,
@@ -111,6 +112,7 @@ class OrderShipmentEntity {
   final String id;
   final String status;
   final String deliveryDate;
+  final String createdAt;
   final List<OrderItemEntity> items;
   final String vendorName;
   final String deliverySlot;
@@ -134,6 +136,7 @@ class OrderShipmentEntity {
       id: (map['suborder_id'] ?? map['id'] ?? '').toString(),
       status: (map['status'] ?? '').toString(),
       deliveryDate: (map['delivery_date'] ?? '').toString(),
+      createdAt: (map['created_at'] ?? map['date'] ?? '').toString(),
       vendorName: (map['vendor_name'] ?? '').toString(),
       deliverySlot: (map['delivery_slot'] ?? '').toString(),
       subTotal: double.tryParse(

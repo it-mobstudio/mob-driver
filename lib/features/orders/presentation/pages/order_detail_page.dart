@@ -66,16 +66,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // Only intercept the pop when there's genuinely nowhere to pop to
-      // (e.g. deep-linked straight into this page) — canPop: false
-      // unconditionally would also disable iOS's edge-swipe-to-pop gesture
-      // (CupertinoPageTransitionsBuilder refuses to attach it whenever a
-      // route reports it can't pop), even on the common path where this
-      // page was simply pushed from the orders list.
-      canPop: context.canPop(),
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        context.go('/homepage');
+        context.go('/orders-tab');
       },
       child: BlocProvider<OrdersBloc>.value(
         value: _ordersBloc,
@@ -124,8 +118,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                       order: order,
                                       shipment: shipments[i],
                                       index: i + 1,
-                                      title: _shipmentTitle(
-                                          order, shipments[i], i),
+                                      title:
+                                          _shipmentTitle(order, shipments[i], i),
                                       iconAsset: _shipmentIconAsset(
                                           order, shipments[i]),
                                       items: shipments[i].items,

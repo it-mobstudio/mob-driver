@@ -45,6 +45,20 @@ class OrdersRepositoryImpl implements OrdersRepository {
   }
 
   @override
+  Future<(Map<String, dynamic>?, AppFailure?)> trackOrder(
+    String suborderId,
+  ) async {
+    try {
+      final body = await _datasource.trackOrder(suborderId);
+      return (body, null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<AppFailure?> submitReview({
     required String suborderId,
     required int rating,

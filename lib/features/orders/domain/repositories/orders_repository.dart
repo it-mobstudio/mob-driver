@@ -7,6 +7,7 @@ abstract interface class OrdersRepository {
     String? search,
   });
   Future<(OrderEntity?, AppFailure?)> getOrderDetail(String id);
+  Future<(Map<String, dynamic>?, AppFailure?)> trackOrder(String suborderId);
   Future<AppFailure?> submitReview({
     required String suborderId,
     required int rating,

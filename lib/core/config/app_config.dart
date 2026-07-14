@@ -17,6 +17,12 @@ class AppConfig {
     defaultValue: 'AIzaSyC_dvw8b7g1e1RB9dQj4rAnFyxGD1S2s7Y',
   );
 
+  static const String sentryDsn = String.fromEnvironment(
+    'SENTRY_DSN',
+    defaultValue:
+        'https://e6f444c8d09b089d88b8a9b572c55c27@o4510619510505472.ingest.de.sentry.io/4511732953841744',
+  );
+
   static Uri apiUri(String path, {Map<String, dynamic>? queryParameters}) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     return Uri.parse('$apiBaseUrl$normalizedPath')

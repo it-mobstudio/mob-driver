@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:m_o_b_demand_side/core/network/auth_interceptor.dart';
+import 'package:m_o_b_demand_side/core/network/logging_interceptor.dart';
+import 'package:sentry_dio/sentry_dio.dart';
 
 class DioClient {
   DioClient._();
@@ -21,5 +23,10 @@ class DioClient {
       ),
     );
     _dio.interceptors.add(AuthInterceptor(_dio));
+    // Breadcrumbs + performance spans + failed-request capture for every
+    // request through this client — the SDK guards its own instrumentation
+    // internally, so a Sentry-side hiccup here can't break a real request.
+    _dio.addSentry();
+    _dio.interceptors.add(LoggingInterceptor());
   }
 }

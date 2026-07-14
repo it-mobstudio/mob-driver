@@ -8,11 +8,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'backend/analytics/analytics_service.dart';
 import 'backend/firebase/firebase_config.dart';
 import 'core/app_runtime/fcm_token_sync.dart';
 import 'core/app_runtime/push_notification_service.dart';
 import 'core/auth/auth_session.dart';
+import 'core/config/app_config.dart';
 import 'core/di/injection.dart';
 import 'features/address/data/local/selected_address_store.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -24,7 +26,7 @@ import 'core/styles/app_theme.dart';
 import 'environment_values.dart';
 
 void main() {
-  runZonedGuarded(() {
+  runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
     if (kIsWeb) {
       try {
@@ -46,10 +48,37 @@ void main() {
         systemNavigationBarContrastEnforced: false,
       ),
     );
-    runApp(const AppBootstrap());
+
+    if (kIsWeb) {
+      runApp(const AppBootstrap());
+      return;
+    }
+    // Sentry is scoped to API/performance monitoring only here — crash
+    // reporting stays owned by Firebase Crashlytics (set up below in
+    // AppBootstrap._bootstrap). That split only holds because Crashlytics's
+    // FlutterError.onError/PlatformDispatcher.onError assignments happen
+    // *after* this and are plain reassignments, not chained handlers, so
+    // they silently replace whatever Sentry registered here. Do not move
+    // Crashlytics's init to run before this one, or Sentry will start
+    // double-reporting crashes too.
+    await SentryFlutter.init(
+      (options) {
+        options.dsn = AppConfig.sentryDsn;
+        // 100% for now to see full API/perf volume; dial down once traffic
+        // patterns are known.
+        options.tracesSampleRate = 1.0;
+        options.environment = kDebugMode ? 'development' : 'production';
+      },
+      appRunner: () => runApp(const AppBootstrap()),
+    );
   }, (error, stack) async {
     if (!kIsWeb) {
-      await FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      try {
+        await FirebaseCrashlytics.instance
+            .recordError(error, stack, fatal: true);
+      } catch (e) {
+        if (kDebugMode) debugPrint('Crashlytics recordError failed: $e');
+      }
     }
   });
 }

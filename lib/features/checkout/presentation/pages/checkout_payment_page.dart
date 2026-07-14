@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/bloc/checkout_bloc.dart';
@@ -460,6 +461,12 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                             _razorpayEntity = checkoutState.entity;
                           });
                         } else if (checkoutState is CheckoutOrderPlaced) {
+                          AnalyticsService.instance
+                              .logPurchase(
+                                orderId: checkoutState.order.orderId,
+                                value: checkoutState.order.total,
+                              )
+                              .catchError((_) {});
                           _router.go(
                             OrderPlacedPage.routePath,
                             extra: checkoutState.order,

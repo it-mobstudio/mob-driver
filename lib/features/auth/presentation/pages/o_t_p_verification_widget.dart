@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
@@ -168,6 +169,9 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
               extra: {'phoneNumber': widget.phoneNumber},
             );
           } else {
+            AnalyticsService.instance
+                .logLogin(method: 'otp')
+                .catchError((_) {});
             context.go(HomepageWidget.routePath);
           }
         } else if (state is AuthError) {

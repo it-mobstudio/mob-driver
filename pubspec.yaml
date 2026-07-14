@@ -86,6 +86,8 @@ dependencies:
   geocoding: ^4.0.0
   web_socket_channel: ^3.0.3
   image_picker: ^1.2.2
+  sentry_flutter: ^8.14.2
+  sentry_dio: ^8.14.2
 
 dependency_overrides:
   http: 1.4.0

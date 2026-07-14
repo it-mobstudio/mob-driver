@@ -4,6 +4,20 @@ class _OrderDetailHeader extends StatelessWidget {
   const _OrderDetailHeader({this.order});
 
   final OrderEntity? order;
+  static const _whatsappNumber = '918970415365';
+
+  Future<void> _openWhatsapp(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await launchUrl(
+      Uri.parse('https://wa.me/$_whatsappNumber'),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Unable to open WhatsApp.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +40,7 @@ class _OrderDetailHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/homepage');
-              }
-            },
+            onPressed: () => context.go('/orders-tab'),
             icon: const AppBackIcon(),
           ),
           Expanded(
@@ -64,18 +72,24 @@ class _OrderDetailHeader extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 32,
-            height: 32,
-            margin: const EdgeInsets.only(right: 16),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF1F1F2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.support_agent_rounded,
-              size: 18,
-              color: Color(0xFF0A243F),
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => _openWhatsapp(context),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF1F1F2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.support_agent_rounded,
+                  size: 18,
+                  color: Color(0xFF0A243F),
+                ),
+              ),
             ),
           ),
         ],
