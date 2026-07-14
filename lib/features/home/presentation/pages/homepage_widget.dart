@@ -37,6 +37,7 @@ class HomepageWidget extends StatefulWidget {
 
 class _HomepageWidgetState extends State<HomepageWidget> {
   final ScrollController _scrollController = ScrollController();
+  late final VoidCallback _homeTabReselectionCallback;
   bool _showBackToTop = false;
 
   static const double _scrollThreshold = 400;
@@ -44,6 +45,8 @@ class _HomepageWidgetState extends State<HomepageWidget> {
   @override
   void initState() {
     super.initState();
+    _homeTabReselectionCallback = _scrollToTop;
+    scrollHomeToTop = _homeTabReselectionCallback;
     _scrollController.addListener(_onScroll);
     if (widget.showReferralBonus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -55,6 +58,9 @@ class _HomepageWidgetState extends State<HomepageWidget> {
 
   @override
   void dispose() {
+    if (identical(scrollHomeToTop, _homeTabReselectionCallback)) {
+      scrollHomeToTop = null;
+    }
     _scrollController.dispose();
     super.dispose();
   }
@@ -74,6 +80,7 @@ class _HomepageWidgetState extends State<HomepageWidget> {
   }
 
   void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
       0,
       duration: const Duration(milliseconds: 400),

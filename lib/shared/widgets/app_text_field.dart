@@ -71,34 +71,48 @@ class _AppTextFieldState extends State<AppTextField> {
   @override
   void initState() {
     super.initState();
+
     _ownsController = widget.controller == null;
     _controller =
         widget.controller ?? TextEditingController(text: widget.initialValue);
+
     _ownsFocusNode = widget.focusNode == null;
     _focusNode = widget.focusNode ?? FocusNode();
+
     _showClearButton = _shouldShowClearButton;
+
     _controller.addListener(_refreshClearButton);
-    _focusNode.addListener(_refreshClearButton);
   }
 
   @override
   void didUpdateWidget(covariant AppTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
+
     if (oldWidget.controller != widget.controller) {
       _controller.removeListener(_refreshClearButton);
-      if (_ownsController) _controller.dispose();
+
+      if (_ownsController) {
+        _controller.dispose();
+      }
+
       _ownsController = widget.controller == null;
-      _controller = widget.controller ?? TextEditingController();
+      _controller =
+          widget.controller ?? TextEditingController(text: widget.initialValue);
+
       _controller.addListener(_refreshClearButton);
     }
+
     if (oldWidget.focusNode != widget.focusNode) {
-      _focusNode.removeListener(_refreshClearButton);
-      if (_ownsFocusNode) _focusNode.dispose();
+      if (_ownsFocusNode) {
+        _focusNode.dispose();
+      }
+
       _ownsFocusNode = widget.focusNode == null;
       _focusNode = widget.focusNode ?? FocusNode();
-      _focusNode.addListener(_refreshClearButton);
     }
+
     final nextShowClearButton = _shouldShowClearButton;
+
     if (_showClearButton != nextShowClearButton) {
       _showClearButton = nextShowClearButton;
     }
@@ -107,24 +121,36 @@ class _AppTextFieldState extends State<AppTextField> {
   @override
   void dispose() {
     _controller.removeListener(_refreshClearButton);
-    _focusNode.removeListener(_refreshClearButton);
-    if (_ownsController) _controller.dispose();
-    if (_ownsFocusNode) _focusNode.dispose();
+
+    if (_ownsController) {
+      _controller.dispose();
+    }
+
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
+
     super.dispose();
   }
 
-  bool get _shouldShowClearButton =>
-      widget.showClearButton &&
-      widget.enabled &&
-      !widget.readOnly &&
-      _focusNode.hasFocus &&
-      _controller.text.isNotEmpty;
+  bool get _shouldShowClearButton {
+    return widget.showClearButton &&
+        widget.enabled &&
+        !widget.readOnly &&
+        _controller.text.isNotEmpty;
+  }
 
   void _refreshClearButton() {
     final nextShowClearButton = _shouldShowClearButton;
-    if (_showClearButton == nextShowClearButton) return;
+
+    if (_showClearButton == nextShowClearButton) {
+      return;
+    }
+
     if (mounted) {
-      setState(() => _showClearButton = nextShowClearButton);
+      setState(() {
+        _showClearButton = nextShowClearButton;
+      });
     } else {
       _showClearButton = nextShowClearButton;
     }
@@ -167,6 +193,7 @@ class _AppTextFieldState extends State<AppTextField> {
           prefixIcon: widget.prefixIcon,
           prefixText: widget.prefixText,
           floatingLabelBehavior: widget.floatingLabelBehavior,
+          enabled: widget.enabled,
         ),
       ),
     );
@@ -180,82 +207,110 @@ InputDecoration appTextFieldDecoration({
   Widget? prefixIcon,
   String? prefixText,
   FloatingLabelBehavior? floatingLabelBehavior,
+  bool enabled = true,
 }) {
   return InputDecoration(
-    labelText: (label == null || label.isEmpty) ? null : label,
+    labelText: label == null || label.isEmpty ? null : label,
     hintText: hintText,
-    floatingLabelBehavior: floatingLabelBehavior,
+    floatingLabelBehavior: floatingLabelBehavior ?? FloatingLabelBehavior.auto,
     labelStyle: AppTextFieldStyles.label,
     floatingLabelStyle: AppTextFieldStyles.stateLabel,
     hintStyle: AppTextFieldStyles.hint,
     errorStyle: AppTextFieldStyles.error,
     prefixText: prefixText,
     prefixStyle: AppTextFieldStyles.inputText,
-    contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
     filled: true,
-    fillColor: Colors.white,
+    fillColor: enabled
+        ? AppTextFieldColors.surface
+        : AppTextFieldColors.disabledSurface,
     isDense: true,
-    // constraints: const BoxConstraints(minHeight: 48),
+    constraints: const BoxConstraints(
+      minHeight: 56,
+      maxHeight: 56,
+    ),
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: 14,
+      vertical: 17,
+    ),
     suffixIcon: suffixIcon,
     prefixIcon: prefixIcon,
-    suffixIconConstraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-    prefixIconConstraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+    suffixIconConstraints: const BoxConstraints(
+      minWidth: 48,
+      minHeight: 48,
+    ),
+    prefixIconConstraints: const BoxConstraints(
+      minWidth: 48,
+      minHeight: 48,
+    ),
     border: _inputBorder(),
     enabledBorder: _inputBorder(),
     focusedBorder: _inputBorder(
-      color: AppTextFieldColors.primaryText,
-      width: 1.5,
+      color: AppTextFieldColors.focusBorder,
+      width: 1.6,
     ),
-    errorBorder: _inputBorder(color: AppTextFieldColors.error, width: 1.5),
+    errorBorder: _inputBorder(
+      color: AppTextFieldColors.error,
+    ),
     focusedErrorBorder: _inputBorder(
       color: AppTextFieldColors.error,
-      width: 1.5,
+      width: 1.6,
     ),
-    disabledBorder: _inputBorder(color: AppTextFieldColors.disabledBorder),
+    disabledBorder: _inputBorder(
+      color: AppTextFieldColors.disabledBorder,
+    ),
   );
 }
 
 abstract final class AppTextFieldColors {
   static const Color surface = Colors.white;
+  static const Color disabledSurface = Color(0xFFF5F7FA);
+
   static const Color primaryText = Color(0xFF0A243F);
   static const Color inputBorder = Color(0xFFDFE4EC);
+  static const Color focusBorder = Color(0xFF0360E5);
+
   static const Color inputLabel = Color(0xFF767C8F);
-  static const Color inputHint = Color(0xFFAFB4C0);
+  static const Color inputHint = Color(0xFF767C8F);
+
   static const Color clearBackground = Color(0xFFB5B5B5);
-  static const Color error = Color(0xFFC13615);
+  static const Color error = Color(0xFFE14040);
   static const Color disabledBorder = Color(0xFFE8ECF2);
 }
 
 abstract final class AppTextFieldStyles {
   static TextStyle get inputText => GoogleFonts.inter(
         color: AppTextFieldColors.primaryText,
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        height: 20 / 14,
+        fontSize: 15,
+        fontWeight: FontWeight.w400,
+        height: 21 / 15,
       );
 
   static TextStyle get label => GoogleFonts.inter(
         color: AppTextFieldColors.inputLabel,
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        height: 14 / 11,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        height: 20 / 14,
       );
 
   static TextStyle get stateLabel => WidgetStateTextStyle.resolveWith(
         (states) {
           final color = states.contains(WidgetState.error)
               ? AppTextFieldColors.error
-              : states.contains(WidgetState.focused)
-                  ? AppTextFieldColors.primaryText
-                  : AppTextFieldColors.inputLabel;
-          return label.copyWith(color: color);
+              : AppTextFieldColors.inputLabel;
+
+          return GoogleFonts.inter(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            height: 18 / 13,
+          );
         },
       );
 
   static TextStyle get hint => GoogleFonts.inter(
         color: AppTextFieldColors.inputHint,
         fontSize: 14,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w400,
         height: 20 / 14,
       );
 
@@ -268,7 +323,9 @@ abstract final class AppTextFieldStyles {
 }
 
 class _ClearTextButton extends StatelessWidget {
-  const _ClearTextButton({required this.onPressed});
+  const _ClearTextButton({
+    required this.onPressed,
+  });
 
   final VoidCallback onPressed;
 
@@ -281,7 +338,10 @@ class _ClearTextButton extends StatelessWidget {
         onPressed: onPressed,
         splashRadius: 18,
         padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 40, minHeight: 48),
+        constraints: const BoxConstraints(
+          minWidth: 40,
+          minHeight: 48,
+        ),
         icon: Container(
           width: 16,
           height: 16,
@@ -305,7 +365,10 @@ OutlineInputBorder _inputBorder({
   double width = 1,
 }) {
   return OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: color, width: width),
+    borderRadius: BorderRadius.circular(10),
+    borderSide: BorderSide(
+      color: color,
+      width: width,
+    ),
   );
 }

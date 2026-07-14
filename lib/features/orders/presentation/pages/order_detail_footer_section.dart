@@ -128,9 +128,23 @@ class _PromoFooter extends StatelessWidget {
                 borderRadius: BorderRadius.circular(40),
               ),
               alignment: Alignment.center,
-              child: SvgPicture.asset(
-                'assets/images/moblogo-orders.svg',
-                // height: 48,
+              child: Container(
+                width: 80,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 56,
+                    height: 15,
+                    child: SvgPicture.asset(
+                      'assets/images/mobinorderdetails.svg',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

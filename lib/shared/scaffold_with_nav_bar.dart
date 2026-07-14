@@ -38,14 +38,23 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
   }
 
   void _onTap(int index) {
-    if (index != widget.navigationShell.currentIndex) {
+    final isCurrentTab = index == widget.navigationShell.currentIndex;
+    final isHomeReselected = isCurrentTab && index == 0;
+
+    if (!isCurrentTab || isHomeReselected) {
       AppHaptics.tabSelection();
       navBarVisible.value = true;
     }
     widget.navigationShell.goBranch(
       index,
-      initialLocation: index == widget.navigationShell.currentIndex,
+      initialLocation: isCurrentTab,
     );
+
+    if (isHomeReselected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) scrollHomeToTop?.call();
+      });
+    }
   }
 
   @override

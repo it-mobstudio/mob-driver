@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 /// Set to false when user scrolls up (content scrolling), true when scrolling back down.
 final ValueNotifier<bool> navBarVisible = ValueNotifier(true);
 
+/// Registered by the active Home page so a second tap on the selected Home
+/// tab can return its preserved scroll view to the top.
+VoidCallback? scrollHomeToTop;
+
 /// Bottom nav bar's own content height, excluding the device safe-area
 /// inset (add `MediaQuery.paddingOf(context).bottom` separately). Shared
 /// so anything positioning itself relative to the nav bar — e.g. the

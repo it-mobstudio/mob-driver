@@ -105,16 +105,16 @@ class _ShipmentSection extends StatelessWidget {
                           height: 28 / 19,
                         ),
                       ),
-                      if (deliveryLabel.isNotEmpty)
-                        Text(
-                          deliveryLabel,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF596378),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            height: 18 / 12,
-                          ),
-                        ),
+                      // if (deliveryLabel.isNotEmpty)
+                      //   Text(
+                      //     deliveryLabel,
+                      //     style: GoogleFonts.inter(
+                      //       color: const Color(0xFF596378),
+                      //       fontSize: 12,
+                      //       fontWeight: FontWeight.w400,
+                      //       height: 18 / 12,
+                      //     ),
+                      //   ),
                     ],
                   ),
                 ),
