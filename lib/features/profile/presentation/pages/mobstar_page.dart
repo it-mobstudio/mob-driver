@@ -619,84 +619,85 @@ class _AllLevelsSheet extends StatelessWidget {
     return FractionallySizedBox(
       heightFactor: .62,
       widthFactor: 1,
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        child: ColoredBox(
-          color: Colors.white,
-          child: SizedBox(
-            width: double.infinity,
-            child: Column(
-              children: [
-                Container(
-                  height: 56,
-                  padding: const EdgeInsets.only(left: 16),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF0F0F0),
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  child: Row(
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          Positioned(
+            top: -61,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).pop(),
+              child: SvgPicture.asset(
+                'assets/images/close.svg',
+                width: 44,
+                height: 44,
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+              child: ColoredBox(
+                color: Colors.white,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
                     children: [
-                      Expanded(
-                        flex: 44,
-                        child: Text('LEVEL', style: _levelHeaderStyle),
-                      ),
-                      Expanded(
-                        flex: 28,
-                        child: Text('POINTS', style: _levelHeaderStyle),
-                      ),
-                      Expanded(
-                        flex: 36,
-                        child: Text(
-                          'MIN SPEND IN\nA YEAR',
-                          textAlign: TextAlign.right,
-                          style: _levelHeaderStyle,
+                      Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF0F0F0),
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 44,
+                              child: Text('LEVEL', style: _levelHeaderStyle),
+                            ),
+                            Expanded(
+                              flex: 28,
+                              child: Text('POINTS', style: _levelHeaderStyle),
+                            ),
+                            Expanded(
+                              flex: 36,
+                              child: Text(
+                                'MIN SPEND IN\nA YEAR',
+                                textAlign: TextAlign.right,
+                                style: _levelHeaderStyle,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          alignment: Alignment.center,
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Color(0xFF0A243F),
-                              size: 18,
-                            ),
+                      Expanded(
+                        child: ListView.separated(
+                          padding: EdgeInsets.zero,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _levels.length,
+                          separatorBuilder: (_, __) => const Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: Color(0xFFE2E2E2),
+                          ),
+                          itemBuilder: (context, index) => _LevelSheetRow(
+                            level: _levels[index],
+                            current: _isCurrentLevel(_levels[index].name),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Expanded(
-                  child: ListView.separated(
-                    padding: EdgeInsets.zero,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _levels.length,
-                    separatorBuilder: (_, __) => const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Color(0xFFE2E2E2),
-                    ),
-                    itemBuilder: (context, index) => _LevelSheetRow(
-                      level: _levels[index],
-                      current: _isCurrentLevel(_levels[index].name),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -738,52 +739,51 @@ class _LevelSheetRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 64,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 44,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (current) const _CurrentLevelBadge(),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: _LevelName(level: level, current: current),
+      child: Stack(
+        children: [
+          if (current)
+            const Positioned(
+              left: 0,
+              top: 0,
+              child: _CurrentLevelBadge(),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 44,
+                  child: _LevelName(level: level),
+                ),
+                Expanded(
+                  flex: 28,
+                  child: Text(
+                    level.points,
+                    style: GoogleFonts.inter(
+                      color: Colors.black,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 20 / 14,
                     ),
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              flex: 28,
-              child: Text(
-                level.points,
-                style: GoogleFonts.inter(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  height: 20 / 14,
                 ),
-              ),
-            ),
-            Expanded(
-              flex: 36,
-              child: Text(
-                level.spend,
-                textAlign: TextAlign.right,
-                style: GoogleFonts.inter(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  height: 20 / 14,
+                Expanded(
+                  flex: 36,
+                  child: Text(
+                    level.spend,
+                    textAlign: TextAlign.right,
+                    style: GoogleFonts.inter(
+                      color: Colors.black,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 20 / 14,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -794,31 +794,28 @@ class _CurrentLevelBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: const Offset(-16, 0),
-      child: Container(
-        height: 24,
-        padding: const EdgeInsets.fromLTRB(10, 0, 12, 0),
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [Color(0xFF313A78), Color(0xFF424B97)],
-          ),
-          borderRadius: BorderRadius.only(
-            topRight: Radius.circular(12),
-            bottomRight: Radius.circular(12),
-          ),
+    return Container(
+      height: 24,
+      padding: const EdgeInsets.fromLTRB(10, 0, 12, 0),
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0xFF313A78), Color(0xFF424B97)],
         ),
-        child: Text(
-          'You are here',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            height: 18 / 12,
-          ),
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(12),
+          bottomRight: Radius.circular(12),
+        ),
+      ),
+      child: Text(
+        'You are here',
+        style: GoogleFonts.inter(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          height: 20 / 13,
         ),
       ),
     );
@@ -826,10 +823,9 @@ class _CurrentLevelBadge extends StatelessWidget {
 }
 
 class _LevelName extends StatelessWidget {
-  const _LevelName({required this.level, required this.current});
+  const _LevelName({required this.level});
 
   final _LevelInfo level;
-  final bool current;
 
   @override
   Widget build(BuildContext context) {
@@ -837,8 +833,8 @@ class _LevelName extends StatelessWidget {
       children: [
         SvgPicture.asset(
           level.asset,
-          width: 28,
-          height: 28,
+          width: 24,
+          height: 24,
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -847,10 +843,9 @@ class _LevelName extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.inter(
-              color:
-                  current ? const Color(0xFF0360E5) : const Color(0xFF0A243F),
+              color: const Color(0xFF0A243F),
               fontSize: 14,
-              fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+              fontWeight: FontWeight.w500,
               height: 20 / 14,
             ),
           ),

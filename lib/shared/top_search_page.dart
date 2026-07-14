@@ -549,7 +549,7 @@ class _SearchPageState extends State<SearchPage> {
         padding: EdgeInsets.zero,
         children: [
           if (_loading) const LinearProgressIndicator(minHeight: 1),
-          _suggestionSectionHeader('CATEGORIES'),
+          _suggestionSectionHeader('BRANDS'),
           ...categoryTerms.map(
             (term) => _categorySuggestionRow(
               term,
@@ -558,7 +558,7 @@ class _SearchPageState extends State<SearchPage> {
                   : () => _submitSearch(term),
             ),
           ),
-          _suggestionSectionHeader('CATEGORIES'),
+          _suggestionSectionHeader('PRODUCTS'),
           if (_suggestions.isNotEmpty) ...[
             ..._suggestions.take(8).map(_productTile),
           ] else ...[

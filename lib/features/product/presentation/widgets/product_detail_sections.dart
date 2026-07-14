@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
@@ -677,94 +678,101 @@ class MobCreditBannerSection extends StatelessWidget {
               height: 14,
             ),
           ),
-          Container(
-            height: 58,
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF096754),
+          Material(
+            color: const Color(0xFF096754),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
               borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                SvgPicture.asset(
-                  'assets/images/buildnowpaylater.svg',
-                  width: 82,
-                  height: 36,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text.rich(
-                        TextSpan(
-                          children: [
+              onTap: () => context.push(
+                MobCreditProfilePage.routePath,
+                extra: {'showBackButton': true},
+              ),
+              child: Container(
+                height: 58,
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
+                child: Row(
+                  children: [
+                    SvgPicture.asset(
+                      'assets/images/buildnowpaylater.svg',
+                      width: 82,
+                      height: 36,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text.rich(
                             TextSpan(
-                              text: '0% Interest',
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF02FE6D),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                height: 16 / 11,
-                              ),
+                              children: [
+                                TextSpan(
+                                  text: '0% Interest',
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF02FE6D),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    height: 16 / 11,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' for 21 days',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                    height: 16 / 11,
+                                  ),
+                                ),
+                              ],
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text.rich(
                             TextSpan(
-                              text: ' for 21 days',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                height: 16 / 11,
-                              ),
+                              children: [
+                                TextSpan(
+                                  text: '90 days',
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF02FE6D),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    height: 16 / 11,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' credit period',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                    height: 16 / 11,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '90 days',
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF02FE6D),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                height: 16 / 11,
-                              ),
-                            ),
-                            TextSpan(
-                              text: ' credit period',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                height: 16 / 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Apply now',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 18 / 12,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'Apply now',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    height: 18 / 12,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],

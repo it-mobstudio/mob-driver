@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -304,12 +306,15 @@ class _ProjectsHeader extends StatelessWidget {
                     height: 22 / 15,
                   ),
                 ),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
-                  child: Icon(
-                    Icons.info_outline,
-                    color: Color(0xFFB8BDC5),
-                    size: 20,
+                  child: IconButton(
+                    onPressed: () => _showProjectsInfoSheet(context),
+                    icon: const Icon(
+                      Icons.info_outline,
+                      color: Color(0xFFB8BDC5),
+                      size: 20,
+                    ),
                   ),
                 ),
               ],
@@ -317,6 +322,201 @@ class _ProjectsHeader extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+void _showProjectsInfoSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.6),
+    builder: (_) => const _ProjectsInfoSheet(),
+  );
+}
+
+class _ProjectsInfoSheet extends StatelessWidget {
+  const _ProjectsInfoSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final sheetHeight = math.min(
+      504.0 + media.padding.bottom,
+      media.size.height - media.padding.top - 88,
+    );
+
+    return SizedBox(
+      height: sheetHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          Positioned(
+            top: -61,
+            child: Material(
+              color: Colors.white,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => Navigator.of(context).pop(),
+                child: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(
+                    Icons.close,
+                    color: _ProjectColors.navy,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+              child: Material(
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 200,
+                      width: double.infinity,
+                      child: Stack(
+                        children: [
+                          Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  Color(0xFF441F0D),
+                                  Color(0xFF893E1A),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: 16,
+                            top: 26,
+                            child: SizedBox(
+                              width: 220,
+                              child: Text(
+                                'Organize procurement\nwith projects',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  height: 30 / 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: -20,
+                            bottom: 1,
+                            child: Image.asset(
+                              'assets/images/myprojectssheet.png',
+                              width: 195,
+                              height: 119,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                        child: Column(
+                          children: [
+                            const _ProjectsInfoBenefitRow(
+                              iconAsset: 'assets/images/easyfilterforrfq.svg',
+                              label: 'Easy filter for all your RFQ and Orders',
+                            ),
+                            const SizedBox(height: 12),
+                            const _ProjectsInfoBenefitRow(
+                              iconAsset:
+                                  'assets/images/dedicatedsiteaddress.svg',
+                              label: 'Dedicated site address for projects',
+                            ),
+                            const Spacer(),
+                            SafeArea(
+                              top: false,
+                              child: SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  style: ElevatedButton.styleFrom(
+                                    elevation: 0,
+                                    backgroundColor: _ProjectColors.blue,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Add new project',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      height: 21 / 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectsInfoBenefitRow extends StatelessWidget {
+  const _ProjectsInfoBenefitRow({
+    required this.iconAsset,
+    required this.label,
+  });
+
+  final String iconAsset;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SvgPicture.asset(
+          iconAsset,
+          width: 40,
+          height: 40,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              color: _ProjectColors.navy,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 18 / 12,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
