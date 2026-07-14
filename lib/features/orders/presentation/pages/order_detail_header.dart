@@ -80,14 +80,28 @@ class _OrderDetailHeader extends StatelessWidget {
               child: Container(
                 width: 32,
                 height: 32,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF1F1F2),
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFDEDEDE),
+                    width: 1,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.support_agent_rounded,
-                  size: 18,
-                  color: Color(0xFF0A243F),
+                child: Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: SvgPicture.asset(
+                      'assets/images/supportagent.svg',
+                      fit: BoxFit.contain,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF0A243F),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

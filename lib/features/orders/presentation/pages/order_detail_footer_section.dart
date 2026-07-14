@@ -36,10 +36,15 @@ class _HelpTile extends StatelessWidget {
                 color: Color(0xFFDFF8F9),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.support_agent_rounded,
-                color: Color(0xFF0A7D83),
-                size: 28,
+              child: Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: SvgPicture.asset(
+                    'assets/images/supportagent.svg',
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 16),
