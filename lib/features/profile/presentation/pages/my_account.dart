@@ -871,8 +871,8 @@ class _AppUpdateCard extends StatelessWidget {
               children: [
                 SvgPicture.asset(
                   'assets/images/updateavailable.svg',
-                  width: 32,
-                  height: 32,
+                  width: 24,
+                  height: 24,
                 ),
                 const SizedBox(width: 16),
                 Text(
