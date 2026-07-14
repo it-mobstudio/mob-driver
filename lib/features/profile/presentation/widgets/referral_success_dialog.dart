@@ -73,65 +73,45 @@ class _ReferralSuccessSheet extends StatelessWidget {
           final maxWidth =
               constraints.maxWidth > 480 ? 480.0 : constraints.maxWidth;
           final sheetHeight =
-              (constraints.maxHeight * 0.58).clamp(380.0, 430.0).toDouble();
+              (constraints.maxHeight * 0.62).clamp(400.0, 480.0).toDouble();
           final heroHeight = (maxWidth * 0.42).clamp(128.0, 168.0).toDouble();
           const closeButtonSize = 44.0;
+          const closeButtonBottomGap = 22.0;
+          const cardTop =
+              closeButtonSize / 2 + closeButtonSize + closeButtonBottomGap;
 
           return Align(
             alignment: Alignment.bottomCenter,
             child: SizedBox(
               width: maxWidth,
-              height: sheetHeight + closeButtonSize,
+              height: cardTop + sheetHeight,
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.topCenter,
                 children: [
                   Positioned(
-                    top: closeButtonSize,
+                    top: cardTop,
                     left: 0,
                     right: 0,
                     bottom: 0,
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(12),
+                        top: Radius.circular(20),
                       ),
                       child: Stack(
                         children: [
-                          Positioned.fill(
-                            child: Container(color: Colors.white),
-                          ),
                           Positioned(
                             top: 0,
                             left: 0,
                             right: 0,
                             child: SizedBox(
                               height: heroHeight,
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  const Positioned.fill(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.centerLeft,
-                                          end: Alignment.centerRight,
-                                          colors: [
-                                            Color(0xFFF3A43D),
-                                            Color(0xFFF7C46D),
-                                            Color(0xFFE89032),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Image.asset(
-                                    'assets/images/mobReferalBanner.webp',
-                                    width: maxWidth,
-                                    height: heroHeight,
-                                    fit: BoxFit.cover,
-                                    alignment: Alignment.topCenter,
-                                  ),
-                                ],
+                              child: Image.asset(
+                                'assets/images/mobReferalBanner.webp',
+                                width: maxWidth,
+                                height: heroHeight,
+                                fit: BoxFit.cover,
+                                alignment: Alignment.topCenter,
                               ),
                             ),
                           ),
@@ -149,7 +129,7 @@ class _ReferralSuccessSheet extends StatelessWidget {
                                     '₹$amountStr',
                                     style: GoogleFonts.inter(
                                       color: const Color(0xFF0A243F),
-                                      fontSize: 32,
+                                      fontSize: 36,
                                       fontWeight: FontWeight.w800,
                                       height: 1.1,
                                     ),
@@ -159,19 +139,19 @@ class _ReferralSuccessSheet extends StatelessWidget {
                                     'added to mobwallet',
                                     style: GoogleFonts.inter(
                                       color: const Color(0xFF0A243F),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      height: 20 / 14,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      height: 20 / 18,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Valid for $validDays days',
                                     style: GoogleFonts.inter(
-                                      color: const Color(0xFFE9441F),
-                                      fontSize: 12,
+                                      color: const Color(0xFFF0483E),
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w500,
-                                      height: 16 / 12,
+                                      height: 16 / 14,
                                     ),
                                   ),
                                   const SizedBox(height: 22),
@@ -186,14 +166,14 @@ class _ReferralSuccessSheet extends StatelessWidget {
                                         minWidth: 230,
                                         maxWidth: 306,
                                       ),
-                                      height: 44,
+                                      height: 48,
                                       padding: const EdgeInsets.only(
                                         left: 18,
                                         right: 8,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF4F4F4),
-                                        borderRadius: BorderRadius.circular(22),
+                                        color: const Color(0xFFF5F5F5),
+                                        borderRadius: BorderRadius.circular(48),
                                       ),
                                       child: Row(
                                         children: [
@@ -204,23 +184,24 @@ class _ReferralSuccessSheet extends StatelessWidget {
                                               overflow: TextOverflow.ellipsis,
                                               style: GoogleFonts.inter(
                                                 color: const Color(0xFF0A243F),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                                height: 16 / 12,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                height: 16 / 14,
                                               ),
                                             ),
                                           ),
                                           Container(
-                                            width: 28,
-                                            height: 28,
+                                            width: 32,
+                                            height: 32,
+                                            alignment: Alignment.center,
                                             decoration: const BoxDecoration(
                                               color: Colors.white,
                                               shape: BoxShape.circle,
                                             ),
-                                            child: const Icon(
-                                              Icons.chevron_right,
-                                              color: Color(0xFF0A243F),
-                                              size: 20,
+                                            child: SvgPicture.asset(
+                                              'assets/images/RoundArrow.svg',
+                                              width: 32,
+                                              height: 32,
                                             ),
                                           ),
                                         ],

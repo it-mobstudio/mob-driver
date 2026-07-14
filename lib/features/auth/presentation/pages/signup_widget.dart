@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/shared/build_wallet_reward.dart';
@@ -33,6 +37,18 @@ class _SignupWidgetState extends State<SignupWidget> {
   final _emailController = TextEditingController();
   final _referralController = TextEditingController();
 
+  late final AuthRepository _authRepository;
+  Timer? _referralDebounce;
+  bool _checkingReferral = false;
+  bool _referralVerified = false;
+  String? _referralError;
+  String? _referralSuccessMessage;
+  String _lastCheckedReferral = '';
+  // Tracked separately from the controller so the bonus sheet only fires
+  // for the code actually submitted with registration — matches web's
+  // lastSubmittedReferralCode (CompleteSignUp.jsx).
+  String _lastSubmittedReferralCode = '';
+
   String get _rawPhone {
     final fromRoute =
         widget.phoneNumber.replaceAll('+91', '').replaceAll(' ', '').trim();
@@ -52,6 +68,7 @@ class _SignupWidgetState extends State<SignupWidget> {
   @override
   void initState() {
     super.initState();
+    _authRepository = sl<AuthRepository>();
     final user = AuthSession.instance.userDetails ?? const <String, dynamic>{};
     _nameController.text = _firstString(user, const [
       'full_name',
@@ -65,10 +82,56 @@ class _SignupWidgetState extends State<SignupWidget> {
 
   @override
   void dispose() {
+    _referralDebounce?.cancel();
     _nameController.dispose();
     _emailController.dispose();
     _referralController.dispose();
     super.dispose();
+  }
+
+  void _onReferralChanged(String value) {
+    _referralDebounce?.cancel();
+    setState(() {
+      _referralVerified = false;
+      _referralError = null;
+      _referralSuccessMessage = null;
+    });
+    final normalized = value.trim().toUpperCase();
+    if (normalized.isEmpty) {
+      _lastCheckedReferral = '';
+      return;
+    }
+    // Covers both typing and pasting — Flutter's TextField doesn't
+    // distinguish the two, unlike web's separate onPaste handler.
+    _referralDebounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) _checkReferralCode(normalized);
+    });
+  }
+
+  /// Mirrors web's validateReferral (CompleteSignUp.jsx) — same
+  /// /accounts/referral-code-checker/ endpoint via AuthRepository
+  /// .checkReferralCode, which already existed but was never wired to any
+  /// UI on mobile.
+  Future<bool> _checkReferralCode(String code) async {
+    if (code == _lastCheckedReferral && _referralVerified) return true;
+    setState(() => _checkingReferral = true);
+    final (isValid, message, failure) =
+        await _authRepository.checkReferralCode(code: code);
+    if (!mounted) return false;
+    final verified = failure == null && isValid;
+    setState(() {
+      _checkingReferral = false;
+      _lastCheckedReferral = code;
+      _referralVerified = verified;
+      _referralSuccessMessage = verified
+          ? (message.isNotEmpty ? message : 'Valid referral code')
+          : null;
+      _referralError = verified
+          ? null
+          : (failure?.message ??
+              (message.isNotEmpty ? message : 'Invalid referral code'));
+    });
+    return verified;
   }
 
   @override
@@ -80,7 +143,7 @@ class _SignupWidgetState extends State<SignupWidget> {
             AddressSelectionWidget.routePath,
             extra: {
               'returnToHome': true,
-              'showReferralBonus': false,
+              'showReferralBonus': _lastSubmittedReferralCode.isNotEmpty,
             },
           );
         } else if (state is AuthError) {
@@ -190,12 +253,45 @@ class _SignupWidgetState extends State<SignupWidget> {
                                   RegExp(r'[a-zA-Z0-9]'),
                                 ),
                               ],
+                              onChanged: _onReferralChanged,
                               onFieldSubmitted: (_) {
                                 if (!isLoading) _submit();
                               },
                             ),
+                            if (_checkingReferral) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Validating referral code...',
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF596378),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ] else if (_referralError != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                _referralError!,
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFFC13615),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ] else if (_referralSuccessMessage != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                _referralSuccessMessage!,
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF13A05A),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
 
-                            const SizedBox(height: 2),
+                            SizedBox(
+                              height: _referralSuccessMessage != null ? 8 : 2,
+                            ),
                             const WalletRewardBanner(amount: 1000),
                           ],
                         ),
@@ -204,7 +300,11 @@ class _SignupWidgetState extends State<SignupWidget> {
                   ),
                   _SignupBottomBar(
                     isLoading: isLoading,
-                    onPressed: isLoading ? null : _submit,
+                    onPressed: (isLoading ||
+                            _checkingReferral ||
+                            _referralError != null)
+                        ? null
+                        : _submit,
                   ),
                 ],
               ),
@@ -215,10 +315,20 @@ class _SignupWidgetState extends State<SignupWidget> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final referralCode = _referralController.text.trim().toUpperCase();
+    // Re-check right before submitting if it hasn't been verified yet (e.g.
+    // the user typed fast and hit "done" before the debounce fired) — same
+    // last-mile guard web does in handleAggreeAndContinue.
+    if (referralCode.isNotEmpty &&
+        !(_referralVerified && _lastCheckedReferral == referralCode)) {
+      final valid = await _checkReferralCode(referralCode);
+      if (!valid || !mounted) return;
+    }
+
+    _lastSubmittedReferralCode = referralCode;
     context.read<AuthBloc>().add(
           AuthRegisterRequested(
             name: _nameController.text.trim(),

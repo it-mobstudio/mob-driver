@@ -204,6 +204,7 @@ class BrowseProductFeed extends StatelessWidget {
     required this.onRequestTap,
     this.crossAxisCount = 2,
     this.requestCardIndex,
+    this.requestCardFullWidth = false,
   });
 
   final ScrollController scrollController;
@@ -220,6 +221,7 @@ class BrowseProductFeed extends StatelessWidget {
   // fixed value to pin it at a specific cell instead (e.g. brand search
   // results pin it at row 2 regardless of how many products load).
   final int? requestCardIndex;
+  final bool requestCardFullWidth;
   final bool hasMore;
   final bool isLoading;
   final bool loadMoreFailed;
@@ -235,7 +237,7 @@ class BrowseProductFeed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tileCount = products.length + 1;
+    final tileCount = products.length + (requestCardFullWidth ? 0 : 1);
     final rowCount = (tileCount / crossAxisCount).ceil();
     // Defaults to the last slot in the grid — after every real result, not
     // interrupting them. A fixed index is clamped so it never sits past the
@@ -251,12 +253,20 @@ class BrowseProductFeed extends StatelessWidget {
     final showProductType = productTypeLabels.isNotEmpty;
     final showBrands = brands.isNotEmpty;
     final extraSections = (showProductType ? 1 : 0) + (showBrands ? 1 : 0);
-    final itemCount = rowCount + extraSections + (hasMore ? 1 : 0);
-    final productTypeSectionIndex =
-        showProductType ? (rowCount >= 2 ? 2 : rowCount) : -1;
-    final brandSectionIndex =
-        showBrands ? rowCount + (showProductType ? 1 : 0) : -1;
-    final loadMoreIndex = rowCount + extraSections;
+    final requestBannerSectionIndex =
+        requestCardFullWidth ? (rowCount >= 2 ? 2 : rowCount) : -1;
+    final itemCount = rowCount +
+        extraSections +
+        (requestCardFullWidth ? 1 : 0) +
+        (hasMore ? 1 : 0);
+    final productTypeSectionIndex = showProductType
+        ? (rowCount >= 2 ? 2 : rowCount) + (requestCardFullWidth ? 1 : 0)
+        : -1;
+    final brandSectionIndex = showBrands
+        ? rowCount + extraSections + (requestCardFullWidth ? 1 : 0)
+        : -1;
+    final loadMoreIndex =
+        rowCount + extraSections + (requestCardFullWidth ? 1 : 0);
 
     return ListView.builder(
       controller: scrollController,
@@ -295,7 +305,17 @@ class BrowseProductFeed extends StatelessWidget {
         //   return _BrandRail(brands: brands);
         // }
 
+        if (requestCardFullWidth && index == requestBannerSectionIndex) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 34),
+            child: BrowseRequestBanner(onTap: onRequestTap),
+          );
+        }
+
         var productRowIndex = index;
+        if (requestCardFullWidth && index > requestBannerSectionIndex) {
+          productRowIndex -= 1;
+        }
         if (showProductType && index > productTypeSectionIndex) {
           productRowIndex -= 1;
         }
@@ -310,6 +330,7 @@ class BrowseProductFeed extends StatelessWidget {
               products: products,
               startIndex: productRowIndex * crossAxisCount,
               requestCardIndex: requestCardIndex,
+              showRequestCard: !requestCardFullWidth,
               crossAxisCount: crossAxisCount,
               cartQtyByProductId: cartQtyByProductId,
               cartUpdatingProductId: cartUpdatingProductId,
@@ -549,11 +570,117 @@ class BrowseRequestCard extends StatelessWidget {
   }
 }
 
+class BrowseRequestBanner extends StatelessWidget {
+  const BrowseRequestBanner({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        height: 136,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF022E0F),
+              Color(0xFF007736),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 12, 14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Can't find the Brand/ Product?",
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 22 / 14,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "Don't worry! Tell us what you need, and\nwe'll be in touch!",
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withValues(alpha: 0.80),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                          height: 18 / 11,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          height: 28,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE600),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            widthFactor: 1,
+                            child: Text(
+                              'Quote request',
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF053961),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                height: 16 / 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Image.asset(
+                  'assets/images/Handwithphn.webp',
+                  width: 117,
+                  height: 117,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerRight,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const SizedBox(width: 86, height: 108);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ProductGridRow extends StatelessWidget {
   const _ProductGridRow({
     required this.products,
     required this.startIndex,
     required this.requestCardIndex,
+    required this.showRequestCard,
     required this.cartQtyByProductId,
     required this.cartUpdatingProductId,
     required this.onProductTap,
@@ -570,6 +697,7 @@ class _ProductGridRow extends StatelessWidget {
   // Absolute grid slot the "can't find it?" card is inserted at; every
   // product from here on shifts one slot later to make room for it.
   final int requestCardIndex;
+  final bool showRequestCard;
   final int crossAxisCount;
   final Map<String, int> cartQtyByProductId;
   final String? cartUpdatingProductId;
@@ -606,7 +734,7 @@ class _ProductGridRow extends StatelessWidget {
   }
 
   Widget _tileForIndex(int index, double width) {
-    if (index == requestCardIndex) {
+    if (showRequestCard && index == requestCardIndex) {
       return SizedBox(
         height: width + 140,
         child: BrowseRequestCard(onTap: onRequestTap),
@@ -615,7 +743,8 @@ class _ProductGridRow extends StatelessWidget {
     // Slots before the request card map straight to the product list;
     // slots after it shift back by one, since the card took up a slot
     // that would otherwise have held a product.
-    final productIndex = index < requestCardIndex ? index : index - 1;
+    final productIndex =
+        showRequestCard && index > requestCardIndex ? index - 1 : index;
     if (productIndex < products.length) {
       return _cardForProduct(products[productIndex], width);
     }

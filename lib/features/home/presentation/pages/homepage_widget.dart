@@ -16,6 +16,7 @@ import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_saving
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_why_choose_card.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/product_rail_section.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/section_title.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/widgets/referral_success_dialog.dart';
 import 'package:m_o_b_demand_side/shared/back_to_top_button.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
@@ -51,7 +52,12 @@ class _HomepageWidgetState extends State<HomepageWidget> {
     if (widget.showReferralBonus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ReferralSuccessDialog.show(context, amount: 1000, walletBalance: 1000);
+        ReferralSuccessDialog.show(
+          context,
+          amount: 1000,
+          walletBalance: 1000,
+          onViewWallet: () => context.push(WalletPointsPage.routePath),
+        );
       });
     }
   }

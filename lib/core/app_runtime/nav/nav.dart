@@ -32,6 +32,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_project
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/upgrade_to_pro_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/dev_info_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
@@ -492,6 +493,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         path: MyProjectsPage.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) => const MyProjectsPage(),
+      ),
+      GoRoute(
+        name: UpgradeToProPage.routeName,
+        path: UpgradeToProPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const UpgradeToProPage(),
       ),
       GoRoute(
         name: MobCreditProfilePage.routeName,

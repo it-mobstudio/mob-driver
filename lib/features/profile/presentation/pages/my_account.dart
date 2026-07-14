@@ -27,6 +27,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_pa
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/upgrade_to_pro_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
@@ -264,15 +265,23 @@ class _ProfileBody extends StatelessWidget {
                       const SizedBox(height: 20),
                       _MenuCard(
                         items: [
+                          _MenuItem(
+                            iconAsset: 'assets/images/upgradeicon.svg',
+                            label: account.isProfessional ? 'mob' : 'Upgrade to',
+                            badgeAsset: 'assets/images/proicon.svg',
+                            onTap: () =>
+                                context.push(UpgradeToProPage.routePath),
+                          ),
                           // Notification preferences: hidden for now (not
                           // ready), keeping the entry here so it's a one-line
-                          // uncomment to bring back rather than a rebuild.
+                          // uncomment to bring back rather than a rebuild.r
                           // _MenuItem(
                           //   iconAsset: 'assets/images/notifications.svg',
                           //   label: 'Notification preferences',
                           //   onTap: () => _comingSoon(
                           //       context, 'Notification preferences'),
                           // ),
+
                           _MenuItem(
                             iconAsset: 'assets/images/aboutus.svg',
                             label: 'About us',
@@ -911,12 +920,14 @@ class _MenuItem {
     required this.iconAsset,
     required this.label,
     required this.onTap,
+    this.badgeAsset,
     this.showChevron = true,
   });
 
   final String iconAsset;
   final String label;
   final VoidCallback onTap;
+  final String? badgeAsset;
   final bool showChevron;
 }
 
@@ -1007,11 +1018,25 @@ class _MenuRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _labelStyle,
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _labelStyle,
+                        ),
+                      ),
+                      if (item.badgeAsset != null) ...[
+                        const SizedBox(width: 8),
+                        SvgPicture.asset(
+                          item.badgeAsset!,
+                          width: 41,
+                          height: 24,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 if (item.showChevron) const _Chevron(),
