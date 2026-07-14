@@ -64,9 +64,15 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         manifestPlaceholders = [
+            // Falls back to the same key already hardcoded in
+            // ios/Runner/AppDelegate.swift and app_config.dart's
+            // String.fromEnvironment default — this key isn't treated as a
+            // secret elsewhere in this repo, so a build from a fresh
+            // checkout/CI machine with no local.properties entry shouldn't
+            // silently ship with an empty Maps API key (blank map, no error).
             GOOGLE_MAPS_API_KEY: localProperties.getProperty(
                 'GOOGLE_MAPS_API_KEY',
-                ''
+                'AIzaSyC_dvw8b7g1e1RB9dQj4rAnFyxGD1S2s7Y'
             )
         ]
     }
