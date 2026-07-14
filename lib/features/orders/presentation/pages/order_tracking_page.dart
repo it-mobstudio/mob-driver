@@ -221,9 +221,9 @@ List<_TrackingTimelineItem> _buildTrackingTimeline({
     }
   }
 
-  final currentStage =
-      shipmentStage ?? _timelineStageFromStatus(order?.status ?? '') ??
-          _timelineStageFromState(trackingState);
+  final currentStage = shipmentStage ??
+      _timelineStageFromStatus(order?.status ?? '') ??
+      _timelineStageFromState(trackingState);
   final completedIndex =
       currentStage.index < _TrackingTimelineStage.packing.index
           ? _TrackingTimelineStage.placed.index
