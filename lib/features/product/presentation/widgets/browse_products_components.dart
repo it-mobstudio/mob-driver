@@ -155,9 +155,9 @@ class SideSubCategoryRail extends StatelessWidget {
 
     return Container(
       width: 80,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        border: const Border(
+        border: Border(
           right: BorderSide(
             color: Color(0xFFE7EAF0),
             width: 1,
@@ -381,7 +381,7 @@ class FloatingCartSummary extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.18),
+                  color: Colors.black.withValues(alpha: 0.18),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -422,7 +422,7 @@ class FloatingCartSummary extends StatelessWidget {
                       Text(
                         '$totalItems ${totalItems == 1 ? 'item' : 'items'}',
                         style: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           height: 18 / 12,
@@ -457,7 +457,11 @@ class BrowseRequestCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Ink(
         decoration: BoxDecoration(
-          color: const Color(0xFF005B24),
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF022E0F), Color(0xFF007736)],
+          ),
           borderRadius: BorderRadius.circular(16),
         ),
         child: InkWell(
@@ -475,11 +479,11 @@ class BrowseRequestCard extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
-                    height: 24 / 14,
+                    height: 20 / 14,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   "Don't worry! Tell us\nwhat you need, and\nwe'll be in touch!",
                   maxLines: 3,
@@ -488,36 +492,37 @@ class BrowseRequestCard extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
-                    height: 20 / 11,
-                    color: Colors.white.withOpacity(0.8),
+                    height: 16 / 11,
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
-                const Spacer(),
-                Flexible(
+                Expanded(
                   child: Image.asset(
-                    'assets/images/cantfind.png',
-                    width: 88,
-                    height: 88,
+                    'assets/images/Handwithphn.webp',
                     fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const SizedBox.shrink();
+                    },
                   ),
                 ),
-                const Spacer(),
                 Container(
-                  height: 42,
+                  height: 32,
                   width: double.infinity,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFE500),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'Quote request',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0A243F),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      height: 16 / 11,
+                      color: const Color(0xFF053961),
                     ),
                   ),
                 ),
@@ -653,7 +658,7 @@ class _ProductTypeRail extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF0A243F).withOpacity(0.08)
+                      ? const Color(0xFF0A243F).withValues(alpha: 0.08)
                       : Colors.white,
                   border: Border.all(
                     color: isSelected

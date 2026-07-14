@@ -157,60 +157,81 @@ class _OrdersPageState extends State<OrdersPage> {
                                 (s) => s is OrdersLoaded || s is OrdersError,
                               );
                             },
-                            child: ListView(
+                            child: CustomScrollView(
                               controller: _scrollController,
                               physics: const AlwaysScrollableScrollPhysics(),
-                              padding: EdgeInsets.fromLTRB(
-                                16,
-                                12,
-                                16,
-                                24 +
-                                    kBottomNavBarHeight +
-                                    MediaQuery.paddingOf(context).bottom,
-                              ),
-                              children: [
-                                _OrdersSearch(
-                                  controller: _searchController,
-                                  onChanged: _onSearchChanged,
-                                  onCleared: _onSearchCleared,
-                                ),
-                                const SizedBox(height: 12),
-                                _FilterButton(
-                                  activeLabel: _activeFilterLabel,
-                                  onTap: _openFilterSheet,
-                                ),
-                                const SizedBox(height: 16),
-                                if (orders.isEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 48,
+                              slivers: [
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    12,
+                                    16,
+                                    0,
+                                  ),
+                                  sliver: SliverToBoxAdapter(
+                                    child: _OrdersSearch(
+                                      controller: _searchController,
+                                      onChanged: _onSearchChanged,
+                                      onCleared: _onSearchCleared,
                                     ),
-                                    child: Center(
-                                      child: Text(
-                                        'No orders yet.',
-                                        style: GoogleFonts.inter(
-                                          color: const Color(0xFF596378),
-                                          fontSize: 14,
+                                  ),
+                                ),
+                                SliverPersistentHeader(
+                                  pinned: true,
+                                  delegate: _FilterHeaderDelegate(
+                                    activeLabel: _activeFilterLabel,
+                                    onTap: _openFilterSheet,
+                                  ),
+                                ),
+                                if (orders.isEmpty)
+                                  SliverPadding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    sliver: SliverToBoxAdapter(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 48,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            'No orders yet.',
+                                            style: GoogleFonts.inter(
+                                              color: const Color(0xFF596378),
+                                              fontSize: 14,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
                                   )
-                                else ...[
-                                  ...orders.map(
-                                    (order) => Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 16),
-                                      child: _OrderCard(
-                                        order: order,
-                                        onTap: () => context.push(
-                                          OrderDetailPage.routePath,
-                                          extra: order.id,
-                                        ),
-                                      ),
+                                else
+                                  SliverPadding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    sliver: SliverList.builder(
+                                      itemCount: orders.length,
+                                      itemBuilder: (context, index) {
+                                        final order = orders[index];
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 16,
+                                          ),
+                                          child: _OrderCard(
+                                            order: order,
+                                            onTap: () => context.push(
+                                              OrderDetailPage.routePath,
+                                              extra: order.id,
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
-                                  if (isLoadingMore)
-                                    const Padding(
+                                if (isLoadingMore)
+                                  const SliverToBoxAdapter(
+                                    child: Padding(
                                       padding: EdgeInsets.symmetric(
                                         vertical: 16,
                                       ),
@@ -224,7 +245,14 @@ class _OrdersPageState extends State<OrdersPage> {
                                         ),
                                       ),
                                     ),
-                                ],
+                                  ),
+                                SliverToBoxAdapter(
+                                  child: SizedBox(
+                                    height: 24 +
+                                        kBottomNavBarHeight +
+                                        MediaQuery.paddingOf(context).bottom,
+                                  ),
+                                ),
                               ],
                             ),
                           ),

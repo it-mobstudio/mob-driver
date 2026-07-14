@@ -78,7 +78,7 @@ class _OrderInfoSection extends StatelessWidget {
               height: 24 / 17,
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(width: 7),
           const _DetailLabel('Order ID'),
           GestureDetector(
             onTap: () => _copyOrderId(context, orderId),

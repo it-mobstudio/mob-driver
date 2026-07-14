@@ -18,10 +18,15 @@ class _HelpTile extends StatelessWidget {
               color: Color(0xFFDFF8F9),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.support_agent_rounded,
-              color: Color(0xFF0A7D83),
-              size: 28,
+            child: Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: SvgPicture.asset(
+                  'assets/images/supportagent.svg',
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -109,9 +114,23 @@ class _PromoFooter extends StatelessWidget {
                 borderRadius: BorderRadius.circular(40),
               ),
               alignment: Alignment.center,
-              child: SvgPicture.asset(
-                'assets/images/moblogo-orders.svg',
-                // height: 48,
+              child: Container(
+                width: 80,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 56,
+                    height: 15,
+                    child: SvgPicture.asset(
+                      'assets/images/mobinorderdetails.svg',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

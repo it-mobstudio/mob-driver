@@ -81,7 +81,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       final raw = shipment?.deliveryDate.trim() ?? '';
       if (raw.isEmpty) return '';
       try {
-        return DateFormat('dd MMM yyyy').format(DateTime.parse(raw).toLocal());
+        return DateFormat("dd MMM yyyy 'at' hh:mm a")
+            .format(DateTime.parse(raw).toLocal());
       } catch (_) {
         return raw;
       }
@@ -90,7 +91,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         formattedDeliveryDate.isNotEmpty ? formattedDeliveryDate : '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F1F2),
+      backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -331,11 +332,16 @@ class _TrackingHero extends StatelessWidget {
               Positioned(
                 left: 0,
                 right: 0,
-                top: height * 0.02,
-                bottom: height * 0.17,
-                child: _heroAsset(
-                  fit: BoxFit.contain,
-                  alignment: Alignment.bottomCenter,
+                bottom: height * (104 / 448),
+                child: Center(
+                  child: SizedBox(
+                    width: 251.31,
+                    height: 251.31,
+                    child: _heroAsset(
+                      fit: BoxFit.contain,
+                      alignment: Alignment.center,
+                    ),
+                  ),
                 ),
               )
             else
@@ -432,10 +438,10 @@ class _EtaCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     state.isDelivered
-                        ? const Icon(
-                            Icons.check_circle,
-                            color: Color(0xFF10B320),
-                            size: 24,
+                        ? SvgPicture.asset(
+                            'assets/images/deliveredtick.svg',
+                            width: 24,
+                            height: 24,
                           )
                         : SvgPicture.asset(
                             'assets/images/thunder.svg',
@@ -706,7 +712,7 @@ class _TrackingItemsCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            Expanded(
+                            Flexible(
                               child: Text(
                                 'Sub order ID: #$orderNumber',
                                 maxLines: 1,
@@ -785,10 +791,10 @@ class _DownloadInvoiceButton extends StatelessWidget {
             await launchUrl(uri, mode: LaunchMode.externalApplication);
           }
         },
-        icon: const Icon(
-          Icons.file_download_outlined,
-          size: 20,
-          color: Color(0xFF0360E5),
+        icon: SvgPicture.asset(
+          'assets/images/download.svg',
+          width: 20,
+          height: 20,
         ),
         label: Text(
           'Download invoice',
@@ -917,12 +923,22 @@ class _TrackingRatingCard extends StatelessWidget {
       height: 80,
       child: Row(
         children: [
-          SizedBox(
+          Container(
             width: 48,
             height: 48,
-            child: Lottie.asset(
-              'assets/lottiejson/rating_6_slight_smile.json',
-              fit: BoxFit.contain,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFF6C2),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: SizedBox(
+                width: 34,
+                height: 34,
+                child: Lottie.asset(
+                  'assets/lottiejson/rating_6_slight_smile.json',
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),

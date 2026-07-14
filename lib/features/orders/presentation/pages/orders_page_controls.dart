@@ -85,7 +85,15 @@ class _OrdersSearch extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, color: Color(0xFF0A243F), size: 18),
+          SvgPicture.asset(
+            'assets/images/Searchicon.svg',
+            width: 18,
+            height: 18,
+            colorFilter: const ColorFilter.mode(
+              Color(0xFF0A243F),
+              BlendMode.srcIn,
+            ),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: TextField(
@@ -189,6 +197,42 @@ class _FilterButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _FilterHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _FilterHeaderDelegate({
+    required this.activeLabel,
+    required this.onTap,
+  });
+
+  final String? activeLabel;
+  final VoidCallback onTap;
+
+  @override
+  double get minExtent => 64;
+
+  @override
+  double get maxExtent => 64;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return ColoredBox(
+      color: const Color(0xFFF1F1F2),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: _FilterButton(activeLabel: activeLabel, onTap: onTap),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _FilterHeaderDelegate oldDelegate) {
+    return activeLabel != oldDelegate.activeLabel || onTap != oldDelegate.onTap;
   }
 }
 
