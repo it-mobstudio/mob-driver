@@ -39,6 +39,7 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   String _selectedCity = '';
+  ProjectListEntity? _visibleProjects;
 
   @override
   void initState() {
@@ -68,7 +69,8 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
     final state = context.read<ProfileBloc>().state;
     if (state is! ProjectsLoaded ||
         state.isLoadingMore ||
-        state.hasReachedEnd) {
+        state.hasReachedEnd ||
+        state.projects.hasNextPage != true) {
       return;
     }
     context
@@ -93,9 +95,44 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
           Expanded(
             child: BlocBuilder<ProfileBloc, ProfileState>(
               builder: (context, state) {
+                if (state is ProjectsLoaded) {
+                  _visibleProjects = state.projects;
+                }
                 final list = state is ProjectsLoaded
                     ? state.projects
-                    : ProjectListEntity.empty;
+                    : _visibleProjects;
+
+                if (list == null) {
+                  return PullToRefresh(
+                    onRefresh: _refresh,
+                    child: CustomScrollView(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        if (state is ProjectsError)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: ErrorStateView(
+                              message: state.message,
+                              onRetry: () => context
+                                  .read<ProfileBloc>()
+                                  .add(ProjectsLoadRequested()),
+                            ),
+                          )
+                        else
+                          const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: _ProjectColors.blue,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }
+
                 final projects = list.projects.where(_matchesFilters).toList();
                 final cities = _citiesFrom(list.projects);
 
@@ -105,7 +142,7 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
                     controller: _scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
-                      if (state is! ProjectsLoaded || list.projects.isNotEmpty)
+                      if (list.projects.isNotEmpty)
                         SliverToBoxAdapter(
                           child: _ProjectControls(
                             controller: _searchController,
@@ -118,16 +155,7 @@ class _MyProjectsViewState extends State<_MyProjectsView> {
                         )
                       else
                         const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                      if (state is ProfileLoading || state is ProfileInitial)
-                        const SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: _ProjectColors.blue,
-                            ),
-                          ),
-                        )
-                      else if (state is ProjectsError)
+                      if (state is ProjectsError && list.projects.isEmpty)
                         SliverFillRemaining(
                           hasScrollBody: false,
                           child: ErrorStateView(

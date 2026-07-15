@@ -163,6 +163,17 @@ class CartProductDetails extends StatelessWidget {
                   onInputChanged: onQtyInputChanged,
                   maxValue:
                       item.availableStock > 0 ? item.availableStock : null,
+                  onMaxExceeded: (stock) {
+                    ScaffoldMessenger.of(context)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Only $stock units available. Quantity updated to $stock.',
+                          ),
+                        ),
+                      );
+                  },
                   isBusy: isBusy,
                 ),
             ],

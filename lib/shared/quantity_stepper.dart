@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
@@ -12,6 +14,7 @@ class QuantityStepper extends StatefulWidget {
     this.isBusy = false,
     this.width = 120,
     this.maxValue,
+    this.onMaxExceeded,
   });
 
   final int value;
@@ -21,6 +24,7 @@ class QuantityStepper extends StatefulWidget {
   final bool isBusy;
   final double width;
   final int? maxValue;
+  final ValueChanged<int>? onMaxExceeded;
 
   @override
   State<QuantityStepper> createState() => _QuantityStepperState();
@@ -30,6 +34,7 @@ class _QuantityStepperState extends State<QuantityStepper> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
   late int _lastValue;
+  Timer? _inputDebounce;
 
   @override
   void initState() {
@@ -42,6 +47,12 @@ class _QuantityStepperState extends State<QuantityStepper> {
   @override
   void didUpdateWidget(QuantityStepper oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.isBusy && !widget.isBusy && _focusNode.hasFocus) {
+      final parsed = int.tryParse(_controller.text.trim());
+      if (parsed != null && parsed != widget.value) {
+        _scheduleInputCommit(_controller.text);
+      }
+    }
     if (oldWidget.value != widget.value) {
       _lastValue = widget.value;
       final newText = '${widget.value}';
@@ -61,8 +72,26 @@ class _QuantityStepperState extends State<QuantityStepper> {
     if (!_focusNode.hasFocus) _commitInput();
   }
 
-  void _commitInput() {
+  void _scheduleInputCommit(String text) {
+    _inputDebounce?.cancel();
+    if (text.trim().isEmpty) return;
+    _inputDebounce = Timer(
+      const Duration(milliseconds: 650),
+      () => _commitInput(fromDebounce: true),
+    );
+  }
+
+  void _commitInput({bool fromDebounce = false}) {
+    _inputDebounce?.cancel();
     final text = _controller.text.trim();
+    if (fromDebounce && text.isEmpty) return;
+    if (widget.isBusy) {
+      _inputDebounce = Timer(
+        const Duration(milliseconds: 350),
+        () => _commitInput(fromDebounce: fromDebounce),
+      );
+      return;
+    }
     final parsed = int.tryParse(text) ?? 0;
     if (parsed == _lastValue) {
       if (text.isEmpty) _controller.text = '$_lastValue';
@@ -70,11 +99,14 @@ class _QuantityStepperState extends State<QuantityStepper> {
     }
     final maxValue = widget.maxValue;
     if (maxValue != null && maxValue > 0 && parsed > maxValue) {
-      widget.onInputChanged?.call(text);
+      final clampedText = '$maxValue';
+      _lastValue = maxValue;
+      widget.onMaxExceeded?.call(maxValue);
       _controller.value = TextEditingValue(
-        text: '$_lastValue',
-        selection: TextSelection.collapsed(offset: '$_lastValue'.length),
+        text: clampedText,
+        selection: TextSelection.collapsed(offset: clampedText.length),
       );
+      widget.onInputChanged?.call(clampedText);
       return;
     }
     _lastValue = parsed;
@@ -83,6 +115,7 @@ class _QuantityStepperState extends State<QuantityStepper> {
 
   @override
   void dispose() {
+    _inputDebounce?.cancel();
     _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     _controller.dispose();
@@ -110,7 +143,7 @@ class _QuantityStepperState extends State<QuantityStepper> {
             child: TextField(
               controller: _controller,
               focusNode: _focusNode,
-              enabled: !widget.isBusy && widget.onInputChanged != null,
+              enabled: widget.onInputChanged != null,
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -123,6 +156,7 @@ class _QuantityStepperState extends State<QuantityStepper> {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
+              onChanged: _scheduleInputCommit,
               onSubmitted: (_) => _commitInput(),
             ),
           ),

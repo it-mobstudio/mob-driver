@@ -120,13 +120,10 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
     }
   }
 
-  // Once saved addresses load, if the cart doesn't already have a delivery
-  // address picked, default to the first saved address — but billing is
-  // deliberately never auto-picked (even when a saved address is flagged
-  // mobCREDIT): the user must explicitly select a billing address or check
-  // "Use same address for delivery and billing" themselves.
+  // Checkout delivery follows the address selected in the top nav. If nothing
+  // saved is selected there, only the saved mobCREDIT address can be used as a
+  // default; otherwise delivery remains blank for the user to choose/add.
   void _autoSelectDefaultAddresses(
-    CartSummaryEntity summary,
     List<AddressEntity> addresses,
   ) {
     if (!_selectedAddressLoaded) return;
@@ -137,26 +134,31 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
 
     if (selectedAddress != null) {
       // A selected address with no DB id is only a browsing/current location.
-      // Checkout needs a saved address, so leave delivery blank and let the
-      // user add/select a real address instead of silently choosing another.
-      if (selectedAddressId.isEmpty) return;
+      // Treat it as no saved top-nav address so mobCREDIT can still be used
+      // as the explicit saved-address fallback.
+      if (selectedAddressId.isNotEmpty) {
+        final savedSelectedAddress = _addressById(addresses, selectedAddressId);
+        if (savedSelectedAddress != null &&
+            _selectedDelivery?.id != savedSelectedAddress.id) {
+          _selectedDelivery = savedSelectedAddress;
+          changed = true;
+        }
+      }
+    }
 
-      final savedSelectedAddress = _addressById(addresses, selectedAddressId);
-      if (savedSelectedAddress != null &&
-          _selectedDelivery?.id != savedSelectedAddress.id) {
-        _selectedDelivery = savedSelectedAddress;
+    if (selectedAddressId.isEmpty && _selectedDelivery == null) {
+      final mobCreditAddress = _mobCreditAddress(addresses);
+      if (mobCreditAddress != null) {
+        _selectedDelivery = mobCreditAddress;
         changed = true;
       }
     }
 
-    if (selectedAddress == null &&
-        _selectedDelivery == null &&
-        summary.shippingAddress.trim().isEmpty) {
-      _selectedDelivery = addresses.first;
-      changed = true;
-    }
-
     if (changed) setState(() {});
+  }
+
+  bool get _hasSavedTopNavAddress {
+    return _storedSelectedAddress?.id.trim().isNotEmpty == true;
   }
 
   List<AddressEntity> _addressList() {
@@ -175,7 +177,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
   bool _canContinue(CartSummaryEntity summary) {
     if (summary.isEmpty) return false;
     final hasDelivery = _selectedDelivery != null ||
-        (!_needsSavedDeliveryAddress && summary.hasDeliveryAddress);
+        (_hasSavedTopNavAddress && summary.hasDeliveryAddress);
     final hasBilling = _sameAddress ||
         _selectedBilling != null ||
         summary.billingAddress.trim().isNotEmpty;
@@ -198,8 +200,19 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
     List<AddressEntity> addresses,
   ) {
     if (_needsSavedDeliveryAddress) return null;
-    return _selectedDelivery ??
-        _addressById(addresses, summary.shippingAddressId);
+    if (_selectedDelivery != null) return _selectedDelivery;
+    if (!_hasSavedTopNavAddress) return null;
+    return _addressById(addresses, summary.shippingAddressId);
+  }
+
+  AddressEntity? _mobCreditAddress(List<AddressEntity> addresses) {
+    for (final address in addresses) {
+      final tag = address.addressTag.trim().toLowerCase();
+      if (address.mobCredit || tag == 'mobcredit' || tag == 'mob credit') {
+        return address;
+      }
+    }
+    return null;
   }
 
   AddressEntity? _effectiveBillingAddress(
@@ -457,7 +470,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                             builder: (context, addressState) {
                               final addresses = _addressList();
                               final showCartDeliveryAddress =
-                                  !_needsSavedDeliveryAddress;
+                                  _hasSavedTopNavAddress;
                               // Mirror web hasSavedAddress:
                               // show CHANGE if cart already has an address OR
                               // user has any saved addresses in their account
@@ -465,11 +478,19 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                   (showCartDeliveryAddress &&
                                       summary.shippingAddressId.isNotEmpty) ||
                                   addresses.isNotEmpty;
+                              final hasEffectiveDeliveryAddress =
+                                  _effectiveDeliveryAddress(
+                                        summary,
+                                        addresses,
+                                      ) !=
+                                      null ||
+                                      (showCartDeliveryAddress &&
+                                          summary.hasDeliveryAddress);
 
                               // Trigger pincode check on first load
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 if (!mounted) return;
-                                _autoSelectDefaultAddresses(summary, addresses);
+                                _autoSelectDefaultAddresses(addresses);
                                 final pincode =
                                     _selectedDelivery?.pincode.isNotEmpty ==
                                             true
@@ -516,9 +537,15 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                       ),
                                       const SizedBox(height: 12),
                                       _SameAddressRow(
-                                        checked: _sameAddress,
-                                        onChanged: (v) =>
-                                            setState(() => _sameAddress = v),
+                                        checked: _sameAddress &&
+                                            hasEffectiveDeliveryAddress,
+                                        enabled: hasEffectiveDeliveryAddress,
+                                        onChanged: (v) {
+                                          if (!hasEffectiveDeliveryAddress) {
+                                            return;
+                                          }
+                                          setState(() => _sameAddress = v);
+                                        },
                                       ),
                                       const SizedBox(height: 20),
                                       _BillingAddressCard(
@@ -814,16 +841,21 @@ class _AddressPill extends StatelessWidget {
 }
 
 class _SameAddressRow extends StatelessWidget {
-  const _SameAddressRow({required this.checked, required this.onChanged});
+  const _SameAddressRow({
+    required this.checked,
+    required this.enabled,
+    required this.onChanged,
+  });
 
   final bool checked;
+  final bool enabled;
   final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => onChanged(!checked),
+      onTap: enabled ? () => onChanged(!checked) : null,
       child: Row(
         children: [
           Container(
@@ -832,8 +864,11 @@ class _SameAddressRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: checked ? const Color(0xFF2973F0) : Colors.white,
               border: Border.all(
-                color:
-                    checked ? const Color(0xFF2973F0) : const Color(0xFF767C8F),
+                color: checked
+                    ? const Color(0xFF2973F0)
+                    : enabled
+                        ? const Color(0xFF767C8F)
+                        : const Color(0xFFB8BDC5),
               ),
               borderRadius: BorderRadius.circular(2),
             ),
@@ -842,13 +877,15 @@ class _SameAddressRow extends StatelessWidget {
                 : null,
           ),
           const SizedBox(width: 9),
-          const Expanded(
+          Expanded(
             child: Text(
               'Use same address for delivery and billing',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: Color(0xFF0A243F),
+                color: enabled
+                    ? const Color(0xFF0A243F)
+                    : const Color(0xFF9AA1AD),
                 fontSize: 11,
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w400,

@@ -112,17 +112,22 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
 
   void _updateCartQuantity(BuildContext context, CartItem item, int quantity) {
     final stock = item.availableStock;
+    var nextQuantity = quantity;
     if (stock > 0 && quantity > stock) {
+      nextQuantity = stock;
       final messenger = _scaffoldMessenger;
       messenger
         ?..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(content: Text('Only $stock units available in stock.')),
+          SnackBar(
+            content: Text(
+              'Only $stock units available. Quantity updated to $stock.',
+            ),
+          ),
         );
-      return;
     }
     context.read<CartBloc>().add(
-          CartQuantityUpdateRequested(item: item, newQty: quantity),
+          CartQuantityUpdateRequested(item: item, newQty: nextQuantity),
         );
   }
 
@@ -671,6 +676,17 @@ class _ReviewItemTile extends StatelessWidget {
                 onInputChanged: onQtyInputChanged,
                 maxValue:
                     item.availableStock > 0 ? item.availableStock : null,
+                onMaxExceeded: (stock) {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Only $stock units available. Quantity updated to $stock.',
+                        ),
+                      ),
+                    );
+                },
                 isBusy: isBusy,
               ),
             ],

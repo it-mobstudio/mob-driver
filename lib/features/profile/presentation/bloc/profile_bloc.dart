@@ -283,8 +283,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         );
         emit(ProjectsLoaded(
           nextList,
-          hasReachedEnd: fetched.projects.isEmpty ||
-              (totalCount > 0 && merged.length >= totalCount),
+          hasReachedEnd: _hasReachedProjectsEnd(nextList),
         ));
       }
     }
@@ -335,6 +334,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   }
 
   bool _hasReachedProjectsEnd(ProjectListEntity projects) {
+    final hasNextPage = projects.hasNextPage;
+    if (hasNextPage != null) return !hasNextPage;
     return projects.projects.isEmpty ||
         (projects.totalCount > 0 &&
             projects.projects.length >= projects.totalCount);

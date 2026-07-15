@@ -57,6 +57,7 @@ class AddressPickerBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showSuggestions = showSearch && suggestions.isNotEmpty;
+    final savedAddresses = _orderedSavedAddresses();
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -109,7 +110,7 @@ class AddressPickerBody extends StatelessWidget {
           else if (addresses.isEmpty)
             const _EmptySavedAddress()
           else
-            ...addresses.map(
+            ...savedAddresses.map(
               (address) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: AddressPickerCard(
@@ -125,6 +126,22 @@ class AddressPickerBody extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  List<AddressEntity> _orderedSavedAddresses() {
+    final selectedId = selectedAddressId?.trim() ?? '';
+    if (selectedId.isEmpty) return addresses;
+
+    final selected = <AddressEntity>[];
+    final others = <AddressEntity>[];
+    for (final address in addresses) {
+      if (address.id.trim() == selectedId) {
+        selected.add(address);
+      } else {
+        others.add(address);
+      }
+    }
+    return [...selected, ...others];
   }
 
   Widget _searchField() {
@@ -456,6 +473,7 @@ class AddressPickerCard extends StatelessWidget {
         : (address.locationName.trim().isNotEmpty
             ? address.locationName.trim()
             : 'Saved address');
+    final addressText = _fullAddressText(address);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -499,7 +517,7 @@ class AddressPickerCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    address.displayAddress,
+                    addressText,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
@@ -572,6 +590,28 @@ class AddressPickerCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _fullAddressText(AddressEntity address) {
+    final lineParts = [
+      address.addressLine1,
+      address.addressLine2,
+    ].map((part) => part.trim()).where((part) => part.isNotEmpty).toList();
+
+    final parts = [
+      if (lineParts.isEmpty) address.formattedAddress,
+      ...lineParts,
+      address.city,
+      address.state,
+      address.pincode,
+    ];
+
+    final seen = <String>{};
+    return parts
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .where((part) => seen.add(part.toLowerCase()))
+        .join(', ');
   }
 }
 

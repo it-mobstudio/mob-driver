@@ -629,18 +629,25 @@ class ProjectListEntity {
     required this.projects,
     required this.page,
     required this.totalCount,
+    this.hasNextPage,
   });
 
   final List<ProjectEntity> projects;
   final int page;
   final int totalCount;
+  final bool? hasNextPage;
 
   factory ProjectListEntity.fromMap(Map<String, dynamic> map, {int page = 1}) {
     final data = map['data'];
     final dataMap = data is Map ? Map<String, dynamic>.from(data) : map;
+    final pagination = _extractPagination(map);
+    final hasNextPage = pagination.containsKey('is_next_page')
+        ? pagination['is_next_page'] == true
+        : null;
     final raw = dataMap['results'] ??
         dataMap['projects'] ??
         dataMap['data'] ??
+        map['data'] ??
         map['results'] ??
         const <dynamic>[];
     final list = raw is List ? raw : const <dynamic>[];
@@ -651,26 +658,58 @@ class ProjectListEntity {
           .toList(),
       page: page,
       totalCount: ProjectEntity._asInt(
-        dataMap['count'] ?? dataMap['total'] ?? dataMap['total_count'],
+        pagination['count'] ??
+            pagination['total'] ??
+            pagination['total_count'] ??
+            pagination['total_entries'] ??
+            dataMap['count'] ??
+            dataMap['total'] ??
+            dataMap['total_count'] ??
+            dataMap['total_entries'],
       ),
+      hasNextPage: hasNextPage,
     );
+  }
+
+  static Map<String, dynamic> _extractPagination(Map<String, dynamic> map) {
+    final data = map['data'];
+    if (data is Map) {
+      final dataMap = Map<String, dynamic>.from(data);
+      final pagination = dataMap['pagination'];
+      if (pagination is Map) return Map<String, dynamic>.from(pagination);
+      if (_hasPaginationKeys(dataMap)) return dataMap;
+    }
+    final pagination = map['pagination'];
+    if (pagination is Map) return Map<String, dynamic>.from(pagination);
+    if (_hasPaginationKeys(map)) return map;
+    return const {};
+  }
+
+  static bool _hasPaginationKeys(Map<String, dynamic> map) {
+    return map.containsKey('is_next_page') ||
+        map.containsKey('next_page') ||
+        map.containsKey('total_entries') ||
+        map.containsKey('total_pages');
   }
 
   static const empty = ProjectListEntity(
     projects: [],
     page: 1,
     totalCount: 0,
+    hasNextPage: false,
   );
 
   ProjectListEntity copyWith({
     List<ProjectEntity>? projects,
     int? page,
     int? totalCount,
+    bool? hasNextPage,
   }) {
     return ProjectListEntity(
       projects: projects ?? this.projects,
       page: page ?? this.page,
       totalCount: totalCount ?? this.totalCount,
+      hasNextPage: hasNextPage ?? this.hasNextPage,
     );
   }
 }

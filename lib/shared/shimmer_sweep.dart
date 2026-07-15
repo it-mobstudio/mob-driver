@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Wraps [child] with a soft diagonal light streak that periodically sweeps
 /// across it — a decorative "shine" for promo/CTA cards. Not a loading
@@ -9,8 +10,8 @@ class ShimmerSweep extends StatefulWidget {
   const ShimmerSweep({
     super.key,
     required this.child,
-    this.interval = const Duration(seconds: 8),
-    this.sweepDuration = const Duration(milliseconds: 3000),
+    this.interval = const Duration(milliseconds: 1200),
+    this.sweepDuration = const Duration(milliseconds: 2500),
   });
 
   final Widget child;
@@ -32,13 +33,32 @@ class _ShimmerSweepState extends State<ShimmerSweep>
   @override
   void initState() {
     super.initState();
-    _sweep();
-    _timer = Timer.periodic(widget.interval, (_) => _sweep());
+    unawaited(_runLoop());
   }
 
-  void _sweep() {
+  @override
+  void didUpdateWidget(covariant ShimmerSweep oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sweepDuration != widget.sweepDuration) {
+      _ctrl.duration = widget.sweepDuration;
+    }
+    if (oldWidget.interval != widget.interval ||
+        oldWidget.sweepDuration != widget.sweepDuration) {
+      _timer?.cancel();
+      _ctrl.stop();
+      unawaited(_runLoop());
+    }
+  }
+
+  Future<void> _runLoop() async {
     if (!mounted) return;
-    _ctrl.forward(from: 0);
+    try {
+      await _ctrl.forward(from: 0);
+    } on TickerCanceled {
+      return;
+    }
+    if (!mounted) return;
+    _timer = Timer(widget.interval, () => unawaited(_runLoop()));
   }
 
   @override

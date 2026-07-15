@@ -245,16 +245,21 @@ class _CartPageState extends State<CartPage> {
 
   void _updateCartQuantity(BuildContext context, CartItem item, int quantity) {
     final stock = item.availableStock;
+    var nextQuantity = quantity;
     if (stock > 0 && quantity > stock) {
+      nextQuantity = stock;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(content: Text('Only $stock units available in stock.')),
+          SnackBar(
+            content: Text(
+              'Only $stock units available. Quantity updated to $stock.',
+            ),
+          ),
         );
-      return;
     }
     context.read<CartBloc>().add(
-          CartQuantityUpdateRequested(item: item, newQty: quantity),
+          CartQuantityUpdateRequested(item: item, newQty: nextQuantity),
         );
   }
 
