@@ -313,34 +313,34 @@ class _MobstarView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      height: 2,
-                      decoration: const BoxDecoration(
-                          border: Border(
-                              bottom: BorderSide(
-                                  color: Color(0xFF4B4B55),
-                                  style: BorderStyle.solid)))),
-                  const SizedBox(height: 38),
-                  const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                          padding: EdgeInsets.only(left: 16),
-                          child: Text('Frequently asked questions',
-                              style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  color: gold,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600)))),
-                  const SizedBox(height: 13),
-                  for (final question in const [
-                    'What is mobSTAR loyalty program?',
-                    'When do mobSTAR points expire?',
-                    'How do I redeem my mobSTAR points?',
-                    'View all FAQ’s'
-                  ])
-                    _FaqRow(question),
-                  const SizedBox(height: 172),
+                  // Container(
+                  //     margin: const EdgeInsets.symmetric(horizontal: 16),
+                  //     height: 2,
+                  //     decoration: const BoxDecoration(
+                  //         border: Border(
+                  //             bottom: BorderSide(
+                  //                 color: Color(0xFF4B4B55),
+                  //                 style: BorderStyle.solid)))),
+                  // const SizedBox(height: 38),
+                  // const Align(
+                  //     alignment: Alignment.centerLeft,
+                  //     child: Padding(
+                  //         padding: EdgeInsets.only(left: 16),
+                  //         child: Text('Frequently asked questions',
+                  //             style: TextStyle(
+                  //                 fontFamily: 'Inter',
+                  //                 color: gold,
+                  //                 fontSize: 12,
+                  //                 fontWeight: FontWeight.w600)))),
+                  // const SizedBox(height: 13),
+                  // for (final question in const [
+                  //   'What is mobSTAR loyalty program?',
+                  //   'When do mobSTAR points expire?',
+                  //   'How do I redeem my mobSTAR points?',
+                  //   'View all FAQ’s'
+                  // ])
+                   // _FaqRow(question),
+                //  const SizedBox(height: 172),
                 ],
               ),
             ),
@@ -581,35 +581,30 @@ class _AllLevelsSheet extends StatelessWidget {
       name: 'Bronze',
       points: '1.0 x',
       spend: 'Free',
-      color: Color(0xFFC9792C),
       asset: 'assets/images/mobStar/bronze.svg',
     ),
     _LevelInfo(
       name: 'Silver',
       points: '1.25 x',
       spend: '₹250,000',
-      color: Color(0xFFC9C9C9),
       asset: 'assets/images/mobStar/silver.svg',
     ),
     _LevelInfo(
       name: 'Gold',
       points: '1.50 x',
       spend: '₹1,200,000',
-      color: Color(0xFFFFC400),
       asset: 'assets/images/mobStar/gold.svg',
     ),
     _LevelInfo(
       name: 'Platinum',
       points: '1.75 x',
       spend: '₹2,500,000',
-      color: Color(0xFF9F9F9F),
       asset: 'assets/images/mobStar/platinum.svg',
     ),
     _LevelInfo(
       name: 'Diamond',
       points: '2.0 x',
       spend: '₹4,857,143',
-      color: Color(0xFF22C7F2),
       asset: 'assets/images/mobStar/dimond.svg',
     ),
   ];
@@ -655,36 +650,40 @@ class _AllLevelsSheet extends StatelessWidget {
                               BorderRadius.vertical(top: Radius.circular(20)),
                         ),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(
-                              flex: 44,
                               child: Text('LEVEL', style: _levelHeaderStyle),
                             ),
-                            Expanded(
-                              flex: 28,
-                              child: Text('POINTS', style: _levelHeaderStyle),
+                            SizedBox(
+                              width: 108,
+                              child: Text(
+                                'POINTS',
+                                textAlign: TextAlign.center,
+                                style: _levelHeaderStyle,
+                              ),
                             ),
                             Expanded(
-                              flex: 36,
-                              child: Text(
-                                'MIN SPEND IN\nA YEAR',
-                                textAlign: TextAlign.right,
-                                style: _levelHeaderStyle,
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: SizedBox(
+                                  width: 86,
+                                  child: Text(
+                                    'MIN SPEND IN A YEAR',
+                                    textAlign: TextAlign.right,
+                                    style: _levelHeaderStyle,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                       Expanded(
-                        child: ListView.separated(
+                        child: ListView.builder(
                           padding: EdgeInsets.zero,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _levels.length,
-                          separatorBuilder: (_, __) => const Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: Color(0xFFE2E2E2),
-                          ),
                           itemBuilder: (context, index) => _LevelSheetRow(
                             level: _levels[index],
                             current: _isCurrentLevel(_levels[index].name),
@@ -718,19 +717,20 @@ class _LevelInfo {
     required this.name,
     required this.points,
     required this.spend,
-    required this.color,
     required this.asset,
   });
 
   final String name;
   final String points;
   final String spend;
-  final Color color;
   final String asset;
 }
 
 class _LevelSheetRow extends StatelessWidget {
-  const _LevelSheetRow({required this.level, required this.current});
+  const _LevelSheetRow({
+    required this.level,
+    required this.current,
+  });
 
   final _LevelInfo level;
   final bool current;
@@ -738,49 +738,61 @@ class _LevelSheetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 64,
+      height: 75,
       child: Stack(
         children: [
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: Color(0xFFE2E2E2),
+            ),
+          ),
           if (current)
             const Positioned(
               left: 0,
               top: 0,
               child: _CurrentLevelBadge(),
             ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 44,
-                  child: _LevelName(level: level),
-                ),
-                Expanded(
-                  flex: 28,
-                  child: Text(
-                    level.points,
-                    style: GoogleFonts.inter(
-                      color: Colors.black,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      height: 20 / 14,
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: _LevelName(level: level),
+                  ),
+                  SizedBox(
+                    width: 108,
+                    child: Text(
+                      level.points,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        height: 20 / 14,
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  flex: 36,
-                  child: Text(
-                    level.spend,
-                    textAlign: TextAlign.right,
-                    style: GoogleFonts.inter(
-                      color: Colors.black,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      height: 20 / 14,
+                  Expanded(
+                    child: Text(
+                      level.spend,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.inter(
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        height: 20 / 14,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

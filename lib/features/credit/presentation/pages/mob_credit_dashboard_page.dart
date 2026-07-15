@@ -11,7 +11,7 @@ import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart
 import 'package:m_o_b_demand_side/features/credit/domain/entities/credit_transaction_entity.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/bloc/credit_bloc.dart';
 import 'package:m_o_b_demand_side/shared/mob_credit.dart';
-import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 
 /// Real mobCREDIT dashboard for customers who already have an account with
 /// Rupifi — shows the live available balance / credit limit and the debit
@@ -55,123 +55,100 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final headerHeight = (screenHeight * 0.28).clamp(186.0, 262.0);
-    final headerContentHeight =
-        headerHeight + (_balanceCardHeight / 2) + 24 + 22 + 14;
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final safeHeaderMinimum = mediaQuery.padding.top + 190;
+    final headerHeight =
+        (screenHeight * 0.286).clamp(safeHeaderMinimum, 262.0).toDouble();
+    final transactionsTop = headerHeight + 108;
+    final contentTop = transactionsTop + 34;
 
-    return Column(
+    return Stack(
       children: [
-        SizedBox(
-          height: headerContentHeight,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                height: headerHeight,
-                decoration: const BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topCenter,
-                    radius: 1.0,
-                    colors: [
-                      Color(0xFF4A8F67),
-                      Color(0xFF2B4939),
-                      Color(0xFF181818),
-                    ],
-                    stops: [
-                      0.0,
-                      0.45,
-                      1.0,
-                    ],
+        Column(
+          children: [
+            SizedBox(
+              height: contentTop,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    height: headerHeight,
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.topCenter,
+                        radius: 1.0,
+                        colors: [
+                          Color(0xFF4A8F67),
+                          Color(0xFF2B4939),
+                          Color(0xFF181818),
+                        ],
+                        stops: [0.0, 0.45, 1.0],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              SafeArea(
-                bottom: false,
-                child: Column(
-                  children: [
-                    const _DashboardHeader(),
-                    const SizedBox(height: 20),
-                    Center(
+                  Positioned(
+                    top: mediaQuery.padding.top + 70,
+                    left: 0,
+                    right: 0,
+                    child: Center(
                       child: SvgPicture.asset(
                         'assets/images/myaccounts-mobcredit.svg',
-                        width: 146,
-                        height: 21,
+                        width: 180,
+                        height: 28,
                         fit: BoxFit.contain,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              Positioned(
-                left: 16,
-                right: 16,
-                top: headerHeight - (_balanceCardHeight / 2),
-                child: _CreditBalanceCard(account: account),
-              ),
-              Positioned(
-                left: 16,
-                right: 16,
-                top: headerHeight + (_balanceCardHeight / 2) + 24,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Transactions',
-                    style: GoogleFonts.inter(
-                      color: MobCreditDashboardPage._primary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      height: 22 / 15,
+                  ),
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    top: headerHeight - (_balanceCardHeight / 2),
+                    child: _CreditBalanceCard(account: account),
+                  ),
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    top: transactionsTop,
+                    child: Text(
+                      'Transactions',
+                      style: GoogleFonts.inter(
+                        color: MobCreditDashboardPage._primary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        height: 22 / 15,
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+                ],
               ),
             ),
-            child: const _CreditTransactionsList(),
-          ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: const _CreditTransactionsList(),
+              ),
+            ),
+          ],
+        ),
+        FrostedNavBar(
+          iconColor: MobCreditDashboardPage._primary,
+          onBack: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/homepage');
+            }
+          },
         ),
       ],
-    );
-  }
-}
-
-class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: Row(
-        children: [
-          SizedBox(
-            width: 48,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: const AppBackIcon(color: Colors.white),
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/homepage');
-                }
-              },
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -190,57 +167,68 @@ class _CreditBalanceCard extends StatelessWidget {
 
     return Container(
       height: _DashboardBody._balanceCardHeight,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         children: [
           Text(
             'Available balance',
             style: GoogleFonts.inter(
-              color: MobCreditDashboardPage._muted,
+              color: const Color(0xFF596378),
               fontSize: 13,
               fontWeight: FontWeight.w500,
               height: 20 / 13,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 2),
           Text(
             formatRupees(available),
+            maxLines: 1,
+            textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               color: MobCreditDashboardPage._primary,
               fontSize: 28,
-              fontWeight: FontWeight.w800,
-              height: 36 / 28,
+              fontWeight: FontWeight.w900,
+              height: 42 / 28,
             ),
           ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: const Color(0xFFE7E7E7),
-              valueColor: const AlwaysStoppedAnimation(Color(0xFF37BD68)),
-            ),
+          const SizedBox(height: 8),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Container(
+                height: 12,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F0F0),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.centerLeft,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: constraints.maxWidth * progress,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFBAECB5), Color(0xFF05CA8F)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Text(
             'Credit limit: ${formatRupees(creditLimit)}',
+            maxLines: 1,
+            textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              color: MobCreditDashboardPage._muted,
-              fontSize: 12,
+              color: const Color(0xFF596378),
+              fontSize: 13,
               fontWeight: FontWeight.w500,
-              height: 18 / 12,
+              height: 20 / 13,
             ),
           ),
         ],

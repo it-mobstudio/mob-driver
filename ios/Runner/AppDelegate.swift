@@ -12,14 +12,18 @@ import ContactsUI
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    if let apiKey = (Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String)?
-      .trimmingCharacters(in: .whitespacesAndNewlines),
-       !apiKey.isEmpty,
-       !apiKey.contains("$(") {
-      GMSServices.provideAPIKey(apiKey)
-    } else {
-      NSLog("Google Maps iOS API key is missing. Add GOOGLE_MAPS_API_KEY to ios/Flutter/Secrets.xcconfig.")
-    }
+    // Keep native map initialization aligned with AppConfig and Android.
+    // A fresh checkout may not have the ignored Secrets.xcconfig file; in
+    // that case Info.plist contains the unresolved build variable and the
+    // Google Maps SDK terminates the app as soon as Add Address opens a map.
+    let fallbackMapsApiKey = "AIzaSyC_dvw8b7g1e1RB9dQj4rAnFyxGD1S2s7Y"
+    let configuredMapsApiKey =
+      (Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String)?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    let mapsApiKey = configuredMapsApiKey.flatMap {
+      !$0.isEmpty && !$0.contains("$(") ? $0 : nil
+    } ?? fallbackMapsApiKey
+    GMSServices.provideAPIKey(mapsApiKey)
 
     GeneratedPluginRegistrant.register(with: self)
     if let controller = window?.rootViewController as? FlutterViewController {

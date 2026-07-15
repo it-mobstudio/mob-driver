@@ -82,6 +82,7 @@ class _AppTextFieldState extends State<AppTextField> {
     _showClearButton = _shouldShowClearButton;
 
     _controller.addListener(_refreshClearButton);
+    _focusNode.addListener(_refreshClearButton);
   }
 
   @override
@@ -103,12 +104,15 @@ class _AppTextFieldState extends State<AppTextField> {
     }
 
     if (oldWidget.focusNode != widget.focusNode) {
+      _focusNode.removeListener(_refreshClearButton);
+
       if (_ownsFocusNode) {
         _focusNode.dispose();
       }
 
       _ownsFocusNode = widget.focusNode == null;
       _focusNode = widget.focusNode ?? FocusNode();
+      _focusNode.addListener(_refreshClearButton);
     }
 
     final nextShowClearButton = _shouldShowClearButton;
@@ -121,6 +125,7 @@ class _AppTextFieldState extends State<AppTextField> {
   @override
   void dispose() {
     _controller.removeListener(_refreshClearButton);
+    _focusNode.removeListener(_refreshClearButton);
 
     if (_ownsController) {
       _controller.dispose();
@@ -137,6 +142,7 @@ class _AppTextFieldState extends State<AppTextField> {
     return widget.showClearButton &&
         widget.enabled &&
         !widget.readOnly &&
+        _focusNode.hasFocus &&
         _controller.text.isNotEmpty;
   }
 
@@ -225,12 +231,12 @@ InputDecoration appTextFieldDecoration({
         : AppTextFieldColors.disabledSurface,
     isDense: true,
     constraints: const BoxConstraints(
-      minHeight: 56,
-      maxHeight: 56,
+      minHeight: 48,
+      maxHeight: 48,
     ),
     contentPadding: const EdgeInsets.symmetric(
-      horizontal: 14,
-      vertical: 17,
+      horizontal: 16,
+      vertical: 14,
     ),
     suffixIcon: suffixIcon,
     prefixIcon: prefixIcon,
@@ -246,14 +252,14 @@ InputDecoration appTextFieldDecoration({
     enabledBorder: _inputBorder(),
     focusedBorder: _inputBorder(
       color: AppTextFieldColors.focusBorder,
-      width: 1.6,
+      width: 1.5,
     ),
     errorBorder: _inputBorder(
       color: AppTextFieldColors.error,
     ),
     focusedErrorBorder: _inputBorder(
       color: AppTextFieldColors.error,
-      width: 1.6,
+      width: 1.5,
     ),
     disabledBorder: _inputBorder(
       color: AppTextFieldColors.disabledBorder,
@@ -267,7 +273,7 @@ abstract final class AppTextFieldColors {
 
   static const Color primaryText = Color(0xFF0A243F);
   static const Color inputBorder = Color(0xFFDFE4EC);
-  static const Color focusBorder = Color(0xFF0360E5);
+  static const Color focusBorder = Color(0xFF0A243F);
 
   static const Color inputLabel = Color(0xFF767C8F);
   static const Color inputHint = Color(0xFF767C8F);
@@ -280,9 +286,9 @@ abstract final class AppTextFieldColors {
 abstract final class AppTextFieldStyles {
   static TextStyle get inputText => GoogleFonts.inter(
         color: AppTextFieldColors.primaryText,
-        fontSize: 15,
-        fontWeight: FontWeight.w400,
-        height: 21 / 15,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        height: 20 / 14,
       );
 
   static TextStyle get label => GoogleFonts.inter(
@@ -294,15 +300,19 @@ abstract final class AppTextFieldStyles {
 
   static TextStyle get stateLabel => WidgetStateTextStyle.resolveWith(
         (states) {
-          final color = states.contains(WidgetState.error)
-              ? AppTextFieldColors.error
-              : AppTextFieldColors.inputLabel;
+          final color = switch (states) {
+            _ when states.contains(WidgetState.error) =>
+              AppTextFieldColors.error,
+            _ when states.contains(WidgetState.focused) =>
+              AppTextFieldColors.primaryText,
+            _ => AppTextFieldColors.inputLabel,
+          };
 
           return GoogleFonts.inter(
             color: color,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            height: 18 / 13,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            height: 14 / 11,
           );
         },
       );
@@ -352,7 +362,7 @@ class _ClearTextButton extends StatelessWidget {
           child: const Icon(
             Icons.close_rounded,
             color: AppTextFieldColors.surface,
-            size: 12,
+            size: 10,
           ),
         ),
       ),
@@ -365,7 +375,7 @@ OutlineInputBorder _inputBorder({
   double width = 1,
 }) {
   return OutlineInputBorder(
-    borderRadius: BorderRadius.circular(10),
+    borderRadius: BorderRadius.circular(12),
     borderSide: BorderSide(
       color: color,
       width: width,
