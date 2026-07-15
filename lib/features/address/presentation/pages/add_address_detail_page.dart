@@ -313,6 +313,7 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
       child: Column(
         children: [
           AppTextField(
+            label: 'House no & Floor*',
             controller: _houseFloorController,
             hintText: 'House no & Floor*',
             textInputAction: TextInputAction.next,
@@ -321,12 +322,14 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
           ),
           const SizedBox(height: 20),
           AppTextField(
+            label: 'Building/ Area/ Colony',
             controller: _buildingAreaController,
             hintText: 'Building/ Area/ Colony',
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 20),
           AppTextField(
+            label: 'GSTIN (optional)',
             controller: _gstController,
             hintText: 'GSTIN (optional)',
             textCapitalization: TextCapitalization.characters,
@@ -367,6 +370,7 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
           if (_addressTag == 'Project') ...[
             const SizedBox(height: 20),
             AppTextField(
+              label: 'Project name*',
               controller: _projectNameController,
               hintText: 'Project name*',
               textInputAction: TextInputAction.next,
@@ -439,6 +443,7 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
           AppTextField(
             controller: _receiverNameController,
             label: 'Receiver Name*',
+            hintText: 'Receiver Name*',
             floatingLabelBehavior: FloatingLabelBehavior.always,
             textInputAction: TextInputAction.next,
             validator: (value) =>
@@ -448,6 +453,7 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
           AppTextField(
             controller: _receiverPhoneController,
             label: 'Receiver ph no*',
+            hintText: 'Receiver Ph no*',
             floatingLabelBehavior: FloatingLabelBehavior.always,
             keyboardType: TextInputType.phone,
             inputFormatters: [

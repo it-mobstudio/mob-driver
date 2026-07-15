@@ -67,6 +67,9 @@ class _AppTextFieldState extends State<AppTextField> {
   late bool _ownsController;
   late bool _ownsFocusNode;
   late bool _showClearButton;
+  bool _hasValidationError = false;
+  bool _pendingValidationError = false;
+  bool _validationRefreshScheduled = false;
 
   @override
   void initState() {
@@ -88,6 +91,11 @@ class _AppTextFieldState extends State<AppTextField> {
   @override
   void didUpdateWidget(covariant AppTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.validator != widget.validator && widget.validator == null) {
+      _hasValidationError = false;
+      _pendingValidationError = false;
+    }
 
     if (oldWidget.controller != widget.controller) {
       _controller.removeListener(_refreshClearButton);
@@ -167,8 +175,32 @@ class _AppTextFieldState extends State<AppTextField> {
     widget.onChanged?.call('');
   }
 
+  String? _validate(String? value) {
+    final error = widget.validator?.call(value);
+    _pendingValidationError = error != null;
+
+    if (!_validationRefreshScheduled &&
+        _hasValidationError != _pendingValidationError) {
+      _validationRefreshScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _validationRefreshScheduled = false;
+        if (mounted && _hasValidationError != _pendingValidationError) {
+          setState(() {
+            _hasValidationError = _pendingValidationError;
+          });
+        }
+      });
+    }
+
+    return error;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hint = widget.hintText?.trim() ?? '';
+    final label = widget.label?.trim() ?? '';
+    final effectiveLabel = hint.isNotEmpty ? hint : label;
+
     return SizedBox(
       width: double.infinity,
       child: TextFormField(
@@ -178,7 +210,16 @@ class _AppTextFieldState extends State<AppTextField> {
         textInputAction: widget.textInputAction,
         inputFormatters: widget.inputFormatters,
         textCapitalization: widget.textCapitalization,
-        validator: widget.validator,
+        validator: widget.validator == null ? null : _validate,
+        errorBuilder: (context, errorText) => Transform.translate(
+          offset: const Offset(-16, 0),
+          child: Text(
+            errorText,
+            style: AppTextFieldStyles.error,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         onChanged: widget.onChanged,
         onFieldSubmitted: widget.onFieldSubmitted,
         enabled: widget.enabled,
@@ -191,14 +232,15 @@ class _AppTextFieldState extends State<AppTextField> {
         cursorErrorColor: AppTextFieldColors.error,
         style: AppTextFieldStyles.inputText,
         decoration: appTextFieldDecoration(
-          label: widget.label,
-          hintText: widget.hintText,
+          label: effectiveLabel,
           suffixIcon: _showClearButton
               ? _ClearTextButton(onPressed: _clear)
               : widget.suffixIcon,
           prefixIcon: widget.prefixIcon,
           prefixText: widget.prefixText,
-          floatingLabelBehavior: widget.floatingLabelBehavior,
+          floatingLabelBehavior: _hasValidationError
+              ? FloatingLabelBehavior.always
+              : widget.floatingLabelBehavior ?? FloatingLabelBehavior.auto,
           enabled: widget.enabled,
         ),
       ),
@@ -219,7 +261,9 @@ InputDecoration appTextFieldDecoration({
     labelText: label == null || label.isEmpty ? null : label,
     hintText: hintText,
     floatingLabelBehavior: floatingLabelBehavior ?? FloatingLabelBehavior.auto,
-    labelStyle: AppTextFieldStyles.label,
+    // While the label is resting inside an empty field it acts as the hint;
+    // once text exists, [floatingLabelStyle] takes over above the border.
+    labelStyle: AppTextFieldStyles.hint,
     floatingLabelStyle: AppTextFieldStyles.stateLabel,
     hintStyle: AppTextFieldStyles.hint,
     errorStyle: AppTextFieldStyles.error,
@@ -294,9 +338,9 @@ abstract final class AppTextFieldStyles {
 
   static TextStyle get label => GoogleFonts.inter(
         color: AppTextFieldColors.inputLabel,
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        height: 20 / 14,
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        height: 14 / 11,
       );
 
   static TextStyle get stateLabel => WidgetStateTextStyle.resolveWith(
@@ -311,7 +355,9 @@ abstract final class AppTextFieldStyles {
 
           return GoogleFonts.inter(
             color: color,
-            fontSize: 11,
+            // InputDecorator scales floating labels to 75%. Compensate so the
+            // rendered label matches the 11px error text.
+            fontSize: 11 / 0.75,
             fontWeight: FontWeight.w500,
             height: 14 / 11,
           );

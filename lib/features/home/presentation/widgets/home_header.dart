@@ -154,8 +154,8 @@ class _HomeHeaderState extends State<HomeHeader> {
                           ),
                           SvgPicture.asset(
                             'assets/images/address-down.svg',
-                            width: 10,
-                            height: 10,
+                            width: 8,
+                            height: 8,
                           ),
                         ],
                       ),
@@ -163,7 +163,7 @@ class _HomeHeaderState extends State<HomeHeader> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               InkWell(
                 onTap: () => context.push(MobstarPage.routePath),
                 borderRadius: BorderRadius.circular(18),
