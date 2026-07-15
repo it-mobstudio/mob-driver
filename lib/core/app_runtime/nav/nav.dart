@@ -413,18 +413,27 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         parentNavigatorKey: appNavigatorKey,
         // Deliberately no `redirect` here — this router has a
         // refreshListenable (AuthSession/AppStateNotifier), and GoRouter
-        // re-runs every active route's `redirect` on any refresh, using a
-        // freshly re-derived GoRouterState whose `extra` is NOT guaranteed
-        // to still be the object originally passed at push-time. That
-        // previously kicked the user back to the address list mid-flow
-        // (e.g. while editing an address) any time an unrelated
-        // auth/app-state notification fired. `extra` is safe to trust
-        // inside `builder` (it's only invoked for the matched route with
-        // its own push-time state), so the "missing extra" fallback for
-        // push-notification deep links belongs here instead.
+        // re-runs every active route's `redirect`/`builder` on any refresh,
+        // using a freshly re-derived GoRouterState whose `extra` is NOT
+        // guaranteed to still be the object originally passed at push-time.
+        // That previously kicked the user back to the address list (or, via
+        // `builder` alone, silently swapped this page for the address list
+        // mid-flow) any time an unrelated auth/app-state notification fired
+        // while this route was on screen — e.g. right after a fresh
+        // registration, while other post-signup syncs are still settling.
+        // RouteExtraCache (same pattern already used for OrderTrackingPage)
+        // remembers the last real `extra` for this path so a refresh with a
+        // missing/wrong-typed `extra` recovers it instead of losing the flow.
         builder: (context, state) {
-          final extra = state.extra;
-          if (extra is! AddressEntity) return const AddressSelectionWidget();
+          final rawExtra = state.extra;
+          if (rawExtra is AddressEntity) {
+            RouteExtraCache.put(AddAddressDetailPage.routePath, rawExtra);
+          }
+          final extra = rawExtra is AddressEntity
+              ? rawExtra
+              : RouteExtraCache.take<AddressEntity>(
+                  AddAddressDetailPage.routePath);
+          if (extra == null) return const AddressSelectionWidget();
           // A non-empty id means this is an existing saved address being
           // edited (its own details are both the location and the form's
           // starting values), not a freshly-confirmed pin with nothing
@@ -439,12 +448,19 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: ConfirmDeliveryLocationPage.routeName,
         path: ConfirmDeliveryLocationPage.routePath,
         parentNavigatorKey: appNavigatorKey,
-        // Same reasoning as AddAddressDetailPage above — no `redirect`.
+        // Same reasoning as AddAddressDetailPage above — no `redirect`, and
+        // RouteExtraCache guards against a refresh-triggered rebuild losing
+        // this route's `extra` mid-flow.
         builder: (context, state) {
-          final extra = state.extra;
-          if (extra is! AddressLocationEntity) {
-            return const AddressSelectionWidget();
+          final rawExtra = state.extra;
+          if (rawExtra is AddressLocationEntity) {
+            RouteExtraCache.put(ConfirmDeliveryLocationPage.routePath, rawExtra);
           }
+          final extra = rawExtra is AddressLocationEntity
+              ? rawExtra
+              : RouteExtraCache.take<AddressLocationEntity>(
+                  ConfirmDeliveryLocationPage.routePath);
+          if (extra == null) return const AddressSelectionWidget();
           return ConfirmDeliveryLocationPage(initialLocation: extra);
         },
       ),

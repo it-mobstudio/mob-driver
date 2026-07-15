@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/nav/nav.dart' show appNavigatorKey;
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
@@ -8,6 +9,7 @@ import 'package:m_o_b_demand_side/features/address/domain/repositories/address_r
 import 'package:m_o_b_demand_side/features/address/presentation/pages/add_address_detail_page.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
+import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
@@ -79,21 +81,14 @@ class _CartPageState extends State<CartPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        // actionError/successMessage on CartLoaded were already wired up in
-        // the bloc (quantity update / remove failures, "Added to cart") but
-        // nothing ever displayed them — a failed update just silently
-        // reverted with no feedback. This surfaces them once each via a
-        // snackbar; errors are then cleared so they don't reappear on the
-        // next unrelated rebuild.
+        // Surface failed cart updates once, then clear so they don't reappear
+        // on the next unrelated rebuild.
         child: BlocListener<CartBloc, CartState>(
           listenWhen: (previous, current) {
             if (current is! CartLoaded) return false;
             final prevError =
                 previous is CartLoaded ? previous.actionError : null;
-            final prevSuccess =
-                previous is CartLoaded ? previous.successMessage : null;
-            return current.actionError != prevError ||
-                current.successMessage != prevSuccess;
+            return current.actionError != prevError;
           },
           listener: (context, state) {
             if (state is! CartLoaded) return;
@@ -103,12 +98,6 @@ class _CartPageState extends State<CartPage> {
                 ..hideCurrentSnackBar()
                 ..showSnackBar(SnackBar(content: Text(state.actionError!)));
               context.read<CartBloc>().add(CartActionErrorCleared());
-            } else if (state.successMessage != null) {
-              messenger
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  SnackBar(content: Text(state.successMessage!)),
-                );
             }
           },
           child: BlocBuilder<CartBloc, CartState>(
@@ -208,18 +197,10 @@ class _CartPageState extends State<CartPage> {
                           isUpdatingCart: updatingItemKey != null,
                           updatingItemKey: updatingItemKey,
                           onQtyChanged: (item, qty) =>
-                              context.read<CartBloc>().add(
-                                    CartQuantityUpdateRequested(
-                                        item: item, newQty: qty),
-                                  ),
+                              _updateCartQuantity(context, item, qty),
                           onQtyInputChanged: (item, text) {
-                            final qty = int.tryParse(text);
-                            if (qty != null) {
-                              context.read<CartBloc>().add(
-                                    CartQuantityUpdateRequested(
-                                        item: item, newQty: qty),
-                                  );
-                            }
+                            final qty = int.tryParse(text.trim()) ?? 0;
+                            _updateCartQuantity(context, item, qty);
                           },
                           onRemove: (item) => context.read<CartBloc>().add(
                                 CartItemRemoveRequested(item: item),
@@ -260,6 +241,21 @@ class _CartPageState extends State<CartPage> {
   double _effectiveTotal(CartSummaryEntity summary) {
     if (summary.total > 0) return summary.total;
     return summary.subtotal + summary.shipping;
+  }
+
+  void _updateCartQuantity(BuildContext context, CartItem item, int quantity) {
+    final stock = item.availableStock;
+    if (stock > 0 && quantity > stock) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Only $stock units available in stock.')),
+        );
+      return;
+    }
+    context.read<CartBloc>().add(
+          CartQuantityUpdateRequested(item: item, newQty: quantity),
+        );
   }
 
   bool _hasDeliveryAddress(CartSummaryEntity summary) {
@@ -430,7 +426,17 @@ class _CartPageState extends State<CartPage> {
   // Bengaluru pin (auto-resolved once the map loads) unless the user drags
   // it or searches from there.
   Future<void> _openAddressFlow() async {
-    final confirmed = await context.push<AddressEntity>(
+    // Push through appNavigatorKey.currentContext, not this page's own
+    // `context` — ConfirmDeliveryLocationPage/AddAddressDetailPage use
+    // `parentNavigatorKey: appNavigatorKey` to escape onto the root
+    // navigator, and popping back off it can leave this page's own
+    // BuildContext/State reporting not-mounted (a GoRouter/StatefulShellRoute
+    // quirk with parentNavigatorKey-escaped routes) even though the page is
+    // still alive underneath — gating on `mounted` here silently aborted the
+    // whole flow right after the map step confirmed a location.
+    final navContext = appNavigatorKey.currentContext;
+    if (navContext == null) return;
+    final confirmed = await navContext.push<AddressEntity>(
       ConfirmDeliveryLocationPage.routePath,
       extra: const AddressLocationEntity(
         latitude: 12.9716,
@@ -443,12 +449,14 @@ class _CartPageState extends State<CartPage> {
         locationName: '',
       ),
     );
-    if (!mounted || confirmed == null) return;
-    final savedAddress = await context.push<AddressEntity>(
+    if (confirmed == null) return;
+    final navContext2 = appNavigatorKey.currentContext;
+    if (navContext2 == null) return;
+    final savedAddress = await navContext2.push<AddressEntity>(
       AddAddressDetailPage.routePath,
       extra: confirmed,
     );
-    if (!mounted || savedAddress == null) return;
+    if (savedAddress == null) return;
     await SelectedAddressStore.save(savedAddress);
     if (!mounted) return;
     setState(() {

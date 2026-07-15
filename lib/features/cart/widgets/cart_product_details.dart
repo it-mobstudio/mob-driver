@@ -1,8 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
+import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/quantity_stepper.dart';
 
@@ -55,19 +57,26 @@ class CartProductDetails extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             // Product image
-            SizedBox(
-              width: 68,
-              height: 68,
-              child: item.isNetworkImage
-                  ? CachedNetworkImage(
-                      imageUrl: item.imageAsset,
-                      fit: BoxFit.contain,
-                      memCacheWidth: 136,
-                      placeholder: (_, __) => const ImageShimmer(),
-                      errorWidget: (_, __, ___) =>
-                          const ProductImagePlaceholder(),
-                    )
-                  : const ProductImagePlaceholder(),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: item.slug.isEmpty
+                  ? null
+                  : () => context
+                      .push('${ProductDetailPage.routePath}/${item.slug}'),
+              child: SizedBox(
+                width: 68,
+                height: 68,
+                child: item.isNetworkImage
+                    ? CachedNetworkImage(
+                        imageUrl: item.imageAsset,
+                        fit: BoxFit.contain,
+                        memCacheWidth: 136,
+                        placeholder: (_, __) => const ImageShimmer(),
+                        errorWidget: (_, __, ___) =>
+                            const ProductImagePlaceholder(),
+                      )
+                    : const ProductImagePlaceholder(),
+              ),
             ),
             const SizedBox(width: 10),
             // Product name + unit price
@@ -152,6 +161,8 @@ class CartProductDetails extends StatelessWidget {
                   onDecrement: () => onQtyChanged(item.qty - 1),
                   onIncrement: () => onQtyChanged(item.qty + 1),
                   onInputChanged: onQtyInputChanged,
+                  maxValue:
+                      item.availableStock > 0 ? item.availableStock : null,
                   isBusy: isBusy,
                 ),
             ],

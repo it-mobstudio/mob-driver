@@ -24,6 +24,7 @@ class OrderItemEntity {
     required this.qty,
     required this.unitPrice,
     required this.mobSku,
+    required this.slug,
   });
 
   final String title;
@@ -31,6 +32,7 @@ class OrderItemEntity {
   final int qty;
   final double unitPrice;
   final String mobSku;
+  final String slug;
 
   double get lineTotal => unitPrice * qty;
 
@@ -66,6 +68,7 @@ class OrderItemEntity {
           ) ??
           0,
       mobSku: (map['mob_sku'] ?? product['mob_sku'] ?? '').toString(),
+      slug: (map['slug'] ?? product['slug'] ?? '').toString(),
     );
   }
 }

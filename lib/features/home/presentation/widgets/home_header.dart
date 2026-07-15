@@ -154,8 +154,8 @@ class _HomeHeaderState extends State<HomeHeader> {
                           ),
                           SvgPicture.asset(
                             'assets/images/address-down.svg',
-                            width: 12,
-                            height: 12,
+                            width: 8,
+                            height: 4,
                           ),
                         ],
                       ),

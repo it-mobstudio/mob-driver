@@ -26,6 +26,12 @@ final class CartItemRemoveRequested extends CartEvent {
 
 final class CartActionErrorCleared extends CartEvent {}
 
+/// Fired when AuthSession signs out — drops any in-memory cart state so a
+/// subsequent sign-up/login on the same device (CartBloc is a DI singleton,
+/// never recreated) can never render the previous account's cart before its
+/// own fresh CartLoadRequested resolves.
+final class CartResetRequested extends CartEvent {}
+
 final class CartRedeemUpdateRequested extends CartEvent {
   CartRedeemUpdateRequested({
     required this.cartId,
@@ -120,9 +126,29 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<CartItemRemoveRequested>(_onRemove);
     on<CartActionErrorCleared>(_onClearError);
     on<CartRedeemUpdateRequested>(_onRedeemUpdate);
+    on<CartResetRequested>((event, emit) => emit(CartInitial()));
+    AuthSession.instance.addListener(_onAuthSessionChanged);
   }
 
   final CartRepository _repository;
+
+  void _onAuthSessionChanged() {
+    if (AuthSession.instance.isAuthenticated) {
+      // Repopulate immediately on login/sign-up so the bloc doesn't sit at
+      // CartInitial — _onQuantityUpdate/_onRemove both require CartLoaded
+      // and silently no-op otherwise, which left "Add" appearing dead until
+      // some other page happened to dispatch CartLoadRequested on mount.
+      add(CartLoadRequested());
+    } else {
+      add(CartResetRequested());
+    }
+  }
+
+  @override
+  Future<void> close() {
+    AuthSession.instance.removeListener(_onAuthSessionChanged);
+    return super.close();
+  }
 
   Future<void> _onLoad(CartLoadRequested event, Emitter<CartState> emit) async {
     if (!AuthSession.instance.isAuthenticated) {
@@ -192,7 +218,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
     emit(CartLoaded(
       summary: mutatedSummary!,
-      successMessage: isAdding ? 'Added to cart' : null,
     ));
   }
 

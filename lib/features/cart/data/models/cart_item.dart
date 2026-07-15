@@ -10,6 +10,8 @@ class CartItem {
     this.storeDelivery = true,
     this.vendorProductId = '',
     this.cartItemId = '',
+    this.slug = '',
+    this.availableStock = 0,
   });
 
   final String title;
@@ -20,6 +22,8 @@ class CartItem {
   final bool storeDelivery;
   final String vendorProductId;
   final String cartItemId;
+  final String slug;
+  final int availableStock;
   bool get isNetworkImage =>
       imageAsset.startsWith('http://') || imageAsset.startsWith('https://');
   String get itemKey => cartItemId.isNotEmpty ? cartItemId : vendorProductId;
@@ -35,6 +39,8 @@ class CartItem {
     bool? storeDelivery,
     String? vendorProductId,
     String? cartItemId,
+    String? slug,
+    int? availableStock,
   }) {
     return CartItem(
       title: title ?? this.title,
@@ -45,6 +51,8 @@ class CartItem {
       storeDelivery: storeDelivery ?? this.storeDelivery,
       vendorProductId: vendorProductId ?? this.vendorProductId,
       cartItemId: cartItemId ?? this.cartItemId,
+      slug: slug ?? this.slug,
+      availableStock: availableStock ?? this.availableStock,
     );
   }
 
@@ -106,6 +114,26 @@ class CartItem {
       },
       const ['cart_item_id', 'cartItemId', 'id'],
     );
+    final slug = _readFirstString(
+      {
+        ...nestedProduct,
+        ...map,
+      },
+      const ['slug'],
+    );
+    final availableStock = _readFirstInt(
+      {
+        ...nestedProduct,
+        ...map,
+      },
+      const [
+        'available_stock',
+        'availableStock',
+        'stock',
+        'available_quantity',
+        'availableQuantity',
+      ],
+    );
 
     return CartItem(
       title: title.isNotEmpty ? title : 'Cart item',
@@ -115,6 +143,8 @@ class CartItem {
       sellerCode: sellerCode.isNotEmpty ? sellerCode : 'STORE',
       vendorProductId: vendorProductId,
       cartItemId: cartItemId,
+      slug: slug,
+      availableStock: availableStock,
     );
   }
 

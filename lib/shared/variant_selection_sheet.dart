@@ -1,10 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/product_cart_action_button.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
+import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
 
@@ -341,6 +343,12 @@ class _VariantListRow extends StatelessWidget {
     final mrp = product.maximumRetailPrice;
     final rowLabel = label.isNotEmpty ? label : product.title;
 
+    void openProductDetail() {
+      if (product.slug.isEmpty) return;
+      Navigator.of(context).pop();
+      context.push('${ProductDetailPage.routePath}/${product.slug}');
+    }
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -356,72 +364,80 @@ class _VariantListRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF6F8FB),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            padding: const EdgeInsets.all(4),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: product.primaryImageUrl.isEmpty
-                  ? const ProductImagePlaceholder()
-                  : CachedNetworkImage(
-                      imageUrl: product.primaryImageUrl,
-                      fit: BoxFit.contain,
-                      memCacheWidth: 120,
-                      errorWidget: (_, __, ___) =>
-                          const ProductImagePlaceholder(),
-                    ),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: openProductDetail,
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6F8FB),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.all(4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: product.primaryImageUrl.isEmpty
+                    ? const ProductImagePlaceholder()
+                    : CachedNetworkImage(
+                        imageUrl: product.primaryImageUrl,
+                        fit: BoxFit.contain,
+                        memCacheWidth: 120,
+                        errorWidget: (_, __, ___) =>
+                            const ProductImagePlaceholder(),
+                      ),
+              ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rowLabel,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    height: 18 / 13,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      '₹ ${price.round()}',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: openProductDetail,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rowLabel,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      height: 18 / 13,
                     ),
-                    if (mrp > 0) ...[
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          '₹ ${mrp.round()}',
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFFB5B5B5),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            decoration: TextDecoration.lineThrough,
-                          ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        '₹ ${price.round()}',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
+                      if (mrp > 0) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            '₹ ${mrp.round()}',
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFFB5B5B5),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 12),

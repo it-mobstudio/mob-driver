@@ -332,6 +332,23 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     if (!mounted || _isRupifiHandoffInProgress) return;
     if (_isPaymentOrderRequestInFlight) return;
 
+    if (summary.isEmpty) {
+      if (_paymentOption != -1 ||
+          _razorpayEntity != null ||
+          _rupifiEntity != null) {
+        setState(() {
+          _paymentOption = -1;
+          _razorpayEntity = null;
+          _rupifiEntity = null;
+          _requestedPaymentOption = null;
+          _requestedPaymentCartId = null;
+          _requestedPaymentTotal = null;
+          _isPaymentOrderRequestInFlight = false;
+        });
+      }
+      return;
+    }
+
     if (summary.total <= 0) {
       if (_paymentOption != -1 ||
           _razorpayEntity != null ||
@@ -392,6 +409,15 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   void _onProceed(BuildContext context, String cartId, double total,
       CartSummaryEntity summary) {
     if (_isRupifiHandoffInProgress) return;
+    if (summary.isEmpty) {
+      _scaffoldMessenger?.showSnackBar(
+        const SnackBar(
+          content: Text('Your cart is empty. Add items to continue.'),
+        ),
+      );
+      _router.go('/cart');
+      return;
+    }
     // Zero total — wallet/points covered the full amount, place order directly
     if (total == 0) {
       _checkoutBloc.add(
@@ -461,6 +487,12 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                   ),
                 CartLoaded(:final summary, :final isRedeemUpdating) =>
                   Builder(builder: (_) {
+                    if (summary.isEmpty) {
+                      return EmptyCartBody(
+                        topBar: _PaymentHeader(onBack: () => _goBack(context)),
+                        shippingTile: const SizedBox.shrink(),
+                      );
+                    }
                     final mobstarApplicableAmount =
                         _mobstarApplicableAmount(summary);
                     // Seed checkboxes from API flags on first load

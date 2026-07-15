@@ -47,7 +47,14 @@ class _ShipmentSection extends StatelessWidget {
       return date.isNotEmpty ? 'Delivered $date' : 'Delivered';
     }
 
-    final suborders = order.shipments;
+    final suborders = order.shipments.isEmpty
+        ? const <OrderShipmentEntity>[]
+        : [...order.shipments]..sort((a, b) {
+            final suffixCompare = _suborderSuffixNumber(a.id)
+                .compareTo(_suborderSuffixNumber(b.id));
+            if (suffixCompare != 0) return suffixCompare;
+            return a.id.compareTo(b.id);
+          });
     if (suborders.length <= 1) {
       final date = _formatDeliveryDate(shipment.deliveryDate);
       return date.isNotEmpty ? 'Arriving by $date' : '';
@@ -61,6 +68,12 @@ class _ShipmentSection extends StatelessWidget {
     }
     if (firstDate.isNotEmpty) return 'Arriving by $firstDate';
     return '';
+  }
+
+  int _suborderSuffixNumber(String id) {
+    final match = RegExp(r'_(\d+)$').firstMatch(id.trim());
+    if (match == null) return 999999;
+    return int.tryParse(match.group(1) ?? '') ?? 999999;
   }
 
   @override
@@ -183,22 +196,29 @@ class _ShipmentItemTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: 44,
-              height: 44,
-              color: const Color(0xFFF1F1F2),
-              child: item.imageUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: item.imageUrl,
-                      fit: BoxFit.contain,
-                      memCacheWidth: 88,
-                      placeholder: (_, __) => const ImageShimmer(),
-                      errorWidget: (_, __, ___) =>
-                          const ProductImagePlaceholder(),
-                    )
-                  : const ProductImagePlaceholder(),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: item.slug.isEmpty
+                ? null
+                : () => context
+                    .push('${ProductDetailPage.routePath}/${item.slug}'),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 44,
+                height: 44,
+                color: const Color(0xFFF1F1F2),
+                child: item.imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: item.imageUrl,
+                        fit: BoxFit.contain,
+                        memCacheWidth: 88,
+                        placeholder: (_, __) => const ImageShimmer(),
+                        errorWidget: (_, __, ___) =>
+                            const ProductImagePlaceholder(),
+                      )
+                    : const ProductImagePlaceholder(),
+              ),
             ),
           ),
           const SizedBox(width: 12),

@@ -12,6 +12,7 @@ import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
 import 'package:m_o_b_demand_side/features/home/domain/store_delivery_label.dart';
+import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/quantity_stepper.dart';
@@ -82,6 +83,22 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
   }
 
   void _submitAddress(BuildContext context) {
+    final cartState = context.read<CartBloc>().state;
+    if (cartState is CartLoaded && cartState.isUpdating) {
+      _scaffoldMessenger?.showSnackBar(
+        const SnackBar(content: Text('Updating cart, please wait.')),
+      );
+      return;
+    }
+    if (cartState is CartLoaded && cartState.summary.isEmpty) {
+      _scaffoldMessenger?.showSnackBar(
+        const SnackBar(
+          content: Text('Your cart is empty. Add items to continue.'),
+        ),
+      );
+      _router.go('/cart');
+      return;
+    }
     _checkoutBloc.add(
       CheckoutAddressUpdateRequested(
         payload: {
@@ -91,6 +108,22 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
         },
       ),
     );
+  }
+
+  void _updateCartQuantity(BuildContext context, CartItem item, int quantity) {
+    final stock = item.availableStock;
+    if (stock > 0 && quantity > stock) {
+      final messenger = _scaffoldMessenger;
+      messenger
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Only $stock units available in stock.')),
+        );
+      return;
+    }
+    context.read<CartBloc>().add(
+          CartQuantityUpdateRequested(item: item, newQty: quantity),
+        );
   }
 
   List<Widget> _buildSellerSections(
@@ -115,16 +148,11 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
           isStoreOpen: _isStoreOpen,
           itemStartIndex:
               entries.take(i).fold<int>(0, (sum, e) => sum + e.value.length),
-          onQtyChanged: (item, qty) => context.read<CartBloc>().add(
-                CartQuantityUpdateRequested(item: item, newQty: qty),
-              ),
+          onQtyChanged: (item, qty) =>
+              _updateCartQuantity(context, item, qty),
           onQtyInputChanged: (item, text) {
-            final qty = int.tryParse(text.trim());
-            if (qty != null && qty > 0) {
-              context.read<CartBloc>().add(
-                    CartQuantityUpdateRequested(item: item, newQty: qty),
-                  );
-            }
+            final qty = int.tryParse(text.trim()) ?? 0;
+            _updateCartQuantity(context, item, qty);
           },
           onRemove: (item) => context.read<CartBloc>().add(
                 CartItemRemoveRequested(item: item),
@@ -182,7 +210,13 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
                         child: Text('Please login to continue.'),
                       ),
                     CartLoaded(:final summary, :final updatingItemKey) =>
-                      Column(
+                      summary.isEmpty
+                          ? EmptyCartBody(
+                              topBar:
+                                  _ReviewHeader(onBack: () => _goBack(context)),
+                              shippingTile: const SizedBox.shrink(),
+                            )
+                          : Column(
                         children: [
                           _ReviewHeader(onBack: () => _goBack(context)),
                           Expanded(
@@ -224,6 +258,7 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
                                   BottomCheckoutBar(
                                     label: 'Continue',
                                     isLoading: isSubmitting,
+                                    isDisabled: updatingItemKey != null,
                                     onProceed: () => _submitAddress(context),
                                   ),
                                 ],
@@ -526,25 +561,32 @@ class _ReviewItemTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF7F7F7),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: item.isNetworkImage
-                      ? CachedNetworkImage(
-                          imageUrl: item.imageAsset,
-                          fit: BoxFit.contain,
-                          memCacheWidth: 128,
-                          placeholder: (_, __) => const ImageShimmer(),
-                          errorWidget: (_, __, ___) =>
-                              const ProductImagePlaceholder(),
-                        )
-                      : const ProductImagePlaceholder(),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: item.slug.isEmpty
+                    ? null
+                    : () => context
+                        .push('${ProductDetailPage.routePath}/${item.slug}'),
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F7F7),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: item.isNetworkImage
+                        ? CachedNetworkImage(
+                            imageUrl: item.imageAsset,
+                            fit: BoxFit.contain,
+                            memCacheWidth: 128,
+                            placeholder: (_, __) => const ImageShimmer(),
+                            errorWidget: (_, __, ___) =>
+                                const ProductImagePlaceholder(),
+                          )
+                        : const ProductImagePlaceholder(),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -627,6 +669,8 @@ class _ReviewItemTile extends StatelessWidget {
                 onDecrement: () => onQtyChanged(item.qty - 1),
                 onIncrement: () => onQtyChanged(item.qty + 1),
                 onInputChanged: onQtyInputChanged,
+                maxValue:
+                    item.availableStock > 0 ? item.availableStock : null,
                 isBusy: isBusy,
               ),
             ],

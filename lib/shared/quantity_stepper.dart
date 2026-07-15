@@ -11,6 +11,7 @@ class QuantityStepper extends StatefulWidget {
     this.onInputChanged,
     this.isBusy = false,
     this.width = 120,
+    this.maxValue,
   });
 
   final int value;
@@ -19,6 +20,7 @@ class QuantityStepper extends StatefulWidget {
   final ValueChanged<String>? onInputChanged;
   final bool isBusy;
   final double width;
+  final int? maxValue;
 
   @override
   State<QuantityStepper> createState() => _QuantityStepperState();
@@ -26,18 +28,28 @@ class QuantityStepper extends StatefulWidget {
 
 class _QuantityStepperState extends State<QuantityStepper> {
   late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  late int _lastValue;
 
   @override
   void initState() {
     super.initState();
+    _lastValue = widget.value;
     _controller = TextEditingController(text: '${widget.value}');
+    _focusNode = FocusNode()..addListener(_handleFocusChange);
   }
 
   @override
   void didUpdateWidget(QuantityStepper oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
+      _lastValue = widget.value;
       final newText = '${widget.value}';
+      final oldText = '${oldWidget.value}';
+      final isEditingDifferentText =
+          _focusNode.hasFocus && _controller.text.isNotEmpty &&
+              _controller.text != oldText;
+      if (isEditingDifferentText) return;
       _controller.value = TextEditingValue(
         text: newText,
         selection: TextSelection.collapsed(offset: newText.length),
@@ -45,8 +57,34 @@ class _QuantityStepperState extends State<QuantityStepper> {
     }
   }
 
+  void _handleFocusChange() {
+    if (!_focusNode.hasFocus) _commitInput();
+  }
+
+  void _commitInput() {
+    final text = _controller.text.trim();
+    final parsed = int.tryParse(text) ?? 0;
+    if (parsed == _lastValue) {
+      if (text.isEmpty) _controller.text = '$_lastValue';
+      return;
+    }
+    final maxValue = widget.maxValue;
+    if (maxValue != null && maxValue > 0 && parsed > maxValue) {
+      widget.onInputChanged?.call(text);
+      _controller.value = TextEditingValue(
+        text: '$_lastValue',
+        selection: TextSelection.collapsed(offset: '$_lastValue'.length),
+      );
+      return;
+    }
+    _lastValue = parsed;
+    widget.onInputChanged?.call(text);
+  }
+
   @override
   void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -71,6 +109,7 @@ class _QuantityStepperState extends State<QuantityStepper> {
           Expanded(
             child: TextField(
               controller: _controller,
+              focusNode: _focusNode,
               enabled: !widget.isBusy && widget.onInputChanged != null,
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
@@ -84,11 +123,12 @@ class _QuantityStepperState extends State<QuantityStepper> {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
-              onChanged: widget.onInputChanged,
+              onSubmitted: (_) => _commitInput(),
             ),
           ),
           IncrementButton(
-            isDisabled: widget.isBusy,
+            isDisabled: widget.isBusy ||
+                (widget.maxValue != null && widget.value >= widget.maxValue!),
             onTap: widget.onIncrement,
           ),
         ],

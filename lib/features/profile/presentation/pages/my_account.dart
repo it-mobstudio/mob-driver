@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart'
     show kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -1086,18 +1085,6 @@ class _VersionFooterState extends State<_VersionFooter> {
     _resetTimer = Timer(_tapWindow, () => _tapCount = 0);
   }
 
-  void _copyVersion(String text) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('Version copied'),
-          duration: Duration(seconds: 1),
-        ),
-      );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1124,31 +1111,14 @@ class _VersionFooterState extends State<_VersionFooter> {
                 final versionText = info == null
                     ? ''
                     : 'v${info.version} (${info.buildNumber})';
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      versionText.isEmpty ? 'APP VERSION' : versionText,
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF9FA4AA),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                        height: 16 / 11,
-                      ),
-                    ),
-                    if (versionText.isNotEmpty) ...[
-                      const SizedBox(width: 4),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => _copyVersion(versionText),
-                        child: const Icon(
-                          Icons.copy_rounded,
-                          size: 12,
-                          color: Color(0xFF9FA4AA),
-                        ),
-                      ),
-                    ],
-                  ],
+                return Text(
+                  versionText.isEmpty ? 'APP VERSION' : versionText,
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF9FA4AA),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    height: 16 / 11,
+                  ),
                 );
               },
             ),

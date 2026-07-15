@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/nav/nav.dart' show appNavigatorKey;
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/network/dio_client.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
@@ -172,6 +173,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
   }
 
   bool _canContinue(CartSummaryEntity summary) {
+    if (summary.isEmpty) return false;
     final hasDelivery = _selectedDelivery != null ||
         (!_needsSavedDeliveryAddress && summary.hasDeliveryAddress);
     final hasBilling = _sameAddress ||
@@ -321,7 +323,19 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
     // Same shortcut as cart/AddressSelectionWidget: straight to the
     // map-confirm step (defaulting to a Bengaluru pin) then the receiver
     // detail form, instead of a whole separate search screen.
-    final confirmed = await context.push<AddressEntity>(
+    //
+    // Both pushes deliberately go through appNavigatorKey.currentContext
+    // rather than this method's own `context` parameter: ConfirmDeliveryLocationPage
+    // and AddAddressDetailPage use `parentNavigatorKey: appNavigatorKey` to
+    // escape onto the root navigator, and popping back off that navigator
+    // leaves this page's own BuildContext reporting `mounted == false` (a
+    // GoRouter/StatefulShellRoute quirk with parentNavigatorKey-escaped
+    // routes) even though the page itself is still very much alive
+    // underneath — gating on `context.mounted` here silently aborted the
+    // whole flow right after the map step confirmed a location.
+    final navContext = appNavigatorKey.currentContext;
+    if (navContext == null) return;
+    final confirmed = await navContext.push<AddressEntity>(
       ConfirmDeliveryLocationPage.routePath,
       extra: const AddressLocationEntity(
         latitude: 12.9716,
@@ -334,12 +348,14 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
         locationName: '',
       ),
     );
-    if (!context.mounted || confirmed == null) return;
-    final savedAddress = await context.push<AddressEntity>(
+    if (confirmed == null) return;
+    final navContext2 = appNavigatorKey.currentContext;
+    if (navContext2 == null) return;
+    final savedAddress = await navContext2.push<AddressEntity>(
       AddAddressDetailPage.routePath,
       extra: confirmed,
     );
-    if (!context.mounted || savedAddress == null) return;
+    if (savedAddress == null) return;
     await SelectedAddressStore.save(savedAddress);
     if (mounted) {
       setState(() {

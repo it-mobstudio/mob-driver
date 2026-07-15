@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/nav/nav.dart' show appNavigatorKey;
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/location/location_permission_helper.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
@@ -179,7 +180,17 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   /// when no location is already known; [ConfirmDeliveryLocationPage]
   /// resolves the real address for it as soon as the map loads.
   Future<void> _openMap([AddressLocationEntity? location]) async {
-    final confirmed = await context.push<AddressEntity>(
+    // Push through appNavigatorKey.currentContext, not this method's own
+    // `context` — ConfirmDeliveryLocationPage/AddAddressDetailPage use
+    // `parentNavigatorKey: appNavigatorKey` to escape onto the root
+    // navigator, and popping back off it can leave this page's own
+    // BuildContext/State reporting not-mounted (a GoRouter/StatefulShellRoute
+    // quirk with parentNavigatorKey-escaped routes) even though the page is
+    // still alive underneath — gating on `mounted` here silently aborted the
+    // whole flow right after the map step confirmed a location.
+    final navContext = appNavigatorKey.currentContext;
+    if (navContext == null) return;
+    final confirmed = await navContext.push<AddressEntity>(
       ConfirmDeliveryLocationPage.routePath,
       extra: location ??
           const AddressLocationEntity(
@@ -193,13 +204,15 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
             locationName: '',
           ),
     );
-    if (!mounted || confirmed == null) return;
-    final savedAddress = await context.push<AddressEntity>(
+    if (confirmed == null) return;
+    final navContext2 = appNavigatorKey.currentContext;
+    if (navContext2 == null) return;
+    final savedAddress = await navContext2.push<AddressEntity>(
       AddAddressDetailPage.routePath,
       extra: confirmed,
     );
-    if (!mounted || savedAddress == null) return;
-    setState(() => _addresses = [..._addresses, savedAddress]);
+    if (savedAddress == null) return;
+    if (mounted) setState(() => _addresses = [..._addresses, savedAddress]);
     await _completeSelection(savedAddress);
   }
 

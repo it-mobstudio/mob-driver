@@ -1,7 +1,7 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/fcm_token_sync.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 
@@ -164,7 +164,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<String?> _currentFcmToken() async {
     if (kIsWeb) return null;
     try {
-      return await FirebaseMessaging.instance.getToken();
+      return await resolveFcmToken();
     } catch (_) {
       return null;
     }

@@ -288,6 +288,7 @@ OrderItemEntity _itemEntityFromPlaced(PlacedOrderProductEntity product) {
     qty: product.quantity,
     unitPrice: product.price,
     mobSku: product.mobSku,
+    slug: '',
   );
 }
 

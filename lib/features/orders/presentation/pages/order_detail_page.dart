@@ -10,6 +10,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/bloc/orders_bloc.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
+import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -156,7 +157,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   List<OrderShipmentEntity> _shipmentsFor(OrderEntity? order) {
     if (order == null) return const [];
-    if (order.shipments.isNotEmpty) return order.shipments;
+    if (order.shipments.isNotEmpty) {
+      return _sortShipmentsBySuborderId(order.shipments);
+    }
     if (order.items.isEmpty) return const [];
     return [
       OrderShipmentEntity(
@@ -166,6 +169,25 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         items: order.items,
       ),
     ];
+  }
+
+  List<OrderShipmentEntity> _sortShipmentsBySuborderId(
+    List<OrderShipmentEntity> shipments,
+  ) {
+    final sorted = [...shipments];
+    sorted.sort((a, b) {
+      final suffixCompare =
+          _suborderSuffixNumber(a.id).compareTo(_suborderSuffixNumber(b.id));
+      if (suffixCompare != 0) return suffixCompare;
+      return a.id.compareTo(b.id);
+    });
+    return sorted;
+  }
+
+  int _suborderSuffixNumber(String id) {
+    final match = RegExp(r'_(\d+)$').firstMatch(id.trim());
+    if (match == null) return 999999;
+    return int.tryParse(match.group(1) ?? '') ?? 999999;
   }
 
   String _resolvedShipmentStatus(

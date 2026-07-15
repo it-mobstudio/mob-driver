@@ -171,12 +171,12 @@ class _DevInfoPageState extends State<DevInfoPage> {
                 const SizedBox(height: 8),
                 // Temporary — remove once Sentry's API/perf wiring has been
                 // confirmed working against the live dashboard.
-                ElevatedButton(
-                  onPressed: () {
-                    throw StateError('This is test exception');
-                  },
-                  child: const Text('Verify Sentry Setup'),
-                ),
+                // ElevatedButton(
+                //   onPressed: () {
+                //     throw StateError('This is test exception');
+                //   },
+                //   child: const Text('Verify Sentry Setup'),
+                // ),
               ],
             ),
     );
