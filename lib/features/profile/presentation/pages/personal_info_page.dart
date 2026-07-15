@@ -12,6 +12,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
 class PersonalInfoPage extends StatelessWidget {
   const PersonalInfoPage({super.key});
@@ -363,46 +364,13 @@ class _ProfileField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
+    return AppTextField(
+      label: '$label*',
       controller: controller,
       readOnly: readOnly,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
-      style: GoogleFonts.inter(
-        color: readOnly ? const Color(0x7F0A243F) : const Color(0xFF0A243F),
-        fontSize: readOnly ? 14 : 12,
-        fontWeight: readOnly ? FontWeight.w500 : FontWeight.w400,
-        height: readOnly ? 1.43 : null,
-      ),
-      decoration: InputDecoration(
-        label: Text('$label *'),
-        labelStyle: GoogleFonts.inter(
-          color: readOnly ? const Color(0xFF767C8F) : const Color(0xFF6E7C8F),
-          fontSize: readOnly ? 11 : 10,
-          fontWeight: readOnly ? FontWeight.w500 : FontWeight.w400,
-          height: readOnly ? 1.27 : null,
-        ),
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.fromLTRB(12, 13, 12, 10),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
-          borderSide: const BorderSide(color: Color(0xFFD7DFE8)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
-          borderSide: const BorderSide(color: Color(0xFFD7DFE8)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
-          borderSide: const BorderSide(color: Color(0xFF0866E9)),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-      ),
+      floatingLabelBehavior: FloatingLabelBehavior.always,
     );
   }
 }

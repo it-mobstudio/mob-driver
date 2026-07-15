@@ -83,13 +83,6 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
     final topPadding = MediaQuery.paddingOf(context).top;
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
     final buttonBottomPadding = bottomPadding > 0 ? bottomPadding + 4 : 24.0;
-    final sheetHeight = math
-        .min(
-          math.max(560.0, screenHeight * .75),
-          screenHeight - topPadding - 72,
-        )
-        .clamp(0.0, screenHeight)
-        .toDouble();
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return BlocConsumer<CreditBloc, CreditState>(
@@ -137,201 +130,229 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
           padding: EdgeInsets.only(bottom: keyboardInset),
-          child: SizedBox(
-            height: screenHeight,
-            child: Stack(
-              alignment: Alignment.bottomCenter,
-              children: [
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                    child: Material(
-                      color: Colors.white,
-                      child: SizedBox(
-                        height: sheetHeight,
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  physics: const BouncingScrollPhysics(),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    16,
-                                    16,
-                                    24,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Apply for mobCREDIT',
-                                        style: TextStyle(
-                                          color: Color(0xFF0A243F),
-                                          fontSize: 18,
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w600,
-                                          height: 1.44,
-                                        ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final availableHeight = constraints.maxHeight;
+              final desiredSheetHeight = math.max(560.0, screenHeight * .75);
+              final maximumSheetHeight = math.max(
+                0.0,
+                availableHeight - topPadding - 72,
+              );
+              final sheetHeight = math
+                  .min(desiredSheetHeight, maximumSheetHeight)
+                  .clamp(0.0, availableHeight)
+                  .toDouble();
+
+              return SizedBox(
+                height: availableHeight,
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                        child: Material(
+                          color: Colors.white,
+                          child: SizedBox(
+                            height: sheetHeight,
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      physics: const BouncingScrollPhysics(),
+                                      keyboardDismissBehavior:
+                                          ScrollViewKeyboardDismissBehavior
+                                              .onDrag,
+                                      padding: const EdgeInsets.fromLTRB(
+                                        16,
+                                        16,
+                                        16,
+                                        24,
                                       ),
-                                      const SizedBox(height: 32),
-                                      AppTextField(
-                                        controller: _businessName,
-                                        focusNode: _businessNameFocus,
-                                        label: 'Business name*',
-                                        showClearButton: false,
-                                        floatingLabelBehavior:
-                                            FloatingLabelBehavior.always,
-                                        textInputAction: TextInputAction.next,
-                                        onFieldSubmitted: (_) =>
-                                            _phoneFocus.requestFocus(),
-                                        validator: (value) => (value == null ||
-                                                value.trim().isEmpty)
-                                            ? 'Business name is required'
-                                            : null,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      AppTextField(
-                                        controller: _phone,
-                                        focusNode: _phoneFocus,
-                                        label: 'Business mobile (for OTP)*',
-                                        keyboardType: TextInputType.phone,
-                                        textInputAction: TextInputAction.next,
-                                        onFieldSubmitted: (_) =>
-                                            _gstFocus.requestFocus(),
-                                        showClearButton: false,
-                                        floatingLabelBehavior:
-                                            FloatingLabelBehavior.always,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                          LengthLimitingTextInputFormatter(
-                                            10,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Apply for mobCREDIT',
+                                            style: TextStyle(
+                                              color: Color(0xFF0A243F),
+                                              fontSize: 18,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w600,
+                                              height: 1.44,
+                                            ),
                                           ),
-                                        ],
-                                        validator: (value) {
-                                          final digits = value?.trim() ?? '';
-                                          if (digits.length != 10) {
-                                            return 'Enter a valid 10-digit mobile number';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                      const SizedBox(height: 20),
-                                      AppTextField(
-                                        controller: _gst,
-                                        label: 'GSTIN*',
-                                        focusNode: _gstFocus,
-                                        textInputAction: TextInputAction.done,
-                                        onFieldSubmitted: (_) =>
-                                            FocusScope.of(context).unfocus(),
-                                        showClearButton: false,
-                                        floatingLabelBehavior:
-                                            FloatingLabelBehavior.always,
-                                        textCapitalization:
-                                            TextCapitalization.characters,
-                                        inputFormatters: [
-                                          LengthLimitingTextInputFormatter(
-                                            15,
+                                          const SizedBox(height: 32),
+                                          AppTextField(
+                                            controller: _businessName,
+                                            focusNode: _businessNameFocus,
+                                            label: 'Business name*',
+                                            showClearButton: false,
+                                            floatingLabelBehavior:
+                                                FloatingLabelBehavior.always,
+                                            textInputAction:
+                                                TextInputAction.next,
+                                            onFieldSubmitted: (_) =>
+                                                _phoneFocus.requestFocus(),
+                                            validator: (value) => (value ==
+                                                        null ||
+                                                    value.trim().isEmpty)
+                                                ? 'Business name is required'
+                                                : null,
                                           ),
+                                          const SizedBox(height: 20),
+                                          AppTextField(
+                                            controller: _phone,
+                                            focusNode: _phoneFocus,
+                                            label: 'Business mobile (for OTP)*',
+                                            keyboardType: TextInputType.phone,
+                                            textInputAction:
+                                                TextInputAction.next,
+                                            onFieldSubmitted: (_) =>
+                                                _gstFocus.requestFocus(),
+                                            showClearButton: false,
+                                            floatingLabelBehavior:
+                                                FloatingLabelBehavior.always,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .digitsOnly,
+                                              LengthLimitingTextInputFormatter(
+                                                10,
+                                              ),
+                                            ],
+                                            validator: (value) {
+                                              final digits =
+                                                  value?.trim() ?? '';
+                                              if (digits.length != 10) {
+                                                return 'Enter a valid 10-digit mobile number';
+                                              }
+                                              return null;
+                                            },
+                                          ),
+                                          const SizedBox(height: 20),
+                                          AppTextField(
+                                            controller: _gst,
+                                            label: 'GSTIN*',
+                                            focusNode: _gstFocus,
+                                            textInputAction:
+                                                TextInputAction.done,
+                                            onFieldSubmitted: (_) =>
+                                                FocusScope.of(context)
+                                                    .unfocus(),
+                                            showClearButton: false,
+                                            floatingLabelBehavior:
+                                                FloatingLabelBehavior.always,
+                                            textCapitalization:
+                                                TextCapitalization.characters,
+                                            inputFormatters: [
+                                              LengthLimitingTextInputFormatter(
+                                                15,
+                                              ),
+                                            ],
+                                            validator: (value) => (value ==
+                                                        null ||
+                                                    value.trim().length < 15)
+                                                ? 'Enter a valid 15-character GSTIN'
+                                                : null,
+                                          ),
+                                          const SizedBox(height: 20),
+                                          _segmentDropdown(),
                                         ],
-                                        validator: (value) => (value == null ||
-                                                value.trim().length < 15)
-                                            ? 'Enter a valid 15-character GSTIN'
-                                            : null,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      _segmentDropdown(),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                  16,
-                                  8,
-                                  16,
-                                  buttonBottomPadding,
-                                ),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: 48,
-                                  child: ElevatedButton(
-                                    onPressed: _submitting
-                                        ? null
-                                        : () => _submit(context),
-                                    style: ElevatedButton.styleFrom(
-                                      elevation: 0,
-                                      backgroundColor: const Color(
-                                        0xFF0360E5,
-                                      ),
-                                      foregroundColor: Colors.white,
-                                      disabledBackgroundColor:
-                                          const Color(0xFF8FB8F5),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
-                                    child: _submitting
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Text(
-                                            'Send request',
-                                            style: _sheetTextStyle(
-                                              color: Colors.white,
-                                              size: 14,
-                                              weight: FontWeight.w600,
-                                              height: 21 / 14,
-                                            ),
-                                          ),
                                   ),
-                                ),
+                                  Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      16,
+                                      8,
+                                      16,
+                                      buttonBottomPadding,
+                                    ),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      height: 48,
+                                      child: ElevatedButton(
+                                        onPressed: _submitting
+                                            ? null
+                                            : () => _submit(context),
+                                        style: ElevatedButton.styleFrom(
+                                          elevation: 0,
+                                          backgroundColor: const Color(
+                                            0xFF0360E5,
+                                          ),
+                                          foregroundColor: Colors.white,
+                                          disabledBackgroundColor:
+                                              const Color(0xFF8FB8F5),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: _submitting
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Colors.white,
+                                                ),
+                                              )
+                                            : Text(
+                                                'Send request',
+                                                style: _sheetTextStyle(
+                                                  color: Colors.white,
+                                                  size: 14,
+                                                  weight: FontWeight.w600,
+                                                  height: 21 / 14,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                Positioned(
-                  bottom: sheetHeight + 16,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => Navigator.of(context).pop(),
-                    child: SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: SvgPicture.asset(
-                        'assets/images/close.svg',
-                        fit: BoxFit.contain,
+                    if (availableHeight >= 72)
+                      Positioned(
+                        bottom: sheetHeight + 16,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => Navigator.of(context).pop(),
+                          child: SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: SvgPicture.asset(
+                              'assets/images/close.svg',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         );
       },
     );
   }
 
-    Widget _segmentDropdown() {
+  Widget _segmentDropdown() {
     if (_segmentsError != null) {
       return InputDecorator(
         decoration: appTextFieldDecoration(
@@ -363,67 +384,67 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
         ),
       );
     }
-      final dropdownWidth = MediaQuery.sizeOf(context).width - 32;
+    final dropdownWidth = MediaQuery.sizeOf(context).width - 32;
     return PopupMenuButton<BusinessSegmentEntity>(
-        offset: const Offset(0, 58),
-        constraints: BoxConstraints(
-          maxHeight: 260,
-          minWidth: dropdownWidth,
+      offset: const Offset(0, 58),
+      constraints: BoxConstraints(
+        maxHeight: 260,
+        minWidth: dropdownWidth,
         maxWidth: dropdownWidth,
-        ),
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        onOpened: () => FocusScope.of(context).unfocus(),
+      ),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      onOpened: () => FocusScope.of(context).unfocus(),
       onSelected: (value) {
-          FocusScope.of(context).unfocus();
+        FocusScope.of(context).unfocus();
         setState(() => _selectedSegment = value);
-        },
-        itemBuilder: (context) => _segments.map((segment) {
-          return PopupMenuItem<BusinessSegmentEntity>(
-            value: segment,
-            child: Text(
-              segment.categoryName,
-              style: AppTextFieldStyles.inputText,
-              overflow: TextOverflow.ellipsis,
-            ),
-          );
-        }).toList(),
-        child: InputDecorator(
-          decoration: appTextFieldDecoration(
-            label: 'Business segment*',
-            floatingLabelBehavior: FloatingLabelBehavior.always,
+      },
+      itemBuilder: (context) => _segments.map((segment) {
+        return PopupMenuItem<BusinessSegmentEntity>(
+          value: segment,
+          child: Text(
+            segment.categoryName,
+            style: AppTextFieldStyles.inputText,
+            overflow: TextOverflow.ellipsis,
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _segmentsLoading
-                      ? 'Loading...'
-                      : (_selectedSegment?.categoryName ??
-                          'Select business segment'),
-                  style: AppTextFieldStyles.inputText,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              RotatedBox(
-                quarterTurns: 1,
-                child: SvgPicture.asset(
-                  'assets/images/Arrow.svg',
-                  width: 18,
-                  height: 18,
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xFF0A243F),
-                    BlendMode.srcIn,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        );
+      }).toList(),
+      child: InputDecorator(
+        decoration: appTextFieldDecoration(
+          label: 'Business segment*',
+          floatingLabelBehavior: FloatingLabelBehavior.always,
         ),
-      );
-    }
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _segmentsLoading
+                    ? 'Loading...'
+                    : (_selectedSegment?.categoryName ??
+                        'Select business segment'),
+                style: AppTextFieldStyles.inputText,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            RotatedBox(
+              quarterTurns: 1,
+              child: SvgPicture.asset(
+                'assets/images/Arrow.svg',
+                width: 18,
+                height: 18,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF0A243F),
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 TextStyle _sheetTextStyle({

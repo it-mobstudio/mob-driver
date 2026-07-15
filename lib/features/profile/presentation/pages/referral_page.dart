@@ -87,10 +87,8 @@ class _ReferralView extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.share, size: 18),
-                          const SizedBox(width: 8),
                           Text(
-                            'Share on WhatsApp',
+                            'Share referral link',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -298,14 +296,6 @@ class _ReferralPromoSection extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            top: 158,
-            child: SvgPicture.asset(
-              'assets/images/Vector.svg',
-              width: 183,
-              height: 180,
             ),
           ),
           Positioned(

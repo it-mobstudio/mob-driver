@@ -166,7 +166,7 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                                         products: entry.value.products,
                                       ),
                                       // if (entry.key == 0)
-                                      // const HomeWhyChooseCard(),
+                                      //   const HomeWhyChooseCard(),
                                     ],
                                   ),
                                 );

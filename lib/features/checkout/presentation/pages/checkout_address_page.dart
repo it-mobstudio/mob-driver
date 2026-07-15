@@ -525,8 +525,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                                     null ||
                                                 summary.billingAddress
                                                     .trim()
-                                                    .isNotEmpty ||
-                                                hasAnyAddress)
+                                                    .isNotEmpty)
                                             ? 'Change'
                                             : 'Add',
                                         onAction: () => _showAddressDrawer(
@@ -894,11 +893,13 @@ class _BillingAddressCard extends StatelessWidget {
                 onTap: onAction,
                 child: Text(
                   actionLabel,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0360E5),
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: Color(0xFF2973F0),
                     fontSize: 12,
+                    fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
-                    height: 18 / 12,
+                    height: 1.50,
                   ),
                 ),
               ),
@@ -934,23 +935,23 @@ class _BillingAddressCard extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 8),
-          Text(
-            displayAddress.isNotEmpty
-                ? [
-                    displayAddress,
-                    if (displayPhone.isNotEmpty) displayPhone,
-                  ].join('\n')
-                : 'Add billing address to continue',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF767C8F),
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-              height: 16 / 12,
+          if (displayAddress.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              [
+                displayAddress,
+                if (displayPhone.isNotEmpty) displayPhone,
+              ].join('\n'),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF767C8F),
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                height: 16 / 12,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1113,8 +1114,8 @@ class _PincodeErrorBanner extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 92,
-            height: 92,
+            width: 136,
+            height: 88,
             child: Lottie.asset(
               'assets/lottiejson/Unserviceable.json',
               fit: BoxFit.contain,

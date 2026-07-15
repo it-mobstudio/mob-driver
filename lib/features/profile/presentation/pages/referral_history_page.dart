@@ -51,7 +51,12 @@ class _ReferralHistoryView extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () => context.push('/search'),
-            icon: const Icon(Icons.search, color: Color(0xFF0A243F), size: 24),
+            icon: SvgPicture.asset(
+              'assets/images/Searchicon.svg',
+              width: 16,
+              height: 16,
+              fit: BoxFit.contain,
+            ),
           ),
         ],
       ),
@@ -185,10 +190,10 @@ class _HeroCard extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                const Icon(
-                                  Icons.copy_outlined,
-                                  size: 14,
-                                  color: Color(0xFF0A243F),
+                                SvgPicture.asset(
+                                  'assets/images/copyinrefer.svg',
+                                  width: 16,
+                                  height: 16,
                                 ),
                               ],
                             ),
@@ -223,7 +228,7 @@ class _HeroCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Image.asset(
-                'assets/images/referral_hero.png',
+                'assets/images/Referandearnapp.webp',
                 width: 120,
                 height: 100,
                 fit: BoxFit.contain,

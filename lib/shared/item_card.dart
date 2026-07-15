@@ -170,35 +170,45 @@ class _ItemCardState extends State<ItemCard> {
                   Positioned(
                     right: 0,
                     bottom: 0,
-                    child: ProductCartActionButton(
-                      product: product,
-                      style: ProductCartActionButtonStyle.rail,
-                      showCounter: !product.hasVariants &&
-                          !product.shouldShowNotify &&
-                          _quantityFor(product) > 0,
-                      quantity:
-                          _quantityFor(product) > 0 ? _quantityFor(product) : 1,
-                      isFetchingCart: _isUpdating(product),
-                      onAdd: (_) async => _increment(),
-                      onAddForQuote: (_) async => _increment(),
-                      // Must send the absolute quantity, not translate to a
-                      // single +1/-1 step: ProductCartActionButton debounces
-                      // rapid taps into one call carrying the final settled
-                      // quantity, so a step-based translation here would only
-                      // ever move the real cart by one regardless of how many
-                      // taps the user made.
-                      onQuantityChanged: (quantity) {
-                        final callback = widget.onCartQuantityChanged;
-                        if (callback != null) {
-                          callback(product, quantity);
-                          return;
-                        }
-                        setState(() => _quantity = quantity);
-                      },
-                      onNotify: widget.onNotifyTap == null
-                          ? null
-                          : () => widget.onNotifyTap!(product),
-                      onVariantsTap: _openVariantSheet,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      // Consume taps anywhere inside the cart action's visual
+                      // footprint. Inner ADD/+/- controls still win the
+                      // gesture arena; blank counter space and temporarily
+                      // disabled controls no longer fall through to the card
+                      // tap that opens product details.
+                      onTap: () {},
+                      child: ProductCartActionButton(
+                        product: product,
+                        style: ProductCartActionButtonStyle.rail,
+                        showCounter: !product.hasVariants &&
+                            !product.shouldShowNotify &&
+                            _quantityFor(product) > 0,
+                        quantity: _quantityFor(product) > 0
+                            ? _quantityFor(product)
+                            : 1,
+                        isFetchingCart: _isUpdating(product),
+                        onAdd: (_) async => _increment(),
+                        onAddForQuote: (_) async => _increment(),
+                        // Must send the absolute quantity, not translate to a
+                        // single +1/-1 step: ProductCartActionButton debounces
+                        // rapid taps into one call carrying the final settled
+                        // quantity, so a step-based translation here would only
+                        // ever move the real cart by one regardless of how many
+                        // taps the user made.
+                        onQuantityChanged: (quantity) {
+                          final callback = widget.onCartQuantityChanged;
+                          if (callback != null) {
+                            callback(product, quantity);
+                            return;
+                          }
+                          setState(() => _quantity = quantity);
+                        },
+                        onNotify: widget.onNotifyTap == null
+                            ? null
+                            : () => widget.onNotifyTap!(product),
+                        onVariantsTap: _openVariantSheet,
+                      ),
                     ),
                   ),
                 ],
