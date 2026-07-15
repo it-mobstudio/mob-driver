@@ -8,7 +8,9 @@ String orderStatusIconAsset(String status) {
   if (s.contains('cancelled')) {
     return 'assets/images/cancelledIcon.svg';
   }
-  if (s.contains('out for delivery') || s.contains('transit')) {
+  if (s.contains('out for delivery') ||
+      s.contains('out of delivery') ||
+      s.contains('transit')) {
     return 'assets/images/outfordeliveryicon.svg';
   }
   if (s.contains('partially')) {

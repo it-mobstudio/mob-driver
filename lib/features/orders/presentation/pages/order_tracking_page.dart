@@ -296,10 +296,12 @@ class OrderTrackingPage extends StatefulWidget {
     super.key,
     this.order,
     this.shipment,
+    this.autoOpenRating = false,
   });
 
   final OrderEntity? order;
   final OrderShipmentEntity? shipment;
+  final bool autoOpenRating;
 
   @override
   State<OrderTrackingPage> createState() => _OrderTrackingPageState();
@@ -320,10 +322,12 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   void initState() {
     super.initState();
     _loadTrackOrder();
-    _ratingPromptTimer = Timer(
-      const Duration(seconds: 3),
-      _openAutoRatingSheet,
-    );
+    if (widget.autoOpenRating) {
+      _ratingPromptTimer = Timer(
+        const Duration(seconds: 3),
+        _openAutoRatingSheet,
+      );
+    }
   }
 
   Future<void> _loadTrackOrder() async {

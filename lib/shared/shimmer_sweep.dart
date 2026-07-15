@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
+// import 'package:flutter/scheduler.dart';
 
 /// Wraps [child] with a soft diagonal light streak that periodically sweeps
 /// across it — a decorative "shine" for promo/CTA cards. Not a loading

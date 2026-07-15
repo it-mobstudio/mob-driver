@@ -611,6 +611,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
             shipment: extra['shipment'] is OrderShipmentEntity
                 ? extra['shipment'] as OrderShipmentEntity
                 : null,
+            autoOpenRating: extra['autoOpenRating'] == true,
           );
         },
       ),

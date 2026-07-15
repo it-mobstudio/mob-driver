@@ -57,7 +57,15 @@ class _HomeHeaderState extends State<HomeHeader> {
         ? 'Tap to set your delivery address'
         : _selectedAddressText(selectedAddress);
 
-    final deliveryText = storeDeliveryLabel(storeStatus);
+    final isOpen = storeStatus?.isOpen ?? true;
+    // Figma shows the raw store message as a small subtitle above a bold
+    // "Currently closed" status line when closed — distinct from the shared
+    // storeDeliveryLabel() used by cart/checkout (which mirrors web's single
+    // raw-message line and has no dedicated "closed" wording of its own).
+    final closedSubtitle =
+        storeStatus != null && !isOpen ? storeStatus.message.trim() : '';
+    final deliveryText =
+        !isOpen ? 'Currently closed' : storeDeliveryLabel(storeStatus);
     final deliveryIcon = storeStatus?.isOpen == false
         ? 'assets/images/timer-delivery.svg'
         : 'assets/images/thunder.svg';
@@ -96,12 +104,26 @@ class _HomeHeaderState extends State<HomeHeader> {
                                   )
                                 : Column(
                                     key: ValueKey(
-                                      '$deliveryIcon|$deliveryText',
+                                      '$deliveryIcon|$deliveryText|$closedSubtitle',
                                     ),
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      if (closedSubtitle.isNotEmpty) ...[
+                                        Text(
+                                          closedSubtitle,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.inter(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            height: 18 / 12,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                      ],
                                       Row(
                                         children: [
                                           SvgPicture.asset(

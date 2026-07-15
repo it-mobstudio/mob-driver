@@ -192,11 +192,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   String _resolvedShipmentStatus(
       OrderEntity order, OrderShipmentEntity shipment) {
-    // Use order-level status (order_status from API) to match website display.
-    // Fall back to suborder status only when the order status is empty.
-    return order.status.trim().isNotEmpty
-        ? order.status.trim()
-        : shipment.status.trim();
+    // Shipment rows must reflect the suborder status. Order-level status is
+    // only a fallback for legacy responses with no suborders.
+    return shipment.status.trim().isNotEmpty
+        ? shipment.status.trim()
+        : order.status.trim();
   }
 
   String _shipmentTitle(
@@ -204,6 +204,19 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     final status = _resolvedShipmentStatus(order, shipment);
     if (status.isEmpty) {
       return index == 0 ? 'Processing' : 'Packing your order';
+    }
+    final normalized = _normalizedStatus(status);
+    final compact = normalized.replaceAll(' ', '');
+    if (normalized.contains('waiting') ||
+        normalized.contains('order placed') ||
+        compact == 'orderplaced') {
+      return 'Packing your order';
+    }
+    if (normalized.contains('vehicle assigned') ||
+        compact == 'vehicleassigned' ||
+        normalized.contains('order is packed') ||
+        compact == 'orderispacked') {
+      return 'Your order is packed';
     }
     if (_isDeliveredStatus(status)) return 'Delivered';
     if (_isOutForDeliveryStatus(status)) return 'Out for delivery';
@@ -215,18 +228,18 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   bool _isOutForDeliveryStatus(String status) {
-    final normalized =
-        status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    final normalized = _normalizedStatus(status);
     final compact = normalized.replaceAll(' ', '');
     return normalized.contains('out for delivery') ||
+        normalized.contains('out of delivery') ||
         compact.contains('outfordelivery') ||
+        compact.contains('outofdelivery') ||
         normalized.contains('out for shipment') ||
         normalized.contains('on the way');
   }
 
   bool _isDeliveredStatus(String status) {
-    final normalized =
-        status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    final normalized = _normalizedStatus(status);
     if (_isOutForDeliveryStatus(status)) {
       return false;
     }
@@ -234,6 +247,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         normalized.contains('completed') ||
         normalized.contains('received') ||
         normalized.contains('fulfilled');
+  }
+
+  String _normalizedStatus(String status) {
+    return status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
   }
 }
 

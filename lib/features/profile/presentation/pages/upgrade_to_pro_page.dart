@@ -204,6 +204,45 @@ class _UpgradeToProViewState extends State<_UpgradeToProView> {
             ),
           ),
           Positioned(
+            top: topPadding + 84,
+            left: 48,
+            right: 48,
+            child: Text.rich(
+              textAlign: TextAlign.center,
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'Special pricing',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFFED7546),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      height: 26 / 18,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' for construction\nprofessionals with ',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      height: 26 / 18,
+                    ),
+                  ),
+                  TextSpan(
+                    text: 'GSTIN',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFFED7546),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      height: 26 / 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
             top: topPadding + 24,
             left: 16,
             child: GestureDetector(

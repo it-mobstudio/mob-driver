@@ -99,6 +99,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
       extra: {
         'order': order,
         if (shipment != null) 'shipment': shipment,
+        'autoOpenRating': true,
       },
     );
   }
