@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/file_tile.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
 /// The "Send us your BOQ" intake form: file dropzone + picked-file tiles,
 /// note/brands fields, and the customer-details fields (name, phone,
@@ -395,52 +396,40 @@ class UploadScreen extends StatelessWidget {
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       validator: validator,
+      errorBuilder: (context, errorText) => Transform.translate(
+        offset: const Offset(-16, 0),
+        child: Text(
+          errorText,
+          style: AppTextFieldStyles.error,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
       minLines: minLines,
       maxLines: maxLines,
-      style: GoogleFonts.inter(
-        color: enabled ? MagicQuoteColors.navy : MagicQuoteColors.muted,
-        fontSize: 15,
+      style: AppTextFieldStyles.inputText.copyWith(
+        color: enabled
+            ? AppTextFieldColors.primaryText
+            : AppTextFieldColors.inputHint,
       ),
-      decoration: InputDecoration(
-        labelText: labelText,
+      decoration: appTextFieldDecoration(
+        label: labelText,
         hintText: hint,
-        floatingLabelBehavior: FloatingLabelBehavior.auto,
-        labelStyle: GoogleFonts.inter(
-          color: MagicQuoteColors.muted,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-        floatingLabelStyle: GoogleFonts.inter(
-          color: MagicQuoteColors.muted,
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-        ),
-        hintStyle:
-            GoogleFonts.inter(color: MagicQuoteColors.muted, fontSize: 14),
-        filled: true,
-        fillColor: enabled ? Colors.white : const Color(0xFFF5F7FA),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
-        border: _inputBorder(),
-        enabledBorder: _inputBorder(
-          color: hasError ? const Color(0xFFE14040) : MagicQuoteColors.border,
-        ),
-        disabledBorder: _inputBorder(),
-        focusedBorder: _inputBorder(color: MagicQuoteColors.blue, width: 1.6),
-        errorBorder: _inputBorder(color: const Color(0xFFE14040)),
-        focusedErrorBorder:
-            _inputBorder(color: const Color(0xFFE14040), width: 1.6),
+        floatingLabelBehavior: hasError
+            ? FloatingLabelBehavior.always
+            : FloatingLabelBehavior.auto,
+        enabled: enabled,
+      ).copyWith(
+        enabledBorder: hasError
+            ? OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: AppTextFieldColors.error,
+                  width: 1.5,
+                ),
+              )
+            : null,
       ),
-    );
-  }
-
-  OutlineInputBorder _inputBorder({
-    Color color = MagicQuoteColors.border,
-    double width = 1,
-  }) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: color, width: width),
     );
   }
 

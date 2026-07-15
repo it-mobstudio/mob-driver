@@ -10,7 +10,6 @@ import 'package:m_o_b_demand_side/features/address/domain/entities/address_entit
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
-
 Future<AddressLocationEntity?> showMapsLinkSheet(BuildContext context) {
   return showModalBottomSheet<AddressLocationEntity>(
     context: context,
@@ -91,9 +90,9 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
                 ),
                 const SizedBox(height: 28),
                 AppTextField(
+                  hintText: 'Maps link*',
                   controller: _linkController,
                   label: 'Maps link*',
-                  floatingLabelBehavior: FloatingLabelBehavior.always,
                   keyboardType: TextInputType.url,
                   onChanged: _onLinkChanged,
                 ),

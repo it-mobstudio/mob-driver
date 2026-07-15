@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
@@ -10,6 +11,7 @@ import 'package:m_o_b_demand_side/features/address/domain/repositories/address_r
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/constants/india_location_options.dart';
+import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
 const _navy = Color(0xFF0A243F);
@@ -27,7 +29,8 @@ final _gstRegex = RegExp(r'^[0-3|9][0-9][a-zA-Z0-9]{13}$');
 /// modal bottom sheet route is a sibling of the page's route in the
 /// Navigator/Overlay, not a descendant of the page's `BlocProvider`, so the
 /// ambient bloc wouldn't otherwise be reachable from inside it.
-Future<void> showProjectFormSheet(BuildContext context, {ProjectEntity? existing}) {
+Future<void> showProjectFormSheet(BuildContext context,
+    {ProjectEntity? existing}) {
   final bloc = context.read<ProfileBloc>();
   return showModalBottomSheet<void>(
     context: context,
@@ -103,7 +106,8 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
       _pincodeController.text = existing.pincode;
       _city = existing.city;
       _state = existing.state;
-      _addressTag = existing.addressTag.isNotEmpty ? existing.addressTag : 'Home';
+      _addressTag =
+          existing.addressTag.isNotEmpty ? existing.addressTag : 'Home';
       _useSavedAddress = false;
     } else {
       _loadSavedAddresses();
@@ -250,8 +254,9 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
     if (_isEdit) {
       final existing = widget.existing!;
       bloc.add(ProjectUpdateRequested(
-        projectId:
-            existing.projectId.isNotEmpty ? existing.projectId : existing.id.toString(),
+        projectId: existing.projectId.isNotEmpty
+            ? existing.projectId
+            : existing.id.toString(),
         projectName: _projectNameController.text.trim(),
         city: _projectCity,
         address: addressPayload,
@@ -281,8 +286,7 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content:
-                    Text(_isEdit ? 'Project updated' : 'Project created'),
+                content: Text(_isEdit ? 'Project updated' : 'Project created'),
               ),
             );
           } else if (state is ProjectSaveError) {
@@ -293,79 +297,112 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
         },
         builder: (context, state) {
           final saving = state is ProjectSaving;
-          return Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(context).height * 0.92,
-            ),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          final screenHeight = MediaQuery.sizeOf(context).height;
+          final availableHeight = screenHeight - bottomInset;
+          final maxSheetHeight =
+              (availableHeight - 60).clamp(0.0, screenHeight).toDouble();
+          final sheetHeight =
+              (screenHeight * .80).clamp(0.0, maxSheetHeight).toDouble();
+
+          return SizedBox(
+            height: sheetHeight + 60,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 8, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _isEdit ? 'Edit project details' : 'Add new project',
-                          style: GoogleFonts.inter(
-                            color: _navy,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed:
-                            saving ? null : () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close, color: _navy),
-                      ),
-                    ],
-                  ),
-                ),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Form(
-                      key: _formKey,
-                      autovalidateMode: _submitAttempted
-                          ? AutovalidateMode.onUserInteraction
-                          : AutovalidateMode.disabled,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _imagePicker(),
-                          const SizedBox(height: 16),
-                          AppTextField(
-                            label: 'Project name*',
-                            controller: _projectNameController,
-                            validator: _requiredValidator,
-                          ),
-                          const SizedBox(height: 12),
-                          _tapField(
-                            label: 'Project city*',
-                            value: _projectCity,
-                            onTap: () => _pickCity(isProjectCity: true),
-                            hasError: _pickerErrors.contains('project_city'),
-                          ),
-                          const SizedBox(height: 20),
-                          const Divider(height: 1, color: Color(0xFFE9E9E9)),
-                          const SizedBox(height: 16),
-                          if (!_isEdit && _useSavedAddress)
-                            _savedAddressSection()
-                          else
-                            _newAddressForm(),
-                        ],
+                Positioned(
+                  top: 0,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: saving ? null : () => Navigator.of(context).pop(),
+                    child: Opacity(
+                      opacity: saving ? .5 : 1,
+                      child: SvgPicture.asset(
+                        'assets/images/close.svg',
+                        width: 44,
+                        height: 44,
                       ),
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: _submitButton(saving),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: sheetHeight,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _isEdit
+                                  ? 'Edit project details'
+                                  : 'Add new project',
+                              style: GoogleFonts.inter(
+                                color: _navy,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Flexible(
+                          child: SingleChildScrollView(
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: Form(
+                              key: _formKey,
+                              autovalidateMode: _submitAttempted
+                                  ? AutovalidateMode.onUserInteraction
+                                  : AutovalidateMode.disabled,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _imagePicker(),
+                                  const SizedBox(height: 16),
+                                  AppTextField(
+                                    label: 'Project name*',
+                                    controller: _projectNameController,
+                                    validator: _requiredValidator,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _tapField(
+                                    label: 'Project city*',
+                                    value: _projectCity,
+                                    onTap: () => _pickCity(isProjectCity: true),
+                                    hasError:
+                                        _pickerErrors.contains('project_city'),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  const Divider(
+                                    height: 1,
+                                    color: Color(0xFFE9E9E9),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  if (!_isEdit && _useSavedAddress)
+                                    _savedAddressSection()
+                                  else
+                                    _newAddressForm(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                          child: _submitButton(saving),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -523,67 +560,12 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
   Widget _savedAddressCard(AddressEntity address) {
     final id = int.tryParse(address.id) ?? 0;
     final selected = _selectedAddressId == id;
-    return InkWell(
-      onTap: () => setState(() => _selectedAddressId = id),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.only(top: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEFF5FF) : Colors.white,
-          border: Border.all(
-            color: selected ? _blue : AppTextFieldColors.inputBorder,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected ? _blue : _muted,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    address.name,
-                    style: GoogleFonts.inter(
-                      color: _navy,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    address.displayAddress,
-                    style: GoogleFonts.inter(color: _muted, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            if (address.addressTag.isNotEmpty)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F0F0),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  address.addressTag,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: _navy,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: AddressPickerCard(
+        address: address,
+        isSelected: selected,
+        onTap: () => setState(() => _selectedAddressId = id),
       ),
     );
   }
@@ -769,7 +751,8 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
           backgroundColor: _blue,
           foregroundColor: Colors.white,
           disabledBackgroundColor: const Color(0xFFDFE4EC),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: saving
             ? const SizedBox(
@@ -782,7 +765,8 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
               )
             : Text(
                 _isEdit ? 'Save changes' : 'Add project',
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+                style: GoogleFonts.inter(
+                    fontSize: 14, fontWeight: FontWeight.w600),
               ),
       ),
     );
@@ -906,7 +890,8 @@ class _OptionPickerSheetState extends State<_OptionPickerSheet> {
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
-                  trailing: selected ? const Icon(Icons.check, color: _blue) : null,
+                  trailing:
+                      selected ? const Icon(Icons.check, color: _blue) : null,
                   onTap: () => Navigator.of(context).pop(option),
                 );
               },

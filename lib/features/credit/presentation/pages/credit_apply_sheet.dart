@@ -196,9 +196,8 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                             controller: _businessName,
                                             focusNode: _businessNameFocus,
                                             label: 'Business name*',
+                                            hintText: 'Business name*',
                                             showClearButton: false,
-                                            floatingLabelBehavior:
-                                                FloatingLabelBehavior.always,
                                             textInputAction:
                                                 TextInputAction.next,
                                             onFieldSubmitted: (_) =>
@@ -214,14 +213,14 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                             controller: _phone,
                                             focusNode: _phoneFocus,
                                             label: 'Business mobile (for OTP)*',
+                                            hintText:
+                                                'Business mobile (for OTP)*',
                                             keyboardType: TextInputType.phone,
                                             textInputAction:
                                                 TextInputAction.next,
                                             onFieldSubmitted: (_) =>
                                                 _gstFocus.requestFocus(),
                                             showClearButton: false,
-                                            floatingLabelBehavior:
-                                                FloatingLabelBehavior.always,
                                             inputFormatters: [
                                               FilteringTextInputFormatter
                                                   .digitsOnly,
@@ -242,6 +241,7 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                           AppTextField(
                                             controller: _gst,
                                             label: 'GSTIN*',
+                                            hintText: 'GSTIN*',
                                             focusNode: _gstFocus,
                                             textInputAction:
                                                 TextInputAction.done,
@@ -249,8 +249,6 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                                 FocusScope.of(context)
                                                     .unfocus(),
                                             showClearButton: false,
-                                            floatingLabelBehavior:
-                                                FloatingLabelBehavior.always,
                                             textCapitalization:
                                                 TextCapitalization.characters,
                                             inputFormatters: [

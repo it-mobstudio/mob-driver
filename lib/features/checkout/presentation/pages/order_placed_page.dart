@@ -13,6 +13,8 @@ import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_ent
 import 'package:m_o_b_demand_side/features/checkout/presentation/bloc/checkout_bloc.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
+import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
 
 class OrderPlacedPage extends StatefulWidget {
   static const routeName = 'OrderPlacedPage';
@@ -51,6 +53,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
   late GoRouter _router;
   Timer? _navTimer;
   PlacedOrderEntity? _resolvedOrder;
+  PlacedOrderEntity? _resolvedOrder;
 
   @override
   void didChangeDependencies() {
@@ -84,8 +87,10 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
       if (mounted) _cartBloc.add(CartLoadRequested());
     });
     _navTimer = Timer(const Duration(seconds: 3), _navigateToOrderTracking);
+    _navTimer = Timer(const Duration(seconds: 3), _navigateToOrderTracking);
   }
 
+  void _navigateToOrderTracking() {
   void _navigateToOrderTracking() {
     if (!mounted) return;
     final placedOrder = widget.order ?? _resolvedOrder;
@@ -94,7 +99,18 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
         : _fallbackOrderEntity(widget.orderId);
     final shipment = _firstShipmentBySuborderId(order.shipments);
 
+    final placedOrder = widget.order ?? _resolvedOrder;
+    final order = placedOrder != null
+        ? _orderEntityFromPlaced(placedOrder)
+        : _fallbackOrderEntity(widget.orderId);
+    final shipment = _firstShipmentBySuborderId(order.shipments);
+
     _router.go(
+      OrderTrackingPage.routePath,
+      extra: {
+        'order': order,
+        if (shipment != null) 'shipment': shipment,
+      },
       OrderTrackingPage.routePath,
       extra: {
         'order': order,
@@ -122,6 +138,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
       child: BlocBuilder<CheckoutBloc, CheckoutState>(
         builder: (context, state) {
           final order = state is CheckoutOrderPlaced ? state.order : null;
+          if (order != null) _resolvedOrder = order;
           if (order != null) _resolvedOrder = order;
           return _scaffold(context, order);
         },
