@@ -213,8 +213,6 @@ class _ProductListingPageState extends State<ProductListingPage> {
         return 'low_price';
       case ProductSortOption.priceHighToLow:
         return 'high_price';
-      case ProductSortOption.ratings:
-        return 'ratings';
     }
   }
 

@@ -183,8 +183,6 @@ class _BrandProductSearchPageState extends State<BrandProductSearchPage> {
         return 'low_price';
       case ProductSortOption.priceHighToLow:
         return 'high_price';
-      case ProductSortOption.ratings:
-        return 'ratings';
     }
   }
 

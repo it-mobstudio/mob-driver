@@ -259,6 +259,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         : const <String, int>{};
     final cartUpdatingKey =
         cartState is CartLoaded ? cartState.updatingItemKey : null;
+    final isProfessional =
+        cartState is CartLoaded && cartState.summary.account.isProfessional;
 
     return BlocProvider<ProductBloc>(
       create: (_) =>
@@ -326,6 +328,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                       const SizedBox(height: 12),
                                       ProductInfoBlock(
                                         product: displayProduct,
+                                        isProfessional: isProfessional,
                                       ),
                                       VariantOptionsSection(
                                         product: product,
@@ -568,9 +571,9 @@ class _ProductShareSheet extends StatelessWidget {
                       'Share the product details',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF0A243F),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        height: 22 / 16,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        height: 22 / 15,
                       ),
                     ),
                   ),
@@ -587,6 +590,7 @@ class _ProductShareSheet extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
               const Divider(height: 1),
               const SizedBox(height: 18),
               Row(
