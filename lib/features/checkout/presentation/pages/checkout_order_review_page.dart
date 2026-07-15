@@ -419,7 +419,7 @@ class _ReviewSellerCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sold by $sellerCode',
+                  'Routing ID $sellerCode',
                   style: GoogleFonts.inter(
                     color: const Color(0xFF67696D),
                     fontSize: 11,

@@ -11,7 +11,8 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/checkout/domain/entities/checkout_entity.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/bloc/checkout_bloc.dart';
-import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
+import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
 
 class OrderPlacedPage extends StatefulWidget {
   static const routeName = 'OrderPlacedPage';
@@ -49,6 +50,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
   late final CartBloc _cartBloc;
   late GoRouter _router;
   Timer? _navTimer;
+  PlacedOrderEntity? _resolvedOrder;
 
   @override
   void didChangeDependencies() {
@@ -81,22 +83,23 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _cartBloc.add(CartLoadRequested());
     });
-    _navTimer = Timer(const Duration(seconds: 4), _navigateToOrderDetail);
+    _navTimer = Timer(const Duration(seconds: 3), _navigateToOrderTracking);
   }
 
-  void _navigateToOrderDetail() {
+  void _navigateToOrderTracking() {
     if (!mounted) return;
-    final orderId = widget.order?.orderId ?? widget.orderId;
-    // A single atomic navigation — do not chain another go()/push() right
-    // after this one. Firing two Navigator page-list mutations back to back
-    // with no frame in between raced go_router's own transition and threw
-    // "Duplicate GlobalKey" / "deactivated widget" errors. This replaces the
-    // whole stack with just OrderDetailPage; canPop() is false afterward,
-    // so _OrderDetailHeader's back button falls back to a single, separate
-    // context.go('/homepage') call of its own when tapped later.
+    final placedOrder = widget.order ?? _resolvedOrder;
+    final order = placedOrder != null
+        ? _orderEntityFromPlaced(placedOrder)
+        : _fallbackOrderEntity(widget.orderId);
+    final shipment = _firstShipmentBySuborderId(order.shipments);
+
     _router.go(
-      OrderDetailPage.routePath,
-      extra: orderId.isNotEmpty ? orderId : null,
+      OrderTrackingPage.routePath,
+      extra: {
+        'order': order,
+        if (shipment != null) 'shipment': shipment,
+      },
     );
   }
 
@@ -119,6 +122,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
       child: BlocBuilder<CheckoutBloc, CheckoutState>(
         builder: (context, state) {
           final order = state is CheckoutOrderPlaced ? state.order : null;
+          if (order != null) _resolvedOrder = order;
           return _scaffold(context, order);
         },
       ),
@@ -176,6 +180,115 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
       ),
     );
   }
+}
+
+OrderShipmentEntity? _firstShipmentBySuborderId(
+  List<OrderShipmentEntity> shipments,
+) {
+  if (shipments.isEmpty) return null;
+  final sorted = [...shipments];
+  sorted.sort((a, b) {
+    final suffixCompare =
+        _suborderSuffixNumber(a.id).compareTo(_suborderSuffixNumber(b.id));
+    if (suffixCompare != 0) return suffixCompare;
+    return a.id.compareTo(b.id);
+  });
+  return sorted.first;
+}
+
+int _suborderSuffixNumber(String id) {
+  final match = RegExp(r'_(\d+)$').firstMatch(id.trim());
+  if (match == null) return 999999;
+  return int.tryParse(match.group(1) ?? '') ?? 999999;
+}
+
+OrderEntity _orderEntityFromPlaced(PlacedOrderEntity order) {
+  final shipments = order.suborders.map(_shipmentEntityFromPlaced).toList();
+  return OrderEntity(
+    id: order.orderId,
+    orderNumber:
+        order.orderNumber.isNotEmpty ? order.orderNumber : order.orderId,
+    status: order.status,
+    createdAt: order.createdAt,
+    total: order.total,
+    items: order.items.map(_itemEntityFromPlaced).toList(),
+    shippingAddress: order.deliveryAddress?.fullAddress ?? '',
+    projectName: '',
+    rewardMessage: order.pointsSummary?.message ?? '',
+    isQuickCommerceOrder: false,
+    shipments: shipments.isNotEmpty
+        ? shipments
+        : [
+            OrderShipmentEntity(
+              id: '${order.orderId}_01',
+              status: order.status,
+              deliveryDate: '',
+              createdAt: order.createdAt,
+              items: order.items.map(_itemEntityFromPlaced).toList(),
+            ),
+          ],
+    subTotal: order.subTotal,
+    sgst: order.sgst,
+    cgst: order.cgst,
+    shippingFee: order.shippingFee,
+    deliveryName: order.deliveryAddress?.name ?? '',
+    deliveryPhone: order.deliveryAddress?.phoneNumber ?? '',
+    paymentMethods: order.payments
+        .map((payment) => payment.gateway)
+        .where((gateway) => gateway.isNotEmpty)
+        .toList(),
+    rewardPoints: order.pointsSummary?.totalPoints ?? 0,
+  );
+}
+
+OrderEntity _fallbackOrderEntity(String orderId) {
+  final id = orderId.trim();
+  return OrderEntity(
+    id: id,
+    orderNumber: id,
+    status: '',
+    createdAt: '',
+    total: 0,
+    items: const [],
+    shippingAddress: '',
+    projectName: '',
+    rewardMessage: '',
+    isQuickCommerceOrder: false,
+    shipments: id.isEmpty
+        ? const []
+        : [
+            OrderShipmentEntity(
+              id: '${id}_01',
+              status: '',
+              deliveryDate: '',
+              items: const [],
+            ),
+          ],
+  );
+}
+
+OrderShipmentEntity _shipmentEntityFromPlaced(PlacedSubOrderEntity suborder) {
+  return OrderShipmentEntity(
+    id: suborder.suborderId,
+    status: suborder.status,
+    deliveryDate: suborder.deliveryDate,
+    deliverySlot: suborder.deliverySlot,
+    createdAt: '',
+    vendorName: suborder.vendorName,
+    subTotal: suborder.subTotal,
+    total: suborder.total,
+    items: suborder.products.map(_itemEntityFromPlaced).toList(),
+  );
+}
+
+OrderItemEntity _itemEntityFromPlaced(PlacedOrderProductEntity product) {
+  return OrderItemEntity(
+    title: product.productName,
+    imageUrl: product.imageUrl,
+    qty: product.quantity,
+    unitPrice: product.price,
+    mobSku: product.mobSku,
+  );
 }
 
 class _PointsPill extends StatelessWidget {

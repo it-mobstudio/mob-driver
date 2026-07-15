@@ -339,9 +339,16 @@ class ProductInfoBlock extends StatelessWidget {
   const ProductInfoBlock({
     super.key,
     required this.product,
+    this.isProfessional = false,
   });
 
   final ProductModel product;
+
+  /// Mirrors web's product-details page: the "Best price" pro badge shows
+  /// next to the price whenever the signed-in user is a mobPRO customer
+  /// (`mobProUser`/`is_professional`), independent of whether this
+  /// particular product happens to have a discount.
+  final bool isProfessional;
 
   @override
   Widget build(BuildContext context) {
@@ -406,6 +413,14 @@ class ProductInfoBlock extends StatelessWidget {
                     if (discount > 0) ...[
                       const SizedBox(width: 16),
                       _DiscountBadge(discount: discount),
+                    ],
+                    if (isProfessional) ...[
+                      const SizedBox(width: 8),
+                      SvgPicture.asset(
+                        'assets/images/pro-bestprice.svg',
+                        height: 24,
+                        width: 110,
+                      ),
                     ],
                   ],
                 ),

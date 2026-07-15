@@ -5,7 +5,7 @@ enum ProductSortOption {
   popularity,
   priceLowToHigh,
   priceHighToLow,
-  ratings,
+  // ratings,
 }
 
 extension ProductSortOptionLabel on ProductSortOption {
@@ -17,8 +17,8 @@ extension ProductSortOptionLabel on ProductSortOption {
         return 'Price - low to high';
       case ProductSortOption.priceHighToLow:
         return 'Price - high to low';
-      case ProductSortOption.ratings:
-        return 'Ratings';
+      // case ProductSortOption.ratings:
+      // return 'Ratings';
     }
   }
 }
@@ -160,8 +160,8 @@ class _SortOptionIcon extends StatelessWidget {
         return _RupeeArrowIcon(color: color, upward: false);
       case ProductSortOption.priceHighToLow:
         return _RupeeArrowIcon(color: color, upward: true);
-      case ProductSortOption.ratings:
-        return Icon(Icons.star_border_rounded, size: 18, color: color);
+      // case ProductSortOption.ratings:
+      // return Icon(Icons.star_border_rounded, size: 18, color: color);
     }
   }
 }

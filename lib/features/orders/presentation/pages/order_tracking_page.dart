@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' hide TextDirection;
@@ -254,6 +256,38 @@ String _currentTrackingTimelineTime(
   return '';
 }
 
+List<OrderShipmentEntity> _sortShipmentsBySuborderId(
+  List<OrderShipmentEntity> shipments,
+) {
+  final sorted = [...shipments];
+  sorted.sort((a, b) {
+    final suffixCompare =
+        _suborderSuffixNumber(a.id).compareTo(_suborderSuffixNumber(b.id));
+    if (suffixCompare != 0) return suffixCompare;
+    return a.id.compareTo(b.id);
+  });
+  return sorted;
+}
+
+int _suborderSuffixNumber(String id) {
+  final match = RegExp(r'_(\d+)$').firstMatch(id.trim());
+  if (match == null) return 999999;
+  return int.tryParse(match.group(1) ?? '') ?? 999999;
+}
+
+OrderShipmentEntity? _selectedInitialShipment(
+  OrderShipmentEntity? requestedShipment,
+  List<OrderShipmentEntity> sortedShipments,
+) {
+  if (requestedShipment != null) {
+    for (final shipment in sortedShipments) {
+      if (shipment.id == requestedShipment.id) return shipment;
+    }
+    return requestedShipment;
+  }
+  return sortedShipments.firstOrNull;
+}
+
 class OrderTrackingPage extends StatefulWidget {
   static const String routeName = 'OrderTrackingPage';
   static const String routePath = '/order-tracking';
@@ -272,17 +306,28 @@ class OrderTrackingPage extends StatefulWidget {
 }
 
 class _OrderTrackingPageState extends State<OrderTrackingPage> {
-  late bool _hasReview = widget.shipment?.hasReview ?? false;
+  late final List<OrderShipmentEntity> _shipments =
+      _sortShipmentsBySuborderId(widget.order?.shipments ?? const []);
+  late OrderShipmentEntity? _selectedShipment =
+      _selectedInitialShipment(widget.shipment, _shipments);
+  late bool _hasReview = _selectedShipment?.hasReview ?? false;
   Map<String, dynamic>? _trackOrderBody;
+  bool _shipmentMenuOpen = false;
+  Timer? _ratingPromptTimer;
+  bool _ratingPromptShown = false;
 
   @override
   void initState() {
     super.initState();
     _loadTrackOrder();
+    _ratingPromptTimer = Timer(
+      const Duration(seconds: 3),
+      _openAutoRatingSheet,
+    );
   }
 
   Future<void> _loadTrackOrder() async {
-    final suborderId = widget.shipment?.id.trim() ?? '';
+    final suborderId = _selectedShipment?.id.trim() ?? '';
     if (suborderId.isEmpty) return;
 
     final (body, failure) = await sl<OrdersRepository>().trackOrder(suborderId);
@@ -295,10 +340,59 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     debugPrint('track_order response: $_trackOrderBody');
   }
 
+  Future<void> _openAutoRatingSheet() async {
+    if (!mounted || _ratingPromptShown || _hasReview) return;
+    if (_shipmentMenuOpen) {
+      _ratingPromptTimer = Timer(
+        const Duration(seconds: 1),
+        _openAutoRatingSheet,
+      );
+      return;
+    }
+
+    final suborderId = _selectedShipment?.id.trim() ?? '';
+    if (suborderId.isEmpty) return;
+
+    _ratingPromptShown = true;
+    final submitted = await showOrderRatingSheet(
+      context,
+      suborderId: suborderId,
+    );
+    if (!mounted) return;
+    if (submitted) setState(() => _hasReview = true);
+  }
+
+  void _selectShipment(OrderShipmentEntity shipment) {
+    if (_selectedShipment?.id == shipment.id) {
+      setState(() => _shipmentMenuOpen = false);
+      return;
+    }
+    setState(() {
+      _selectedShipment = shipment;
+      _hasReview = shipment.hasReview;
+      _trackOrderBody = null;
+      _shipmentMenuOpen = false;
+    });
+    _loadTrackOrder();
+  }
+
+  @override
+  void dispose() {
+    _ratingPromptTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final order = widget.order;
-    final shipment = widget.shipment;
+    final shipment = _selectedShipment;
+    final shipments = _shipments;
+    final selectedShipmentIndex = shipments.indexWhere(
+      (candidate) => candidate.id == shipment?.id,
+    );
+    final selectedShipmentNumber =
+        selectedShipmentIndex >= 0 ? selectedShipmentIndex + 1 : 1;
+    final showShipmentSelector = shipments.length > 1;
     final items = shipment?.items.isNotEmpty == true
         ? shipment!.items
         : order?.items ?? const <OrderItemEntity>[];
@@ -351,91 +445,346 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        child: Column(
+        child: Stack(
           children: [
-            _TrackingHeader(title: trackingState.headerTitle),
-            Expanded(
-              child: SingleChildScrollView(
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF1F1F2),
-                  ),
-                  child: Column(
-                    children: [
-                      _TrackingHeroSection(
-                        state: trackingState,
-                        deliveryDate: deliveryDate,
-                        deliverySlot: deliverySlot,
-                        isQuickOrder: isQuickOrder,
-                        arrivingIn: arrivingIn,
-                        normalStatusTime: normalStatusTime,
-                        onNormalStatusTap: isQuickOrder
-                            ? null
-                            : () => _showOrderStatusSheet(
-                                  context,
-                                  timelineItems,
+            Column(
+              children: [
+                _TrackingHeader(title: trackingState.headerTitle),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFFFFF),
+                      ),
+                      child: Column(
+                        children: [
+                          if (showShipmentSelector) ...[
+                            Container(
+                              width: double.infinity,
+                              color: Colors.white,
+                              padding: const EdgeInsets.only(
+                                top: 8,
+                                bottom: 8,
+                              ),
+                              child: _ShipmentSelectorPill(
+                                label: 'Shipment $selectedShipmentNumber',
+                                expanded: _shipmentMenuOpen,
+                                onTap: () => setState(
+                                  () => _shipmentMenuOpen = !_shipmentMenuOpen,
                                 ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
-                        child: Column(
-                          children: [
-                            if (!trackingState.isDelivered) ...[
-                              // if (vehicleAssigned) ...[
-                              //   _DeliveryPartnerCard(vendorName: vendorName),
-                              //   const SizedBox(height: 12),
-                              // ],
-                              _DeliveryAddressCard(
-                                address: address,
-                                deliveryName: deliveryName,
-                                deliveryPhone: deliveryPhone,
                               ),
-                              const SizedBox(height: 12),
-                            ],
-                            if (trackingState.canDownloadInvoice &&
-                                invoiceUrl.isNotEmpty) ...[
-                              _DownloadInvoiceButton(invoiceUrl: invoiceUrl),
-                              const SizedBox(height: 12),
-                            ],
-                            _TrackingItemsCard(
-                              items: items,
-                              orderNumber: orderNumber,
-                              onViewSummary: order == null || shipment == null
-                                  ? null
-                                  : () => context.push(
-                                        '/order-detail',
-                                        extra: order.id,
-                                      ),
                             ),
-                            const SizedBox(height: 12),
-                            const _TrackingHelpCard(),
-                            if (!_hasReview) ...[
-                              const SizedBox(height: 12),
-                              _TrackingRatingCard(
-                                suborderId: orderNumber,
-                                onReviewSubmitted: () =>
-                                    setState(() => _hasReview = true),
-                              ),
-                            ],
-                            const SizedBox(height: 20),
-                            ReferralEarnCard(
-                              onTap: () {
-                                context.push('/refer-a-friend');
-                              },
-                              backgroundSvg: 'assets/images/giftbox.webp',
-                            ),
-                            const SizedBox(height: 32),
                           ],
-                        ),
+                          _TrackingHeroSection(
+                            state: trackingState,
+                            deliveryDate: deliveryDate,
+                            deliverySlot: deliverySlot,
+                            isQuickOrder: isQuickOrder,
+                            arrivingIn: arrivingIn,
+                            normalStatusTime: normalStatusTime,
+                            onNormalStatusTap: isQuickOrder
+                                ? null
+                                : () => _showOrderStatusSheet(
+                                      context,
+                                      timelineItems,
+                                    ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
+                            child: Column(
+                              children: [
+                                if (!trackingState.isDelivered) ...[
+                                  // if (vehicleAssigned) ...[
+                                  //   _DeliveryPartnerCard(vendorName: vendorName),
+                                  //   const SizedBox(height: 12),
+                                  // ],
+                                  _DeliveryAddressCard(
+                                    address: address,
+                                    deliveryName: deliveryName,
+                                    deliveryPhone: deliveryPhone,
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                                if (trackingState.canDownloadInvoice &&
+                                    invoiceUrl.isNotEmpty) ...[
+                                  _DownloadInvoiceButton(
+                                      invoiceUrl: invoiceUrl),
+                                  const SizedBox(height: 12),
+                                ],
+                                _TrackingItemsCard(
+                                  items: items,
+                                  orderNumber: orderNumber,
+                                  onViewSummary:
+                                      order == null || shipment == null
+                                          ? null
+                                          : () => context.push(
+                                                '/order-detail',
+                                                extra: order.id,
+                                              ),
+                                ),
+                                const SizedBox(height: 12),
+                                const _TrackingHelpCard(),
+                                if (!_hasReview) ...[
+                                  const SizedBox(height: 12),
+                                  _TrackingRatingCard(
+                                    suborderId: orderNumber,
+                                    onReviewSubmitted: () =>
+                                        setState(() => _hasReview = true),
+                                  ),
+                                ],
+                                const SizedBox(height: 20),
+                                ReferralEarnCard(
+                                  onTap: () {
+                                    context.push('/refer-a-friend');
+                                  },
+                                  backgroundSvg: 'assets/images/giftbox.webp',
+                                ),
+                                const SizedBox(height: 32),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
+              ],
+            ),
+            if (_shipmentMenuOpen) ...[
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() => _shipmentMenuOpen = false),
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.72),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 52,
+                left: 0,
+                right: 0,
+                child: _ShipmentSelectorPill(
+                  label: 'Shipment $selectedShipmentNumber',
+                  expanded: true,
+                  onTap: () => setState(() => _shipmentMenuOpen = false),
+                ),
+              ),
+              Positioned(
+                top: 96,
+                left: 16,
+                right: 16,
+                child: _ShipmentDropdownCard(
+                  shipments: shipments,
+                  selectedShipment: shipment,
+                  onSelected: _selectShipment,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShipmentSelectorPill extends StatelessWidget {
+  const _ShipmentSelectorPill({
+    required this.label,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.fromLTRB(18, 0, 14, 0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.10),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  color: _TrackingColors.navy,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 16 / 13,
+                ),
+              ),
+              const SizedBox(width: 8),
+              SvgPicture.asset(
+                expanded
+                    ? 'assets/images/upicon.svg'
+                    : 'assets/images/downicon.svg',
+                width: 18,
+                height: 18,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ShipmentDropdownCard extends StatelessWidget {
+  const _ShipmentDropdownCard({
+    required this.shipments,
+    required this.selectedShipment,
+    required this.onSelected,
+  });
+
+  final List<OrderShipmentEntity> shipments;
+  final OrderShipmentEntity? selectedShipment;
+  final ValueChanged<OrderShipmentEntity> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < shipments.length; i++) ...[
+            _ShipmentDropdownRow(
+              shipment: shipments[i],
+              shipmentNumber: i + 1,
+              selected: shipments[i].id == selectedShipment?.id,
+              onTap: () => onSelected(shipments[i]),
+            ),
+            if (i != shipments.length - 1) const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ShipmentDropdownRow extends StatelessWidget {
+  const _ShipmentDropdownRow({
+    required this.shipment,
+    required this.shipmentNumber,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final OrderShipmentEntity shipment;
+  final int shipmentNumber;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 72),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F7F7),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            _ShipmentRadio(selected: selected),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Shipment $shipmentNumber',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: _TrackingColors.navy,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      height: 22 / 16,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${shipment.items.length} items - ${_shipmentStatusLabel(shipment.status)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF767C8F),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      height: 20 / 14,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  String _shipmentStatusLabel(String status) {
+    final value = status.trim();
+    if (value.isEmpty) return _TrackingState.packing.subtitle;
+    return _TrackingState.fromStatus(value).subtitle;
+  }
+}
+
+class _ShipmentRadio extends StatelessWidget {
+  const _ShipmentRadio({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? _TrackingColors.navy : const Color(0xFF9AA6B2),
+          width: 2,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: selected
+          ? Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: _TrackingColors.navy,
+                shape: BoxShape.circle,
+              ),
+            )
+          : null,
     );
   }
 }
@@ -463,7 +812,13 @@ class _TrackingHeader extends StatelessWidget {
               child: IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints.expand(),
-                onPressed: () => context.pop(),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/orders');
+                  }
+                },
                 icon: const AppBackIcon(),
               ),
             ),

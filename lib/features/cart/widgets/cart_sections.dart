@@ -587,7 +587,7 @@ class SellerSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sold by $sellerCode',
+                  'Routing ID $sellerCode',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
