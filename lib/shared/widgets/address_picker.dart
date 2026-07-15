@@ -53,8 +53,6 @@ class AddressPickerBody extends StatelessWidget {
   final VoidCallback? onMapsLink;
 
   static const _navy = Color(0xFF0A243F);
-  static const _blue = Color(0xFF0360E5);
-  static const _border = Color(0xFFDFE4EC);
 
   @override
   Widget build(BuildContext context) {
@@ -229,23 +227,23 @@ class AddressPickerBody extends StatelessWidget {
                   ),
                 )
               else
-               SizedBox(
-  width: 16,
-  height: 16,
-  child: svgAsset.toLowerCase().endsWith('.svg')
-      ? SvgPicture.asset(
-          svgAsset,
-          width: 16,
-          height: 16,
-          fit: BoxFit.contain,
-        )
-      : Image.asset(
-          svgAsset,
-          width: 16,
-          height: 16,
-          fit: BoxFit.contain,
-        ),
-),
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: svgAsset.toLowerCase().endsWith('.svg')
+                      ? SvgPicture.asset(
+                          svgAsset,
+                          width: 16,
+                          height: 16,
+                          fit: BoxFit.contain,
+                        )
+                      : Image.asset(
+                          svgAsset,
+                          width: 16,
+                          height: 16,
+                          fit: BoxFit.contain,
+                        ),
+                ),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -436,16 +434,16 @@ class AddressPickerCard extends StatelessWidget {
     super.key,
     required this.address,
     required this.onTap,
-    required this.onEdit,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
     this.isSelected = false,
   });
 
   final AddressEntity address;
   final bool isSelected;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   static const _navy = Color(0xFF0A243F);
   static const _muted = Color(0xFF596378);
@@ -534,37 +532,42 @@ class AddressPickerCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 16),
-            PopupMenuButton<String>(
-              padding: EdgeInsets.zero,
-              offset: const Offset(0, 30),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onSelected: (value) {
-                if (value == 'edit') onEdit();
-                if (value == 'delete') onDelete();
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'edit', child: Text('Edit address')),
-                PopupMenuItem(value: 'delete', child: Text('Delete address')),
-              ],
-              child: Container(
-                width: 26,
-                height: 26,
-                alignment: Alignment.center,
-                // decoration: BoxDecoration(
-                //   color: Colors.white,
-                //   shape: BoxShape.circle,
-                //   border: Border.all(color: const Color(0xFFD9DEE8)),
-                // ),
-                child: SvgPicture.asset(
-                  'assets/images/Menu.svg',
-                  width: 12,
-                  height: 15,
+            if (onEdit != null || onDelete != null) ...[
+              const SizedBox(width: 16),
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                offset: const Offset(0, 30),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                onSelected: (value) {
+                  if (value == 'edit') onEdit?.call();
+                  if (value == 'delete') onDelete?.call();
+                },
+                itemBuilder: (context) => [
+                  if (onEdit != null)
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit address'),
+                    ),
+                  if (onDelete != null)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete address'),
+                    ),
+                ],
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  alignment: Alignment.center,
+                  child: SvgPicture.asset(
+                    'assets/images/Menu.svg',
+                    width: 12,
+                    height: 15,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

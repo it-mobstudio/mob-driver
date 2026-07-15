@@ -118,10 +118,12 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
             centerTitle: true,
             title: Text(
               'Personal info',
+              textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 color: const Color(0xFF0A243F),
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
+                height: 1.47,
               ),
             ),
             bottom: const PreferredSize(
@@ -185,14 +187,17 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
                 width: double.infinity,
                 padding: EdgeInsets.fromLTRB(
                   10,
-                  12,
+                  16,
                   10,
                   10 + MediaQuery.of(context).padding.bottom,
                 ),
-                decoration: const BoxDecoration(
+                decoration: const ShapeDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
                   ),
                 ),
                 child: SizedBox(
@@ -220,10 +225,10 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
                         : Text(
                             'Update profile',
                             style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                height: 1.5),
                           ),
                   ),
                 ),

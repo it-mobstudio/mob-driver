@@ -223,6 +223,7 @@ InputDecoration appTextFieldDecoration({
     floatingLabelStyle: AppTextFieldStyles.stateLabel,
     hintStyle: AppTextFieldStyles.hint,
     errorStyle: AppTextFieldStyles.error,
+    errorMaxLines: 2,
     prefixText: prefixText,
     prefixStyle: AppTextFieldStyles.inputText,
     filled: true,
@@ -232,7 +233,6 @@ InputDecoration appTextFieldDecoration({
     isDense: true,
     constraints: const BoxConstraints(
       minHeight: 48,
-      maxHeight: 48,
     ),
     contentPadding: const EdgeInsets.symmetric(
       horizontal: 16,
@@ -256,6 +256,7 @@ InputDecoration appTextFieldDecoration({
     ),
     errorBorder: _inputBorder(
       color: AppTextFieldColors.error,
+      width: 1.5,
     ),
     focusedErrorBorder: _inputBorder(
       color: AppTextFieldColors.error,
@@ -279,7 +280,7 @@ abstract final class AppTextFieldColors {
   static const Color inputHint = Color(0xFF767C8F);
 
   static const Color clearBackground = Color(0xFFB5B5B5);
-  static const Color error = Color(0xFFE14040);
+  static const Color error = Color(0xFFC13615);
   static const Color disabledBorder = Color(0xFFE8ECF2);
 }
 

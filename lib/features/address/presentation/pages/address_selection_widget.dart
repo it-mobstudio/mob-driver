@@ -99,8 +99,8 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
                 onPressed: () => context.pop(),
                 icon: SvgPicture.asset(
                   'assets/images/Back.svg',
-                  width: 12,
-                  height: 12,
+                  width: 14,
+                  height: 14,
                 ),
               ),
               title: Text(
@@ -116,6 +116,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
               ),
             ),
             body: SafeArea(
+              bottom:false,
               child: AddressPickerBody(
                 addresses: _addresses,
                 selectedAddressId: SelectedAddressStore.cached?.id,
