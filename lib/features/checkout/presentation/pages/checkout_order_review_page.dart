@@ -42,6 +42,7 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
   late GoRouter _router;
   ScaffoldMessengerState? _scaffoldMessenger;
   String _deliveryLabel = '';
+  bool _isStoreOpen = true;
 
   @override
   void didChangeDependencies() {
@@ -60,7 +61,10 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
   Future<void> _loadStoreDeliveryLabel() async {
     final (status, failure) = await sl<HomeRepository>().getStoreOpenStatus();
     if (!mounted || failure != null) return;
-    setState(() => _deliveryLabel = storeDeliveryLabel(status));
+    setState(() {
+      _deliveryLabel = storeDeliveryLabel(status);
+      _isStoreOpen = status?.isOpen ?? true;
+    });
   }
 
   @override
@@ -108,6 +112,7 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
           items: entry.value,
           shipping: perSellerShipping,
           deliveryLabel: _deliveryLabel,
+          isStoreOpen: _isStoreOpen,
           itemStartIndex:
               entries.take(i).fold<int>(0, (sum, e) => sum + e.value.length),
           onQtyChanged: (item, qty) => context.read<CartBloc>().add(
@@ -340,6 +345,7 @@ class _ReviewSellerCard extends StatelessWidget {
     required this.items,
     required this.shipping,
     required this.deliveryLabel,
+    this.isStoreOpen = true,
     required this.itemStartIndex,
     required this.onQtyChanged,
     required this.onQtyInputChanged,
@@ -352,6 +358,7 @@ class _ReviewSellerCard extends StatelessWidget {
   final List<CartItem> items;
   final double shipping;
   final String deliveryLabel;
+  final bool isStoreOpen;
   final int itemStartIndex;
   final void Function(CartItem item, int quantity) onQtyChanged;
   final void Function(CartItem item, String quantityText) onQtyInputChanged;
@@ -425,7 +432,12 @@ class _ReviewSellerCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SvgPicture.asset('assets/images/qwik.svg', height: 14),
+                      SvgPicture.asset(
+                        isStoreOpen
+                            ? 'assets/images/qwik.svg'
+                            : 'assets/images/timer-delivery.svg',
+                        height: 14,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         deliveryLabel.trim(),

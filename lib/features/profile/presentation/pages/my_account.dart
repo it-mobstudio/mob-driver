@@ -167,14 +167,17 @@ class _ProfileBody extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   sliver: SliverList.list(
                     children: [
-                      MobCreditCard(
-                        account: account,
-                        onManage: () =>
-                            context.push(MobCreditDashboardPage.routePath),
-                        onApply: () =>
-                            context.push(MobCreditProfilePage.routePath),
-                      ),
-                      const SizedBox(height: 16),
+                      if (resolveMobCreditStatus(account) ==
+                          MobCreditStatus.active) ...[
+                        MobCreditCard(
+                          account: account,
+                          onManage: () =>
+                              context.push(MobCreditDashboardPage.routePath),
+                          onApply: () =>
+                              context.push(MobCreditProfilePage.routePath),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       Row(
                         children: [
                           Expanded(
@@ -224,7 +227,7 @@ class _ProfileBody extends StatelessWidget {
                             label: 'Addresses',
                             onTap: () => context.push(
                               AddressSelectionWidget.routePath,
-                              extra: {'showSearch': false},
+                              extra: {'showSearch': false, 'selectable': false},
                             ),
                           ),
                           _MenuItem(

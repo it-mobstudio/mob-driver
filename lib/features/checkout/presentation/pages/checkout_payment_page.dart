@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -71,6 +72,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
 
   @override
   void dispose() {
+    _restoreAppSystemBars();
     _razorpay.clear();
     // Reset redeem state on navigate away (mirrors web handleGetCartData reset)
     final cartState = _cartBloc.state;
@@ -88,6 +90,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    _restoreAppSystemBars();
     final paymentId = _razorpayValue(
       response.paymentId,
       response.data?['razorpay_payment_id'],
@@ -150,6 +153,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
+    _restoreAppSystemBars();
     _checkoutBloc.add(
       CheckoutRazorpayPaymentFailed(
         response.message ?? 'Payment failed. Please try again.',
@@ -157,10 +161,37 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     );
   }
 
-  void _handleExternalWallet(ExternalWalletResponse response) {}
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    _restoreAppSystemBars();
+  }
 
   // Replace with your Razorpay key (rzp_test_xxx or rzp_live_xxx)
   static const _razorpayKey = 'rzp_test_fjQ8CCi7188hME';
+  static const _razorpayBlue = Color(0xFF3650D4);
+
+  void _setRazorpaySystemBars() {
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: _razorpayBlue,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
+  }
+
+  void _restoreAppSystemBars() {
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
+  }
 
   // Called when mobCREDIT radio is tapped — triggers Rupifi order creation immediately
   void _onMobCreditSelected(String cartId, double total) {
@@ -343,10 +374,16 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       'name': entity.name.isNotEmpty ? entity.name : 'MOB',
       'order_id': entity.razorpayOrderId,
       'description': 'Order payment',
+      'theme': {
+        'color': '#3650D4',
+        'backdrop_color': '#FFFFFF',
+      },
     };
     try {
+      _setRazorpaySystemBars();
       _razorpay.open(options);
     } catch (e) {
+      _restoreAppSystemBars();
       _checkoutBloc.add(CheckoutRazorpayPaymentFailed(
           'Could not open payment gateway. Please try again.'));
     }
@@ -838,10 +875,10 @@ class _RedeemOptionsCard extends StatelessWidget {
                 checked: useMobwallet,
                 enabled: hasWallet && !isUpdating,
                 amount: '₹${applicableWalletAmount.toStringAsFixed(2)}',
-                icon: const Icon(
-                  Icons.account_balance_wallet,
-                  color: Color(0xFFC9825E),
-                  size: 16,
+                icon: SvgPicture.asset(
+                  'assets/images/walleticon.svg',
+                  width: 16,
+                  height: 16,
                 ),
                 label: walletLabel,
                 onTap: isUpdating ? null : onMobwalletChanged,
@@ -999,6 +1036,12 @@ class _MobCreditPaymentCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
+                border: selected
+                    ? Border.all(
+                        color: const Color(0xFF0A243F),
+                        width: 2,
+                      )
+                    : null,
               ),
               child: Column(
                 children: [
@@ -1173,6 +1216,12 @@ class _RazorpayTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
+            border: selected
+                ? Border.all(
+                    color: const Color(0xFF0A243F),
+                    width: 2,
+                  )
+                : null,
           ),
           child: Row(
             children: [

@@ -8,6 +8,22 @@ import ContactsUI
   private let contactPickerChannel = "m_o_b_demand_side/contact_picker"
   private var pendingContactResult: FlutterResult?
 
+  // This app opts into the UIScene lifecycle (see Info.plist's
+  // UIApplicationSceneManifest, using FlutterSceneDelegate). Under that
+  // lifecycle, `didFinishLaunchingWithOptions` runs BEFORE the scene
+  // connects its window — so `window` was still nil there, the
+  // `rootViewController as? FlutterViewController` cast silently failed,
+  // and the channel handler never got registered. Every Dart-side call
+  // then hit MissingPluginException, which is exactly the "Contact picker
+  // is available on mobile devices" fallback message. Overriding `window`
+  // to add a didSet observer instead means setup runs whenever the window
+  // actually becomes available, regardless of scene vs. non-scene timing.
+  override var window: UIWindow? {
+    didSet {
+      setupContactPickerChannel()
+    }
+  }
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -22,20 +38,23 @@ import ContactsUI
     }
 
     GeneratedPluginRegistrant.register(with: self)
-    if let controller = window?.rootViewController as? FlutterViewController {
-      let channel = FlutterMethodChannel(
-        name: contactPickerChannel,
-        binaryMessenger: controller.binaryMessenger
-      )
-      channel.setMethodCallHandler { [weak self] call, result in
-        guard call.method == "pickPhoneContact" else {
-          result(FlutterMethodNotImplemented)
-          return
-        }
-        self?.pickPhoneContact(result: result)
-      }
-    }
+    setupContactPickerChannel()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  private func setupContactPickerChannel() {
+    guard let controller = window?.rootViewController as? FlutterViewController else { return }
+    let channel = FlutterMethodChannel(
+      name: contactPickerChannel,
+      binaryMessenger: controller.binaryMessenger
+    )
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "pickPhoneContact" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      self?.pickPhoneContact(result: result)
+    }
   }
 
   private func pickPhoneContact(result: @escaping FlutterResult) {

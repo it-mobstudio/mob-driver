@@ -187,6 +187,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
             returnToHome: extra['returnToHome'] == true,
             showReferralBonus: extra['showReferralBonus'] == true,
             showSearch: extra['showSearch'] != false,
+            selectable: extra['selectable'] != false,
             title: extra['title']?.toString(),
           );
         },
@@ -410,16 +411,20 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: AddAddressDetailPage.routeName,
         path: AddAddressDetailPage.routePath,
         parentNavigatorKey: appNavigatorKey,
-        // Every in-app caller supplies `extra`, but this route is also a
-        // plausible deep-link/push-notification target (see
-        // PushNotificationService, which pushes routes straight from a
-        // backend payload with no `extra` at all) — fall back to the
-        // address picker instead of crashing on the cast below.
-        redirect: (context, state) => state.extra is AddressEntity
-            ? null
-            : AddressSelectionWidget.routePath,
+        // Deliberately no `redirect` here — this router has a
+        // refreshListenable (AuthSession/AppStateNotifier), and GoRouter
+        // re-runs every active route's `redirect` on any refresh, using a
+        // freshly re-derived GoRouterState whose `extra` is NOT guaranteed
+        // to still be the object originally passed at push-time. That
+        // previously kicked the user back to the address list mid-flow
+        // (e.g. while editing an address) any time an unrelated
+        // auth/app-state notification fired. `extra` is safe to trust
+        // inside `builder` (it's only invoked for the matched route with
+        // its own push-time state), so the "missing extra" fallback for
+        // push-notification deep links belongs here instead.
         builder: (context, state) {
-          final extra = state.extra as AddressEntity;
+          final extra = state.extra;
+          if (extra is! AddressEntity) return const AddressSelectionWidget();
           // A non-empty id means this is an existing saved address being
           // edited (its own details are both the location and the form's
           // starting values), not a freshly-confirmed pin with nothing
@@ -434,14 +439,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: ConfirmDeliveryLocationPage.routeName,
         path: ConfirmDeliveryLocationPage.routePath,
         parentNavigatorKey: appNavigatorKey,
-        // Same fallback as above — this route also expects `extra` that a
-        // push-notification deep link would never supply.
-        redirect: (context, state) => state.extra is AddressLocationEntity
-            ? null
-            : AddressSelectionWidget.routePath,
-        builder: (context, state) => ConfirmDeliveryLocationPage(
-          initialLocation: state.extra as AddressLocationEntity,
-        ),
+        // Same reasoning as AddAddressDetailPage above — no `redirect`.
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! AddressLocationEntity) {
+            return const AddressSelectionWidget();
+          }
+          return ConfirmDeliveryLocationPage(initialLocation: extra);
+        },
       ),
       GoRoute(
         name: MagicAiQuotePage.routeName,

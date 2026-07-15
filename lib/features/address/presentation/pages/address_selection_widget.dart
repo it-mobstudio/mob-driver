@@ -23,6 +23,7 @@ class AddressSelectionWidget extends StatefulWidget {
     this.returnToHome = false,
     this.showReferralBonus = false,
     this.showSearch = true,
+    this.selectable = true,
     this.title,
   });
 
@@ -37,6 +38,14 @@ class AddressSelectionWidget extends StatefulWidget {
   /// search/quick-pick pills, just "Add new address" + the saved list. The
   /// nav bar entry point keeps both (the default).
   final bool showSearch;
+
+  /// My Account's "Addresses" menu is a pure address-book manager — tapping
+  /// a saved address there must not change the app's active delivery
+  /// address (only the overflow menu's Edit/Delete should act). RFQ's
+  /// "Your address" picker reuses this same page with [showSearch] false
+  /// too, but it genuinely needs tap-to-pick-and-return, hence a separate
+  /// flag rather than overloading [showSearch].
+  final bool selectable;
 
   /// Overrides the default title (which otherwise falls back to
   /// 'Search location' / 'Addresses' based on [showSearch]).
@@ -323,6 +332,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   }
 
   Future<void> _completeSelection(AddressEntity address) async {
+    if (!widget.selectable) return;
     await SelectedAddressStore.save(address);
     if (!mounted) return;
     if (widget.returnToHome) {

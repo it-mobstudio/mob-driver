@@ -381,22 +381,22 @@ class _ConfirmDeliveryLocationPageState
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: () => context.pop(),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'CHANGE',
-                  style: GoogleFonts.inter(
-                    color: _blue,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+              // TextButton(
+              //   onPressed: () => context.pop(),
+              //   style: TextButton.styleFrom(
+              //     padding: EdgeInsets.zero,
+              //     minimumSize: Size.zero,
+              //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              //   ),
+              //   child: Text(
+              //     'CHANGE',
+              //     style: GoogleFonts.inter(
+              //       color: _blue,
+              //       fontSize: 12,
+              //       fontWeight: FontWeight.w700,
+              //     ),
+              //   ),
+              // ),
             ],
           ),
           const SizedBox(height: 6),

@@ -31,6 +31,7 @@ class _CartPageState extends State<CartPage> {
   AddressEntity? _storedAddress;
   List<AddressEntity> _savedAddresses = const [];
   String _deliveryLabel = '';
+  bool _isStoreOpen = true;
 
   @override
   void initState() {
@@ -43,7 +44,10 @@ class _CartPageState extends State<CartPage> {
   Future<void> _loadStoreDeliveryLabel() async {
     final (status, failure) = await sl<HomeRepository>().getStoreOpenStatus();
     if (!mounted || failure != null) return;
-    setState(() => _deliveryLabel = storeDeliveryLabel(status));
+    setState(() {
+      _deliveryLabel = storeDeliveryLabel(status);
+      _isStoreOpen = status?.isOpen ?? true;
+    });
   }
 
   Future<void> _loadStoredAddress() async {
@@ -200,6 +204,7 @@ class _CartPageState extends State<CartPage> {
                           sellerCode: entry.key,
                           sellerItems: entry.value,
                           deliveryLabel: _deliveryLabel,
+                          isStoreOpen: _isStoreOpen,
                           isUpdatingCart: updatingItemKey != null,
                           updatingItemKey: updatingItemKey,
                           onQtyChanged: (item, qty) =>

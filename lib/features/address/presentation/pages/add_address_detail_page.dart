@@ -305,11 +305,11 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
 
   Widget _addressDetailsCard() {
     return Container(
-      padding: const EdgeInsets.all(0),
-      // decoration: BoxDecoration(
-      //   color: Colors.white,
-      //   // borderRadius: BorderRadius.circular(18),
-      // ),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         children: [
           AppTextField(
@@ -460,18 +460,24 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _receiverPhoneController.clear(),
-                    child: const SizedBox(
-                      width: 40,
-                      height: 48,
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: Color(0xFF767C8F),
-                        size: 20,
-                      ),
-                    ),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _receiverPhoneController,
+                    builder: (context, value, _) {
+                      if (value.text.isEmpty) {
+                        return const SizedBox(width: 40, height: 48);
+                      }
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _receiverPhoneController.clear(),
+                        child: const SizedBox(
+                          width: 40,
+                          height: 48,
+                          child: Center(
+                            child: _ClearIconCircle(),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
@@ -626,5 +632,30 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(state.message)));
     }
+  }
+}
+
+/// Matches AppTextField's built-in clear-button styling exactly, so the
+/// receiver-phone field's hand-rolled clear icon (needed here since it
+/// shares its suffix area with the contact-picker icon) doesn't look like a
+/// different control from every other field's clear button.
+class _ClearIconCircle extends StatelessWidget {
+  const _ClearIconCircle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: const BoxDecoration(
+        color: Color(0xFFB5B5B5),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(
+        Icons.close_rounded,
+        color: Colors.white,
+        size: 12,
+      ),
+    );
   }
 }

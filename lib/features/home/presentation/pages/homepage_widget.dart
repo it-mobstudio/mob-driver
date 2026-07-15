@@ -114,6 +114,8 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                   builder: (context, state) {
                     return switch (state) {
                       HomeLoaded(:final data) => PullToRefresh(
+                          playSound: true,
+                          showSpinner: true,
                           onRefresh: () async {
                             final bloc = context.read<HomeBloc>();
                             bloc.add(HomeRefreshRequested());
@@ -163,8 +165,8 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                                         title: entry.value.title,
                                         products: entry.value.products,
                                       ),
-                                      if (entry.key == 0)
-                                        const HomeWhyChooseCard(),
+                                      // if (entry.key == 0)
+                                      // const HomeWhyChooseCard(),
                                     ],
                                   ),
                                 );
@@ -188,6 +190,8 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                       HomeInitial() =>
                         const _HomeLoadingSkeleton(),
                       HomeError(:final message) => PullToRefresh(
+                          playSound: true,
+                          showSpinner: true,
                           onRefresh: () async {
                             final bloc = context.read<HomeBloc>();
                             bloc.add(HomeRefreshRequested());

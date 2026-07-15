@@ -508,6 +508,7 @@ class SellerSection extends StatelessWidget {
     required this.onQtyChanged,
     required this.onQtyInputChanged,
     required this.onRemove,
+    this.isStoreOpen = true,
     this.isUpdatingCart = false,
     this.updatingItemKey,
   });
@@ -515,6 +516,7 @@ class SellerSection extends StatelessWidget {
   final String sellerCode;
   final List<CartItem> sellerItems;
   final String deliveryLabel;
+  final bool isStoreOpen;
   final void Function(CartItem item, int quantity) onQtyChanged;
   final void Function(CartItem item, String quantityText) onQtyInputChanged;
   final void Function(CartItem item) onRemove;
@@ -598,7 +600,9 @@ class SellerSection extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SvgPicture.asset(
-                        'assets/images/qwik.svg',
+                        isStoreOpen
+                            ? 'assets/images/qwik.svg'
+                            : 'assets/images/timer-delivery.svg',
                         height: 14,
                       ),
                       const SizedBox(width: 6),

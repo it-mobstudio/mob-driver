@@ -61,9 +61,6 @@ class _HomeHeaderState extends State<HomeHeader> {
     final deliveryIcon = storeStatus?.isOpen == false
         ? 'assets/images/timer-delivery.svg'
         : 'assets/images/thunder.svg';
-    final closedSubtitle = storeStatus != null && !storeStatus.isOpen
-        ? storeStatus.message.trim()
-        : '';
     final profilePictureUrl = _profilePictureUrl();
 
     return Container(
@@ -99,26 +96,12 @@ class _HomeHeaderState extends State<HomeHeader> {
                                   )
                                 : Column(
                                     key: ValueKey(
-                                      '$deliveryIcon|$deliveryText|$closedSubtitle',
+                                      '$deliveryIcon|$deliveryText',
                                     ),
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      if (closedSubtitle.isNotEmpty) ...[
-                                        Text(
-                                          closedSubtitle,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.inter(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            height: 18 / 12,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                      ],
                                       Row(
                                         children: [
                                           SvgPicture.asset(
@@ -169,11 +152,11 @@ class _HomeHeaderState extends State<HomeHeader> {
                               ),
                             ),
                           ),
-                          // const Icon(
-                          //   Icons.keyboard_arrow_down,
-                          //   color: Colors.white,
-                          //   size: 14,
-                          // ),
+                          SvgPicture.asset(
+                            'assets/images/address-down.svg',
+                            width: 12,
+                            height: 12,
+                          ),
                         ],
                       ),
                     ],

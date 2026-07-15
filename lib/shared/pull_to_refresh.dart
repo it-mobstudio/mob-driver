@@ -11,10 +11,14 @@ class PullToRefresh extends StatefulWidget {
     super.key,
     required this.onRefresh,
     required this.child,
+    this.playSound = false,
+    this.showSpinner = false,
   });
 
   final Future<void> Function() onRefresh;
   final Widget child;
+  final bool playSound;
+  final bool showSpinner;
 
   @override
   State<PullToRefresh> createState() => _PullToRefreshState();
@@ -34,7 +38,7 @@ class _PullToRefreshState extends State<PullToRefresh> {
   @override
   void initState() {
     super.initState();
-    _preloadSound();
+    if (widget.playSound) _preloadSound();
   }
 
   // Preload so playback is instant once a refresh actually triggers, instead
@@ -89,7 +93,7 @@ class _PullToRefreshState extends State<PullToRefresh> {
 
   Future<void> _handleRefresh() async {
     AppHaptics.lightTap();
-    if (_soundReady) {
+    if (widget.playSound && _soundReady) {
       unawaited(_soundPlayer.seek(Duration.zero));
       unawaited(_soundPlayer.play());
     }
@@ -127,7 +131,7 @@ class _PullToRefreshState extends State<PullToRefresh> {
             child: widget.child,
           ),
         ),
-        if (_refreshing)
+        if (_refreshing && widget.showSpinner)
           const Padding(
             padding: EdgeInsets.only(top: 16),
             child: _RefreshSpinner(),

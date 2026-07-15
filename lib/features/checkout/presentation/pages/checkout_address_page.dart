@@ -119,11 +119,11 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
     }
   }
 
-  // Mirrors web's CheckoutAddress.jsx: once saved addresses load, if the
-  // cart doesn't already have a delivery/billing address picked, default
-  // to the first saved address (delivery) and whichever saved address is
-  // flagged as the mobCREDIT/billing address (billing) — instead of
-  // leaving the user to manually pick an address they've already saved.
+  // Once saved addresses load, if the cart doesn't already have a delivery
+  // address picked, default to the first saved address — but billing is
+  // deliberately never auto-picked (even when a saved address is flagged
+  // mobCREDIT): the user must explicitly select a billing address or check
+  // "Use same address for delivery and billing" themselves.
   void _autoSelectDefaultAddresses(
     CartSummaryEntity summary,
     List<AddressEntity> addresses,
@@ -153,18 +153,6 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
         summary.shippingAddress.trim().isEmpty) {
       _selectedDelivery = addresses.first;
       changed = true;
-    }
-
-    if (!_sameAddress &&
-        _selectedBilling == null &&
-        summary.billingAddress.trim().isEmpty) {
-      for (final address in addresses) {
-        if (address.mobCredit) {
-          _selectedBilling = address;
-          changed = true;
-          break;
-        }
-      }
     }
 
     if (changed) setState(() {});

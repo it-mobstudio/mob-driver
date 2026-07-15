@@ -291,8 +291,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     builder: (context) {
                       _syncSelectedSeller(product);
                       final displayProduct = _productForSeller(product);
-                      final cartItemCount = cartQtyByProductId.values
-                          .fold<int>(0, (sum, qty) => sum + qty);
+                      final cartItemCount = cartQtyByProductId.length;
                       final bottomBarReservedHeight =
                           _bottomBarBaseReservedHeight +
                               MediaQuery.paddingOf(context).bottom;
@@ -456,8 +455,8 @@ class _ProductDetailHeader extends StatelessWidget {
               ),
               const Spacer(),
               _HeaderIconButton(
-                icon: _HeaderActionIcon.favorite,
-                onTap: () {},
+                icon: _HeaderActionIcon.search,
+                onTap: () => context.push('/search'),
               ),
               const SizedBox(width: 12),
               _HeaderIconButton(
@@ -514,7 +513,7 @@ class _HeaderIconButton extends StatelessWidget {
               width: 16,
               height: 16,
             ),
-          _HeaderActionIcon.favorite => SvgPicture.asset(
+          _HeaderActionIcon.search => SvgPicture.asset(
               'assets/images/Search.svg',
               width: 16,
               height: 16,
@@ -525,7 +524,7 @@ class _HeaderIconButton extends StatelessWidget {
   }
 }
 
-enum _HeaderActionIcon { back, favorite, share }
+enum _HeaderActionIcon { back, search, share }
 
 class _ProductShareSheet extends StatelessWidget {
   const _ProductShareSheet({
