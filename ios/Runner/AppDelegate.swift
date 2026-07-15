@@ -4,25 +4,10 @@ import GoogleMaps
 import ContactsUI
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, CNContactPickerDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, CNContactPickerDelegate {
   private let contactPickerChannel = "m_o_b_demand_side/contact_picker"
+  private var contactPickerMethodChannel: FlutterMethodChannel?
   private var pendingContactResult: FlutterResult?
-
-  // This app opts into the UIScene lifecycle (see Info.plist's
-  // UIApplicationSceneManifest, using FlutterSceneDelegate). Under that
-  // lifecycle, `didFinishLaunchingWithOptions` runs BEFORE the scene
-  // connects its window — so `window` was still nil there, the
-  // `rootViewController as? FlutterViewController` cast silently failed,
-  // and the channel handler never got registered. Every Dart-side call
-  // then hit MissingPluginException, which is exactly the "Contact picker
-  // is available on mobile devices" fallback message. Overriding `window`
-  // to add a didSet observer instead means setup runs whenever the window
-  // actually becomes available, regardless of scene vs. non-scene timing.
-  override var window: UIWindow? {
-    didSet {
-      setupContactPickerChannel()
-    }
-  }
 
   override func application(
     _ application: UIApplication,
@@ -41,16 +26,21 @@ import ContactsUI
     } ?? fallbackMapsApiKey
     GMSServices.provideAPIKey(mapsApiKey)
 
-    GeneratedPluginRegistrant.register(with: self)
-    setupContactPickerChannel()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  private func setupContactPickerChannel() {
-    guard let controller = window?.rootViewController as? FlutterViewController else { return }
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    setupContactPickerChannel(
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+  }
+
+  private func setupContactPickerChannel(binaryMessenger: FlutterBinaryMessenger) {
+    guard contactPickerMethodChannel == nil else { return }
     let channel = FlutterMethodChannel(
       name: contactPickerChannel,
-      binaryMessenger: controller.binaryMessenger
+      binaryMessenger: binaryMessenger
     )
     channel.setMethodCallHandler { [weak self] call, result in
       guard call.method == "pickPhoneContact" else {
@@ -59,6 +49,7 @@ import ContactsUI
       }
       self?.pickPhoneContact(result: result)
     }
+    contactPickerMethodChannel = channel
   }
 
   private func pickPhoneContact(result: @escaping FlutterResult) {
@@ -72,7 +63,7 @@ import ContactsUI
     }
 
     pendingContactResult = result
-    guard let presenter = window?.rootViewController else {
+    guard let presenter = activeViewController else {
       pendingContactResult = nil
       result(FlutterError(
         code: "UNAVAILABLE",
@@ -85,6 +76,19 @@ import ContactsUI
     picker.delegate = self
     picker.displayedPropertyKeys = [CNContactPhoneNumbersKey]
     presenter.present(picker, animated: true)
+  }
+
+  private var activeViewController: UIViewController? {
+    let activeWindow = window ?? UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap { $0.windows }
+      .first { $0.isKeyWindow }
+
+    var controller = activeWindow?.rootViewController
+    while let presented = controller?.presentedViewController {
+      controller = presented
+    }
+    return controller
   }
 
   func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
