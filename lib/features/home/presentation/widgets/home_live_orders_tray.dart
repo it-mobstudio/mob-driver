@@ -2,11 +2,16 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/data/datasources/order_notification_socket_datasource.dart';
+import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
+import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 
 class HomeLiveOrdersTray extends StatefulWidget {
   const HomeLiveOrdersTray({super.key});
@@ -19,6 +24,9 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
     with WidgetsBindingObserver {
   final OrderNotificationSocketDatasource _datasource =
       const OrderNotificationSocketDatasource();
+  static List<OrderNotificationPreview> _cachedOrders = const [];
+  static String _cachedPhoneNumber = '';
+  static String _dismissedPhoneNumber = '';
   bool _expanded = false;
   bool _dismissed = false;
   bool _socketPaused = false;
@@ -46,11 +54,12 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _socketPaused = false;
-      _syncSocket(force: true);
+      if (_ordersSubscription == null) {
+        _syncSocket(force: true);
+      }
       return;
     }
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       _socketPaused = true;
       _ordersSubscription?.cancel();
@@ -66,9 +75,14 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
     _ordersSubscription = null;
     setState(() {
       _phoneNumber = digitsPhone;
-      _dismissed = false;
+      _dismissed = digitsPhone.isNotEmpty &&
+          digitsPhone == _dismissedPhoneNumber &&
+          digitsPhone == _cachedPhoneNumber &&
+          _cachedOrders.isNotEmpty;
       _expanded = false;
-      _orders = const [];
+      _orders = digitsPhone.isNotEmpty && digitsPhone == _cachedPhoneNumber
+          ? _cachedOrders
+          : const [];
     });
     if (_socketPaused || digitsPhone.isEmpty) return;
     _ordersSubscription = _datasource.watch(phoneNumber: digitsPhone).listen(
@@ -79,25 +93,35 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
 
   void _onOrders(List<OrderNotificationPreview> nextOrders) {
     if (!mounted || nextOrders.isEmpty) return;
+    final mergedOrders = _mergeOrders(_orders, nextOrders);
     setState(() {
       _dismissed = false;
-      _orders = nextOrders.length > 1
-          ? nextOrders
-          : _upsertOrder(_orders, nextOrders.first);
+      _dismissedPhoneNumber = '';
+      _orders = mergedOrders;
+      _cachedPhoneNumber = _phoneNumber;
+      _cachedOrders = _orders;
     });
   }
 
-  List<OrderNotificationPreview> _upsertOrder(
+  List<OrderNotificationPreview> _mergeOrders(
     List<OrderNotificationPreview> current,
-    OrderNotificationPreview next,
+    List<OrderNotificationPreview> nextOrders,
   ) {
-    final nextKey = _orderKey(next);
-    if (nextKey.isEmpty) return [next, ...current];
-    final updated = <OrderNotificationPreview>[next];
-    for (final order in current) {
-      if (_orderKey(order) != nextKey) updated.add(order);
+    final updated = <OrderNotificationPreview>[];
+    final seenKeys = <String>{};
+
+    for (final order in nextOrders) {
+      final key = _orderKey(order);
+      if (key.isNotEmpty && !seenKeys.add(key)) continue;
+      updated.add(order);
     }
-    return updated;
+
+    for (final order in current) {
+      final key = _orderKey(order);
+      if (key.isNotEmpty && !seenKeys.add(key)) continue;
+      updated.add(order);
+    }
+    return updated.take(5).toList(growable: false);
   }
 
   String _orderKey(OrderNotificationPreview order) {
@@ -114,13 +138,60 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
       orders: _orders,
       expanded: _expanded,
       onExpandChanged: (value) => setState(() => _expanded = value),
-      onDismiss: () => setState(() => _dismissed = true),
-      onTrack: _openOrders,
+      onDismiss: _dismissTray,
+      onTrack: _openTracking,
+      onViewAll: _openOrders,
     );
+  }
+
+  void _dismissTray() {
+    setState(() {
+      _dismissed = true;
+      _expanded = false;
+      _dismissedPhoneNumber = _phoneNumber;
+    });
   }
 
   void _openOrders() {
     context.push('/orders-tab');
+  }
+
+  void _openTracking(OrderNotificationPreview order) {
+    final suborderId = order.trackingSuborderId;
+    if (suborderId.isEmpty) {
+      context.push('/orders-tab');
+      return;
+    }
+    final parentOrderId = _parentOrderId(suborderId);
+    final shipment = OrderShipmentEntity(
+      id: suborderId,
+      status: order.status,
+      deliveryDate: '',
+      items: const [],
+    );
+    context.push(
+      OrderTrackingPage.routePath,
+      extra: {
+        'order': OrderEntity(
+          id: parentOrderId,
+          orderNumber: parentOrderId,
+          status: order.status,
+          createdAt: '',
+          total: 0,
+          items: const [],
+          shippingAddress: '',
+          projectName: '',
+          rewardMessage: '',
+          isQuickCommerceOrder: false,
+          shipments: [shipment],
+        ),
+        'shipment': shipment,
+      },
+    );
+  }
+
+  String _parentOrderId(String suborderId) {
+    return suborderId.replaceFirst(RegExp(r'_\d+$'), '');
   }
 }
 
@@ -131,51 +202,76 @@ class _OrdersTrayOverlay extends StatelessWidget {
     required this.onExpandChanged,
     required this.onDismiss,
     required this.onTrack,
+    required this.onViewAll,
   });
 
   final List<OrderNotificationPreview> orders;
   final bool expanded;
   final ValueChanged<bool> onExpandChanged;
   final VoidCallback onDismiss;
-  final VoidCallback onTrack;
+  final ValueChanged<OrderNotificationPreview> onTrack;
+  final VoidCallback onViewAll;
+
+  static const double _stackedGap = 12;
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.paddingOf(context).bottom + 72;
-    return Positioned.fill(
-      child: Stack(
-        children: [
-          if (expanded)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => onExpandChanged(false),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5),
-                  child: Container(
-                    color: Colors.black.withValues(alpha: .62),
+    return BlocSelector<CartBloc, CartState, bool>(
+      selector: (state) => state is CartLoaded && state.summary.itemCount > 0,
+      builder: (context, hasCart) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: navBarVisible,
+          builder: (context, isNavBarVisible, _) {
+            final bottomInset = MediaQuery.paddingOf(context).bottom;
+            final navOffset =
+                hasCart && !isNavBarVisible ? -kBottomNavBarHeight : 0.0;
+            final collapsedBottom = bottomInset +
+                kViewCartBarGap +
+                navOffset +
+                (hasCart ? kViewCartBarHeight + _stackedGap : 0);
+
+            return Positioned.fill(
+              child: Stack(
+                children: [
+                  if (expanded)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        onTap: () => onExpandChanged(false),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5),
+                          child: Container(
+                            color: Colors.black.withValues(alpha: .62),
+                          ),
+                        ),
+                      ),
+                    ),
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                    left: 16,
+                    right: 16,
+                    bottom: collapsedBottom,
+                    child: expanded
+                        ? _ExpandedOrdersTray(
+                            orders: orders,
+                            onTrack: onTrack,
+                            onViewAll: onViewAll,
+                            onClose: () => onExpandChanged(false),
+                          )
+                        : _CollapsedOrdersTray(
+                            order: orders.first,
+                            hiddenCount: orders.length - 1,
+                            onExpand: () => onExpandChanged(true),
+                            onTrack: onTrack,
+                            onDismiss: onDismiss,
+                          ),
                   ),
-                ),
+                ],
               ),
-            ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: bottom,
-            child: expanded
-                ? _ExpandedOrdersTray(
-                    orders: orders,
-                    onTrack: onTrack,
-                  )
-                : _CollapsedOrdersTray(
-                    order: orders.first,
-                    hiddenCount: orders.length - 1,
-                    onExpand: () => onExpandChanged(true),
-                    onTrack: onTrack,
-                    onDismiss: onDismiss,
-                  ),
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -184,16 +280,30 @@ class _ExpandedOrdersTray extends StatelessWidget {
   const _ExpandedOrdersTray({
     required this.orders,
     required this.onTrack,
+    required this.onViewAll,
+    required this.onClose,
   });
 
   final List<OrderNotificationPreview> orders;
-  final VoidCallback onTrack;
+  final ValueChanged<OrderNotificationPreview> onTrack;
+  final VoidCallback onViewAll;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onClose,
+          child: SvgPicture.asset(
+            'assets/images/closeicon-bg.svg',
+            width: 44,
+            height: 44,
+          ),
+        ),
+        const SizedBox(height: 6),
         Row(
           children: [
             Expanded(
@@ -201,14 +311,14 @@ class _ExpandedOrdersTray extends StatelessWidget {
                 'Your orders',
                 style: GoogleFonts.inter(
                   color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  height: 24 / 18,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  height: 24 / 17,
                 ),
               ),
             ),
             TextButton(
-              onPressed: onTrack,
+              onPressed: onViewAll,
               style: TextButton.styleFrom(
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.zero,
@@ -218,21 +328,17 @@ class _ExpandedOrdersTray extends StatelessWidget {
               child: Text(
                 'View all',
                 style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  height: 20 / 14,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 20 / 13,
                 ),
               ),
             ),
             const SizedBox(width: 2),
-            const CircleAvatar(
-              radius: 13,
-              backgroundColor: Color(0xFFE5E5E5),
-              child: Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFF6D7480),
-                size: 20,
-              ),
+            SvgPicture.asset(
+              'assets/images/Notification-rightarrow.svg',
+              width: 24,
+              height: 24,
             ),
           ],
         ),
@@ -258,65 +364,143 @@ class _CollapsedOrdersTray extends StatelessWidget {
   final OrderNotificationPreview order;
   final int hiddenCount;
   final VoidCallback onExpand;
-  final VoidCallback onTrack;
+  final ValueChanged<OrderNotificationPreview> onTrack;
   final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (hiddenCount > 0)
-          Transform.translate(
-            offset: const Offset(0, 8),
-            child: Material(
-              color: Colors.white,
-              elevation: 8,
-              shadowColor: Colors.black.withValues(alpha: .16),
-              borderRadius: BorderRadius.circular(8),
-              child: InkWell(
-                onTap: onExpand,
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  height: 28,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '+ $hiddenCount more',
-                        style: GoogleFonts.inter(
-                          color: const Color(0xFF0A243F),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          height: 18 / 12,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SvgPicture.asset(
-                        'assets/images/upicon.svg',
-                        width: 10,
-                        height: 10,
-                      ),
-                    ],
-                  ),
+    final orderCard = _LiveOrderCard(
+      order: order,
+      onTrack: onTrack,
+      trailing: IconButton(
+        onPressed: onDismiss,
+        padding: EdgeInsets.zero,
+        icon: SvgPicture.asset(
+          'assets/images/close-light.svg',
+          width: 16,
+          height: 16,
+        ),
+      ),
+    );
+
+    if (hiddenCount <= 0) return orderCard;
+
+    return SizedBox(
+      height: 72,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          if (hiddenCount > 1)
+            Positioned(
+              left: 28,
+              right: 28,
+              top: 2,
+              child: const _StackedOrderCardLayer(),
+            ),
+          Positioned(
+            left: 12,
+            right: 12,
+            top: 10,
+            child: const _StackedOrderCardLayer(),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 18,
+            child: orderCard,
+          ),
+          Positioned(
+            top: 0,
+            child: _MoreOrdersPill(
+              hiddenCount: hiddenCount,
+              onTap: onExpand,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StackedOrderCardLayer extends StatelessWidget {
+  const _StackedOrderCardLayer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 54,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE8E8E8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoreOrdersPill extends StatelessWidget {
+  const _MoreOrdersPill({
+    required this.hiddenCount,
+    required this.onTap,
+  });
+
+  final int hiddenCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 0,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFD6D6D6)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '+ $hiddenCount more',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0A243F),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 16 / 11,
                 ),
               ),
-            ),
-          ),
-        _LiveOrderCard(
-          order: order,
-          onTrack: onTrack,
-          trailing: IconButton(
-            onPressed: onDismiss,
-            icon: const Icon(
-              Icons.close_rounded,
-              color: Color(0xFF9AA1AD),
-              size: 20,
-            ),
+              const SizedBox(width: 8),
+              SvgPicture.asset(
+                'assets/images/moreicon.svg',
+                width: 8,
+                height: 6,
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -329,38 +513,42 @@ class _LiveOrderCard extends StatelessWidget {
   });
 
   final OrderNotificationPreview order;
-  final VoidCallback onTrack;
+  final ValueChanged<OrderNotificationPreview> onTrack;
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      elevation: 8,
-      shadowColor: Colors.black.withValues(alpha: .14),
-      borderRadius: BorderRadius.circular(14),
+      elevation: 0,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        height: 58,
+        height: 54,
         padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE2E6EE)),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 12,
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 38,
+              height: 38,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: _accentColorFor(order),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: SvgPicture.asset(
-                'assets/images/vehicletracking.svg',
-                width: 28,
-                height: 28,
+                _iconAssetFor(order),
+                width: 38,
+                height: 38,
               ),
             ),
             const SizedBox(width: 10),
@@ -375,9 +563,9 @@ class _LiveOrderCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       color: const Color(0xFF0A243F),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      height: 18 / 14,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 18 / 13,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -386,9 +574,9 @@ class _LiveOrderCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF6C778A),
+                      color: const Color(0xFF596378),
                       fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w400,
                       height: 15 / 11,
                     ),
                   ),
@@ -400,11 +588,11 @@ class _LiveOrderCard extends StatelessWidget {
               width: 68,
               height: 34,
               child: OutlinedButton(
-                onPressed: onTrack,
+                onPressed: () => onTrack(order),
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.zero,
-                  side: const BorderSide(color: Color(0xFF0BA326)),
-                  foregroundColor: const Color(0xFF0BA326),
+                  side: const BorderSide(color: Color(0xFF008800)),
+                  foregroundColor: const Color(0xFF008800),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -412,9 +600,9 @@ class _LiveOrderCard extends StatelessWidget {
                 child: Text(
                   'Track',
                   style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    height: 18 / 13,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    height: 18 / 12,
                   ),
                 ),
               ),
@@ -433,5 +621,14 @@ class _LiveOrderCard extends StatelessWidget {
     final value = '${order.title} ${order.status}'.toLowerCase();
     if (value.contains('pack')) return const Color(0xFFFFEFAF);
     return const Color(0xFFDDFBFF);
+  }
+
+  String _iconAssetFor(OrderNotificationPreview order) {
+    final statusText = order.status.isNotEmpty
+        ? order.status
+        : '${order.title} ${order.subtitle}';
+    return orderStatusIconAsset(
+      statusText,
+    );
   }
 }

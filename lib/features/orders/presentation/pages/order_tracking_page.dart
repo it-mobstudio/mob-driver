@@ -58,6 +58,21 @@ String _mapString(
   return '';
 }
 
+bool _mapBool(
+  Map<String, dynamic>? map,
+  List<String> keys,
+) {
+  if (map == null) return false;
+  for (final key in keys) {
+    final value = map[key];
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final text = value?.toString().trim().toLowerCase() ?? '';
+    if (text == 'true' || text == '1' || text == 'yes') return true;
+  }
+  return false;
+}
+
 Map<String, dynamic>? _trackOrderPayload(Map<String, dynamic>? map) {
   if (map == null) return null;
   for (final key in const ['data', 'result', 'tracking', 'track_order']) {
@@ -151,6 +166,7 @@ class _TrackingTimelineItem {
 
 _TrackingTimelineStage _timelineStageFromState(_TrackingState state) {
   return switch (state) {
+    _TrackingState.delayed => _TrackingTimelineStage.packing,
     _TrackingState.packing => _TrackingTimelineStage.packing,
     _TrackingState.packed => _TrackingTimelineStage.packed,
     _TrackingState.outForDelivery => _TrackingTimelineStage.outForDelivery,
@@ -308,8 +324,9 @@ class OrderTrackingPage extends StatefulWidget {
 }
 
 class _OrderTrackingPageState extends State<OrderTrackingPage> {
-  late final List<OrderShipmentEntity> _shipments =
-      _sortShipmentsBySuborderId(widget.order?.shipments ?? const []);
+  late OrderEntity? _order = widget.order;
+  late List<OrderShipmentEntity> _shipments =
+      _sortShipmentsBySuborderId(_order?.shipments ?? const []);
   late OrderShipmentEntity? _selectedShipment =
       _selectedInitialShipment(widget.shipment, _shipments);
   late bool _hasReview = _selectedShipment?.hasReview ?? false;
@@ -321,6 +338,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   @override
   void initState() {
     super.initState();
+    _hydrateOrderDetails();
     _loadTrackOrder();
     if (widget.autoOpenRating) {
       _ratingPromptTimer = Timer(
@@ -328,6 +346,48 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         _openAutoRatingSheet,
       );
     }
+  }
+
+  Future<void> _hydrateOrderDetails() async {
+    final order = _order;
+    if (order == null || _hasDetailedOrder(order)) return;
+    final orderId = order.id.trim().isNotEmpty
+        ? order.id.trim()
+        : _parentOrderId(_selectedShipment?.id ?? '');
+    if (orderId.isEmpty) return;
+
+    final (detailedOrder, failure) =
+        await sl<OrdersRepository>().getOrderDetail(orderId);
+    if (!mounted) return;
+    if (failure != null || detailedOrder == null) {
+      if (failure != null) {
+        debugPrint('get_suborder_details failed: ${failure.message}');
+      }
+      return;
+    }
+
+    final shipments = _sortShipmentsBySuborderId(detailedOrder.shipments);
+    final selectedShipment = _selectedInitialShipment(
+      _selectedShipment ?? widget.shipment,
+      shipments,
+    );
+    setState(() {
+      _order = detailedOrder;
+      _shipments = shipments;
+      _selectedShipment = selectedShipment;
+      _hasReview = selectedShipment?.hasReview ?? false;
+    });
+  }
+
+  bool _hasDetailedOrder(OrderEntity order) {
+    return order.shippingAddress.trim().isNotEmpty ||
+        order.deliveryName.trim().isNotEmpty ||
+        order.items.isNotEmpty ||
+        order.shipments.any((shipment) => shipment.items.isNotEmpty);
+  }
+
+  String _parentOrderId(String suborderId) {
+    return suborderId.replaceFirst(RegExp(r'_\d+$'), '').trim();
   }
 
   Future<void> _loadTrackOrder() async {
@@ -388,7 +448,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final order = widget.order;
+    final order = _order;
     final shipment = _selectedShipment;
     final shipments = _shipments;
     final selectedShipmentIndex = shipments.indexWhere(
@@ -414,7 +474,19 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     final orderStatus = order?.status.trim() ?? '';
     final trackingStatus =
         shipmentStatus.isNotEmpty ? shipmentStatus : orderStatus;
-    final trackingState = _TrackingState.fromStatus(trackingStatus);
+    final trackPayload = _trackOrderPayload(_trackOrderBody);
+    final trackOrderStatus = _mapString(
+      trackPayload,
+      const ['order_status', 'orderStatus', 'status'],
+    );
+    final isDelayed = _mapBool(trackPayload, const ['is_delayed', 'isDelayed']);
+    final trackingState = _TrackingState.fromStatus(
+      isDelayed
+          ? 'Order delayed'
+          : trackOrderStatus.isNotEmpty
+              ? trackOrderStatus
+              : trackingStatus,
+    );
     final deliverySlot = shipment?.deliverySlot ?? '';
     // final vendorName = shipment?.vendorName ?? '';
     // final vehicleAssigned = shipment?.vehicleAssigned ?? false;
@@ -433,9 +505,11 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     final isQuickOrder = _trackOrderBody == null
         ? order?.isQuickCommerceOrder ?? false
         : _isQuickOrderResponse(_trackOrderBody);
-    final arrivingIn = _mapString(
-      _trackOrderPayload(_trackOrderBody),
-      const ['arriving_in', 'arrivingIn', 'eta'],
+    final arrivingIn =
+        _mapString(trackPayload, const ['arriving_in', 'arrivingIn', 'eta']);
+    final trackStatusText = _mapString(
+      trackPayload,
+      const ['order_status_text', 'orderStatusText', 'status_text', 'text'],
     );
     final timelineItems = _buildTrackingTimeline(
       order: order,
@@ -468,7 +542,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                               color: Colors.white,
                               padding: const EdgeInsets.only(
                                 top: 8,
-                                bottom: 8,
+                                bottom: 18,
                               ),
                               child: _ShipmentSelectorPill(
                                 label: 'Shipment $selectedShipmentNumber',
@@ -485,6 +559,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                             deliverySlot: deliverySlot,
                             isQuickOrder: isQuickOrder,
                             arrivingIn: arrivingIn,
+                            statusText: trackStatusText,
                             normalStatusTime: normalStatusTime,
                             onNormalStatusTap: isQuickOrder
                                 ? null
@@ -494,9 +569,19 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                                     ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
+                            padding: EdgeInsets.fromLTRB(
+                              16,
+                              trackingState.isDelayed ? 10 : 30,
+                              16,
+                              0,
+                            ),
                             child: Column(
                               children: [
+                                if (trackingState.isDelayed) ...[
+                                  const SizedBox(height: 16),
+                                  const _DelayedInfoCard(),
+                                  const SizedBox(height: 12),
+                                ],
                                 if (!trackingState.isDelivered) ...[
                                   // if (vehicleAssigned) ...[
                                   //   _DeliveryPartnerCard(vendorName: vendorName),
@@ -609,41 +694,50 @@ class _ShipmentSelectorPill extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          height: 32,
-          padding: const EdgeInsets.fromLTRB(18, 0, 14, 0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  color: _TrackingColors.navy,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  height: 16 / 13,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          child: Container(
+            height: 32,
+            padding: const EdgeInsets.fromLTRB(18, 0, 14, 0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 24,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 8),
                 ),
-              ),
-              const SizedBox(width: 8),
-              SvgPicture.asset(
-                expanded
-                    ? 'assets/images/upicon.svg'
-                    : 'assets/images/downicon.svg',
-                width: 18,
-                height: 18,
-              ),
-            ],
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    color: _TrackingColors.navy,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    height: 16 / 13,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SvgPicture.asset(
+                  expanded
+                      ? 'assets/images/upicon.svg'
+                      : 'assets/images/downicon.svg',
+                  width: 18,
+                  height: 18,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -858,6 +952,7 @@ class _TrackingHeroSection extends StatelessWidget {
     required this.deliverySlot,
     required this.isQuickOrder,
     required this.arrivingIn,
+    required this.statusText,
     required this.normalStatusTime,
     required this.onNormalStatusTap,
   });
@@ -867,6 +962,7 @@ class _TrackingHeroSection extends StatelessWidget {
   final String deliverySlot;
   final bool isQuickOrder;
   final String arrivingIn;
+  final String statusText;
   final String normalStatusTime;
   final VoidCallback? onNormalStatusTap;
 
@@ -904,6 +1000,7 @@ class _TrackingHeroSection extends StatelessWidget {
                   deliverySlot: deliverySlot,
                   isQuickOrder: isQuickOrder,
                   arrivingIn: arrivingIn,
+                  statusText: statusText,
                   normalStatusTime: normalStatusTime,
                   onTap: onNormalStatusTap,
                 ),
@@ -1045,6 +1142,7 @@ class _EtaCard extends StatelessWidget {
     required this.deliverySlot,
     required this.isQuickOrder,
     required this.arrivingIn,
+    required this.statusText,
     required this.normalStatusTime,
     required this.onTap,
   });
@@ -1054,6 +1152,7 @@ class _EtaCard extends StatelessWidget {
   final String deliverySlot;
   final bool isQuickOrder;
   final String arrivingIn;
+  final String statusText;
   final String normalStatusTime;
   final VoidCallback? onTap;
 
@@ -1133,6 +1232,12 @@ class _EtaCard extends StatelessWidget {
 
   Widget _quickOrderCard() {
     final etaText = arrivingIn.trim().isNotEmpty ? arrivingIn.trim() : '--';
+    final title = state.isDelayed ? 'Delayed' : etaText;
+    final subtitle = state.isDelivered
+        ? deliveryDate
+        : state.isDelayed && statusText.trim().isNotEmpty
+            ? statusText.trim()
+            : state.subtitle;
 
     return Container(
       height: 88,
@@ -1147,7 +1252,7 @@ class _EtaCard extends StatelessWidget {
           Positioned(
             left: 16,
             top: 16,
-            width: 188,
+            right: 112,
             height: 56,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1157,25 +1262,11 @@ class _EtaCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    state.isDelivered
-                        ? SvgPicture.asset(
-                            'assets/images/deliveredtick.svg',
-                            width: 24,
-                            height: 24,
-                          )
-                        : SvgPicture.asset(
-                            'assets/images/thunder.svg',
-                            width: 24,
-                            height: 24,
-                            colorFilter: const ColorFilter.mode(
-                              Color(0xFF329537),
-                              BlendMode.srcIn,
-                            ),
-                          ),
+                    _quickOrderStatusIcon(),
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        state.isDelivered ? 'Delivered' : etaText,
+                        state.isDelivered ? 'Delivered' : title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -1190,9 +1281,9 @@ class _EtaCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 SizedBox(
-                  width: 188,
+                  width: double.infinity,
                   child: Text(
-                    state.isDelivered ? deliveryDate : state.subtitle,
+                    subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
@@ -1238,6 +1329,68 @@ class _EtaCard extends StatelessWidget {
     if (date.isNotEmpty) return 'on $date';
     if (slot.isNotEmpty) return 'at $slot';
     return '';
+  }
+
+  Widget _quickOrderStatusIcon() {
+    if (state.isDelayed) {
+      return SvgPicture.asset(
+        'assets/images/delayedicon.svg',
+        width: 24,
+        height: 24,
+      );
+    }
+    if (state.isDelivered) {
+      return SvgPicture.asset(
+        'assets/images/deliveredtick.svg',
+        width: 24,
+        height: 24,
+      );
+    }
+    return SvgPicture.asset(
+      'assets/images/thunder.svg',
+      width: 24,
+      height: 24,
+      colorFilter: const ColorFilter.mode(
+        Color(0xFF329537),
+        BlendMode.srcIn,
+      ),
+    );
+  }
+}
+
+class _DelayedInfoCard extends StatelessWidget {
+  const _DelayedInfoCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDEDEDE)),
+        gradient: const LinearGradient(
+          begin: Alignment.centerRight,
+          end: Alignment.centerLeft,
+          colors: [
+            Color(0xFFFFFFFF),
+            Color(0xFFFFE2DE),
+          ],
+          stops: [0.0009, 0.999],
+        ),
+      ),
+      child: Text(
+        "Your order is taking a little longer than expected.\n"
+        "We're treating it as a priority and working to deliver it\n"
+        "as quickly as possible.",
+        style: GoogleFonts.inter(
+          color: _TrackingColors.navy,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          height: 16 / 12,
+        ),
+      ),
+    );
   }
 }
 
@@ -2467,6 +2620,7 @@ class ReferralEarnCard extends StatelessWidget {
 }
 
 enum _TrackingState {
+  delayed,
   packing,
   packed,
   outForDelivery,
@@ -2476,6 +2630,9 @@ enum _TrackingState {
     final value =
         status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
     final compactValue = value.replaceAll(' ', '');
+    if (value.contains('delay') || compactValue.contains('delay')) {
+      return _TrackingState.delayed;
+    }
     if (value.contains('waiting') ||
         value.contains('order placed') ||
         compactValue == 'orderplaced') {
@@ -2508,6 +2665,7 @@ enum _TrackingState {
 
   String get subtitle {
     return switch (this) {
+      _TrackingState.delayed => 'Your order is delayed',
       _TrackingState.delivered => 'Delivered',
       _TrackingState.outForDelivery => 'Out for delivery',
       _TrackingState.packed => 'Your order is packed',
@@ -2517,6 +2675,7 @@ enum _TrackingState {
 
   String get heroAsset {
     return switch (this) {
+      _TrackingState.delayed => 'assets/images/Packing_your_order.webp',
       _TrackingState.delivered => 'assets/images/Delivered.webp',
       _TrackingState.outForDelivery => 'assets/images/Out_for_delivery.webp',
       _TrackingState.packed => 'assets/images/Your_order_is_packed.webp',
@@ -2532,6 +2691,8 @@ enum _TrackingState {
   }
 
   bool get isDelivered => this == _TrackingState.delivered;
+
+  bool get isDelayed => this == _TrackingState.delayed;
 
   bool get isOutForDelivery => this == _TrackingState.outForDelivery;
 

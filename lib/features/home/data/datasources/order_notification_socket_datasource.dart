@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -43,6 +44,8 @@ class OrderNotificationSocketDatasource {
           final orders = _notificationsFromMessage(message);
           if (orders.isNotEmpty && !controller.isClosed) {
             controller.add(orders);
+          } else {
+            _debugIgnoredMessage(message);
           }
         },
         onError: (_) {},
@@ -141,16 +144,43 @@ class OrderNotificationSocketDatasource {
       _asMap(_asMap(message['data'])?['data']),
     ]) {
       if (candidate == null) continue;
+      if (_isConnectionAck(candidate)) continue;
       if (_hasNotificationKeys(candidate)) return candidate;
     }
     return null;
   }
 
+  void _debugIgnoredMessage(Map<String, dynamic> message) {
+    if (!kDebugMode) return;
+    final payload = _asMap(message['payload']);
+    final type = (payload?['type'] ?? message['type'] ?? '').toString();
+    if (type.isEmpty || type.contains('connected')) return;
+    debugPrint('Ignored order notification socket message: $message');
+  }
+
+  bool _isConnectionAck(Map<String, dynamic> map) {
+    final type = (map['type'] ?? '').toString().trim().toLowerCase();
+    return type == 'notifications_connected' ||
+        type == 'notification_connected' ||
+        type == 'connected';
+  }
+
   bool _hasNotificationKeys(Map<String, dynamic> map) {
     return map.containsKey('arriving_in') ||
+        map.containsKey('eta') ||
+        map.containsKey('title') ||
+        map.containsKey('message') ||
+        map.containsKey('text') ||
+        map.containsKey('sub_text') ||
+        map.containsKey('item_name') ||
+        map.containsKey('product_name') ||
+        map.containsKey('items') ||
+        map.containsKey('item_count') ||
+        map.containsKey('order_id') ||
+        map.containsKey('order_number') ||
         map.containsKey('order_status') ||
         map.containsKey('order_status_text') ||
-        map.containsKey('status') ||
+        map.containsKey('status_display') ||
         map.containsKey('suborder_id') ||
         map.containsKey('sub_order_id');
   }
@@ -164,6 +194,14 @@ class OrderNotificationSocketDatasource {
 
   Map<String, dynamic>? _asMap(dynamic value) {
     if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is String) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {
+        return null;
+      }
+    }
     return null;
   }
 }
@@ -183,10 +221,15 @@ class OrderNotificationPreview {
   final String orderId;
   final String suborderId;
 
+  String get trackingSuborderId {
+    if (suborderId.isNotEmpty) return suborderId;
+    return RegExp(r'_\d+$').hasMatch(orderId.trim()) ? orderId.trim() : '';
+  }
+
   factory OrderNotificationPreview.fromMap(Map<String, dynamic> map) {
     final status = _firstString([
       map['order_status'],
-      map['status'],
+      if (map['status'] is! bool) map['status'],
       map['state'],
     ]);
     final title = _titleFrom(map, status);
@@ -205,31 +248,82 @@ class OrderNotificationPreview {
   }
 
   static String _titleFrom(Map<String, dynamic> map, String status) {
-    final arrivingIn = _firstString([
-      map['arriving_in'],
-      map['eta'],
-      map['estimated_time'],
-      map['delivery_time'],
-    ]);
-    if (arrivingIn.isNotEmpty) return 'Arriving in $arrivingIn';
+    final statusTitle = _titleFromStatus(status);
+    if (statusTitle.isNotEmpty) return statusTitle;
 
     final text = _firstString([
       map['title'],
+      map['status_display'],
+      map['text'],
       map['order_status_text'],
       map['status_text'],
       map['message'],
       status,
     ]);
-    if (text.isEmpty) return '';
+    if (_isPriorityStatus(status) && text.isNotEmpty) {
+      return _sentenceCase(text);
+    }
+
+    if (text.isEmpty) return 'Track your order';
     return _sentenceCase(text);
   }
 
+  static String _titleFromStatus(String status) {
+    final value =
+        status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    final compactValue = value.replaceAll(' ', '');
+    if (value.isEmpty) return '';
+    if (value.contains('delay')) return 'Your order is delayed';
+    if (value.contains('waiting') ||
+        value.contains('order placed') ||
+        compactValue == 'orderplaced') {
+      return 'Packing your order';
+    }
+    if (value.contains('vehicle assigned') ||
+        value.contains('ready for pickup') ||
+        value.contains('order is packed') ||
+        value.contains('ready to ship') ||
+        compactValue == 'vehicleassigned' ||
+        compactValue == 'readyforpickup' ||
+        compactValue == 'orderispacked') {
+      return 'Your order is packed';
+    }
+    if (value.contains('out of delivery') ||
+        value.contains('out for delivery') ||
+        compactValue.contains('outofdelivery') ||
+        compactValue.contains('outfordelivery') ||
+        value.contains('on the way')) {
+      return 'Out for delivery';
+    }
+    if (value.contains('delivered') ||
+        value.contains('completed') ||
+        value.contains('received') ||
+        value.contains('fulfilled')) {
+      return 'Delivered';
+    }
+    return _sentenceCase(status);
+  }
+
   static String _subtitleFrom(Map<String, dynamic> map) {
+    final subText = _firstString([
+      map['sub_text'],
+      map['subtitle'],
+      map['description'],
+    ]);
+    if (subText.isNotEmpty) return subText;
+
     final firstItem = _firstItemName(map);
     final itemCount = _asInt(map['item_count'] ?? map['items_count']);
     if (firstItem.isEmpty) return itemCount > 0 ? '$itemCount items' : '';
     if (itemCount <= 1) return firstItem;
     return '$firstItem +${itemCount - 1} items';
+  }
+
+  static bool _isPriorityStatus(String status) {
+    final value = status.trim().toLowerCase();
+    return value.contains('delay') ||
+        value.contains('cancel') ||
+        value.contains('failed');
   }
 
   static String _firstItemName(Map<String, dynamic> map) {
