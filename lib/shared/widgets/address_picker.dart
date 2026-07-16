@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
 /// The saved-address-picker UI, shared by the nav bar's full-page
 /// AddressSelectionWidget, My Account's "Addresses" menu, cart's "Change"
@@ -145,60 +146,17 @@ class AddressPickerBody extends StatelessWidget {
   }
 
   Widget _searchField() {
-    return TextField(
+    return AppTextField(
       controller: searchController,
       onChanged: onSearchChanged,
-      style: GoogleFonts.inter(
-        color: const Color(0xFF0A243F),
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-      ),
-      decoration: InputDecoration(
-        hintText: 'Search for area, street name..',
-        hintStyle: GoogleFonts.inter(
-          color: const Color(0xFFAFB4C0),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-        prefixIcon: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: SvgPicture.asset(
-            'assets/images/Searchicon.svg',
-            width: 16,
-            height: 16,
-            fit: BoxFit.contain,
-          ),
-        ),
-        prefixIconConstraints: const BoxConstraints(
-          minWidth: 48,
-          minHeight: 48,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFD0D4DC),
-            width: 0.5,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFD0D4DC),
-            width: 0.5,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFF0360E5),
-            width: 1,
-          ),
+      hintText: 'Search for area, street name..',
+      prefixIcon: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SvgPicture.asset(
+          'assets/images/Searchicon.svg',
+          width: 16,
+          height: 16,
+          fit: BoxFit.contain,
         ),
       ),
     );

@@ -49,12 +49,13 @@ class _ShipmentSection extends StatelessWidget {
 
     final suborders = order.shipments.isEmpty
         ? const <OrderShipmentEntity>[]
-        : [...order.shipments]..sort((a, b) {
-            final suffixCompare = _suborderSuffixNumber(a.id)
-                .compareTo(_suborderSuffixNumber(b.id));
-            if (suffixCompare != 0) return suffixCompare;
-            return a.id.compareTo(b.id);
-          });
+        : [...order.shipments]
+      ..sort((a, b) {
+        final suffixCompare =
+            _suborderSuffixNumber(a.id).compareTo(_suborderSuffixNumber(b.id));
+        if (suffixCompare != 0) return suffixCompare;
+        return a.id.compareTo(b.id);
+      });
     if (suborders.length <= 1) {
       final date = _formatDeliveryDate(shipment.deliveryDate);
       return date.isNotEmpty ? 'Arriving by $date' : '';
@@ -134,15 +135,15 @@ class _ShipmentSection extends StatelessWidget {
                 Container(
                   width: 24,
                   height: 24,
-                  decoration: const BoxDecoration(
+                  decoration: const ShapeDecoration(
                     color: Color(0xFFF1F1F2),
-                    shape: BoxShape.circle,
+                    shape: OvalBorder(),
                   ),
                   child: Center(
                     child: SvgPicture.asset(
-                      'assets/images/Arrow.svg',
-                      width: 14,
-                      height: 14,
+                      'assets/images/greaterarrow.svg',
+                      width: 12,
+                      height: 12,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -200,14 +201,14 @@ class _ShipmentItemTile extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: item.slug.isEmpty
                 ? null
-                : () => context
-                    .push('${ProductDetailPage.routePath}/${item.slug}'),
+                : () =>
+                    context.push('${ProductDetailPage.routePath}/${item.slug}'),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 width: 44,
                 height: 44,
-                color: const Color(0xFFF1F1F2),
+               // color: const Color(0xFFF1F1F2),
                 child: item.imageUrl.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: item.imageUrl,

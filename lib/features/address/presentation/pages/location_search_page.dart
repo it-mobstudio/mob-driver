@@ -145,7 +145,7 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
                       decoration: InputDecoration(
                         hintText: 'Search for area, street name..',
                         hintStyle: GoogleFonts.inter(
-                          color: const Color(0xFFAFB4C0),
+                          color: const Color(0xFF596378),
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -181,7 +181,7 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFF0360E5),
+                            color:  Color(0xFF0A243F),
                             width: 1,
                           ),
                         ),

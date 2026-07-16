@@ -1065,15 +1065,17 @@ class _MobCreditPaymentCard extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: selected
-                    ? Border.all(
-                        color: const Color(0xFF0A243F),
-                        width: 2,
-                      )
-                    : null,
+                shape: RoundedRectangleBorder(
+                  side: selected
+                      ? const BorderSide(
+                          color: Color(0xFF0A243F),
+                          width: 2,
+                        )
+                      : BorderSide.none,
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Column(
                 children: [
@@ -1204,11 +1206,14 @@ class _MobCreditInfo extends StatelessWidget {
               height: 24,
               width: 96,
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: const BoxDecoration(
+              decoration: const ShapeDecoration(
                 color: Color(0xFF1E1E20),
-                borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(12),
-                  bottomLeft: Radius.circular(10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(10),
+                    topRight: Radius.circular(10),
+                    bottomLeft: Radius.circular(10),
+                  ),
                 ),
               ),
               alignment: Alignment.center,
@@ -1269,14 +1274,11 @@ class _RazorpayTile extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Text(
-                'Razorpay',
-                style: GoogleFonts.inter(
-                  color: const Color(0xFF0057A8),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  fontStyle: FontStyle.italic,
-                ),
+              SvgPicture.asset(
+                'assets/images/razorpay.svg',
+                width: 68,
+                height: 16,
+                fit: BoxFit.contain,
               ),
             ],
           ),
@@ -1321,11 +1323,12 @@ class _RadioMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeColor =
-        enabled ? const Color(0xFF0360E5) : const Color(0xFFB0B4BB);
+        enabled ? const Color(0xFF0A243F) : const Color(0xFFB0B4BB);
     final borderColor = selected ? activeColor : const Color(0xFF767C8F);
     return Container(
       width: 18,
       height: 18,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white,

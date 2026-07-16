@@ -162,7 +162,7 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
                             controller: _nameController,
                             textInputAction: TextInputAction.next,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 20),
                           _ProfileField(
                             label: 'Business mobile',
                             controller: _phoneController,
@@ -170,7 +170,7 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
                             textInputAction: TextInputAction.next,
                             readOnly: true,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 20),
                           _ProfileField(
                             label: 'Email',
                             controller: _emailController,
@@ -370,12 +370,12 @@ class _ProfileField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppTextField(
-      label: '$label*',
+      hintText: '$label*',
       controller: controller,
+      enabled: !readOnly,
       readOnly: readOnly,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
-      floatingLabelBehavior: FloatingLabelBehavior.always,
     );
   }
 }
