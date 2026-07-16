@@ -22,6 +22,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/dev_info_p
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/account_privacy_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
@@ -269,7 +270,8 @@ class _ProfileBody extends StatelessWidget {
                         items: [
                           _MenuItem(
                             iconAsset: 'assets/images/upgradeicon.svg',
-                            label: account.isProfessional ? 'mob' : 'Upgrade to',
+                            label:
+                                account.isProfessional ? 'mob' : 'Upgrade to',
                             badgeAsset: 'assets/images/proicon.svg',
                             onTap: () =>
                                 context.push(UpgradeToProPage.routePath),
@@ -283,7 +285,12 @@ class _ProfileBody extends StatelessWidget {
                           //   onTap: () => _comingSoon(
                           //       context, 'Notification preferences'),
                           // ),
-
+                          _MenuItem(
+                            iconAsset: 'assets/images/accountprivacy.svg',
+                            label: 'Account privacy',
+                            onTap: () =>
+                                context.push(AccountPrivacyPage.routePath),
+                          ),
                           _MenuItem(
                             iconAsset: 'assets/images/aboutus.svg',
                             label: 'About us',

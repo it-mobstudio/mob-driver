@@ -27,6 +27,7 @@ import 'package:m_o_b_demand_side/features/orders/presentation/pages/orders_page
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_listing_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/account_privacy_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
@@ -454,7 +455,8 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         builder: (context, state) {
           final rawExtra = state.extra;
           if (rawExtra is AddressLocationEntity) {
-            RouteExtraCache.put(ConfirmDeliveryLocationPage.routePath, rawExtra);
+            RouteExtraCache.put(
+                ConfirmDeliveryLocationPage.routePath, rawExtra);
           }
           final extra = rawExtra is AddressLocationEntity
               ? rawExtra
@@ -502,6 +504,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         path: MyAccountWidget.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) => const MyAccountWidget(),
+      ),
+      GoRoute(
+        name: AccountPrivacyPage.routeName,
+        path: AccountPrivacyPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const AccountPrivacyPage(),
       ),
       GoRoute(
         name: OrdersPage.routeName,
