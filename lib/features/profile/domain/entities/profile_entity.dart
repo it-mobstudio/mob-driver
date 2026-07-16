@@ -78,8 +78,10 @@ class ReferralSummaryEntity {
     final invitesRaw =
         map['invites'] is List ? map['invites'] as List : <dynamic>[];
     return ReferralSummaryEntity(
-      referralCode: (map['referral_code'] ?? '').toString(),
-      referralLink: (map['referral_link'] ?? '').toString(),
+      referralCode:
+          (map['referral_code'] ?? map['referralCode'] ?? '').toString(),
+      referralLink:
+          (map['referral_link'] ?? map['referralLink'] ?? '').toString(),
       invitedCount: int.tryParse((map['invited_count'] ?? '0').toString()) ?? 0,
       orderedCount: int.tryParse((map['ordered_count'] ?? '0').toString()) ?? 0,
       notOrderedCount:

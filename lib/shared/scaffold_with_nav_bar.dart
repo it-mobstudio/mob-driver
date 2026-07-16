@@ -18,11 +18,23 @@ class ScaffoldWithNavBar extends StatefulWidget {
 
 class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
   bool _visible = true;
+  late int _lastIndex;
 
   @override
   void initState() {
     super.initState();
+    _lastIndex = widget.navigationShell.currentIndex;
     navBarVisible.addListener(_onVisibilityChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant ScaffoldWithNavBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final currentIndex = widget.navigationShell.currentIndex;
+    if (currentIndex != _lastIndex) {
+      _lastIndex = currentIndex;
+      if (!navBarVisible.value) navBarVisible.value = true;
+    }
   }
 
   @override

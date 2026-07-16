@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
@@ -36,8 +37,14 @@ class _ReferralView extends StatelessWidget {
         builder: (context, state) {
           final isLoading = state is ProfileLoading || state is ProfileInitial;
           final summary = state is ReferralSummaryLoaded ? state.summary : null;
-          final referralCode = summary?.referralCode ?? '';
-          final referralLink = summary?.referralLink ?? '';
+          final cachedReferral = _cachedReferralData();
+          final referralCode = (summary?.referralCode.trim().isNotEmpty ?? false)
+              ? summary!.referralCode.trim()
+              : cachedReferral.code;
+          final referralLink = (summary?.referralLink.trim().isNotEmpty ?? false)
+              ? summary!.referralLink.trim()
+              : cachedReferral.link;
+          final canShare = referralCode.isNotEmpty;
 
           return Column(
             children: [
@@ -53,7 +60,7 @@ class _ReferralView extends StatelessWidget {
                     children: [
                       _ReferralPromoSection(
                         referralCode: referralCode,
-                        isLoading: isLoading,
+                        isLoading: isLoading && !canShare,
                       ),
                     ],
                   ),
@@ -69,13 +76,13 @@ class _ReferralView extends StatelessWidget {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: isLoading
-                          ? null
-                          : () => _shareReferral(
+                      onPressed: canShare
+                          ? () => _shareReferral(
                                 context,
                                 referralCode,
                                 referralLink,
-                              ),
+                              )
+                          : null,
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         backgroundColor: const Color(0xFF0A243F),
@@ -106,6 +113,50 @@ class _ReferralView extends StatelessWidget {
         },
       ),
     );
+  }
+
+  ({String code, String link}) _cachedReferralData() {
+    final details = AuthSession.instance.userDetails;
+    if (details == null || details.isEmpty) return (code: '', link: '');
+    final flattened = _flattenReferralData(details);
+    return (
+      code: _firstNonEmpty(flattened, const [
+        'referral_code',
+        'referralCode',
+        'refer_code',
+        'referCode',
+      ]),
+      link: _firstNonEmpty(flattened, const [
+        'referral_link',
+        'referralLink',
+      ]),
+    );
+  }
+
+  Map<String, dynamic> _flattenReferralData(Map<String, dynamic> source) {
+    final flattened = <String, dynamic>{};
+    for (final key in const [
+      'user_details',
+      'user_data',
+      'user',
+      'profile',
+      'account',
+    ]) {
+      final nested = source[key];
+      if (nested is Map) {
+        flattened.addAll(Map<String, dynamic>.from(nested));
+      }
+    }
+    flattened.addAll(source);
+    return flattened;
+  }
+
+  String _firstNonEmpty(Map<String, dynamic> source, List<String> keys) {
+    for (final key in keys) {
+      final value = source[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return '';
   }
 
   Future<void> _shareReferral(
@@ -192,6 +243,7 @@ class _ReferralPromoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasReferralCode = referralCode.trim().isNotEmpty;
     return SizedBox(
       height: 606,
       child: Stack(
@@ -257,7 +309,7 @@ class _ReferralPromoSection extends StatelessWidget {
             top: 118,
             child: InkWell(
               borderRadius: BorderRadius.circular(48),
-              onTap: isLoading
+              onTap: !hasReferralCode
                   ? null
                   : () async {
                       await Clipboard.setData(

@@ -140,10 +140,11 @@ class _SignupWidgetState extends State<SignupWidget> {
       listener: (context, state) {
         if (state is AuthRegistered) {
           context.go(
-            AddressSelectionWidget.routePath,
+            '${AddressSelectionWidget.routePath}?fromSignup=true',
             extra: {
               'returnToHome': true,
               'showReferralBonus': _lastSubmittedReferralCode.isNotEmpty,
+              'showBackButton': false,
             },
           );
         } else if (state is AuthError) {

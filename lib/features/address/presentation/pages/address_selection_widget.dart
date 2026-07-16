@@ -25,6 +25,7 @@ class AddressSelectionWidget extends StatefulWidget {
     this.showReferralBonus = false,
     this.showSearch = true,
     this.selectable = true,
+    this.showBackButton = true,
     this.title,
   });
 
@@ -47,6 +48,7 @@ class AddressSelectionWidget extends StatefulWidget {
   /// too, but it genuinely needs tap-to-pick-and-return, hence a separate
   /// flag rather than overloading [showSearch].
   final bool selectable;
+  final bool showBackButton;
 
   /// Overrides the default title (which otherwise falls back to
   /// 'Search location' / 'Addresses' based on [showSearch]).
@@ -82,6 +84,8 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final showBackButton = widget.showBackButton && !widget.returnToHome;
+
     return BlocProvider<AddressBloc>.value(
       value: _addressBloc,
       child: BlocConsumer<AddressBloc, AddressState>(
@@ -96,14 +100,17 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF0A243F),
               elevation: 0,
-              leading: IconButton(
-                onPressed: () => context.pop(),
-                icon: SvgPicture.asset(
-                  'assets/images/Back.svg',
-                  width: 14,
-                  height: 14,
-                ),
-              ),
+              automaticallyImplyLeading: showBackButton,
+              leading: showBackButton
+                  ? IconButton(
+                      onPressed: () => context.pop(),
+                      icon: SvgPicture.asset(
+                        'assets/images/Back.svg',
+                        width: 14,
+                        height: 14,
+                      ),
+                    )
+                  : null,
               title: Text(
                 widget.title ??
                     (widget.showSearch ? 'Search location' : 'Addresses'),

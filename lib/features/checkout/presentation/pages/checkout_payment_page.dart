@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -72,7 +71,6 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
 
   @override
   void dispose() {
-    _restoreAppSystemBars();
     _razorpay.clear();
     // Reset redeem state on navigate away (mirrors web handleGetCartData reset)
     final cartState = _cartBloc.state;
@@ -90,7 +88,6 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
-    _restoreAppSystemBars();
     final paymentId = _razorpayValue(
       response.paymentId,
       response.data?['razorpay_payment_id'],
@@ -153,7 +150,6 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
-    _restoreAppSystemBars();
     _checkoutBloc.add(
       CheckoutRazorpayPaymentFailed(
         response.message ?? 'Payment failed. Please try again.',
@@ -161,37 +157,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     );
   }
 
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    _restoreAppSystemBars();
-  }
+  void _handleExternalWallet(ExternalWalletResponse response) {}
 
   // Replace with your Razorpay key (rzp_test_xxx or rzp_live_xxx)
   static const _razorpayKey = 'rzp_test_fjQ8CCi7188hME';
-  static const _razorpayBlue = Color(0xFF3650D4);
-
-  void _setRazorpaySystemBars() {
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: _razorpayBlue,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-        systemNavigationBarColor: Colors.white,
-        systemNavigationBarIconBrightness: Brightness.dark,
-      ),
-    );
-  }
-
-  void _restoreAppSystemBars() {
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarIconBrightness: Brightness.dark,
-      ),
-    );
-  }
 
   // Called when mobCREDIT radio is tapped — triggers Rupifi order creation immediately
   void _onMobCreditSelected(String cartId, double total) {
@@ -332,23 +301,6 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     if (!mounted || _isRupifiHandoffInProgress) return;
     if (_isPaymentOrderRequestInFlight) return;
 
-    if (summary.isEmpty) {
-      if (_paymentOption != -1 ||
-          _razorpayEntity != null ||
-          _rupifiEntity != null) {
-        setState(() {
-          _paymentOption = -1;
-          _razorpayEntity = null;
-          _rupifiEntity = null;
-          _requestedPaymentOption = null;
-          _requestedPaymentCartId = null;
-          _requestedPaymentTotal = null;
-          _isPaymentOrderRequestInFlight = false;
-        });
-      }
-      return;
-    }
-
     if (summary.total <= 0) {
       if (_paymentOption != -1 ||
           _razorpayEntity != null ||
@@ -391,16 +343,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       'name': entity.name.isNotEmpty ? entity.name : 'MOB',
       'order_id': entity.razorpayOrderId,
       'description': 'Order payment',
-      'theme': {
-        'color': '#3650D4',
-        'backdrop_color': '#FFFFFF',
-      },
     };
     try {
-      _setRazorpaySystemBars();
       _razorpay.open(options);
     } catch (e) {
-      _restoreAppSystemBars();
       _checkoutBloc.add(CheckoutRazorpayPaymentFailed(
           'Could not open payment gateway. Please try again.'));
     }
@@ -409,15 +355,6 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   void _onProceed(BuildContext context, String cartId, double total,
       CartSummaryEntity summary) {
     if (_isRupifiHandoffInProgress) return;
-    if (summary.isEmpty) {
-      _scaffoldMessenger?.showSnackBar(
-        const SnackBar(
-          content: Text('Your cart is empty. Add items to continue.'),
-        ),
-      );
-      _router.go('/cart');
-      return;
-    }
     // Zero total — wallet/points covered the full amount, place order directly
     if (total == 0) {
       _checkoutBloc.add(
@@ -487,12 +424,6 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                   ),
                 CartLoaded(:final summary, :final isRedeemUpdating) =>
                   Builder(builder: (_) {
-                    if (summary.isEmpty) {
-                      return EmptyCartBody(
-                        topBar: _PaymentHeader(onBack: () => _goBack(context)),
-                        shippingTile: const SizedBox.shrink(),
-                      );
-                    }
                     final mobstarApplicableAmount =
                         _mobstarApplicableAmount(summary);
                     // Seed checkboxes from API flags on first load
@@ -1065,17 +996,9 @@ class _MobCreditPaymentCard extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              decoration: ShapeDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  side: selected
-                      ? const BorderSide(
-                          color: Color(0xFF0A243F),
-                          width: 2,
-                        )
-                      : BorderSide.none,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
@@ -1206,14 +1129,11 @@ class _MobCreditInfo extends StatelessWidget {
               height: 24,
               width: 96,
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: const ShapeDecoration(
+              decoration: const BoxDecoration(
                 color: Color(0xFF1E1E20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(10),
-                    topRight: Radius.circular(10),
-                    bottomLeft: Radius.circular(10),
-                  ),
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(12),
+                  bottomLeft: Radius.circular(10),
                 ),
               ),
               alignment: Alignment.center,
@@ -1253,12 +1173,6 @@ class _RazorpayTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: selected
-                ? Border.all(
-                    color: const Color(0xFF0A243F),
-                    width: 2,
-                  )
-                : null,
           ),
           child: Row(
             children: [
@@ -1274,11 +1188,14 @@ class _RazorpayTile extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              SvgPicture.asset(
-                'assets/images/razorpay.svg',
-                width: 68,
-                height: 16,
-                fit: BoxFit.contain,
+              Text(
+                'Razorpay',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0057A8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ],
           ),
@@ -1323,12 +1240,11 @@ class _RadioMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeColor =
-        enabled ? const Color(0xFF0A243F) : const Color(0xFFB0B4BB);
+        enabled ? const Color(0xFF0360E5) : const Color(0xFFB0B4BB);
     final borderColor = selected ? activeColor : const Color(0xFF767C8F);
     return Container(
       width: 18,
       height: 18,
-      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white,

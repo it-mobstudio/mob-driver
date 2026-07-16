@@ -5,6 +5,10 @@ import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
+import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
+import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_brand_grid.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_category_grid.dart';
@@ -41,6 +45,9 @@ class _HomepageWidgetState extends State<HomepageWidget> {
   final ScrollController _scrollController = ScrollController();
   late final VoidCallback _homeTabReselectionCallback;
   bool _showBackToTop = false;
+  bool _checkingAddressGate = true;
+  bool _addressGateRedirecting = false;
+  bool _referralDialogShown = false;
 
   static const double _scrollThreshold = 400;
 
@@ -50,17 +57,56 @@ class _HomepageWidgetState extends State<HomepageWidget> {
     _homeTabReselectionCallback = _scrollToTop;
     scrollHomeToTop = _homeTabReselectionCallback;
     _scrollController.addListener(_onScroll);
-    if (widget.showReferralBonus) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ReferralSuccessDialog.show(
-          context,
-          amount: 1000,
-          walletBalance: 1000,
-          onViewWallet: () => context.push(WalletPointsPage.routePath),
-        );
-      });
+    _runAddressGate();
+  }
+
+  Future<void> _runAddressGate() async {
+    final selected = await SelectedAddressStore.read();
+    if (!mounted) return;
+    if (selected != null) {
+      setState(() => _checkingAddressGate = false);
+      _showReferralDialogIfNeeded();
+      return;
     }
+
+    final (addresses, failure) = await sl<AddressRepository>().getAddresses();
+    if (!mounted) return;
+    if (failure == null && addresses != null && addresses.isNotEmpty) {
+      await SelectedAddressStore.save(addresses.first);
+      if (!mounted) return;
+      setState(() => _checkingAddressGate = false);
+      _showReferralDialogIfNeeded();
+      return;
+    }
+
+    if (failure != null) {
+      setState(() => _checkingAddressGate = false);
+      _showReferralDialogIfNeeded();
+      return;
+    }
+
+    _addressGateRedirecting = true;
+    context.go(
+      '${AddressSelectionWidget.routePath}?hideBack=true',
+      extra: {
+        'returnToHome': true,
+        'showBackButton': false,
+      },
+    );
+  }
+
+  void _showReferralDialogIfNeeded() {
+    if (!widget.showReferralBonus || _referralDialogShown) return;
+    _referralDialogShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _addressGateRedirecting) return;
+      ReferralSuccessDialog.show(
+        context,
+        amount: 1000,
+        walletBalance: 1000,
+        onViewWallet: () => context.push(WalletPointsPage.routePath),
+      );
+    });
   }
 
   @override
@@ -98,6 +144,13 @@ class _HomepageWidgetState extends State<HomepageWidget> {
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
+
+    if (_checkingAddressGate || _addressGateRedirecting) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,

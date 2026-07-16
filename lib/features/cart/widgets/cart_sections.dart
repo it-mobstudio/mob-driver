@@ -508,6 +508,7 @@ class SellerSection extends StatelessWidget {
     required this.onQtyChanged,
     required this.onQtyInputChanged,
     required this.onRemove,
+    this.itemStartIndex = 0,
     this.isStoreOpen = true,
     this.isUpdatingCart = false,
     this.updatingItemKey,
@@ -515,6 +516,7 @@ class SellerSection extends StatelessWidget {
 
   final String sellerCode;
   final List<CartItem> sellerItems;
+  final int itemStartIndex;
   final String deliveryLabel;
   final bool isStoreOpen;
   final void Function(CartItem item, int quantity) onQtyChanged;
@@ -553,11 +555,16 @@ class SellerSection extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  'Store delivery',
+                  'Delivery fee',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
+                    height: 18 / 12,
                     color: const Color(0xFF0A243F),
+                    decoration: TextDecoration.underline,
+                    decorationColor: const Color(0xFF0A243F),
+                    decorationStyle: TextDecorationStyle.dotted,
+                    decorationThickness: 1.44,
                   ),
                 ),
                 const Spacer(),
@@ -621,7 +628,7 @@ class SellerSection extends StatelessWidget {
                 ],
                 for (var i = 0; i < sellerItems.length; i++) ...[
                   CartProductDetails(
-                    index: i,
+                    index: itemStartIndex + i,
                     item: sellerItems[i],
                     onQtyChanged: (qty) => onQtyChanged(sellerItems[i], qty),
                     onQtyInputChanged: (value) =>
@@ -728,8 +735,8 @@ class OrderDetailsCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 _kvRow('Subtotal', money(subtotal)),
                 _kvRow(
-                  'Shipping',
-                  shipping == 0 ? 'Free Delivery' : money(shipping),
+                  'Delivery fee',
+                  shipping == 0 ? 'Free' : money(shipping),
                   valueColor: shipping == 0 ? const Color(0xFF01A685) : null,
                 ),
                 _kvRow(

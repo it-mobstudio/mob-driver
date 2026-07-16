@@ -39,15 +39,13 @@ class HomeCategoryGrid extends StatelessWidget {
         child: Text('No categories found'),
       );
     }
-    final visibleCategories = categories.take(8).toList();
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
         padding: EdgeInsets.zero,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: visibleCategories.length,
+        itemCount: categories.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4,
           mainAxisSpacing: 16,
@@ -56,7 +54,7 @@ class HomeCategoryGrid extends StatelessWidget {
         ),
         itemBuilder: (context, index) {
           return Center(
-            child: HomeCategoryTile(category: visibleCategories[index]),
+            child: HomeCategoryTile(category: categories[index]),
           );
         },
       ),

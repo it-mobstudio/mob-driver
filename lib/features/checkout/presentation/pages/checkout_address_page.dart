@@ -5,7 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
-import 'package:m_o_b_demand_side/core/app_runtime/nav/nav.dart' show appNavigatorKey;
+import 'package:m_o_b_demand_side/core/app_runtime/nav/nav.dart'
+    show appNavigatorKey;
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/network/dio_client.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
@@ -480,12 +481,17 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                   addresses.isNotEmpty;
                               final hasEffectiveDeliveryAddress =
                                   _effectiveDeliveryAddress(
-                                        summary,
-                                        addresses,
-                                      ) !=
-                                      null ||
+                                            summary,
+                                            addresses,
+                                          ) !=
+                                          null ||
                                       (showCartDeliveryAddress &&
                                           summary.hasDeliveryAddress);
+                              final effectiveBillingAddress =
+                                  _effectiveBillingAddress(
+                                summary,
+                                addresses,
+                              );
 
                               // Trigger pincode check on first load
                               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -561,16 +567,29 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                           summary,
                                           addresses,
                                         ),
-                                        actionLabel: (_effectiveBillingAddress(
-                                                      summary,
-                                                      addresses,
-                                                    ) !=
-                                                    null ||
+                                        tag: effectiveBillingAddress
+                                                ?.addressTag ??
+                                            '',
+                                        project: effectiveBillingAddress
+                                                ?.projectName ??
+                                            '',
+                                        isMobCredit: effectiveBillingAddress
+                                                ?.mobCredit ??
+                                            false,
+                                        isMissingBillingAddress:
+                                            !_sameAddress &&
+                                                effectiveBillingAddress ==
+                                                    null &&
                                                 summary.billingAddress
                                                     .trim()
-                                                    .isNotEmpty)
-                                            ? 'Change'
-                                            : 'Add',
+                                                    .isEmpty,
+                                        actionLabel:
+                                            (effectiveBillingAddress != null ||
+                                                    summary.billingAddress
+                                                        .trim()
+                                                        .isNotEmpty)
+                                                ? 'Change'
+                                                : 'Add',
                                         onAction: () => _showAddressDrawer(
                                           context,
                                           forBilling: true,
@@ -705,7 +724,8 @@ class _DeliveryAddressCard extends StatelessWidget {
     final displayPhone = phone.trim();
     final displayTag = tag.trim();
     final displayProject = project.trim();
-    final hasPills = displayTag.isNotEmpty || displayProject.isNotEmpty;
+    final showTag = displayTag.isNotEmpty && !_isMobCreditTag(displayTag);
+    final hasPills = showTag || displayProject.isNotEmpty;
 
     return _CheckoutCard(
       padding: const EdgeInsets.all(12),
@@ -763,12 +783,12 @@ class _DeliveryAddressCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      if (displayTag.isNotEmpty)
+                      if (showTag)
                         _AddressPill(
                           text: displayTag,
                           color: const Color(0xFFE6EEF9),
                         ),
-                      if (displayTag.isNotEmpty && displayProject.isNotEmpty)
+                      if (showTag && displayProject.isNotEmpty)
                         const SizedBox(width: 8),
                       if (displayProject.isNotEmpty)
                         Flexible(
@@ -807,6 +827,24 @@ class _DeliveryAddressCard extends StatelessWidget {
   }
 }
 
+bool _isMobCreditTag(String tag) {
+  final normalized = tag.trim().toLowerCase();
+  return normalized == 'mobcredit' || normalized == 'mob credit';
+}
+
+class _MobCreditTag extends StatelessWidget {
+  const _MobCreditTag();
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/mobCreditTag.png',
+      height: 20,
+      fit: BoxFit.contain,
+    );
+  }
+}
+
 class _AddressPill extends StatelessWidget {
   const _AddressPill({
     required this.text,
@@ -823,7 +861,7 @@ class _AddressPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         text,
@@ -883,9 +921,8 @@ class _SameAddressRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: enabled
-                    ? const Color(0xFF0A243F)
-                    : const Color(0xFF9AA1AD),
+                color:
+                    enabled ? const Color(0xFF0A243F) : const Color(0xFF9AA1AD),
                 fontSize: 11,
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w400,
@@ -903,14 +940,22 @@ class _BillingAddressCard extends StatelessWidget {
   const _BillingAddressCard({
     required this.address,
     required this.gstNumber,
+    required this.isMissingBillingAddress,
     required this.actionLabel,
     required this.onAction,
+    this.tag = '',
+    this.project = '',
+    this.isMobCredit = false,
     this.phone = '',
   });
 
   final String address;
   final String phone;
   final String gstNumber;
+  final String tag;
+  final String project;
+  final bool isMobCredit;
+  final bool isMissingBillingAddress;
   final String actionLabel;
   final VoidCallback? onAction;
 
@@ -919,9 +964,17 @@ class _BillingAddressCard extends StatelessWidget {
     final displayAddress = address.trim();
     final displayPhone = phone.trim();
     final displayGstNumber = gstNumber.trim();
+    final displayTag = tag.trim();
+    final displayProject = project.trim();
+    final showMobCreditTag = isMobCredit || _isMobCreditTag(displayTag);
+    final hasPills =
+        showMobCreditTag || displayTag.isNotEmpty || displayProject.isNotEmpty;
 
-    return _CheckoutCard(
+    final card = _CheckoutCard(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      border: isMissingBillingAddress
+          ? Border.all(color: const Color(0xFFF0483E))
+          : null,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -929,15 +982,32 @@ class _BillingAddressCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
-                child: Text(
-                  'Billing address',
-                  style: TextStyle(
-                    color: Color(0xFF0A243F),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                    height: 1.43,
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: 'Billing address',
+                        style: TextStyle(
+                          color: Color(0xFF0A243F),
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          height: 1.43,
+                        ),
+                      ),
+                      if (isMissingBillingAddress)
+                        const TextSpan(
+                          text: ' + GST',
+                          style: TextStyle(
+                            color: Color(0xFF67696D),
+                            fontSize: 12,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                            height: 1.50,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -1004,9 +1074,55 @@ class _BillingAddressCard extends StatelessWidget {
                 height: 16 / 12,
               ),
             ),
+            if (hasPills) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (showMobCreditTag)
+                    const _MobCreditTag()
+                  else if (displayTag.isNotEmpty)
+                    _AddressPill(
+                      text: displayTag,
+                      color: const Color(0xFFE6EEF9),
+                    ),
+                  if ((showMobCreditTag || displayTag.isNotEmpty) &&
+                      displayProject.isNotEmpty)
+                    const SizedBox(width: 8),
+                  if (displayProject.isNotEmpty)
+                    Flexible(
+                      child: _AddressPill(
+                        text: displayProject.startsWith('Project:')
+                            ? displayProject
+                            : 'Project: $displayProject',
+                        color: const Color(0xFFFFD911),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ],
         ],
       ),
+    );
+
+    if (!isMissingBillingAddress) return card;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        card,
+        const SizedBox(height: 6),
+        Text(
+          'Please add billing address',
+          style: GoogleFonts.inter(
+            color: const Color(0xFFF0483E),
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            height: 18 / 12,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1105,10 +1221,12 @@ class _CheckoutCard extends StatelessWidget {
   const _CheckoutCard({
     required this.child,
     this.padding = EdgeInsets.zero,
+    this.border,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
+  final BoxBorder? border;
 
   @override
   Widget build(BuildContext context) {
@@ -1117,6 +1235,7 @@ class _CheckoutCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: Colors.white,
+        border: border,
         borderRadius: BorderRadius.circular(12),
       ),
       child: child,

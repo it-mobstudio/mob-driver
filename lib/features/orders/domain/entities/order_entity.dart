@@ -95,6 +95,24 @@ class OrderShipmentFileEntity {
   }
 }
 
+class OrderTrackingEventEntity {
+  const OrderTrackingEventEntity({
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String status;
+  final String createdAt;
+
+  factory OrderTrackingEventEntity.fromMap(Map<String, dynamic> map) {
+    return OrderTrackingEventEntity(
+      status: (map['status'] ?? map['order_status'] ?? '').toString(),
+      createdAt: (map['created_at'] ?? map['createdAt'] ?? map['date'] ?? '')
+          .toString(),
+    );
+  }
+}
+
 class OrderShipmentEntity {
   const OrderShipmentEntity({
     required this.id,
@@ -112,6 +130,7 @@ class OrderShipmentEntity {
     this.rewardMessage = '',
     this.files = const <OrderShipmentFileEntity>[],
     this.hasReview = false,
+    this.trackingEvents = const <OrderTrackingEventEntity>[],
   });
 
   final String id;
@@ -128,6 +147,7 @@ class OrderShipmentEntity {
   final int rewardPoints;
   final String rewardMessage;
   final List<OrderShipmentFileEntity> files;
+  final List<OrderTrackingEventEntity> trackingEvents;
   // "review" is only ever present once the customer has actually submitted
   // one — its mere presence (not its contents) is what should hide the
   // "Rate now" prompt on the tracking page.
@@ -184,6 +204,7 @@ class OrderShipmentEntity {
               OrderShipmentFileEntity.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
       hasReview: map['review'] != null,
+      trackingEvents: _trackingEventsFromMap(map),
     );
   }
 }
@@ -205,6 +226,7 @@ class OrderEntity {
     this.sgst = 0,
     this.cgst = 0,
     this.shippingFee = 0,
+    this.saving,
     this.deliveryName = '',
     this.deliveryPhone = '',
     this.billingName = '',
@@ -214,6 +236,7 @@ class OrderEntity {
     this.paymentMethods = const [],
     this.rewardPoints = 0,
     this.isStoreOrder = false,
+    this.trackingEvents = const <OrderTrackingEventEntity>[],
   });
 
   final String id;
@@ -231,6 +254,7 @@ class OrderEntity {
   final double sgst;
   final double cgst;
   final double shippingFee;
+  final double? saving;
   final String deliveryName;
   final String deliveryPhone;
   final String billingName;
@@ -240,6 +264,7 @@ class OrderEntity {
   final List<String> paymentMethods;
   final int rewardPoints;
   final bool isStoreOrder;
+  final List<OrderTrackingEventEntity> trackingEvents;
 
   factory OrderEntity.fromMap(Map<String, dynamic> map) {
     final itemsRaw = map['items'] is List ? map['items'] as List : <dynamic>[];
@@ -348,6 +373,12 @@ class OrderEntity {
       cgst: double.tryParse((map['cgst'] ?? '0').toString()) ?? 0,
       shippingFee:
           double.tryParse((map['shipping_fee'] ?? '0').toString()) ?? 0,
+      saving: _optionalDouble(map, const [
+        'saving',
+        'savings',
+        'saved_amount',
+        'savedAmount',
+      ]),
       deliveryName: (addr['name'] ?? '').toString(),
       deliveryPhone: (addr['phone_number'] ?? addr['phone'] ?? '').toString(),
       billingName: (billingAddr['name'] ?? '').toString(),
@@ -363,6 +394,7 @@ class OrderEntity {
       rewardPoints:
           int.tryParse((pointsSummary['total_points'] ?? '0').toString()) ?? 0,
       isStoreOrder: map['is_store_order'] == true,
+      trackingEvents: _trackingEventsFromMap(map),
     );
   }
 
@@ -373,4 +405,30 @@ class OrderEntity {
   /// resolves to the right order.
   static String baseOrderId(String raw) =>
       raw.replaceFirst(RegExp(r'_\d+$'), '');
+}
+
+double? _optionalDouble(Map<String, dynamic> map, List<String> keys) {
+  for (final key in keys) {
+    if (!map.containsKey(key)) continue;
+    final value = map[key];
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    final parsed = double.tryParse(value.toString().replaceAll(',', '').trim());
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+List<OrderTrackingEventEntity> _trackingEventsFromMap(Map<String, dynamic> map) {
+  for (final key in const ['tracking', 'trackings', 'timeline', 'history']) {
+    final value = map[key];
+    if (value is List) {
+      return value
+          .whereType<Map>()
+          .map((item) =>
+              OrderTrackingEventEntity.fromMap(Map<String, dynamic>.from(item)))
+          .toList();
+    }
+  }
+  return const [];
 }

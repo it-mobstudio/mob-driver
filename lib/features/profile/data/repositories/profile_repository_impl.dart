@@ -54,12 +54,27 @@ class ProfileRepositoryImpl implements ProfileRepository {
       final raw = body['data'] is Map
           ? Map<String, dynamic>.from(body['data'] as Map)
           : body;
-      return (ReferralSummaryEntity.fromMap(raw), null);
+      final summary = ReferralSummaryEntity.fromMap(raw);
+      await _cacheReferralSummary(summary);
+      return (summary, null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {
       return (null, UnknownFailure(e.toString()));
     }
+  }
+
+  Future<void> _cacheReferralSummary(ReferralSummaryEntity summary) async {
+    final referralCode = summary.referralCode.trim();
+    final referralLink = summary.referralLink.trim();
+    if (referralCode.isEmpty && referralLink.isEmpty) return;
+
+    final current = AuthSession.instance.userDetails ?? <String, dynamic>{};
+    await AuthSession.instance.saveUserDetails({
+      ...current,
+      if (referralCode.isNotEmpty) 'referral_code': referralCode,
+      if (referralLink.isNotEmpty) 'referral_link': referralLink,
+    });
   }
 
   @override

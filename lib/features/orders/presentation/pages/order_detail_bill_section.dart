@@ -11,7 +11,7 @@ class _BillDetailsSection extends StatelessWidget {
     final total = order?.total ?? 0.0;
     final tax = (order?.sgst ?? 0) + (order?.cgst ?? 0);
     final shipping = order?.shippingFee ?? 0.0;
-    final savedAmount = subTotal > total ? subTotal - total : 0.0;
+    final savedAmount = order?.saving;
     final points = order?.rewardPoints ?? 0;
     final rewardMessage = order?.rewardMessage ?? '';
 
@@ -37,7 +37,7 @@ class _BillDetailsSection extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _BillRow(
-            label: 'Shipping',
+            label: 'Delivery fee',
             value: shipping > 0 ? '₹${shipping.toStringAsFixed(2)}' : 'Free',
           ),
           if (tax > 0) ...[
@@ -49,14 +49,19 @@ class _BillDetailsSection extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFFE0E0E0)),
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: Color(0xFFDEDEDE),
+          ),
           const SizedBox(height: 12),
           _BillRow(
             label: 'Total',
             value: '₹${total.toStringAsFixed(2)}',
             bold: true,
           ),
-          if (savedAmount > 0) _SavedAmountBadge(amount: savedAmount),
+          if (savedAmount != null && savedAmount > 0)
+            _SavedAmountBadge(amount: savedAmount),
           if (points > 0 || rewardMessage.isNotEmpty) ...[
             const SizedBox(height: 12),
             _EarnPointsBanner(points: points, message: rewardMessage),
@@ -87,14 +92,17 @@ class _SavedAmountBadge extends StatelessWidget {
             end: Alignment.centerLeft,
           ),
         ),
-        alignment: Alignment.center,
-        child: Text(
-          'SAVED ₹${amount.toStringAsFixed(0)}',
-          style: GoogleFonts.inter(
-            color: const Color(0xFF329537),
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            height: 16 / 11,
+        child: Align(
+          alignment: Alignment.center,
+          widthFactor: 1,
+          child: Text(
+            'SAVED ₹${amount.toStringAsFixed(0)}',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF329537),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              height: 16 / 11,
+            ),
           ),
         ),
       ),
@@ -172,15 +180,15 @@ class _EarnPointsBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(
-            'You will earn',
-            style: GoogleFonts.inter(
-              color: const Color(0xFF0A243F),
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-              height: 18 / 12,
-            ),
-          ),
+          // Text(
+          //   'You will earn',
+          //   style: GoogleFonts.inter(
+          //     color: const Color(0xFF0A243F),
+          //     fontSize: 12,
+          //     fontWeight: FontWeight.w400,
+          //     height: 18 / 12,
+          //   ),
+          // ),
           const SizedBox(width: 4),
           SvgPicture.asset('assets/images/points.svg', width: 16, height: 16),
           const SizedBox(width: 4),

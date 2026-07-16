@@ -137,7 +137,11 @@ class _SearchPageState extends State<SearchPage> {
     try {
       final (result, failure) =
           await sl<ProductRepository>().searchSuggestions(query: q);
-      if (!mounted) return;
+      // Discard results from a superseded request: the debounce timer only
+      // limits how many requests fire, not the order in which they land, so
+      // an older in-flight request can resolve (or fail) after a newer one
+      // already updated the UI for the current query.
+      if (!mounted || q != query) return;
       if (failure != null) {
         setState(() {
           _error = 'Something went wrong. Please try again.';
@@ -151,7 +155,7 @@ class _SearchPageState extends State<SearchPage> {
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || q != query) return;
       setState(() {
         _error = 'Something went wrong. Please try again.';
         _loading = false;

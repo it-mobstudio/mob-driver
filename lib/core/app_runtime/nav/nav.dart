@@ -183,11 +183,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
           final extra = state.extra is Map<String, dynamic>
               ? state.extra as Map<String, dynamic>
               : <String, dynamic>{};
+          final fromSignup =
+              state.uri.queryParameters['fromSignup'] == 'true';
+          final hideBack = state.uri.queryParameters['hideBack'] == 'true';
           return AddressSelectionWidget(
-            returnToHome: extra['returnToHome'] == true,
+            returnToHome: fromSignup || extra['returnToHome'] == true,
             showReferralBonus: extra['showReferralBonus'] == true,
             showSearch: extra['showSearch'] != false,
             selectable: extra['selectable'] != false,
+            showBackButton:
+                !fromSignup && !hideBack && extra['showBackButton'] != false,
             title: extra['title']?.toString(),
           );
         },

@@ -153,8 +153,7 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
           isStoreOpen: _isStoreOpen,
           itemStartIndex:
               entries.take(i).fold<int>(0, (sum, e) => sum + e.value.length),
-          onQtyChanged: (item, qty) =>
-              _updateCartQuantity(context, item, qty),
+          onQtyChanged: (item, qty) => _updateCartQuantity(context, item, qty),
           onQtyInputChanged: (item, text) {
             final qty = int.tryParse(text.trim()) ?? 0;
             _updateCartQuantity(context, item, qty);
@@ -222,56 +221,61 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
                               shippingTile: const SizedBox.shrink(),
                             )
                           : Column(
-                        children: [
-                          _ReviewHeader(onBack: () => _goBack(context)),
-                          Expanded(
-                            child: Container(
-                              color: const Color(0xFFF0F0F0),
-                              child: Stack(
-                                children: [
-                                  ListView(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        16, 16, 16, 118),
-                                    children: [
-                                      _CartSummaryCard(
-                                        itemCount: summary.items.length,
-                                        storeCount:
-                                            summary.itemsBySeller.keys.length,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      ..._buildSellerSections(
-                                          context, summary, updatingItemKey),
-                                      OrderDetailsCard(
-                                        subtotal: summary.subtotal,
-                                        shipping: summary.shipping,
-                                        tax: summary.tax,
-                                        savings: summary.savings,
-                                        total: summary.total,
-                                        earningPoints: summary.earningPoints,
-                                        mobstarApplied: summary.usePoints &&
-                                                summary.mobstarAmount > 0
-                                            ? summary.mobstarAmount
-                                            : null,
-                                        walletApplied: summary.useWallet &&
-                                                summary.applicableWalletAmount >
-                                                    0
-                                            ? summary.applicableWalletAmount
-                                            : null,
-                                      ),
-                                    ],
+                              children: [
+                                _ReviewHeader(onBack: () => _goBack(context)),
+                                Expanded(
+                                  child: Container(
+                                    color: const Color(0xFFF0F0F0),
+                                    child: Stack(
+                                      children: [
+                                        ListView(
+                                          padding: const EdgeInsets.fromLTRB(
+                                              16, 16, 16, 118),
+                                          children: [
+                                            _CartSummaryCard(
+                                              itemCount: summary.items.length,
+                                              storeCount: summary
+                                                  .itemsBySeller.keys.length,
+                                            ),
+                                            const SizedBox(height: 20),
+                                            ..._buildSellerSections(context,
+                                                summary, updatingItemKey),
+                                            OrderDetailsCard(
+                                              subtotal: summary.subtotal,
+                                              shipping: summary.shipping,
+                                              tax: summary.tax,
+                                              savings: summary.savings,
+                                              total: summary.total,
+                                              earningPoints:
+                                                  summary.earningPoints,
+                                              mobstarApplied: summary
+                                                          .usePoints &&
+                                                      summary.mobstarAmount > 0
+                                                  ? summary.mobstarAmount
+                                                  : null,
+                                              walletApplied: summary
+                                                          .useWallet &&
+                                                      summary.applicableWalletAmount >
+                                                          0
+                                                  ? summary
+                                                      .applicableWalletAmount
+                                                  : null,
+                                            ),
+                                          ],
+                                        ),
+                                        BottomCheckoutBar(
+                                          label: 'Continue',
+                                          isLoading: isSubmitting,
+                                          isDisabled: updatingItemKey != null,
+                                          onProceed: () =>
+                                              _submitAddress(context),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  BottomCheckoutBar(
-                                    label: 'Continue',
-                                    isLoading: isSubmitting,
-                                    isDisabled: updatingItemKey != null,
-                                    onProceed: () => _submitAddress(context),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                   };
                 },
               ),
@@ -428,14 +432,16 @@ class _ReviewSellerCard extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  items.first.storeDelivery
-                      ? 'Store delivery'
-                      : 'Direct delivery',
+                  items.first.storeDelivery ? 'Delivery fee' : 'Delivery fee',
                   style: GoogleFonts.inter(
                     color: const Color(0xFF0A243F),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     height: 18 / 12,
+                    decoration: TextDecoration.underline,
+                    decorationColor: const Color(0xFF0A243F),
+                    decorationStyle: TextDecorationStyle.dotted,
+                    decorationThickness: 1.44,
                   ),
                 ),
                 const Spacer(),
@@ -674,8 +680,7 @@ class _ReviewItemTile extends StatelessWidget {
                 onDecrement: () => onQtyChanged(item.qty - 1),
                 onIncrement: () => onQtyChanged(item.qty + 1),
                 onInputChanged: onQtyInputChanged,
-                maxValue:
-                    item.availableStock > 0 ? item.availableStock : null,
+                maxValue: item.availableStock > 0 ? item.availableStock : null,
                 onMaxExceeded: (stock) {
                   ScaffoldMessenger.of(context)
                     ..hideCurrentSnackBar()

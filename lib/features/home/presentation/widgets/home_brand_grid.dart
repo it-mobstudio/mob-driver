@@ -9,7 +9,7 @@ class HomeBrandGrid extends StatelessWidget {
   static const List<_HomeBrandItem> _brands = [
     _HomeBrandItem(
       name: 'Fevicol',
-      titleImage: 'assets/images/Brands/Pidilitelogo.svg',
+      titleImage: 'assets/images/Brands/Fevicollogo.png',
       productImage: 'assets/images/Brands/Fevicol.webp',
     ),
     _HomeBrandItem(

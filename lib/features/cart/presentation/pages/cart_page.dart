@@ -186,12 +186,16 @@ class _CartPageState extends State<CartPage> {
                       SavingsStrip(savings: summary.savings),
                     ],
                     const SizedBox(height: 20),
-                    ...summary.itemsBySeller.entries.map(
-                      (entry) => Padding(
+                    for (final indexed
+                        in summary.itemsBySeller.entries.indexed)
+                      Padding(
                         padding: const EdgeInsets.only(bottom: 20),
                         child: SellerSection(
-                          sellerCode: entry.key,
-                          sellerItems: entry.value,
+                          sellerCode: indexed.$2.key,
+                          sellerItems: indexed.$2.value,
+                          itemStartIndex: summary.itemsBySeller.entries
+                              .take(indexed.$1)
+                              .fold<int>(0, (sum, e) => sum + e.value.length),
                           deliveryLabel: _deliveryLabel,
                           isStoreOpen: _isStoreOpen,
                           isUpdatingCart: updatingItemKey != null,
@@ -207,7 +211,6 @@ class _CartPageState extends State<CartPage> {
                               ),
                         ),
                       ),
-                    ),
                     // const ViewCouponsTile(),
                     // const SizedBox(height: 8),
                     OrderDetailsCard(

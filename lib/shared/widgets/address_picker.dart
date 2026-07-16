@@ -131,18 +131,19 @@ class AddressPickerBody extends StatelessWidget {
 
   List<AddressEntity> _orderedSavedAddresses() {
     final selectedId = selectedAddressId?.trim() ?? '';
-    if (selectedId.isEmpty) return addresses;
-
     final selected = <AddressEntity>[];
+    final mobCredit = <AddressEntity>[];
     final others = <AddressEntity>[];
     for (final address in addresses) {
-      if (address.id.trim() == selectedId) {
+      if (selectedId.isNotEmpty && address.id.trim() == selectedId) {
         selected.add(address);
+      } else if (_isMobCreditAddress(address)) {
+        mobCredit.add(address);
       } else {
         others.add(address);
       }
     }
-    return [...selected, ...others];
+    return [...selected, ...mobCredit, ...others];
   }
 
   Widget _searchField() {
@@ -313,6 +314,11 @@ class AddressPickerBody extends StatelessWidget {
         )
         .toList();
   }
+}
+
+bool _isMobCreditAddress(AddressEntity address) {
+  final tag = address.addressTag.trim().toLowerCase();
+  return address.mobCredit || tag == 'mobcredit' || tag == 'mob credit';
 }
 
 /// A single search-result (or recent-search) row: a location icon, the
@@ -490,7 +496,9 @@ class AddressPickerCard extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 6,
                     children: [
-                      if (address.addressTag.trim().isNotEmpty)
+                      if (_isMobCreditAddress(address))
+                        const _MobCreditTag()
+                      else if (address.addressTag.trim().isNotEmpty)
                         _AddressPill(
                           text: address.addressTag.trim(),
                           color: const Color(0xFFF7F7F7),
@@ -599,6 +607,19 @@ class _SelectedBadge extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MobCreditTag extends StatelessWidget {
+  const _MobCreditTag();
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/mobCreditTag.png',
+      height: 20,
+      fit: BoxFit.contain,
     );
   }
 }

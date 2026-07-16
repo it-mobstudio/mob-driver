@@ -82,6 +82,22 @@ Map<String, dynamic>? _trackOrderPayload(Map<String, dynamic>? map) {
   return map;
 }
 
+List<OrderTrackingEventEntity> _trackingEvents(Map<String, dynamic>? map) {
+  final payload = _trackOrderPayload(map);
+  if (payload == null) return const [];
+  for (final key in const ['tracking', 'trackings', 'timeline', 'history']) {
+    final value = payload[key];
+    if (value is List) {
+      return value
+          .whereType<Map>()
+          .map((item) =>
+              OrderTrackingEventEntity.fromMap(Map<String, dynamic>.from(item)))
+          .toList();
+    }
+  }
+  return const [];
+}
+
 bool _isQuickOrderResponse(Map<String, dynamic>? map) {
   final value = _mapString(
     _trackOrderPayload(map),
@@ -90,6 +106,8 @@ bool _isQuickOrderResponse(Map<String, dynamic>? map) {
   if (value.isEmpty) return false;
   return value != 'normal_order' &&
       value != 'normal' &&
+      value != 'store_order' &&
+      value != 'store' &&
       value != 'false' &&
       value != '0';
 }
@@ -206,6 +224,10 @@ _TrackingTimelineStage? _timelineStageFromStatus(String status) {
       value.contains('packed')) {
     return _TrackingTimelineStage.packed;
   }
+  if (value.contains('sorting best quality products') ||
+      value.contains('sorting')) {
+    return _TrackingTimelineStage.packed;
+  }
   if (value.contains('packing') ||
       value.contains('processing') ||
       value.contains('created')) {
@@ -218,11 +240,14 @@ List<_TrackingTimelineItem> _buildTrackingTimeline({
   required OrderEntity? order,
   required OrderShipmentEntity? shipment,
   required _TrackingState trackingState,
+  required List<OrderTrackingEventEntity> trackingEvents,
 }) {
   final stageTimes = <_TrackingTimelineStage, String>{};
+  _TrackingTimelineStage? trackingEventStage;
   final orderCreatedAt = _formatTrackingDateTime(order?.createdAt ?? '');
   if (orderCreatedAt.isNotEmpty) {
     stageTimes[_TrackingTimelineStage.placed] = orderCreatedAt;
+    stageTimes[_TrackingTimelineStage.packing] = orderCreatedAt;
   }
 
   final shipmentCreatedAt = _formatTrackingDateTime(shipment?.createdAt ?? '');
@@ -239,7 +264,20 @@ List<_TrackingTimelineItem> _buildTrackingTimeline({
     }
   }
 
-  final currentStage = shipmentStage ??
+  for (final event in trackingEvents) {
+    final stage = _timelineStageFromStatus(event.status);
+    final timeText = _formatTrackingDateTime(event.createdAt);
+    if (stage != null && timeText.isNotEmpty) {
+      stageTimes[stage] = timeText;
+      if (trackingEventStage == null ||
+          stage.index > trackingEventStage.index) {
+        trackingEventStage = stage;
+      }
+    }
+  }
+
+  final currentStage = trackingEventStage ??
+      shipmentStage ??
       _timelineStageFromStatus(order?.status ?? '') ??
       _timelineStageFromState(trackingState);
   final completedIndex =
@@ -480,13 +518,12 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       const ['order_status', 'orderStatus', 'status'],
     );
     final isDelayed = _mapBool(trackPayload, const ['is_delayed', 'isDelayed']);
-    final trackingState = _TrackingState.fromStatus(
-      isDelayed
-          ? 'Order delayed'
-          : trackOrderStatus.isNotEmpty
-              ? trackOrderStatus
-              : trackingStatus,
-    );
+    final statusText =
+        trackOrderStatus.isNotEmpty ? trackOrderStatus : trackingStatus;
+    final statusState = _TrackingState.fromStatus(statusText);
+    final trackingState = isDelayed && !statusState.isDelivered
+        ? _TrackingState.delayed
+        : statusState;
     final deliverySlot = shipment?.deliverySlot ?? '';
     // final vendorName = shipment?.vendorName ?? '';
     // final vehicleAssigned = shipment?.vehicleAssigned ?? false;
@@ -511,10 +548,16 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       trackPayload,
       const ['order_status_text', 'orderStatusText', 'status_text', 'text'],
     );
+    final detailTrackingEvents = shipment?.trackingEvents.isNotEmpty == true
+        ? shipment!.trackingEvents
+        : order?.trackingEvents ?? const <OrderTrackingEventEntity>[];
     final timelineItems = _buildTrackingTimeline(
       order: order,
       shipment: shipment,
       trackingState: trackingState,
+      trackingEvents: detailTrackingEvents.isNotEmpty
+          ? detailTrackingEvents
+          : _trackingEvents(_trackOrderBody),
     );
     final normalStatusTime =
         _currentTrackingTimelineTime(timelineItems, trackingState);

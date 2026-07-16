@@ -676,7 +676,7 @@ class _CreditProfileData {
           'wallet',
           'mob_wallet',
         ],
-        fallback: 1500);
+        fallback: 0);
     final points = _numValue(
         user,
         const [
@@ -685,10 +685,10 @@ class _CreditProfileData {
           'points',
           'total_points',
         ],
-        fallback: 328);
+        fallback: 0);
 
     return _CreditProfileData(
-      name: name.isEmpty ? 'Johnathan Wick' : name,
+      name: name,
       phone: _formatPhone(phone),
       rewardPoints: points.round(),
       walletBalance: wallet,
