@@ -100,7 +100,7 @@ class CreditPage extends StatelessWidget {
                     MobCreditDocumentsCard(
                       onViewDocuments: () => showCreditDocumentsSheet(context),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     const MobCreditIndiaCard(),
                     const SizedBox(height: 40),
                     MobCreditSectionTitle('What our members say'),

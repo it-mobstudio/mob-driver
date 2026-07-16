@@ -453,8 +453,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                 Expanded(
                   child: SingleChildScrollView(
                     child: DecoratedBox(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFFFFF),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).scaffoldBackgroundColor,
                       ),
                       child: Column(
                         children: [

@@ -44,9 +44,7 @@ class _MobstarView extends StatelessWidget {
     final valueText = mobstar.actualMoney % 1 == 0
         ? mobstar.actualMoney.toStringAsFixed(0)
         : mobstar.actualMoney.toStringAsFixed(2);
-    final rewardPercent = mobstar.percentage * 100;
-    final rewardText =
-        rewardPercent == 0 ? '0%' : '${_trimNumber(rewardPercent)}%';
+    final rewardText = '${_trimNumber(mobstar.percentage)}X points';
 
     return Scaffold(
       backgroundColor: const Color(0xFF090A15),
@@ -64,17 +62,27 @@ class _MobstarView extends StatelessWidget {
                       fit: StackFit.expand,
                       children: [
                         const DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(24),
-                              bottomRight: Radius.circular(24),
-                            ),
+                          decoration: ShapeDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFF000000), Color(0xFF505AB1)],
-                              stops: [.12, 1],
+                              end: Alignment.topRight,
+                              colors: [Colors.black, Color(0xFF505AB1)],
                             ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(24),
+                                bottomRight: Radius.circular(24),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: SvgPicture.asset(
+                            'assets/images/Starbgmobstar.svg',
+                            // width: 170,
+                            // height: 170,
                           ),
                         ),
                         Positioned(
@@ -153,7 +161,7 @@ class _MobstarView extends StatelessWidget {
                           left: 16,
                           right: 16,
                           child: Material(
-                            color: Colors.white.withValues(alpha: .05),
+                            color: Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(20),
@@ -163,11 +171,11 @@ class _MobstarView extends StatelessWidget {
                                 height: 114,
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 16),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                      color:
-                                          Colors.white.withValues(alpha: .15)),
+                                decoration: ShapeDecoration(
+                                  color: Colors.white.withValues(alpha: .05),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                 ),
                                 child: Row(
                                     crossAxisAlignment:
@@ -191,52 +199,54 @@ class _MobstarView extends StatelessWidget {
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.center,
                                                 children: [
-                                                  Transform.translate(
-                                                    offset: const Offset(0,
-                                                        -2), // adjust: -3, -2, -1, 0
-                                                    child: SvgPicture.asset(
-                                                      'assets/images/points.svg',
-                                                      width: 20,
-                                                      height: 20,
-                                                      fit: BoxFit.contain,
-                                                    ),
+                                                  SvgPicture.asset(
+                                                    'assets/images/points.svg',
+                                                    width: 20,
+                                                    height: 20,
+                                                    fit: BoxFit.contain,
                                                   ),
-                                                  const SizedBox(width: 7),
+                                                  const SizedBox(width: 8),
                                                   Transform.translate(
-                                                    offset: const Offset(0, 0),
+                                                    offset: const Offset(0, 2),
                                                     child: Text(
                                                       '$points',
                                                       style: _text(
                                                         28,
-                                                        const Color(0xFF999999),
+                                                        Colors.white,
                                                         FontWeight.w900,
                                                         height: 1,
                                                       ),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 9),
+                                                  const SizedBox(width: 8),
                                                   Transform.translate(
-                                                    offset: const Offset(0, -1),
+                                                    offset: const Offset(0, 1),
                                                     child: Container(
+                                                      height: 24,
                                                       padding: const EdgeInsets
                                                           .symmetric(
-                                                          horizontal: 10,
-                                                          vertical: 2),
-                                                      decoration: BoxDecoration(
+                                                          horizontal: 10),
+                                                      decoration:
+                                                          ShapeDecoration(
                                                         color: Colors.white
                                                             .withValues(
                                                                 alpha: .2),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(16),
+                                                        shape:
+                                                            RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(16),
+                                                        ),
                                                       ),
+                                                      alignment:
+                                                          Alignment.center,
                                                       child: Text(
                                                         '₹$valueText',
                                                         style: _text(
                                                           13,
                                                           Colors.white70,
                                                           FontWeight.w500,
-                                                          height: 1,
+                                                          height: 20 / 13,
                                                         ),
                                                       ),
                                                     ),
@@ -274,13 +284,13 @@ class _MobstarView extends StatelessWidget {
                       Expanded(
                           child: _BenefitCard(
                               asset: 'assets/images/Xpoints.svg',
-                              title: '$rewardText rewards',
+                              title: rewardText,
                               subtitle: 'on every purchase')),
                       const SizedBox(width: 15),
-                      Expanded(
+                      const Expanded(
                           child: _BenefitCard(
                               asset: 'assets/images/freeimg.svg',
-                              title: '${mobstar.freeDelivery} FREE',
+                              title: 'FREE',
                               subtitle: 'deliveries')),
                     ]),
                   ),
@@ -312,35 +322,32 @@ class _MobstarView extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 28),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: _DottedDivider(),
+                  ),
+                  const SizedBox(height: 38),
+                  const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                          padding: EdgeInsets.only(left: 16),
+                          child: Text('Frequently asked questions',
+                              style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  color: gold,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  height: 18 / 12)))),
+                  const SizedBox(height: 13),
+                  for (final question in const [
+                    'What is mobSTAR loyalty program?',
+                    'When do mobSTAR points expire?',
+                    'How do I redeem my mobSTAR points?',
+                    'View all FAQ’s'
+                  ])
+                    _FaqRow(question),
                   const SizedBox(height: 40),
-                  // Container(
-                  //     margin: const EdgeInsets.symmetric(horizontal: 16),
-                  //     height: 2,
-                  //     decoration: const BoxDecoration(
-                  //         border: Border(
-                  //             bottom: BorderSide(
-                  //                 color: Color(0xFF4B4B55),
-                  //                 style: BorderStyle.solid)))),
-                  // const SizedBox(height: 38),
-                  // const Align(
-                  //     alignment: Alignment.centerLeft,
-                  //     child: Padding(
-                  //         padding: EdgeInsets.only(left: 16),
-                  //         child: Text('Frequently asked questions',
-                  //             style: TextStyle(
-                  //                 fontFamily: 'Inter',
-                  //                 color: gold,
-                  //                 fontSize: 12,
-                  //                 fontWeight: FontWeight.w600)))),
-                  // const SizedBox(height: 13),
-                  // for (final question in const [
-                  //   'What is mobSTAR loyalty program?',
-                  //   'When do mobSTAR points expire?',
-                  //   'How do I redeem my mobSTAR points?',
-                  //   'View all FAQ’s'
-                  // ])
-                   // _FaqRow(question),
-                //  const SizedBox(height: 172),
                 ],
               ),
             ),
@@ -424,8 +431,7 @@ class _BenefitCard extends StatelessWidget {
       height: 129,
       decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: .03),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: .1))),
+          borderRadius: BorderRadius.circular(16)),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         SvgPicture.asset(asset, width: 48, height: 48),
         const SizedBox(height: 12),
@@ -446,13 +452,11 @@ class _LevelCard extends StatelessWidget {
 
   final MobstarEntity mobstar;
 
-  // No API field gives progress-toward-next-level directly, and
-  // purchase_limit is just the flat target — not something to subtract or
-  // divide against other fields ourselves.
-  double get progress => 0;
-
   @override
   Widget build(BuildContext context) {
+    final progress = mobstar.purchaseLimit <= 0
+        ? 0.0
+        : (mobstar.points / mobstar.purchaseLimit).clamp(0.0, 1.0);
     final remainingText =
         mobstar.purchaseLimit.round().toString().replaceAllMapped(
               RegExp(r'\B(?=(\d{3})+(?!\d))'),
@@ -465,7 +469,6 @@ class _LevelCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: .03),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: .1)),
       ),
       child: Column(
         children: [
@@ -497,52 +500,72 @@ class _LevelCard extends StatelessWidget {
                   Positioned(
                     left: 34,
                     right: 34,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) => Stack(
-                        children: [
-                          Container(
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF41414B),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 450),
-                            curve: Curves.easeOut,
-                            width: constraints.maxWidth * progress,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF996E37), Color(0xFFFFB75C)],
+                    child: SizedBox(
+                      height: 8,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            const ColoredBox(color: Color(0xFF41414B)),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: FractionallySizedBox(
+                                widthFactor: progress,
+                                heightFactor: 1,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient:
+                                        _levelGradient(mobstar.membership),
+                                  ),
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                   Positioned(
                     left: 0,
-                    child: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: const Color(0xFF161722),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: const ShapeDecoration(
+                        color: Color(0xFF131313),
+                        shape: OvalBorder(
+                          side: BorderSide(
+                            color: Color(0xFF53545B),
+                          ),
+                        ),
+                      ),
                       child: SvgPicture.asset(
-                          _MobstarView._levelAsset(mobstar.membership),
-                          width: 24,
-                          height: 23),
+                        _MobstarView._levelAsset(mobstar.membership),
+                        width: 24,
+                        height: 24,
+                      ),
                     ),
                   ),
                   Positioned(
                     right: 0,
-                    child: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: const Color(0xFF161722),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: const ShapeDecoration(
+                        color: Color(0xFF131313),
+                        shape: OvalBorder(
+                          side: BorderSide(
+                            color: Color(0xFF53545B),
+                          ),
+                        ),
+                      ),
                       child: SvgPicture.asset(
-                          _MobstarView._levelAsset(nextMembership),
-                          width: 24,
-                          height: 24),
+                        _MobstarView._levelAsset(nextMembership),
+                        width: 24,
+                        height: 24,
+                      ),
                     ),
                   ),
                 ],
@@ -567,6 +590,44 @@ class _LevelCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  static LinearGradient _levelGradient(String membership) {
+    final level = membership.toLowerCase();
+
+    if (level.contains('diamond') || level.contains('dimond')) {
+      return const LinearGradient(
+        begin: Alignment(1, .5),
+        end: Alignment(.1, .5),
+        colors: [Color(0xFF59D9FC), Color(0xFFC0C0BF)],
+      );
+    }
+    if (level.contains('platinum')) {
+      return const LinearGradient(
+        begin: Alignment(1, .5),
+        end: Alignment(.1, .5),
+        colors: [Color(0xFF59D9FC), Color(0xFFC0C0BF)],
+      );
+    }
+    if (level.contains('gold')) {
+      return const LinearGradient(
+        begin: Alignment(.1, .5),
+        end: Alignment(1, .5),
+        colors: [Color(0xFFE9B305), Color(0xFFC0C0BF)],
+      );
+    }
+    if (level.contains('silver')) {
+      return const LinearGradient(
+        begin: Alignment(1, .5),
+        end: Alignment(.1, .5),
+        colors: [Color(0xFFE9B305), Color(0xFFC0C0BF)],
+      );
+    }
+    return const LinearGradient(
+      begin: Alignment(.1, .5),
+      end: Alignment(1, .5),
+      colors: [Color(0xFFAD6F33), Color(0xFFC0C0BF)],
     );
   }
 }
@@ -877,8 +938,7 @@ class _FaqRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: .1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: .1))),
+          borderRadius: BorderRadius.circular(16)),
       child: Row(children: [
         Expanded(
             child: Text(text,
@@ -888,4 +948,34 @@ class _FaqRow extends StatelessWidget {
                     fontWeight: FontWeight.w500))),
         const Icon(Icons.chevron_right, color: _MobstarView.muted, size: 20)
       ]));
+}
+
+class _DottedDivider extends StatelessWidget {
+  const _DottedDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 2,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const dotWidth = 2.0;
+          const gap = 3.0;
+          final count = (constraints.maxWidth / (dotWidth + gap)).floor();
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(
+              count,
+              (_) => const SizedBox(
+                width: dotWidth,
+                height: 1,
+                child: ColoredBox(color: Color(0xFF4B4B55)),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

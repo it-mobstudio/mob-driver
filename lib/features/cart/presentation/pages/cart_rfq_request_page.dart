@@ -13,6 +13,7 @@ import 'package:m_o_b_demand_side/features/address/presentation/pages/address_se
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
+import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
 /// Opens the RFQ ("purchase later / recheck prices") form as a true modal
 /// bottom sheet over the current screen, matching the rest of the app's
@@ -426,34 +427,14 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
     String? Function(String?)? validator,
     bool readOnly = false,
   }) {
-    return TextFormField(
+    return AppTextField(
+      label: label,
       controller: controller,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       validator: validator,
+      enabled: !readOnly,
       readOnly: readOnly,
-      style: GoogleFonts.inter(color: _navy, fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label,
-        floatingLabelBehavior: FloatingLabelBehavior.auto,
-        labelStyle: GoogleFonts.inter(color: _muted, fontSize: 13),
-        filled: true,
-        fillColor: readOnly ? const Color(0xFFF5F7FA) : Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-        border: _inputBorder(),
-        enabledBorder: _inputBorder(),
-        focusedBorder: _inputBorder(color: _blue),
-        errorBorder: _inputBorder(color: const Color(0xFFE14040)),
-        focusedErrorBorder: _inputBorder(color: const Color(0xFFE14040)),
-      ),
-    );
-  }
-
-  OutlineInputBorder _inputBorder({Color color = _border}) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: color),
     );
   }
 

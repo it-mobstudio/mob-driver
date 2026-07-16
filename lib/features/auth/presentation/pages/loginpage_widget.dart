@@ -180,7 +180,7 @@ class _PhonePrefix extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 16, right: 24),
+      padding: const EdgeInsets.only(left: 16, right: 10),
       child: Center(
         widthFactor: 1,
         child: Text(

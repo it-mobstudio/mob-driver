@@ -1386,11 +1386,15 @@ class _BrandNameRow extends StatelessWidget {
                 height: 18 / 12,
               ),
             ),
-            const SizedBox(width: 4),
-            const Icon(
-              Icons.keyboard_arrow_right_rounded,
-              size: 14,
-              color: Color(0xFF01A685),
+            const SizedBox(width: 6),
+            Transform.translate(
+              offset: const Offset(0, 1),
+              child: SvgPicture.asset(
+                'assets/images/greenarrow.svg',
+                width: 10,
+                height: 10,
+                fit: BoxFit.contain,
+              ),
             ),
           ],
         ),
@@ -1604,7 +1608,12 @@ class _RatingBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, size: 12, color: Color(0xFFFFC107)),
+          SvgPicture.asset(
+            'assets/images/ratingstar.svg',
+            width: 12,
+            height: 12,
+            fit: BoxFit.contain,
+          ),
           const SizedBox(width: 6),
           Text(
             rating.toStringAsFixed(1),

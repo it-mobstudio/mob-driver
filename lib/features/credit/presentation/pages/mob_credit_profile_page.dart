@@ -1306,6 +1306,7 @@ class MobCreditDocumentsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return _InfoCard(
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           SizedBox(
             height: 128,
@@ -1355,6 +1356,7 @@ class MobCreditDocumentsCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -1383,14 +1385,15 @@ class MobCreditIndiaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return _InfoCard(
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           Positioned(
             right: -4,
             top: 10,
             child: SvgPicture.asset(
               'assets/images/indiamap.svg',
-              width: 112,
-              height: 122,
+              // width: 112,
+              // height: 122,
             ),
           ),
           const SizedBox(
