@@ -35,8 +35,10 @@ class _OrderInfoSection extends StatelessWidget {
   Future<void> _copyOrderId(BuildContext context, String orderId) async {
     await Clipboard.setData(ClipboardData(text: orderId));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Order ID copied')),
+    TopSnackBar.show(
+      context,
+      message: 'Order ID copied',
+      type: TopSnackBarType.success,
     );
   }
 

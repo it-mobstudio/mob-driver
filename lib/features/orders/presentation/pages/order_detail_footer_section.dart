@@ -6,14 +6,15 @@ class _HelpTile extends StatelessWidget {
   static const _whatsappNumber = '918970415365';
 
   Future<void> _openWhatsapp(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final ok = await launchUrl(
       Uri.parse('https://wa.me/$_whatsappNumber'),
       mode: LaunchMode.externalApplication,
     );
     if (!ok) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Unable to open WhatsApp.')),
+      TopSnackBar.show(
+        context,
+        message: 'Unable to open WhatsApp.',
+        type: TopSnackBarType.error,
       );
     }
   }

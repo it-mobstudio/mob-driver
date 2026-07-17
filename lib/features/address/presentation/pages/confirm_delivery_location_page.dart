@@ -13,6 +13,7 @@ import 'package:m_o_b_demand_side/features/address/domain/repositories/address_r
 import 'package:m_o_b_demand_side/features/address/presentation/pages/location_search_page.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/maps_link_sheet.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 /// Lets the user drag-confirm the exact pin location before it's applied as
 /// the active delivery location shown in the top nav bar — the step that
@@ -549,9 +550,11 @@ class _ConfirmDeliveryLocationPageState
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    TopSnackBar.show(
+      context,
+      message: message,
+      type: TopSnackBarType.error,
+    );
   }
 }
 

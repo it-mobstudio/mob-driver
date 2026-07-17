@@ -17,6 +17,7 @@ import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_wid
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
 import 'package:m_o_b_demand_side/features/home/domain/store_delivery_label.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class CartPage extends StatefulWidget {
   static const String routeName = 'CartPage';
@@ -92,11 +93,12 @@ class _CartPageState extends State<CartPage> {
           },
           listener: (context, state) {
             if (state is! CartLoaded) return;
-            final messenger = ScaffoldMessenger.of(context);
             if (state.actionError != null) {
-              messenger
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(content: Text(state.actionError!)));
+              TopSnackBar.show(
+                context,
+                message: state.actionError!,
+                type: TopSnackBarType.error,
+              );
               context.read<CartBloc>().add(CartActionErrorCleared());
             }
           },
@@ -251,15 +253,11 @@ class _CartPageState extends State<CartPage> {
     var nextQuantity = quantity;
     if (stock > 0 && quantity > stock) {
       nextQuantity = stock;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              'Only $stock units available. Quantity updated to $stock.',
-            ),
-          ),
-        );
+      TopSnackBar.show(
+        context,
+        message: 'Only $stock units available. Quantity updated to $stock.',
+        type: TopSnackBarType.info,
+      );
     }
     context.read<CartBloc>().add(
           CartQuantityUpdateRequested(item: item, newQty: nextQuantity),
@@ -392,10 +390,10 @@ class _CartPageState extends State<CartPage> {
         await sl<AddressRepository>().deleteAddress(address.id);
     if (!mounted) return;
     if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(failure?.message ?? 'Unable to delete address.'),
-        ),
+      TopSnackBar.show(
+        context,
+        message: failure?.message ?? 'Unable to delete address.',
+        type: TopSnackBarType.error,
       );
       return;
     }

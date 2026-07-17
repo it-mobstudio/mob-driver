@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_appl
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_documents_sheet.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 const _creditWhatsappNumber = '918970415365';
 
@@ -196,8 +197,10 @@ class CreditPage extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open WhatsApp')),
+      TopSnackBar.show(
+        context,
+        message: 'Unable to open WhatsApp',
+        type: TopSnackBarType.error,
       );
     }
   }
@@ -206,8 +209,10 @@ class CreditPage extends StatelessWidget {
     final uri = Uri.parse(url);
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open link.')),
+      TopSnackBar.show(
+        context,
+        message: 'Unable to open link.',
+        type: TopSnackBarType.error,
       );
     }
   }

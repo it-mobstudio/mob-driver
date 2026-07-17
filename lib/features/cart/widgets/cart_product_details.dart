@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/quantity_stepper.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class CartProductDetails extends StatelessWidget {
   const CartProductDetails({
@@ -84,15 +85,22 @@ class CartProductDetails extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF0A243F),
-                      height: 20 / 12,
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: item.slug.isEmpty
+                        ? null
+                        : () => context.push(
+                            '${ProductDetailPage.routePath}/${item.slug}'),
+                    child: Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF0A243F),
+                        height: 20 / 12,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -164,15 +172,12 @@ class CartProductDetails extends StatelessWidget {
                   maxValue:
                       item.availableStock > 0 ? item.availableStock : null,
                   onMaxExceeded: (stock) {
-                    ScaffoldMessenger.of(context)
-                      ..hideCurrentSnackBar()
-                      ..showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Only $stock units available. Quantity updated to $stock.',
-                          ),
-                        ),
-                      );
+                    TopSnackBar.show(
+                      context,
+                      message:
+                          'Only $stock units available. Quantity updated to $stock.',
+                      type: TopSnackBarType.info,
+                    );
                   },
                   isBusy: isBusy,
                 ),

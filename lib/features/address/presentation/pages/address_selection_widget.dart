@@ -17,6 +17,7 @@ import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_de
 import 'package:m_o_b_demand_side/features/address/presentation/pages/maps_link_sheet.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class AddressSelectionWidget extends StatefulWidget {
   const AddressSelectionWidget({
@@ -26,6 +27,7 @@ class AddressSelectionWidget extends StatefulWidget {
     this.showSearch = true,
     this.selectable = true,
     this.showBackButton = true,
+    this.autoDetectCurrentLocation = false,
     this.title,
   });
 
@@ -49,6 +51,7 @@ class AddressSelectionWidget extends StatefulWidget {
   /// flag rather than overloading [showSearch].
   final bool selectable;
   final bool showBackButton;
+  final bool autoDetectCurrentLocation;
 
   /// Overrides the default title (which otherwise falls back to
   /// 'Search location' / 'Addresses' based on [showSearch]).
@@ -66,12 +69,20 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   List<AddressEntity> _addresses = const [];
   bool _loadingAddresses = true;
   bool _detectingLocation = false;
+  bool _autoDetectStarted = false;
 
   @override
   void initState() {
     super.initState();
     _addressBloc = sl<AddressBloc>()..add(AddressLoadRequested());
     _addressRepository = sl<AddressRepository>();
+    if (widget.autoDetectCurrentLocation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _autoDetectStarted) return;
+        _autoDetectStarted = true;
+        _detectCurrentLocation();
+      });
+    }
   }
 
   @override
@@ -175,9 +186,11 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
       _completeSelection(_toAddressEntity(state.location));
     } else if (state is AddressError) {
       setState(() => _loadingAddresses = false);
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(state.message)));
+      TopSnackBar.show(
+        context,
+        message: state.message,
+        type: TopSnackBarType.error,
+      );
     }
   }
 
@@ -347,9 +360,11 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    TopSnackBar.show(
+      context,
+      message: message,
+      type: TopSnackBarType.error,
+    );
   }
 
   Future<void> _completeSelection(AddressEntity address) async {

@@ -15,6 +15,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_p
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class MobCreditProfilePage extends StatelessWidget {
   const MobCreditProfilePage({super.key});
@@ -167,8 +168,10 @@ class _MobCreditProfileBody extends StatelessWidget {
   }
 
   static void _comingSoon(BuildContext context, String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label is coming soon')),
+    TopSnackBar.show(
+      context,
+      message: '$label is coming soon',
+      type: TopSnackBarType.info,
     );
   }
 }

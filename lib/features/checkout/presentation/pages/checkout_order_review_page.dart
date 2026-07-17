@@ -17,6 +17,7 @@ import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/quantity_stepper.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class CheckoutOrderReviewPage extends StatefulWidget {
   static const routeName = 'CheckoutOrderReviewPage';
@@ -41,7 +42,6 @@ class CheckoutOrderReviewPage extends StatefulWidget {
 class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
   late final CheckoutBloc _checkoutBloc;
   late GoRouter _router;
-  ScaffoldMessengerState? _scaffoldMessenger;
   String _deliveryLabel = '';
   bool _isStoreOpen = true;
 
@@ -49,7 +49,6 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _router = GoRouter.of(context);
-    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
   }
 
   @override
@@ -85,16 +84,18 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
   void _submitAddress(BuildContext context) {
     final cartState = context.read<CartBloc>().state;
     if (cartState is CartLoaded && cartState.isUpdating) {
-      _scaffoldMessenger?.showSnackBar(
-        const SnackBar(content: Text('Updating cart, please wait.')),
+      TopSnackBar.show(
+        context,
+        message: 'Updating cart, please wait.',
+        type: TopSnackBarType.info,
       );
       return;
     }
     if (cartState is CartLoaded && cartState.summary.isEmpty) {
-      _scaffoldMessenger?.showSnackBar(
-        const SnackBar(
-          content: Text('Your cart is empty. Add items to continue.'),
-        ),
+      TopSnackBar.show(
+        context,
+        message: 'Your cart is empty. Add items to continue.',
+        type: TopSnackBarType.error,
       );
       _router.go('/cart');
       return;
@@ -115,16 +116,11 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
     var nextQuantity = quantity;
     if (stock > 0 && quantity > stock) {
       nextQuantity = stock;
-      final messenger = _scaffoldMessenger;
-      messenger
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              'Only $stock units available. Quantity updated to $stock.',
-            ),
-          ),
-        );
+      TopSnackBar.show(
+        context,
+        message: 'Only $stock units available. Quantity updated to $stock.',
+        type: TopSnackBarType.info,
+      );
     }
     context.read<CartBloc>().add(
           CartQuantityUpdateRequested(item: item, newQty: nextQuantity),
@@ -184,11 +180,10 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
           if (checkoutState is CheckoutAddressUpdated) {
             _router.push(CheckoutPaymentPage.routePath);
           } else if (checkoutState is CheckoutError) {
-            _scaffoldMessenger?.showSnackBar(
-              SnackBar(
-                content: Text(checkoutState.message),
-                backgroundColor: Colors.red.shade700,
-              ),
+            TopSnackBar.show(
+              context,
+              message: checkoutState.message,
+              type: TopSnackBarType.error,
             );
           }
         },
@@ -605,15 +600,22 @@ class _ReviewItemTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.title,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        height: 18 / 12,
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: item.slug.isEmpty
+                          ? null
+                          : () => context.push(
+                              '${ProductDetailPage.routePath}/${item.slug}'),
+                      child: Text(
+                        item.title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          height: 18 / 12,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -682,15 +684,12 @@ class _ReviewItemTile extends StatelessWidget {
                 onInputChanged: onQtyInputChanged,
                 maxValue: item.availableStock > 0 ? item.availableStock : null,
                 onMaxExceeded: (stock) {
-                  ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Only $stock units available. Quantity updated to $stock.',
-                        ),
-                      ),
-                    );
+                  TopSnackBar.show(
+                    context,
+                    message:
+                        'Only $stock units available. Quantity updated to $stock.',
+                    type: TopSnackBarType.info,
+                  );
                 },
                 isBusy: isBusy,
               ),

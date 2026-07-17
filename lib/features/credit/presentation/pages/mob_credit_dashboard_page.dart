@@ -10,6 +10,8 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/entities/credit_transaction_entity.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/bloc/credit_bloc.dart';
+import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
+import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_detail_page.dart';
 import 'package:m_o_b_demand_side/shared/mob_credit.dart';
 import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 
@@ -298,67 +300,75 @@ class _CreditTransactionRow extends StatelessWidget {
             .format(transaction.createdAt!.toLocal());
     final order = transaction.orderNumber;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(text: 'Order ID: '),
-                      TextSpan(
-                        text: order.isEmpty ? '—' : order,
-                        style: const TextStyle(color: Color(0xFF0360E5)),
-                      ),
-                    ],
+    return InkWell(
+      onTap: order.isEmpty
+          ? null
+          : () => context.push(
+                OrderDetailPage.routePath,
+                extra: OrderEntity.baseOrderId(order),
+              ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFE2E2E2))),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(text: 'Order ID: '),
+                        TextSpan(
+                          text: order.isEmpty ? '—' : order,
+                          style: const TextStyle(color: Color(0xFF0360E5)),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: MobCreditDashboardPage._primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 20 / 14,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: MobCreditDashboardPage._primary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    height: 20 / 14,
+                  const SizedBox(height: 4),
+                  Text(
+                    date.isEmpty
+                        ? transaction.remarks
+                        : '${debit ? 'Debited' : 'Credited'} on $date',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: MobCreditDashboardPage._muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      height: 18 / 12,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  date.isEmpty
-                      ? transaction.remarks
-                      : '${debit ? 'Debited' : 'Credited'} on $date',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: MobCreditDashboardPage._muted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    height: 18 / 12,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '${debit ? '-' : '+'}₹$amount',
-            textAlign: TextAlign.right,
-            style: GoogleFonts.inter(
-              color: debit
-                  ? MobCreditDashboardPage._primary
-                  : const Color(0xFF07AD61),
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              height: 20 / 14,
+            const SizedBox(width: 8),
+            Text(
+              '${debit ? '-' : '+'}₹$amount',
+              textAlign: TextAlign.right,
+              style: GoogleFonts.inter(
+                color: debit
+                    ? MobCreditDashboardPage._primary
+                    : const Color(0xFF07AD61),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                height: 20 / 14,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

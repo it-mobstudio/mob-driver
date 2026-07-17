@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/features/product/domain/repositories/product_r
 import 'package:m_o_b_demand_side/features/magic_quote/domain/repositories/magic_quote_repository.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class AddMoreItemsSheet extends StatefulWidget {
   const AddMoreItemsSheet({
@@ -120,9 +121,11 @@ class _AddMoreItemsSheetState extends State<AddMoreItemsSheet> {
     if (!mounted) return;
     if (failure != null) {
       setState(() => _addingSku = '');
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(failure.message)));
+      TopSnackBar.show(
+        context,
+        message: failure.message,
+        type: TopSnackBarType.error,
+      );
       return;
     }
     widget.onAdded(payload, addedItem);

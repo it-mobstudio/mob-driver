@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/app_runtime/fcm_token_sync.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 /// Hidden diagnostics screen — reached by tapping the version footer on My
 /// Account several times. Gives QA/support the exact build + environment
@@ -108,14 +109,12 @@ class _DevInfoPageState extends State<DevInfoPage> {
 
   void _copy(String label, String value) {
     Clipboard.setData(ClipboardData(text: value));
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$label copied'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
+    TopSnackBar.show(
+      context,
+      message: '$label copied',
+      type: TopSnackBarType.success,
+      duration: const Duration(seconds: 1),
+    );
   }
 
   @override

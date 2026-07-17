@@ -9,6 +9,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ReferralPage extends StatelessWidget {
@@ -182,10 +183,10 @@ class _ReferralView extends StatelessWidget {
     } else {
       await Clipboard.setData(ClipboardData(text: message));
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Referral link copied — WhatsApp not available'),
-        ),
+      TopSnackBar.show(
+        context,
+        message: 'Referral link copied - WhatsApp not available',
+        type: TopSnackBarType.info,
       );
     }
   }
@@ -316,8 +317,10 @@ class _ReferralPromoSection extends StatelessWidget {
                         ClipboardData(text: referralCode),
                       );
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Referral code copied')),
+                      TopSnackBar.show(
+                        context,
+                        message: 'Referral code copied',
+                        type: TopSnackBarType.success,
                       );
                     },
               child: Container(

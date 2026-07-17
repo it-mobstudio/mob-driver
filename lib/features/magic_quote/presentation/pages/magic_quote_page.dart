@@ -24,6 +24,7 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 import 'package:m_o_b_demand_side/shared/image_url.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/quote_item_row.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/results_screen.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/review_questions_sheet.dart';
@@ -1382,9 +1383,11 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    TopSnackBar.show(
+      context,
+      message: message,
+      type: TopSnackBarType.error,
+    );
   }
 }
 

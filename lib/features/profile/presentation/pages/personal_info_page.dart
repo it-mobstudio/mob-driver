@@ -13,6 +13,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class PersonalInfoPage extends StatelessWidget {
   const PersonalInfoPage({super.key});
@@ -91,14 +92,18 @@ class _PersonalInfoViewState extends State<_PersonalInfoView> {
             // over to the authoritative server copy.
             _pickedImageBytes = null;
             _pickedImageName = null;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile updated successfully')),
+            TopSnackBar.show(
+              context,
+              message: 'Profile updated successfully',
+              type: TopSnackBarType.success,
             );
           }
         } else if (state case ProfileError(:final message)) {
           _submitting = false;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
+          TopSnackBar.show(
+            context,
+            message: message,
+            type: TopSnackBarType.error,
           );
         }
       },

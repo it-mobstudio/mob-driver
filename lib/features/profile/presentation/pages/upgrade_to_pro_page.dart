@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 enum _ProStatus { notApplied, active, onHold }
 
@@ -88,8 +89,10 @@ class _UpgradeToProViewState extends State<_UpgradeToProView> {
     final uri = Uri.parse('https://wa.me/918970415365');
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open WhatsApp.')),
+      TopSnackBar.show(
+        context,
+        message: 'Unable to open WhatsApp.',
+        type: TopSnackBarType.error,
       );
     }
   }
@@ -109,15 +112,19 @@ class _UpgradeToProViewState extends State<_UpgradeToProView> {
           } else if (_submitting) {
             _submitting = false;
             _justUpgraded = true;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Upgrade request submitted')),
+            TopSnackBar.show(
+              context,
+              message: 'Upgrade request submitted',
+              type: TopSnackBarType.success,
             );
           }
         } else if (state case ProfileError(:final message)) {
           if (_submitting) {
             _submitting = false;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message)),
+            TopSnackBar.show(
+              context,
+              message: message,
+              type: TopSnackBarType.error,
             );
           }
         }

@@ -22,6 +22,7 @@ import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 import 'package:m_o_b_demand_side/shared/view_cart_bar.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class ProductListingPage extends StatefulWidget {
   const ProductListingPage({
@@ -184,15 +185,12 @@ class _ProductListingPageState extends State<ProductListingPage> {
       phoneNumber: phoneNumber,
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? "We'll notify you when this is back in stock."
-              : failure?.message ?? 'Unable to set up notification.',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
+    TopSnackBar.show(
+      context,
+      message: success
+          ? "We'll notify you when this is back in stock."
+          : failure?.message ?? 'Unable to set up notification.',
+      type: success ? TopSnackBarType.success : TopSnackBarType.error,
     );
   }
 

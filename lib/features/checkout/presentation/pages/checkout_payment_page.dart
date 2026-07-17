@@ -18,6 +18,7 @@ import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class CheckoutPaymentPage extends StatefulWidget {
   static const routeName = 'CheckoutPaymentPage';
@@ -49,13 +50,11 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   late final CartBloc _cartBloc;
   late final Razorpay _razorpay;
   late GoRouter _router;
-  ScaffoldMessengerState? _scaffoldMessenger;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _router = GoRouter.of(context);
-    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
   }
 
   @override
@@ -370,9 +369,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     }
 
     if (_paymentOption == -1) {
-      _scaffoldMessenger?.showSnackBar(
-        const SnackBar(
-            content: Text('Please select a payment method to continue.')),
+      TopSnackBar.show(
+        context,
+        message: 'Please select a payment method to continue.',
+        type: TopSnackBarType.error,
       );
       return;
     }
@@ -381,9 +381,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       if (entity != null) {
         _openRupifiGateway(entity);
       } else {
-        _scaffoldMessenger?.showSnackBar(
-          const SnackBar(
-              content: Text('Loading payment details, please try again.')),
+        TopSnackBar.show(
+          context,
+          message: 'Loading payment details, please try again.',
+          type: TopSnackBarType.info,
         );
       }
     } else if (_paymentOption == 1) {
@@ -478,11 +479,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                           );
                         } else if (checkoutState is CheckoutError) {
                           _isPaymentOrderRequestInFlight = false;
-                          _scaffoldMessenger?.showSnackBar(
-                            SnackBar(
-                              content: Text(checkoutState.message),
-                              backgroundColor: Colors.red.shade700,
-                            ),
+                          TopSnackBar.show(
+                            context,
+                            message: checkoutState.message,
+                            type: TopSnackBarType.error,
                           );
                         }
                       },

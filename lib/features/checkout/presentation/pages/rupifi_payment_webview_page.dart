@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -149,21 +150,19 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
         mode: LaunchMode.externalApplication,
       );
       if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'No UPI app found to complete this payment. '
+        TopSnackBar.show(
+          context,
+          message: 'No UPI app found to complete this payment. '
               'Please install GPay, PhonePe, or Paytm and try again.',
-            ),
-          ),
+          type: TopSnackBarType.error,
         );
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to open the UPI app. Please try again.'),
-          ),
+        TopSnackBar.show(
+          context,
+          message: 'Unable to open the UPI app. Please try again.',
+          type: TopSnackBarType.error,
         );
       }
     }

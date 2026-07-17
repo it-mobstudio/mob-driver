@@ -67,24 +67,13 @@ class _ProductImagesCarouselState extends State<ProductImagesCarousel> {
   @override
   Widget build(BuildContext context) {
     final images = widget.images;
+    final topInset = MediaQuery.paddingOf(context).top;
     return Container(
       color: Colors.white,
-      height: 375,
+      height: 375 + topInset,
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 32,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF0F0F0),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-              ),
-            ),
-          ),
           PageView.builder(
             controller: _pageController,
             itemCount: images.isEmpty ? 1 : images.length,
@@ -112,7 +101,7 @@ class _ProductImagesCarouselState extends State<ProductImagesCarousel> {
                   );
                 },
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(60, 48, 60, 76),
+                  padding: EdgeInsets.fromLTRB(60, 48 + topInset, 60, 76),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -134,9 +123,31 @@ class _ProductImagesCarouselState extends State<ProductImagesCarousel> {
               );
             },
           ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 96,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0),
+                      Colors.white.withValues(alpha: 0.88),
+                      const Color(0xFFF0F0F0),
+                    ],
+                    stops: const [0, 0.48, 1],
+                  ),
+                ),
+              ),
+            ),
+          ),
           if (images.length > 1)
             Positioned(
-              bottom: 12,
+              bottom: 30,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(images.length, (i) {
@@ -1185,18 +1196,26 @@ class VariantOptionsSection extends StatelessWidget {
                     groupedVariants[key] ?? const <ProductVariantOption>[];
                 final activeValue = selectedVariants[key] ??
                     product.activeVariantSelections[key];
-                final shouldSplitRows = options.length > 4;
-                final topRow = <({ProductVariantOption option, int index})>[];
-                final bottomRow =
-                    <({ProductVariantOption option, int index})>[];
-                for (var i = 0; i < options.length; i++) {
-                  final record = (option: options[i], index: i);
-                  if (!shouldSplitRows || i.isEven) {
-                    topRow.add(record);
-                  } else {
-                    bottomRow.add(record);
-                  }
-                }
+                final optionRecords = [
+                  for (var i = 0; i < options.length; i++)
+                    (option: options[i], index: i),
+                ];
+                final selectedRecordIndex = activeValue == null
+                    ? -1
+                    : optionRecords.indexWhere(
+                        (record) => record.option.value == activeValue,
+                      );
+                final displayRecords = selectedRecordIndex <= 0
+                    ? optionRecords
+                    : [
+                        optionRecords[selectedRecordIndex],
+                        ...optionRecords.where(
+                          (record) =>
+                              record.index !=
+                              optionRecords[selectedRecordIndex].index,
+                        ),
+                      ];
+
                 Widget chip(ProductVariantOption opt, int idx) {
                   final selected = activeValue == opt.value ||
                       (activeValue == null && idx == 0);
@@ -1208,36 +1227,47 @@ class VariantOptionsSection extends StatelessWidget {
                   );
                 }
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SingleChildScrollView(
+                if (options.length > 8) {
+                  final topRowCount = (displayRecords.length / 2).ceil();
+                  final topRow = displayRecords.take(topRowCount).toList();
+                  final bottomRow = displayRecords.skip(topRowCount).toList();
+
+                  Widget railRow(
+                    List<({ProductVariantOption option, int index})> records,
+                  ) {
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < records.length; i++) ...[
+                          chip(records[i].option, records[i].index),
+                          if (i < records.length - 1) const SizedBox(width: 10),
+                        ],
+                      ],
+                    );
+                  }
+
+                  return SizedBox(
+                    height: 78,
+                    child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (var i = 0; i < topRow.length; i++) ...[
-                            chip(topRow[i].option, topRow[i].index),
-                            if (i < topRow.length - 1)
-                              const SizedBox(width: 10),
-                          ],
+                          railRow(topRow),
+                          const SizedBox(height: 10),
+                          railRow(bottomRow),
                         ],
                       ),
                     ),
-                    if (bottomRow.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            for (var i = 0; i < bottomRow.length; i++) ...[
-                              chip(bottomRow[i].option, bottomRow[i].index),
-                              if (i < bottomRow.length - 1)
-                                const SizedBox(width: 10),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
+                  );
+                }
+
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    for (final record in displayRecords)
+                      chip(record.option, record.index),
                   ],
                 );
               }),

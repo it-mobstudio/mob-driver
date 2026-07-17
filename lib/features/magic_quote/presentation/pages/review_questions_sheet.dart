@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/bloc/magic_quote_bloc.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class ReviewQuestionsSheet extends StatefulWidget {
   const ReviewQuestionsSheet({
@@ -91,9 +92,11 @@ class _ReviewQuestionsSheetState extends State<ReviewQuestionsSheet> {
       widget.onSubmitted();
     } else if (state is MagicQuoteReviewError) {
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(state.message)));
+      TopSnackBar.show(
+        context,
+        message: state.message,
+        type: TopSnackBarType.error,
+      );
     }
   }
 

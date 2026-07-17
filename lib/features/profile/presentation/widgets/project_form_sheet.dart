@@ -13,6 +13,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_blo
 import 'package:m_o_b_demand_side/shared/constants/india_location_options.dart';
 import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 const _navy = Color(0xFF0A243F);
 const _blue = Color(0xFF0360E5);
@@ -214,8 +215,10 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
 
     if (!formValid || errors.isNotEmpty) {
       if (errors.contains('site_delivery')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select an address')),
+        TopSnackBar.show(
+          context,
+          message: 'Please select an address',
+          type: TopSnackBarType.error,
         );
       }
       return;
@@ -283,15 +286,17 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
       child: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProjectSaved) {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_isEdit ? 'Project updated' : 'Project created'),
-              ),
+            TopSnackBar.show(
+              context,
+              message: _isEdit ? 'Project updated' : 'Project created',
+              type: TopSnackBarType.success,
             );
+            Navigator.of(context).pop();
           } else if (state is ProjectSaveError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
+            TopSnackBar.show(
+              context,
+              message: state.message,
+              type: TopSnackBarType.error,
             );
           }
         },

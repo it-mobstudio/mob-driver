@@ -5,6 +5,7 @@ import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
 import 'package:m_o_b_demand_side/features/product/domain/entities/product_entity.dart';
 import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class SwapProductSheet extends StatefulWidget {
   const SwapProductSheet({
@@ -144,9 +145,11 @@ class _SwapProductSheetState extends State<SwapProductSheet> {
     if (!mounted) return;
     if (failure != null) {
       setState(() => _replacingSku = '');
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(failure.message)));
+      TopSnackBar.show(
+        context,
+        message: failure.message,
+        type: TopSnackBarType.error,
+      );
       return;
     }
     widget.onReplaced(payload);

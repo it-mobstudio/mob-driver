@@ -193,6 +193,8 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
             selectable: extra['selectable'] != false,
             showBackButton:
                 !fromSignup && !hideBack && extra['showBackButton'] != false,
+            autoDetectCurrentLocation:
+                fromSignup || extra['autoDetectCurrentLocation'] == true,
             title: extra['title']?.toString(),
           );
         },

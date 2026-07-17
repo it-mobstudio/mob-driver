@@ -10,6 +10,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/entities/business_segment_entity.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/bloc/credit_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 Future<void> showCreditApplySheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -61,8 +62,10 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
   void _submit(BuildContext blocContext) {
     FocusScope.of(context).unfocus();
     if (_selectedSegment == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a business segment')),
+      TopSnackBar.show(
+        context,
+        message: 'Please select a business segment',
+        type: TopSnackBarType.error,
       );
       return;
     }
@@ -107,16 +110,18 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
             setState(() => _submitting = true);
           case CreditApplySubmitted():
             setState(() => _submitting = false);
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Your mobCREDIT request has been submitted'),
-              ),
+            TopSnackBar.show(
+              context,
+              message: 'Your mobCREDIT request has been submitted',
+              type: TopSnackBarType.success,
             );
+            Navigator.of(context).pop();
           case CreditApplyError(message: final message):
             setState(() => _submitting = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message)),
+            TopSnackBar.show(
+              context,
+              message: message,
+              type: TopSnackBarType.error,
             );
           case CreditInitial():
           case CreditHistoryLoading():

@@ -7,10 +7,12 @@ import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class AddAddressDetailPage extends StatefulWidget {
   const AddAddressDetailPage({
@@ -43,6 +45,7 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
       MethodChannel('m_o_b_demand_side/contact_picker');
 
   late final AddressBloc _addressBloc;
+  late final AddressRepository _addressRepository;
 
   /// The pin location backing this form — starts as [AddAddressDetailPage.location]
   /// but is replaced in place when "Change" resolves a different pin, so the
@@ -62,12 +65,67 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
   void initState() {
     super.initState();
     _addressBloc = sl<AddressBloc>();
+    _addressRepository = sl<AddressRepository>();
     final existing = widget.existingAddress;
     if (existing != null) {
       _prefillFromExisting(existing);
+      _resolveLocationLabelIfNeeded();
     } else {
       _prefillReceiverDetails();
     }
+  }
+
+  /// Saved addresses usually carry lat/long but no `formattedAddress` (that's
+  /// pin-drop metadata, never stored) — so the summary card falls back to
+  /// echoing the user's own typed address lines back at them, which reads as
+  /// a mismatch. Resolve the real place name from the coordinates instead,
+  /// same lookup the map picker uses, and only fall back to the typed
+  /// address when there's no usable lat/long to resolve.
+  Future<void> _resolveLocationLabelIfNeeded() async {
+    final hasFormattedAddress = _location.formattedAddress.trim().isNotEmpty;
+    final hasCoordinates = _location.latitude != 0 && _location.longitude != 0;
+    if (hasFormattedAddress || !hasCoordinates) return;
+
+    final (resolved, failure) = await _addressRepository.reverseGeocode(
+      _location.latitude,
+      _location.longitude,
+    );
+    if (!mounted || failure != null || resolved == null) return;
+    if (resolved.formattedAddress.trim().isEmpty) return;
+
+    setState(() {
+      _location = AddressEntity(
+        id: _location.id,
+        latitude: _location.latitude,
+        longitude: _location.longitude,
+        googleMapLink: _location.googleMapLink,
+        formattedAddress: resolved.formattedAddress,
+        city: resolved.city.trim().isEmpty ? _location.city : resolved.city,
+        state:
+            resolved.state.trim().isEmpty ? _location.state : resolved.state,
+        pincode: resolved.pincode.trim().isEmpty
+            ? _location.pincode
+            : resolved.pincode,
+        sublocality: resolved.sublocality.trim().isEmpty
+            ? _location.sublocality
+            : resolved.sublocality,
+        locationName: resolved.locationName.trim().isEmpty
+            ? _location.locationName
+            : resolved.locationName,
+        name: _location.name,
+        email: _location.email,
+        addressLine1: _location.addressLine1,
+        addressLine2: _location.addressLine2,
+        sitePerson: _location.sitePerson,
+        sitePersonMobile: _location.sitePersonMobile,
+        addressTag: _location.addressTag,
+        phoneNumber: _location.phoneNumber,
+        isLocationServiceable: _location.isLocationServiceable,
+        projectName: _location.projectName,
+        mobCredit: _location.mobCredit,
+        gstNumber: _location.gstNumber,
+      );
+    });
   }
 
   void _prefillFromExisting(AddressEntity existing) {
@@ -217,7 +275,21 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
       ),
     );
     if (!mounted || confirmed == null) return;
-    setState(() => _location = confirmed);
+
+    // A pin moved to a different spot invalidates whatever house/floor and
+    // building/area text the user already typed for the old spot — clear it
+    // so a stale description doesn't silently ride along with the new
+    // location, matching how other delivery apps handle a map re-pin.
+    final moved = confirmed.latitude != _location.latitude ||
+        confirmed.longitude != _location.longitude;
+
+    setState(() {
+      _location = confirmed;
+      if (moved) {
+        _houseFloorController.clear();
+        _buildingAreaController.clear();
+      }
+    });
   }
 
   /// Editing a saved address (rather than a freshly-confirmed map pin) means
@@ -622,21 +694,27 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    TopSnackBar.show(
+      context,
+      message: message,
+      type: TopSnackBarType.info,
+    );
   }
 
   void _onStateChanged(BuildContext context, AddressState state) {
     if (state is AddressSaved) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Address saved successfully.')),
+      TopSnackBar.show(
+        context,
+        message: 'Address saved successfully.',
+        type: TopSnackBarType.success,
       );
       context.pop(state.address);
     } else if (state is AddressError) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(state.message)));
+      TopSnackBar.show(
+        context,
+        message: state.message,
+        type: TopSnackBarType.error,
+      );
     }
   }
 }

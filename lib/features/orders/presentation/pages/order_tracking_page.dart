@@ -12,6 +12,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/repositories/orders_repository.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
@@ -1689,14 +1690,15 @@ class _TrackingHelpCard extends StatelessWidget {
 
   Future<void> _openWhatsapp(BuildContext context) async {
     AppHaptics.lightTap();
-    final messenger = ScaffoldMessenger.of(context);
     final ok = await launchUrl(
       Uri.parse('https://wa.me/$_whatsappNumber'),
       mode: LaunchMode.externalApplication,
     );
     if (!ok) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Unable to open WhatsApp.')),
+      TopSnackBar.show(
+        context,
+        message: 'Unable to open WhatsApp.',
+        type: TopSnackBarType.error,
       );
     }
   }

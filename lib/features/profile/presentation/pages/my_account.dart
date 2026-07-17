@@ -28,6 +28,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_i
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/upgrade_to_pro_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 import 'package:m_o_b_demand_side/shared/mob_credit.dart';
@@ -350,8 +351,10 @@ class _ProfileBody extends StatelessWidget {
     final uri = Uri.parse(url);
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open link.')),
+      TopSnackBar.show(
+        context,
+        message: 'Unable to open link.',
+        type: TopSnackBarType.error,
       );
     }
   }
@@ -360,8 +363,10 @@ class _ProfileBody extends StatelessWidget {
     final uri = Uri.parse('https://wa.me/918970415365');
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open WhatsApp.')),
+      TopSnackBar.show(
+        context,
+        message: 'Unable to open WhatsApp.',
+        type: TopSnackBarType.error,
       );
     }
   }

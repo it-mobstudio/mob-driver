@@ -24,6 +24,7 @@ import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/similar_products_section.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -40,8 +41,31 @@ class ProductDetailPage extends StatefulWidget {
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
   final Map<String, String?> _selectedVariants = <String, String?>{};
+  final ScrollController _scrollController = ScrollController();
   ProductSellerOffer? _selectedSeller;
+  bool _showHeaderSurface = false;
   static const double _bottomBarBaseReservedHeight = 88;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    final showSurface =
+        _scrollController.hasClients && _scrollController.offset > 16;
+    if (showSurface == _showHeaderSurface) return;
+    setState(() => _showHeaderSurface = showSurface);
+  }
 
   Future<void> _changeProductQuantity(
     ProductModel product,
@@ -81,15 +105,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       phoneNumber: phoneNumber,
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? "We'll notify you when this is back in stock."
-              : failure?.message ?? 'Unable to set up notification.',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
+    TopSnackBar.show(
+      context,
+      message: success
+          ? "We'll notify you when this is back in stock."
+          : failure?.message ?? 'Unable to set up notification.',
+      type: success ? TopSnackBarType.success : TopSnackBarType.error,
     );
   }
 
@@ -266,9 +287,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       create: (_) =>
           sl<ProductBloc>()..add(ProductDetailRequested(slug: widget.slug)),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF0F0F0),
-        body: SafeArea(
-          bottom: false,
+        backgroundColor: Colors.white,
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.white,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarBrightness: Brightness.light,
+          ),
           child: BlocBuilder<ProductBloc, ProductState>(
             builder: (context, state) {
               return switch (state) {
@@ -277,7 +302,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   const ProductDetailSkeleton(),
                 ProductError(:final message) => Column(
                     children: [
-                      _ProductDetailHeader(onBack: () => _goBack(context)),
+                      _ProductDetailHeader(
+                        showSurface: true,
+                        onBack: () => _goBack(context),
+                      ),
                       Expanded(
                         child: ErrorStateView(
                           message: message,
@@ -316,69 +344,76 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                           s is ProductError,
                                     );
                                   },
-                                  child: ListView(
-                                    physics:
-                                        const AlwaysScrollableScrollPhysics(),
-                                    padding: EdgeInsets.only(
-                                      bottom: bottomBarReservedHeight,
+                                  child: ColoredBox(
+                                    color: const Color(0xFFF0F0F0),
+                                    child: ListView(
+                                      controller: _scrollController,
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      padding: EdgeInsets.only(
+                                        bottom: bottomBarReservedHeight,
+                                      ),
+                                      children: [
+                                        ProductImagesCarousel(
+                                          images: product.images,
+                                        ),
+                                        // const SizedBox(height: 6),
+                                        ProductInfoBlock(
+                                          product: displayProduct,
+                                          isProfessional: isProfessional,
+                                        ),
+                                        VariantOptionsSection(
+                                          product: product,
+                                          variants: product.variants,
+                                          selectedVariants: _selectedVariants,
+                                          onSelect: (key, option) =>
+                                              _selectVariant(
+                                                  context, key, option),
+                                          onMoreOptions:
+                                              product.variantOptionCount > 8 ||
+                                                      product.childProducts
+                                                          .isNotEmpty
+                                                  ? () => _showVariantSheet(
+                                                        context,
+                                                        product,
+                                                        cartQtyByProductId,
+                                                        cartUpdatingKey,
+                                                      )
+                                                  : null,
+                                        ),
+                                        ProductDeliverySection(
+                                          product: displayProduct,
+                                          onViewOtherSellers:
+                                              product.sellers.length > 1
+                                                  ? () => _showSellerSheet(
+                                                        context,
+                                                        product,
+                                                      )
+                                                  : null,
+                                        ),
+                                        const MobCreditBannerSection(),
+                                        const ProductAssuranceSection(),
+                                        ProductLongDetailsSection(
+                                          description:
+                                              product.productDescription,
+                                          features: product.features,
+                                          bulletPoints:
+                                              product.productBulletPoints,
+                                        ),
+                                        SimilarProductsSection(
+                                          products: similarProducts,
+                                          quantityResolver: (productId) =>
+                                              cartQtyByProductId[productId] ??
+                                              0,
+                                          isUpdatingResolver: (productId) =>
+                                              cartUpdatingKey == productId,
+                                          onCartQuantityChanged:
+                                              _changeProductQuantity,
+                                          onNotifyTap: _handleNotifyTap,
+                                        ),
+                                        const SizedBox(height: 24),
+                                      ],
                                     ),
-                                    children: [
-                                      ProductImagesCarousel(
-                                          images: product.images),
-                                      const SizedBox(height: 12),
-                                      ProductInfoBlock(
-                                        product: displayProduct,
-                                        isProfessional: isProfessional,
-                                      ),
-                                      VariantOptionsSection(
-                                        product: product,
-                                        variants: product.variants,
-                                        selectedVariants: _selectedVariants,
-                                        onSelect: (key, option) =>
-                                            _selectVariant(
-                                                context, key, option),
-                                        onMoreOptions:
-                                            product.variantOptionCount > 8 ||
-                                                    product.childProducts
-                                                        .isNotEmpty
-                                                ? () => _showVariantSheet(
-                                                      context,
-                                                      product,
-                                                      cartQtyByProductId,
-                                                      cartUpdatingKey,
-                                                    )
-                                                : null,
-                                      ),
-                                      ProductDeliverySection(
-                                        product: displayProduct,
-                                        onViewOtherSellers:
-                                            product.sellers.length > 1
-                                                ? () => _showSellerSheet(
-                                                      context,
-                                                      product,
-                                                    )
-                                                : null,
-                                      ),
-                                      const MobCreditBannerSection(),
-                                      const ProductAssuranceSection(),
-                                      ProductLongDetailsSection(
-                                        description: product.productDescription,
-                                        features: product.features,
-                                        bulletPoints:
-                                            product.productBulletPoints,
-                                      ),
-                                      SimilarProductsSection(
-                                        products: similarProducts,
-                                        quantityResolver: (productId) =>
-                                            cartQtyByProductId[productId] ?? 0,
-                                        isUpdatingResolver: (productId) =>
-                                            cartUpdatingKey == productId,
-                                        onCartQuantityChanged:
-                                            _changeProductQuantity,
-                                        onNotifyTap: _handleNotifyTap,
-                                      ),
-                                      const SizedBox(height: 24),
-                                    ],
                                   ),
                                 ),
                               ),
@@ -389,6 +424,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             right: 0,
                             top: 0,
                             child: _ProductDetailHeader(
+                              showSurface: _showHeaderSurface,
                               onBack: () => _goBack(context),
                               onShare: () =>
                                   _showShareSheet(context, displayProduct),
@@ -435,41 +471,54 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 class _ProductDetailHeader extends StatelessWidget {
   const _ProductDetailHeader({
     required this.onBack,
+    required this.showSurface,
     this.onShare,
   });
 
   final VoidCallback onBack;
+  final bool showSurface;
   final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          color: Colors.white.withValues(alpha: 0.10),
-          child: Row(
-            children: [
-              _HeaderIconButton(
-                icon: _HeaderActionIcon.back,
-                onTap: onBack,
-              ),
-              const Spacer(),
-              _HeaderIconButton(
-                icon: _HeaderActionIcon.search,
-                onTap: () => context.push('/search'),
-              ),
-              const SizedBox(width: 12),
-              _HeaderIconButton(
-                icon: _HeaderActionIcon.share,
-                onTap: onShare ?? () {},
-              ),
-            ],
+    Widget content = Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      color: showSurface
+          ? Colors.white.withValues(alpha: 0.72)
+          : Colors.transparent,
+      child: Row(
+        children: [
+          _HeaderIconButton(
+            icon: _HeaderActionIcon.back,
+            onTap: onBack,
           ),
-        ),
+          const Spacer(),
+          _HeaderIconButton(
+            icon: _HeaderActionIcon.search,
+            onTap: () => context.push('/search'),
+          ),
+          const SizedBox(width: 12),
+          _HeaderIconButton(
+            icon: _HeaderActionIcon.share,
+            onTap: onShare ?? () {},
+          ),
+        ],
       ),
+    );
+
+    if (showSurface) {
+      content = ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: content,
+        ),
+      );
+    }
+
+    return SafeArea(
+      bottom: false,
+      child: content,
     );
   }
 }
@@ -539,11 +588,12 @@ class _ProductShareSheet extends StatelessWidget {
   final String url;
 
   Future<void> _launch(BuildContext context, Uri uri) async {
-    final messenger = ScaffoldMessenger.of(context);
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Unable to open share option.')),
+      TopSnackBar.show(
+        context,
+        message: 'Unable to open share option.',
+        type: TopSnackBarType.error,
       );
     }
   }

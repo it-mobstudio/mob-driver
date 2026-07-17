@@ -9,6 +9,7 @@ import 'package:m_o_b_demand_side/features/product/data/models/product_models.da
 import 'package:m_o_b_demand_side/features/product/presentation/pages/product_detail_page.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class VariantSelectionSheet extends StatefulWidget {
   const VariantSelectionSheet({
@@ -194,11 +195,10 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
       return;
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Notify feature will be enabled soon.'),
-        duration: Duration(seconds: 2),
-      ),
+    TopSnackBar.show(
+      context,
+      message: 'Notify feature will be enabled soon.',
+      type: TopSnackBarType.info,
     );
   }
 

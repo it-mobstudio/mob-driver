@@ -91,6 +91,7 @@ class _HomepageWidgetState extends State<HomepageWidget> {
       extra: {
         'returnToHome': true,
         'showBackButton': false,
+        'autoDetectCurrentLocation': true,
       },
     );
   }

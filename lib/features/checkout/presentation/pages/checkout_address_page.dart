@@ -23,6 +23,7 @@ import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
 import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class CheckoutAddressPage extends StatefulWidget {
   static const routeName = 'CheckoutAddressPage';
@@ -421,10 +422,10 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
         await sl<AddressRepository>().deleteAddress(address.id);
     if (!mounted) return;
     if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(failure?.message ?? 'Unable to delete address.'),
-        ),
+      TopSnackBar.show(
+        context,
+        message: failure?.message ?? 'Unable to delete address.',
+        type: TopSnackBarType.error,
       );
       return;
     }

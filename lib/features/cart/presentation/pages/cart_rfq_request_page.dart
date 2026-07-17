@@ -14,6 +14,7 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/rfq/presentation/bloc/rfq_bloc.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 /// Opens the RFQ ("purchase later / recheck prices") form as a true modal
 /// bottom sheet over the current screen, matching the rest of the app's
@@ -870,9 +871,11 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
       return;
     }
     if (state is CartRfqError) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(state.message)));
+      TopSnackBar.show(
+        context,
+        message: state.message,
+        type: TopSnackBarType.error,
+      );
     }
   }
 }

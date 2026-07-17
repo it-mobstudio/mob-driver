@@ -275,7 +275,10 @@ class _HomeHeaderState extends State<HomeHeader> {
   Future<void> _promptForLocation() async {
     final selected = await context.push<AddressEntity>(
       '${AddressSelectionWidget.routePath}?hideBack=true',
-      extra: {'showBackButton': false},
+      extra: {
+        'showBackButton': false,
+        'autoDetectCurrentLocation': true,
+      },
     );
     if (!mounted || selected == null) return;
     await SelectedAddressStore.save(selected);

@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/address/domain/entities/address_entit
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 /// A focused, full-page location search — autofocuses the search field on
 /// open and shows recent searches before the user types, mirroring the
@@ -90,9 +91,11 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
       if (!mounted) return;
       context.pop(state.location);
     } else if (state is AddressError) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(state.message)));
+      TopSnackBar.show(
+        context,
+        message: state.message,
+        type: TopSnackBarType.error,
+      );
     }
   }
 
