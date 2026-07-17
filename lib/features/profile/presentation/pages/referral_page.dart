@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -62,6 +63,14 @@ class _ReferralView extends StatelessWidget {
                       _ReferralPromoSection(
                         referralCode: referralCode,
                         isLoading: isLoading && !canShare,
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _YourReferralsCard(
+                          onTap: () =>
+                              context.push(ReferralHistoryPage.routePath),
+                        ),
                       ),
                     ],
                   ),
@@ -364,7 +373,7 @@ class _ReferralPromoSection extends StatelessWidget {
             ),
           ),
           const Positioned(
-            top: 382,
+            top: 370,
             left: 16,
             right: 16,
             child: SizedBox(
@@ -402,13 +411,86 @@ class _ReferralPromoSection extends StatelessWidget {
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 color: const Color(0xFF767C8F),
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w400,
                 height: 20 / 14,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _YourReferralsCard extends StatelessWidget {
+  const _YourReferralsCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: double.infinity,
+          height: 74,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your referrals',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 20 / 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Track your referrals and rewards',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF8A8A8A),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          height: 18 / 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Container(
+                  width: 24,
+                  height: 24,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F1F2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: SvgPicture.asset(
+                    'assets/images/greaterarrow.svg',
+                    width: 6,
+                    height: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

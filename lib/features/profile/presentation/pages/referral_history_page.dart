@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:go_router/go_router.dart';
-import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
@@ -27,79 +24,112 @@ class ReferralHistoryPage extends StatelessWidget {
   }
 }
 
-class _ReferralHistoryView extends StatelessWidget {
+class _ReferralHistoryView extends StatefulWidget {
   const _ReferralHistoryView();
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: const AppBackIcon(),
-        ),
-        title: Text(
-          'Referrals',
-          style: GoogleFonts.inter(
-            color: const Color(0xFF0A243F),
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () => context.push('/search'),
-            icon: SvgPicture.asset(
-              'assets/images/Searchicon.svg',
-              width: 16,
-              height: 16,
-              fit: BoxFit.contain,
-            ),
-          ),
-        ],
-      ),
-      body: BlocBuilder<ProfileBloc, ProfileState>(
-        builder: (context, state) {
-          final isLoading = state is ProfileLoading || state is ProfileInitial;
-          final summary = state is ReferralSummaryLoaded ? state.summary : null;
-          final referralCode = summary?.referralCode ?? '';
-          final referralLink = summary?.referralLink ?? '';
-          final invites = summary?.invites ?? [];
+  State<_ReferralHistoryView> createState() => _ReferralHistoryViewState();
+}
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 32),
-            child: Column(
-              children: [
-                _HeroCard(
-                  referralCode: referralCode,
-                  referralLink: referralLink,
-                  isLoading: isLoading,
-                ),
-                const SizedBox(height: 12),
-                _ReferralsTable(invites: invites, isLoading: isLoading),
-              ],
+class _ReferralHistoryViewState extends State<_ReferralHistoryView> {
+  final _scrollController = ScrollController();
+
+  static const _navy = Color(0xFF0A243F);
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF0F0F0),
+        body: Stack(
+          children: [
+            BlocBuilder<ProfileBloc, ProfileState>(
+              builder: (context, state) {
+                final isLoading =
+                    state is ProfileLoading || state is ProfileInitial;
+                final summary =
+                    state is ReferralSummaryLoaded ? state.summary : null;
+
+                return Column(
+                  children: [
+                    _HistoryHero(
+                      amount: summary?.walletCreditedAmount ?? 0,
+                      isLoading: isLoading,
+                    ),
+                    const SizedBox(height: 8),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: _WalletNotice(),
+                    ),
+                    const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Referrals',
+                          style: GoogleFonts.inter(
+                            color: _navy,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            height: 22 / 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                        ),
+                        child: SingleChildScrollView(
+                          controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: _ReferralList(
+                              invites: summary?.invites ?? const [],
+                              isLoading: isLoading,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-          );
-        },
+            const FrostedNavBar(),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Hero card (horizontal layout matching MobReferral.jsx) ────────────────────
-
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({
-    required this.referralCode,
-    required this.referralLink,
+class _HistoryHero extends StatelessWidget {
+  const _HistoryHero({
+    required this.amount,
     required this.isLoading,
   });
 
-  final String referralCode;
-  final String referralLink;
+  final double amount;
   final bool isLoading;
 
   Future<void> _copyCode(BuildContext context) async {
@@ -137,319 +167,192 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final amountText = amount == amount.roundToDouble()
+        ? amount.toStringAsFixed(0)
+        : amount.toStringAsFixed(2);
+    final safeTop = MediaQuery.paddingOf(context).top;
+    const cardTopAfterSafeArea = 74.0;
+    const cardHeight = 102.0;
+    final gradientHeight = safeTop + cardTopAfterSafeArea + cardHeight / 2;
+    final heroHeight = safeTop + cardTopAfterSafeArea + cardHeight;
+
+    return SizedBox(
+      height: heroHeight,
+      child: Stack(
         children: [
-          // Top row: text left, image right
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Refer a friend to',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        height: 24 / 16,
-                      ),
-                    ),
-                    Text(
-                      'Get ₹1000',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF00C48B),
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        height: 36 / 26,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Code + Share row
-                    Row(
-                      children: [
-                        InkWell(
-                          onTap: isLoading ? null : () => _copyCode(context),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F5),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  isLoading ? '...' : referralCode,
-                                  style: GoogleFonts.inter(
-                                    color: const Color(0xFF0A243F),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                SvgPicture.asset(
-                                  'assets/images/copyinrefer.svg',
-                                  width: 16,
-                                  height: 16,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap:
-                              isLoading ? null : () => _shareWhatsApp(context),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0A243F),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Share',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: gradientHeight,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(-0.25, -1.1),
+                  radius: 1.35,
+                  colors: [
+                    Color(0xFF8A4E00),
+                    Color(0xFF17110A),
+                    Color(0xFF050505),
                   ],
+                  stops: [0, .46, 1],
                 ),
-              ),
-              const SizedBox(width: 12),
-              Image.asset(
-                'assets/images/Referandearnapp.webp',
-                width: 120,
-                height: 100,
-                fit: BoxFit.contain,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Reward cards row
-          const Row(
-            children: [
-              Expanded(
-                child: _SmallRewardCard(
-                  iconAsset: 'assets/images/yourfrndget.svg',
-                  heading: 'Your friend gets',
-                  amount: '₹1000',
-                  caption: 'upon sign up',
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _SmallRewardCard(
-                  iconAsset: 'assets/images/youget.svg',
-                  heading: 'You get',
-                  amount: '₹1000',
-                  caption: 'after their 1st order',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              'Amount will be added to mobWallet. Valid for 90 days.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                color: const Color(0xFF767C8F),
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-                height: 18 / 12,
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SafeArea(
+            bottom: false,
+            child: SizedBox(
+              width: double.infinity,
+              height: cardTopAfterSafeArea + cardHeight,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 47,
+                    right: 47,
+                    top: 15,
+                    child: Text(
+                      'Your referrals',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        height: 22 / 15,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: cardTopAfterSafeArea,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        height: cardHeight,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Amount earned',
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF596378),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                height: 20 / 13,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (isLoading)
+                              const _Skeleton(width: 92, height: 32)
+                            else
+                              Text(
+                                '₹$amountText',
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF0A243F),
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  height: 42 / 28,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _SmallRewardCard extends StatelessWidget {
-  const _SmallRewardCard({
-    required this.iconAsset,
-    required this.heading,
-    required this.amount,
-    required this.caption,
-  });
-
-  final String iconAsset;
-  final String heading;
-  final String amount;
-  final String caption;
+class _WalletNotice extends StatelessWidget {
+  const _WalletNotice();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFEEEEEE)),
+        color: Colors.black.withValues(alpha: .05),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        children: [
-          SvgPicture.asset(iconAsset, width: 32, height: 32),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  heading,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF767C8F),
-                    fontSize: 11,
-                    height: 16 / 11,
-                  ),
-                ),
-                Text(
-                  amount,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    height: 22 / 15,
-                  ),
-                ),
-                Text(
-                  caption,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF767C8F),
-                    fontSize: 11,
-                    height: 16 / 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: Text(
+        'Amount will be added to mobWallet. Valid for 30 days.',
+        textAlign: TextAlign.center,
+        style: GoogleFonts.inter(
+          color: const Color(0xFF596378),
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          height: 18 / 12,
+        ),
       ),
     );
   }
 }
 
-// ── Referrals table ───────────────────────────────────────────────────────────
-
-class _ReferralsTable extends StatelessWidget {
-  const _ReferralsTable({
-    required this.invites,
-    required this.isLoading,
-  });
+class _ReferralList extends StatelessWidget {
+  const _ReferralList({required this.invites, required this.isLoading});
 
   final List<ReferralInviteEntity> invites;
   final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    if (isLoading) {
+      return const Column(
+          children: [_SkeletonInvite(), _SkeletonInvite(), _SkeletonInvite()]);
+    }
+    if (invites.isEmpty) {
+      return const _EmptyReferrals();
+    }
+    return Column(
+      children: [
+        for (var i = 0; i < invites.length; i++) ...[
+          _InviteRow(invite: invites[i]),
+          if (i != invites.length - 1)
+            const Divider(height: 1, color: Color(0xFFE5E5E5)),
+        ],
+      ],
+    );
+  }
+}
+
+class _EmptyReferrals extends StatelessWidget {
+  const _EmptyReferrals();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 32),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Your Referrals',
-              style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
+          Image.asset(
+            'assets/images/norefferals.webp',
+            width: 136,
+            height: 136,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No referrals yet',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: const Color(0xFF0A243F),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 20 / 14,
             ),
           ),
-          // Table header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF5F7FA),
-              border: Border.symmetric(
-                horizontal: BorderSide(color: Color(0xFFEEEEEE)),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: Text(
-                    'DETAILS',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF767C8F),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 5,
-                  child: Text(
-                    '1ST ORDER STATUS',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF767C8F),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 56,
-                  child: Text(
-                    'AMOUNT',
-                    textAlign: TextAlign.end,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF767C8F),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Body
-          if (isLoading)
-            ...[1, 2, 3].map((_) => const _SkeletonRow())
-          else if (invites.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: Text(
-                  'No referrals yet.',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF767C8F),
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            )
-          else
-            ...invites.map((invite) => _InviteRow(invite: invite)),
-          const SizedBox(height: 8),
         ],
       ),
     );
@@ -461,96 +364,90 @@ class _InviteRow extends StatelessWidget {
 
   final ReferralInviteEntity invite;
 
-  String get _statusLabel {
-    if (invite.rewarded) return 'Reward posted';
-    if (invite.ordered) return 'Order placed';
-    return 'Order pending';
-  }
-
-  Color get _statusColor {
-    if (invite.rewarded) return const Color(0xFF00C48B);
-    if (invite.ordered) return const Color(0xFF2F80ED);
-    return const Color(0xFF767C8F);
-  }
-
-  String get _amountLabel {
-    final amt = invite.inviterRewardAmount;
-    return amt > 0 ? '+₹${amt.toStringAsFixed(0)}' : '-';
-  }
+  bool get _successful => invite.ordered || invite.rewarded;
+  String get _status => _successful ? 'Order placed' : 'Order pending';
 
   @override
   Widget build(BuildContext context) {
-    final name = invite.inviteeName.isNotEmpty
-        ? invite.inviteeName
-        : invite.inviteePhone;
+    final name = invite.inviteeName.trim().isEmpty
+        ? invite.inviteePhone
+        : invite.inviteeName.trim();
+    final amount = invite.inviterRewardAmount;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
-      ),
+    return SizedBox(
+      height: 75,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Details
           Expanded(
-            flex: 5,
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
                     color: const Color(0xFF0A243F),
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    height: 20 / 14,
                   ),
                 ),
-                if (invite.inviteeName.isNotEmpty &&
-                    invite.inviteePhone.isNotEmpty)
-                  Text(
-                    invite.inviteePhone,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF767C8F),
-                      fontSize: 12,
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        invite.inviteePhone,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF596378),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                          height: 16 / 11,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 20,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: _successful
+                              ? const [Color(0xFFB5E6C5), Color(0x00B5E6C6)]
+                              : const [Color(0xFFFFE0D1), Color(0x00FFE1D2)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _status,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF0A243F),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          height: 16 / 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          // Status
-          Expanded(
-            flex: 5,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _statusColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                _statusLabel,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  color: _statusColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          // Amount
-          SizedBox(
-            width: 56,
-            child: Text(
-              _amountLabel,
-              textAlign: TextAlign.end,
-              style: GoogleFonts.inter(
-                color: invite.inviterRewardAmount > 0
-                    ? const Color(0xFF00C48B)
-                    : const Color(0xFF767C8F),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
+          const SizedBox(width: 8),
+          Text(
+            amount > 0 ? '+₹${amount.toStringAsFixed(2)}' : '--',
+            style: GoogleFonts.inter(
+              color: amount > 0
+                  ? const Color(0xFF07AD61)
+                  : const Color(0xFF596378),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              height: 20 / 14,
             ),
           ),
         ],
@@ -559,40 +456,33 @@ class _InviteRow extends StatelessWidget {
   }
 }
 
-class _SkeletonRow extends StatelessWidget {
-  const _SkeletonRow();
+class _SkeletonInvite extends StatelessWidget {
+  const _SkeletonInvite();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
-      ),
-      child: const Row(
+    return const SizedBox(
+      height: 76,
+      child: Row(
         children: [
           Expanded(
-            flex: 5,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _Shimmer(width: 100, height: 12),
-                SizedBox(height: 6),
-                _Shimmer(width: 80, height: 10),
-              ],
-            ),
-          ),
-          Expanded(flex: 5, child: _Shimmer(width: 80, height: 24)),
-          SizedBox(width: 56, child: _Shimmer(width: 40, height: 12)),
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                _Skeleton(width: 110, height: 14),
+                SizedBox(height: 8),
+                _Skeleton(width: 170, height: 12),
+              ])),
+          _Skeleton(width: 64, height: 14),
         ],
       ),
     );
   }
 }
 
-class _Shimmer extends StatelessWidget {
-  const _Shimmer({required this.width, required this.height});
-
+class _Skeleton extends StatelessWidget {
+  const _Skeleton({required this.width, required this.height});
   final double width;
   final double height;
 

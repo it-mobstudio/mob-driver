@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,6 +8,7 @@ import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '/index.dart';
 
 class LoginpageWidget extends StatefulWidget {
@@ -22,11 +24,28 @@ class LoginpageWidget extends StatefulWidget {
 class _LoginpageWidgetState extends State<LoginpageWidget> {
   final _mobileController = TextEditingController();
   final _mobileFocusNode = FocusNode();
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () => _openExternal(
+            'https://mob-demand-side.netlify.app/home/faq?key=termsAndCondition',
+          );
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () => _openExternal(
+            'https://mob-demand-side.netlify.app/home/faq?key=privacyPolicy',
+          );
+  }
 
   @override
   void dispose() {
     _mobileController.dispose();
     _mobileFocusNode.dispose();
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
     super.dispose();
   }
 
@@ -150,6 +169,9 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                 );
               },
             ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
+            floatingActionButton: _legalText(),
           ),
         );
       },
@@ -171,6 +193,72 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
         ],
       ),
     );
+  }
+
+  Widget _legalText() {
+    const regularStyle = TextStyle(
+      color: Color(0xFF0A243F),
+      fontSize: 11,
+      fontFamily: 'Inter',
+      fontWeight: FontWeight.w400,
+      height: 16 / 11,
+    );
+    const mediumStyle = TextStyle(
+      color: Color(0xFF0A243F),
+      fontSize: 11,
+      fontFamily: 'Inter',
+      fontWeight: FontWeight.w500,
+      height: 16 / 11,
+    );
+    const linkStyle = TextStyle(
+      color: Color(0xFF0A243F),
+      fontSize: 11,
+      fontFamily: 'Inter',
+      fontWeight: FontWeight.w600,
+      height: 16 / 11,
+    );
+
+    return SizedBox(
+      width: MediaQuery.sizeOf(context).width,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(
+                text: 'By clicking continue you agree to our ',
+                style: regularStyle,
+              ),
+              TextSpan(
+                text: 'Terms and Conditions',
+                style: linkStyle,
+                recognizer: _termsRecognizer,
+              ),
+              const TextSpan(text: ' and ', style: mediumStyle),
+              TextSpan(
+                text: 'Privacy Statement',
+                style: linkStyle,
+                recognizer: _privacyRecognizer,
+              ),
+              const TextSpan(text: '. ', style: mediumStyle),
+            ],
+          ),
+          textAlign: TextAlign.left,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openExternal(String url) async {
+    final opened = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open link.')),
+      );
+    }
   }
 }
 
