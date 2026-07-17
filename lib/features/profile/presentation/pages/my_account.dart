@@ -24,9 +24,10 @@ import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entit
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/account_privacy_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/mob_support_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_projects_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/personal_info_page.dart';
-import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_history_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/upgrade_to_pro_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/rfq/presentation/pages/rfq.dart';
@@ -202,8 +203,7 @@ class _ProfileBody extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       _ReferralCard(
-                        onTap: () =>
-                            context.push(ReferralHistoryPage.routePath),
+                        onTap: () => context.push(ReferralPage.routePath),
                       ),
                       const SizedBox(height: 16),
                       // Always visible — "App update available" opens the
@@ -252,7 +252,7 @@ class _ProfileBody extends StatelessWidget {
                           _MenuItem(
                             iconAsset: 'assets/images/mobsupport.svg',
                             label: 'mob support',
-                            onTap: () => _openWhatsapp(context),
+                            onTap: () => context.push(MobSupportPage.routePath),
                           ),
                         ],
                       ),
@@ -359,16 +359,6 @@ class _ProfileBody extends StatelessWidget {
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Unable to open link.')),
-      );
-    }
-  }
-
-  static Future<void> _openWhatsapp(BuildContext context) async {
-    final uri = Uri.parse('https://wa.me/918970415365');
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open WhatsApp.')),
       );
     }
   }
