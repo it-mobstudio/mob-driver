@@ -5,9 +5,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
-import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
-import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 
 class ReferralHistoryPage extends StatelessWidget {
   const ReferralHistoryPage({super.key});
@@ -115,7 +113,7 @@ class _ReferralHistoryViewState extends State<_ReferralHistoryView> {
                 );
               },
             ),
-            const FrostedNavBar(),
+            FrostedNavBar(),
           ],
         ),
       ),
@@ -131,39 +129,6 @@ class _HistoryHero extends StatelessWidget {
 
   final double amount;
   final bool isLoading;
-
-  Future<void> _copyCode(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: referralCode));
-    if (!context.mounted) return;
-    TopSnackBar.show(
-      context,
-      message: 'Referral code copied',
-      type: TopSnackBarType.success,
-    );
-  }
-
-  Future<void> _shareWhatsApp(BuildContext context) async {
-    final link = referralLink.isNotEmpty
-        ? referralLink
-        : '${AppConfig.webAppBaseUrl}/?ref=$referralCode';
-    final message = 'Hey! Need construction or interior materials in a flash? '
-        "I've been using Mad over Buildings, and their QWIK 1-4 hour delivery is an absolute lifesaver. "
-        'No more waiting around for supplies! Try it out for yourself: '
-        'sign up with my code $referralCode to get ₹1,000 off your first order. $link';
-    final uri =
-        Uri.parse('https://wa.me/?text=${Uri.encodeComponent(message)}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      await Clipboard.setData(ClipboardData(text: message));
-      if (!context.mounted) return;
-      TopSnackBar.show(
-        context,
-        message: 'Referral link copied',
-        type: TopSnackBarType.info,
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

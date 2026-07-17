@@ -72,7 +72,7 @@ class MobSupportPage extends StatelessWidget {
                       subtitle: 'Replies within 24 hrs',
                       onTap: () => _launch(
                           context,
-                          Uri.parse('mailto:support@madoverbuildings.com'),
+                          Uri.parse('mailto:ask@madoverbuildings.com'),
                           'Unable to open an email app.'),
                     ),
                   ],
