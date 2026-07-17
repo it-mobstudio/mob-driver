@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '/index.dart';
@@ -255,9 +256,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
       mode: LaunchMode.externalApplication,
     );
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open link.')),
-      );
+      TopSnackBar.show(context, message: 'Unable to open link.');
     }
   }
 }

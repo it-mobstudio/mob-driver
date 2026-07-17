@@ -37,6 +37,7 @@ import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_p
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/upgrade_to_pro_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/wallet_points_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/dev_info_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_faq_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_points_page.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_page.dart';
@@ -185,8 +186,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
           final extra = state.extra is Map<String, dynamic>
               ? state.extra as Map<String, dynamic>
               : <String, dynamic>{};
-          final fromSignup =
-              state.uri.queryParameters['fromSignup'] == 'true';
+          final fromSignup = state.uri.queryParameters['fromSignup'] == 'true';
           final hideBack = state.uri.queryParameters['hideBack'] == 'true';
           return AddressSelectionWidget(
             returnToHome: fromSignup || extra['returnToHome'] == true,
@@ -595,6 +595,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         path: MobstarPage.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) => const MobstarPage(),
+      ),
+      GoRoute(
+        name: MobstarFaqPage.routeName,
+        path: MobstarFaqPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const MobstarFaqPage(),
       ),
       GoRoute(
         name: MobstarPointsPage.routeName,

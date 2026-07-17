@@ -40,12 +40,14 @@ class _ReferralView extends StatelessWidget {
           final isLoading = state is ProfileLoading || state is ProfileInitial;
           final summary = state is ReferralSummaryLoaded ? state.summary : null;
           final cachedReferral = _cachedReferralData();
-          final referralCode = (summary?.referralCode.trim().isNotEmpty ?? false)
-              ? summary!.referralCode.trim()
-              : cachedReferral.code;
-          final referralLink = (summary?.referralLink.trim().isNotEmpty ?? false)
-              ? summary!.referralLink.trim()
-              : cachedReferral.link;
+          final referralCode =
+              (summary?.referralCode.trim().isNotEmpty ?? false)
+                  ? summary!.referralCode.trim()
+                  : cachedReferral.code;
+          final referralLink =
+              (summary?.referralLink.trim().isNotEmpty ?? false)
+                  ? summary!.referralLink.trim()
+                  : cachedReferral.link;
           final canShare = referralCode.isNotEmpty;
 
           return Column(
@@ -407,7 +409,7 @@ class _ReferralPromoSection extends StatelessWidget {
             left: 16,
             right: 16,
             child: Text(
-              'Amount will be added to mobWallet.\nValid for 30 days.',
+              'Amount will be added to your mobWallet. Valid for 90 days. Up to 20% can be used per transaction.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 color: const Color(0xFF767C8F),

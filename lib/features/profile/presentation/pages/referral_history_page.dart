@@ -252,7 +252,7 @@ class _WalletNotice extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
-        'Amount will be added to mobWallet. Valid for 30 days.',
+        'Amount will be added to your mobWallet. Valid for 90 days. Up to 20% can be used per transaction.',
         textAlign: TextAlign.center,
         style: GoogleFonts.inter(
           color: const Color(0xFF596378),

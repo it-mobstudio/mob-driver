@@ -679,7 +679,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     if (context.canPop()) {
       context.pop();
     } else {
-      _router.go('/checkout/review');
+      _router.go('/checkout/address');
     }
   }
 

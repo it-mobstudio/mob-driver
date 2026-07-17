@@ -5,10 +5,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/profile/domain/entities/faq_entry.dart';
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_faq_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_points_page.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/faq_accordion_tile.dart';
 
 class MobstarPage extends StatelessWidget {
   const MobstarPage({super.key});
@@ -340,13 +343,11 @@ class _MobstarView extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                   height: 18 / 12)))),
                   const SizedBox(height: 13),
-                  for (final question in const [
-                    'What is mobSTAR loyalty program?',
-                    'When do mobSTAR points expire?',
-                    'How do I redeem my mobSTAR points?',
-                    'View all FAQ’s'
-                  ])
-                    _FaqRow(question),
+                  for (final entry in _faqEntries) FaqAccordionTile(entry),
+                  _FaqRow(
+                    'View all FAQ’s',
+                    onTap: () => context.push(MobstarFaqPage.routePath),
+                  ),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -928,26 +929,54 @@ class _LevelName extends StatelessWidget {
   }
 }
 
+const _faqEntries = <FaqEntry>[
+  FaqEntry(
+    'What is mobSTAR loyalty program?',
+    "The mobSTAR Loyalty Program is Mad Over Buildings' exclusive loyalty "
+        'program for material purchases. Earn mobSTAR points every time you '
+        'buy directly through MOB and unlock more rewards & benefits as you '
+        'level up. There are five levels: Bronze, Silver, Gold, Platinum, '
+        'and Diamond.',
+  ),
+  FaqEntry(
+    'When do mobSTAR points expire?',
+    'mobSTAR points are valid for one year from the date they are credited '
+        'to your account. Any unused points will expire after this period, '
+        'so be sure to redeem them in time to enjoy your rewards.',
+  ),
+  FaqEntry(
+    'How do I redeem my mobSTAR points?',
+    'You can redeem your points during checkout when placing an order. '
+        'Simply select the points option. If your points cover the total '
+        'amount, no additional payment is needed. If not, you can pay the '
+        'remaining balance using any other available payment method.',
+  ),
+];
+
 class _FaqRow extends StatelessWidget {
-  const _FaqRow(this.text);
+  const _FaqRow(this.text, {this.onTap});
   final String text;
+  final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => Container(
-      height: 48,
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .1),
-          borderRadius: BorderRadius.circular(16)),
-      child: Row(children: [
-        Expanded(
-            child: Text(text,
-                style: GoogleFonts.inter(
-                    color: _MobstarView.muted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500))),
-        const Icon(Icons.chevron_right, color: _MobstarView.muted, size: 20)
-      ]));
+  Widget build(BuildContext context) => InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+          height: 48,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .1),
+              borderRadius: BorderRadius.circular(16)),
+          child: Row(children: [
+            Expanded(
+                child: Text(text,
+                    style: GoogleFonts.inter(
+                        color: _MobstarView.muted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500))),
+            const Icon(Icons.chevron_right, color: _MobstarView.muted, size: 20)
+          ])));
 }
 
 class _DottedDivider extends StatelessWidget {

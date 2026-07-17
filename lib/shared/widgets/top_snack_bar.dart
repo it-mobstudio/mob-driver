@@ -9,165 +9,209 @@ class TopSnackBar {
   TopSnackBar._();
 
   static OverlayEntry? _currentEntry;
-  static Timer? _currentTimer;
 
   static void show(
     BuildContext context, {
     required String message,
     TopSnackBarType type = TopSnackBarType.info,
-    Duration duration = const Duration(seconds: 5),
+    Duration duration = const Duration(seconds: 3),
   }) {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null || message.trim().isEmpty) return;
 
-    _currentTimer?.cancel();
     _currentEntry?.remove();
     _currentEntry = null;
 
-    final entry = OverlayEntry(
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
       builder: (_) => _TopSnackBarOverlay(
         message: message,
         type: type,
         duration: duration,
+        onDismissed: () {
+          entry.remove();
+          if (identical(_currentEntry, entry)) _currentEntry = null;
+        },
       ),
     );
 
     _currentEntry = entry;
     overlay.insert(entry);
-    _currentTimer = Timer(duration + const Duration(milliseconds: 250), () {
-      entry.remove();
-      if (identical(_currentEntry, entry)) _currentEntry = null;
-    });
   }
 }
 
-class _TopSnackBarOverlay extends StatelessWidget {
+class _TopSnackBarOverlay extends StatefulWidget {
   const _TopSnackBarOverlay({
     required this.message,
     required this.type,
     required this.duration,
+    required this.onDismissed,
   });
 
   final String message;
   final TopSnackBarType type;
   final Duration duration;
+  final VoidCallback onDismissed;
+
+  @override
+  State<_TopSnackBarOverlay> createState() => _TopSnackBarOverlayState();
+}
+
+class _TopSnackBarOverlayState extends State<_TopSnackBarOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+      reverseDuration: const Duration(milliseconds: 180),
+    )..forward();
+    _dismissTimer = Timer(widget.duration, _dismiss);
+  }
+
+  Future<void> _dismiss() async {
+    if (!mounted) return;
+    await _controller.reverse();
+    if (mounted) widget.onDismissed();
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final accent = switch (type) {
+    final accent = switch (widget.type) {
       TopSnackBarType.success => const Color(0xFF329537),
       TopSnackBarType.info => const Color(0xFF329537),
       TopSnackBarType.error => const Color(0xFFF0483E),
     };
+    final topInset = MediaQuery.paddingOf(context).top;
+    final toast = ClipRRect(
+      borderRadius: const BorderRadius.vertical(
+        bottom: Radius.circular(14),
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: accent,
+          borderRadius: const BorderRadius.vertical(
+            bottom: Radius.circular(14),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(22, topInset + 7, 16, 9),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Transform.translate(
+                    offset: const Offset(0, -1),
+                    child: SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.asset(
+                            'assets/images/app_icon.png',
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.message,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 17 / 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SizedBox(
+                height: 2,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                  ),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 1, end: 0),
+                    duration: widget.duration,
+                    curve: Curves.linear,
+                    builder: (context, value, child) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: value,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: ColoredBox(
+                      color: Colors.white.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return Positioned(
       top: 0,
       left: 0,
       right: 0,
       child: IgnorePointer(
-        child: SafeArea(
-          bottom: false,
-          child: Material(
-            color: Colors.transparent,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: Transform.translate(
-                    offset: Offset(0, -10 * (1 - value)),
-                    child: child,
-                  ),
-                );
-              },
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: accent,
-                  boxShadow: [
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.20),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+        child: Material(
+          color: Colors.transparent,
+          child: AnimatedBuilder(
+            animation: _controller,
+            child: toast,
+            builder: (context, child) {
+              final value = Curves.easeOutCubic.transform(
+                _controller.value,
+              );
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, -10 * (1 - value)),
+                  child: child,
                 ),
-                child: Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 30,
-                            height: 30,
-                            child: Center(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.asset(
-                                  'assets/images/app_icon.png',
-                                  width: 28,
-                                  height: 28,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              message,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                height: 17 / 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 7,
-                      child: SizedBox(
-                        width: 58,
-                        height: 3,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.26),
-                            ),
-                            child: TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 1, end: 0),
-                              duration: duration,
-                              curve: Curves.linear,
-                              builder: (context, value, child) {
-                                return Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: FractionallySizedBox(
-                                    widthFactor: value,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: ColoredBox(
-                                color: Colors.white.withValues(alpha: 0.72),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),
