@@ -94,7 +94,6 @@ class _SupportHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 66,
       color: Colors.white,
       alignment: Alignment.topCenter,
       child: Padding(

@@ -37,7 +37,7 @@ class BrowseProductsHeader extends StatelessWidget {
               child: Center(child: AppBackIcon()),
             ),
           ),
-          const SizedBox(width: 2),
+          const SizedBox(width: 16),
           Expanded(
             child: Text(
               category,
@@ -52,13 +52,12 @@ class BrowseProductsHeader extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: onSearch,
-            icon: const Icon(
-              Icons.search,
-              size: 20,
-              color: Color(0xFF0A243F),
-            ),
-          ),
+              onPressed: onSearch,
+              icon: SvgPicture.asset(
+                'assets/images/Searchicon.svg',
+                width: 16,
+                height: 16,
+              )),
         ],
       ),
     );
@@ -105,7 +104,7 @@ class BrowseFilterRow extends StatelessWidget {
           const SizedBox(width: 8),
           _FilterChip(
             label: 'Sort by',
-            trailingIcon: Icons.keyboard_arrow_down_rounded,
+            trailingAsset: 'assets/images/downicon.svg',
             onTap: onSortTap,
           ),
           ...filterSections.expand((section) {
@@ -114,7 +113,7 @@ class BrowseFilterRow extends StatelessWidget {
               const SizedBox(width: 8),
               _FilterChip(
                 label: section.label.isNotEmpty ? section.label : section.key,
-                trailingIcon: Icons.keyboard_arrow_down_rounded,
+                trailingAsset: 'assets/images/downicon.svg',
                 onTap: () => onSectionTap(section),
                 selectedCount: selectedCount,
               ),
@@ -1097,7 +1096,7 @@ class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
     this.leadingAsset,
-    this.trailingIcon,
+    this.trailingAsset,
     this.onTap,
     this.selectedCount = 0,
     this.onClear,
@@ -1105,7 +1104,7 @@ class _FilterChip extends StatelessWidget {
 
   final String label;
   final String? leadingAsset;
-  final IconData? trailingIcon;
+  final String? trailingAsset;
   final VoidCallback? onTap;
   final int selectedCount;
   final VoidCallback? onClear;
@@ -1178,9 +1177,17 @@ class _FilterChip extends StatelessWidget {
                 ),
               ),
             ],
-            if (trailingIcon != null) ...[
+            if (trailingAsset != null) ...[
               const SizedBox(width: 8),
-              Icon(trailingIcon, size: 14, color: const Color(0xFF0A243F)),
+              SvgPicture.asset(
+                trailingAsset!,
+                width: 12,
+                height: 12,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF0A243F),
+                  BlendMode.srcIn,
+                ),
+              ),
             ],
           ],
         ),

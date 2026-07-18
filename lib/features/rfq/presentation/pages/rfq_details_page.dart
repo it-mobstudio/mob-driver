@@ -235,11 +235,11 @@ class _RfqDetailsBody extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
             child: _ItemsSelectedCard(rfq: rfq),
           ),
-        if (rfq.quoteRequestedItems.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-            child: _RequestedItemsByVendorCard(rfq: rfq),
-          ),
+        // if (rfq.quoteRequestedItems.isNotEmpty)
+        //   Padding(
+        //     padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+        //     child: _RequestedItemsByVendorCard(rfq: rfq),
+        //   ),
         const Padding(
           padding: EdgeInsets.fromLTRB(16, 16, 16, 28),
           child: _HelpCard(),
@@ -289,7 +289,8 @@ class _MagicQuoteDescriptionRow extends StatelessWidget {
                 height: 18 / 12,
               ),
               children: [
-                const TextSpan(text: 'We should reach out within 5 - 30 mins\n'),
+                const TextSpan(
+                    text: 'We should reach out within 5 - 30 mins\n'),
                 const TextSpan(text: 'or Call '),
                 WidgetSpan(
                   alignment: PlaceholderAlignment.baseline,
@@ -1507,7 +1508,11 @@ class _HelpCard extends StatelessWidget {
                     Uri.parse('https://wa.me/918970415365'),
                     mode: LaunchMode.externalApplication,
                   ),
-                  icon: const Icon(Icons.phone_in_talk_outlined, size: 18),
+                  icon: SvgPicture.asset(
+                    'assets/images/whatsapp.svg',
+                    width: 18,
+                    height: 18,
+                  ),
                   label: Text(
                     'Chat with us',
                     style: GoogleFonts.inter(
@@ -1534,11 +1539,23 @@ class _HelpCard extends StatelessWidget {
             children: [
               Stack(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 24,
-                    backgroundColor: Color(0xFFE2F3EC),
-                    child: Icon(Icons.support_agent, color: Color(0xFF0A243F)),
+                    backgroundColor: const Color(0xFFE2F3EC),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/mobsupportteam.png',
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
+                  // const CircleAvatar(
+                  //   radius: 24,
+                  //   backgroundColor: Color(0xFFE2F3EC),
+                  //   child: Icon(Icons.support_agent, color: Color(0xFF0A243F)),
+                  // ),
                   Positioned(
                     right: 0,
                     top: 0,

@@ -332,88 +332,105 @@ class _CartRfqRequestSheetState extends State<_CartRfqRequestSheet> {
     final itemCount = widget.summary.itemCount;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF2DD),
-        borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.all(16),
+      decoration: ShapeDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment(0, 0.5),
+          end: Alignment(1, 0.5),
+          colors: [Color(0xFFFDF1EC), Color(0xFFFCEBD0)],
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'You have added $itemCount items for quote request',
-                  style: GoogleFonts.inter(
-                    color: _navy,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    height: 1.4,
-                  ),
-                ),
-                if (widget.summary.items.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      ...widget.summary.items.take(3).map(
-                            (item) => Padding(
-                              padding: const EdgeInsets.only(right: 0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: Container(
-                                  width: 30,
-                                  height: 30,
-                                  color: Colors.white,
-                                  child: item.isNetworkImage
-                                      ? Image.network(
-                                          item.imageAsset,
-                                          fit: BoxFit.contain,
-                                          errorBuilder: (_, __, ___) =>
-                                              const Icon(
-                                            Icons.inventory_2_outlined,
-                                            size: 16,
-                                          ),
-                                        )
-                                      : const Icon(
-                                          Icons.inventory_2_outlined,
-                                          size: 16,
-                                        ),
-                                ),
-                              ),
-                            ),
-                          ),
-                    ],
-                  ),
-                ],
-              ],
+          Text(
+            'You have added $itemCount items for quote request',
+            style: GoogleFonts.inter(
+              color: _navy,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 20 / 14,
             ),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: _navy,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'View cart',
-                  style: GoogleFonts.inter(
-                    color: _navy,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SizedBox(
+                width: 72,
+                height: 32,
+                child: Stack(
+                  children: widget.summary.items
+                      .take(3)
+                      .toList()
+                      .asMap()
+                      .entries
+                      .map((entry) {
+                    final item = entry.value;
+                    return Positioned(
+                      left: entry.key * 20,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: const Color(0xFFE2E2E2)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: item.isNetworkImage
+                            ? Image.network(
+                                item.imageAsset,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.inventory_2_outlined,
+                                  size: 16,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.inventory_2_outlined,
+                                size: 16,
+                              ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              InkWell(
+                onTap: () => Navigator.of(context).pop(),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View cart',
+                        style: GoogleFonts.inter(
+                          color: _navy,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          height: 20 / 14,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const CircleAvatar(
+                        radius: 12,
+                        backgroundColor: Colors.white,
+                        child: Icon(
+                          Icons.chevron_right,
+                          color: _navy,
+                          size: 20,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                const CircleAvatar(
-                  radius: 13,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.chevron_right, color: _navy, size: 20),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

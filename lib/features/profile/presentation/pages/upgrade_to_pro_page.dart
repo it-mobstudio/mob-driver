@@ -191,29 +191,36 @@ class _UpgradeToProViewState extends State<_UpgradeToProView> {
       ),
       child: Stack(
         children: [
-          AspectRatio(
-            aspectRatio: 375 / 324,
+          SizedBox(
+            width: double.infinity,
+            height: topPadding + 390,
+            child: const ColoredBox(color: Color(0xFF191919)),
+          ),
+          Positioned(
+            top: topPadding + 66,
+            left: 0,
+            right: 0,
+            height: 324,
             child: Image.asset(
               'assets/images/pro-topbanner.png',
               fit: BoxFit.cover,
-              width: double.infinity,
             ),
           ),
           Positioned(
-            top: topPadding + 27,
+            top: topPadding + 22,
             left: 0,
             right: 0,
             child: Center(
               child: SvgPicture.asset(
                 'assets/images/mobpro-logo.svg',
-                height: 28,
+                height: 24,
               ),
             ),
           ),
           Positioned(
-            top: topPadding + 84,
-            left: 48,
-            right: 48,
+            top: topPadding + 90,
+            left: 28,
+            right: 27,
             child: Text.rich(
               textAlign: TextAlign.center,
               TextSpan(
@@ -228,7 +235,7 @@ class _UpgradeToProViewState extends State<_UpgradeToProView> {
                     ),
                   ),
                   TextSpan(
-                    text: ' for construction\nprofessionals with ',
+                    text: ' for construction professionals with ',
                     style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 18,
@@ -250,7 +257,7 @@ class _UpgradeToProViewState extends State<_UpgradeToProView> {
             ),
           ),
           Positioned(
-            top: topPadding + 24,
+            top: topPadding + 16,
             left: 16,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
