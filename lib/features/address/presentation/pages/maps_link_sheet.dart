@@ -49,6 +49,10 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
+    final sheetBottomPadding = bottomInset > 0
+        ? 24.0
+        : 24.0 + (bottomSafeArea > 0 ? bottomSafeArea : 8.0);
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       padding: EdgeInsets.only(bottom: bottomInset),
@@ -71,7 +75,7 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 28, 16, 32),
+            padding: EdgeInsets.fromLTRB(16, 28, 16, sheetBottomPadding),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

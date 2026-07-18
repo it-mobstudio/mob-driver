@@ -24,18 +24,65 @@ class MobstarPage extends StatelessWidget {
     return BlocProvider(
       create: (_) => sl<ProfileBloc>()..add(MobstarLoadRequested()),
       child: const AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
+        value: SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF090A15),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFF090A15),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
         child: _MobstarView(),
       ),
     );
   }
 }
 
-class _MobstarView extends StatelessWidget {
+class _MobstarView extends StatefulWidget {
   const _MobstarView();
 
   static const gold = Color(0xFFD99A3E);
   static const muted = Color(0xFFBEBEC2);
+
+  static TextStyle _text(double size, Color color, FontWeight weight,
+          {double? height}) =>
+      GoogleFonts.inter(
+          color: color, fontSize: size, fontWeight: weight, height: height);
+
+  static Future<void> _showAllLevelsSheet(
+    BuildContext context,
+    MobstarEntity mobstar,
+  ) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: .6),
+      builder: (context) => _AllLevelsSheet(mobstar: mobstar),
+    );
+  }
+
+  static String _trimNumber(double value) {
+    if (value % 1 == 0) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+  }
+
+  static String _levelAsset(String level) {
+    final lower = level.toLowerCase();
+    if (lower.contains('diamond') || lower.contains('dimond')) {
+      return 'assets/images/mobStar/dimond.svg';
+    }
+    if (lower.contains('platinum')) return 'assets/images/mobStar/platinum.svg';
+    if (lower.contains('gold')) return 'assets/images/mobStar/gold.svg';
+    if (lower.contains('silver')) return 'assets/images/mobStar/silver.svg';
+    return 'assets/images/mobStar/bronze.svg';
+  }
+
+  @override
+  State<_MobstarView> createState() => _MobstarViewState();
+}
+
+class _MobstarViewState extends State<_MobstarView> {
+  int? _expandedFaqIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +94,7 @@ class _MobstarView extends StatelessWidget {
     final valueText = mobstar.actualMoney % 1 == 0
         ? mobstar.actualMoney.toStringAsFixed(0)
         : mobstar.actualMoney.toStringAsFixed(2);
-    final rewardText = '${_trimNumber(mobstar.percentage)}X points';
+    final rewardText = '${_MobstarView._trimNumber(mobstar.percentage)}X points';
 
     return Scaffold(
       backgroundColor: const Color(0xFF090A15),
@@ -120,7 +167,8 @@ class _MobstarView extends StatelessWidget {
                           child: Text(
                             'Get points on every order you place!',
                             textAlign: TextAlign.center,
-                            style: _text(13, muted, FontWeight.w500,
+                            style: _MobstarView._text(
+                                13, _MobstarView.muted, FontWeight.w500,
                                 height: 20 / 13),
                           ),
                         ),
@@ -149,10 +197,11 @@ class _MobstarView extends StatelessWidget {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(mobstar.membership,
-                                        style: _text(
+                                        style: _MobstarView._text(
                                             14, Colors.white, FontWeight.w500)),
                                     SvgPicture.asset(
-                                        _levelAsset(mobstar.membership),
+                                        _MobstarView._levelAsset(
+                                            mobstar.membership),
                                         width: 24,
                                         height: 23),
                                   ]),
@@ -192,7 +241,9 @@ class _MobstarView extends StatelessWidget {
                                                   MainAxisAlignment.center,
                                               children: [
                                             Text('mobSTAR points',
-                                                style: _text(13, muted,
+                                                style: _MobstarView._text(
+                                                    13,
+                                                    _MobstarView.muted,
                                                     FontWeight.w500)),
                                             const SizedBox(height: 4),
                                             SizedBox(
@@ -213,7 +264,7 @@ class _MobstarView extends StatelessWidget {
                                                     offset: const Offset(0, 2),
                                                     child: Text(
                                                       '$points',
-                                                      style: _text(
+                                                      style: _MobstarView._text(
                                                         28,
                                                         Colors.white,
                                                         FontWeight.w900,
@@ -245,7 +296,8 @@ class _MobstarView extends StatelessWidget {
                                                           Alignment.center,
                                                       child: Text(
                                                         '₹$valueText',
-                                                        style: _text(
+                                                        style:
+                                                            _MobstarView._text(
                                                           13,
                                                           Colors.white70,
                                                           FontWeight.w500,
@@ -259,7 +311,9 @@ class _MobstarView extends StatelessWidget {
                                             ),
                                             const SizedBox(height: 4),
                                             Text('4 points = ₹1',
-                                                style: _text(13, muted,
+                                                style: _MobstarView._text(
+                                                    13,
+                                                    _MobstarView.muted,
                                                     FontWeight.w500)),
                                           ])),
                                       const Center(
@@ -310,16 +364,18 @@ class _MobstarView extends StatelessWidget {
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(18),
-                        onTap: () => _showAllLevelsSheet(context, mobstar),
+                        onTap: () =>
+                            _MobstarView._showAllLevelsSheet(context, mobstar),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 6),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
                             Text('View all levels',
-                                style: _text(14, muted, FontWeight.w500)),
+                                style: _MobstarView._text(
+                                    14, _MobstarView.muted, FontWeight.w500)),
                             const SizedBox(width: 5),
                             const Icon(Icons.chevron_right,
-                                color: muted, size: 18)
+                                color: _MobstarView.muted, size: 18)
                           ]),
                         ),
                       ),
@@ -338,12 +394,22 @@ class _MobstarView extends StatelessWidget {
                           child: Text('Frequently asked questions',
                               style: TextStyle(
                                   fontFamily: 'Inter',
-                                  color: gold,
+                                  color: _MobstarView.gold,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   height: 18 / 12)))),
                   const SizedBox(height: 13),
-                  for (final entry in _faqEntries) FaqAccordionTile(entry),
+                  for (final indexedEntry in _faqEntries.indexed)
+                    FaqAccordionTile(
+                      indexedEntry.$2,
+                      expanded: _expandedFaqIndex == indexedEntry.$1,
+                      onExpansionChanged: (expanded) {
+                        setState(() {
+                          _expandedFaqIndex =
+                              expanded ? indexedEntry.$1 : null;
+                        });
+                      },
+                    ),
                   _FaqRow(
                     'View all FAQ’s',
                     onTap: () => context.push(MobstarFaqPage.routePath),
@@ -358,39 +424,6 @@ class _MobstarView extends StatelessWidget {
     );
   }
 
-  static TextStyle _text(double size, Color color, FontWeight weight,
-          {double? height}) =>
-      GoogleFonts.inter(
-          color: color, fontSize: size, fontWeight: weight, height: height);
-
-  static Future<void> _showAllLevelsSheet(
-    BuildContext context,
-    MobstarEntity mobstar,
-  ) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: .6),
-      builder: (context) => _AllLevelsSheet(mobstar: mobstar),
-    );
-  }
-
-  static String _trimNumber(double value) {
-    if (value % 1 == 0) return value.toStringAsFixed(0);
-    return value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
-  }
-
-  static String _levelAsset(String level) {
-    final lower = level.toLowerCase();
-    if (lower.contains('diamond') || lower.contains('dimond')) {
-      return 'assets/images/mobStar/dimond.svg';
-    }
-    if (lower.contains('platinum')) return 'assets/images/mobStar/platinum.svg';
-    if (lower.contains('gold')) return 'assets/images/mobStar/gold.svg';
-    if (lower.contains('silver')) return 'assets/images/mobStar/silver.svg';
-    return 'assets/images/mobStar/bronze.svg';
-  }
 }
 
 class _MobstarLogo extends StatelessWidget {
