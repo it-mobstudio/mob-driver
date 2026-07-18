@@ -149,111 +149,121 @@ class _OrdersPageState extends State<OrdersPage> {
                             ),
                           ),
                         OrdersLoaded(:final orders, :final isLoadingMore) =>
-                          PullToRefresh(
-                            onRefresh: () async {
-                              _ordersBloc.add(OrdersRefreshRequested());
-                              await _ordersBloc.stream.firstWhere(
-                                (s) => s is OrdersLoaded || s is OrdersError,
-                              );
-                            },
-                            child: CustomScrollView(
-                              controller: _scrollController,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              slivers: [
-                                SliverPadding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    12,
-                                    16,
-                                    0,
-                                  ),
-                                  sliver: SliverToBoxAdapter(
-                                    child: _OrdersSearch(
-                                      controller: _searchController,
-                                      onChanged: _onSearchChanged,
-                                      onCleared: _onSearchCleared,
-                                    ),
-                                  ),
+                          Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  12,
+                                  16,
+                                  0,
                                 ),
-                                SliverPersistentHeader(
-                                  pinned: true,
-                                  delegate: _FilterHeaderDelegate(
-                                    activeLabel: _activeFilterLabel,
-                                    onTap: _openFilterSheet,
-                                  ),
+                                child: _OrdersSearch(
+                                  controller: _searchController,
+                                  onChanged: _onSearchChanged,
+                                  onCleared: _onSearchCleared,
                                 ),
-                                if (orders.isEmpty)
-                                  SliverPadding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
-                                    sliver: SliverToBoxAdapter(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 48,
+                              ),
+                              Expanded(
+                                child: PullToRefresh(
+                                  onRefresh: () async {
+                                    _ordersBloc.add(OrdersRefreshRequested());
+                                    await _ordersBloc.stream.firstWhere(
+                                      (s) =>
+                                          s is OrdersLoaded || s is OrdersError,
+                                    );
+                                  },
+                                  child: CustomScrollView(
+                                    controller: _scrollController,
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    slivers: [
+                                      SliverPersistentHeader(
+                                        pinned: true,
+                                        delegate: _FilterHeaderDelegate(
+                                          activeLabel: _activeFilterLabel,
+                                          onTap: _openFilterSheet,
                                         ),
-                                        child: Center(
-                                          child: Text(
-                                            'No orders yet.',
-                                            style: GoogleFonts.inter(
-                                              color: const Color(0xFF596378),
-                                              fontSize: 14,
+                                      ),
+                                      if (orders.isEmpty)
+                                        SliverPadding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          ),
+                                          sliver: SliverToBoxAdapter(
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                vertical: 48,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  'No orders yet.',
+                                                  style: GoogleFonts.inter(
+                                                    color:
+                                                        const Color(0xFF596378),
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        SliverPadding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          ),
+                                          sliver: SliverList.builder(
+                                            itemCount: orders.length,
+                                            itemBuilder: (context, index) {
+                                              final order = orders[index];
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 16,
+                                                ),
+                                                child: _OrderCard(
+                                                  order: order,
+                                                  onTap: () => context.push(
+                                                    OrderDetailPage.routePath,
+                                                    extra: order.id,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      if (isLoadingMore)
+                                        const SliverToBoxAdapter(
+                                          child: Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            child: Center(
+                                              child: SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  SliverPadding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
-                                    sliver: SliverList.builder(
-                                      itemCount: orders.length,
-                                      itemBuilder: (context, index) {
-                                        final order = orders[index];
-                                        return Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 16,
-                                          ),
-                                          child: _OrderCard(
-                                            order: order,
-                                            onTap: () => context.push(
-                                              OrderDetailPage.routePath,
-                                              extra: order.id,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                if (isLoadingMore)
-                                  const SliverToBoxAdapter(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 16,
-                                      ),
-                                      child: Center(
+                                      SliverToBoxAdapter(
                                         child: SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
+                                          height: 24 +
+                                              kBottomNavBarHeight +
+                                              MediaQuery.paddingOf(context)
+                                                  .bottom,
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                SliverToBoxAdapter(
-                                  child: SizedBox(
-                                    height: 24 +
-                                        kBottomNavBarHeight +
-                                        MediaQuery.paddingOf(context).bottom,
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         _ => const SizedBox.shrink(),
                       };
