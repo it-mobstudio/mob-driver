@@ -75,7 +75,7 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
 
   NavigationDecision _onNavigationRequest(NavigationRequest request) {
     final uri = Uri.tryParse(request.url);
-    debugPrint('[Rupifi] _onNavigationRequest: ${request.url}');
+    if (kDebugMode) debugPrint('[Rupifi] _onNavigationRequest: ${request.url}');
     if (uri == null) return NavigationDecision.navigate;
 
     // Backend's app-scheme completion redirect (mobdemandside:// / uat
@@ -88,10 +88,12 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
         (uri.scheme == 'mobdemandside' || uri.scheme == 'mobdemandsideuat') &&
             uri.host == 'checkout';
     if (isAppSchemeRedirect) {
-      debugPrint('[Rupifi] ✅ App-scheme redirect detected');
-      debugPrint(
-          '[Rupifi]   scheme=${uri.scheme}  host=${uri.host}  path=${uri.path}');
-      debugPrint('[Rupifi]   params=${uri.queryParameters}');
+      if (kDebugMode) {
+        debugPrint('[Rupifi] App-scheme redirect detected');
+        debugPrint(
+            '[Rupifi] scheme=${uri.scheme} host=${uri.host} path=${uri.path}');
+        debugPrint('[Rupifi] params=${uri.queryParameters}');
+      }
       final path = uri.path.toLowerCase();
       final status = uri.queryParameters['status'] ??
           (path.contains('fail') || path.contains('cancel')
@@ -105,8 +107,10 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
         transactionId: uri.queryParameters['transactionId'],
         currency: uri.queryParameters['currency'],
       );
-      debugPrint(
-          '[Rupifi] RupifiPaymentResult → status=$status  orderId=${result.orderId}  isCompleted=${result.isCompleted}');
+      if (kDebugMode) {
+        debugPrint(
+            '[Rupifi] RupifiPaymentResult status=$status orderId=${result.orderId} isCompleted=${result.isCompleted}');
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Navigator.of(context).pop(result);
       });
@@ -120,8 +124,10 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
     // — it just fails (blank page / ERR_UNKNOWN_URL_SCHEME). Hand off to the
     // OS so the actual UPI app opens, same as the native intent flow would.
     if (uri.scheme != 'http' && uri.scheme != 'https') {
-      debugPrint(
-          '[Rupifi] 📲 Non-http scheme – launching externally: ${uri.scheme}://${uri.host}');
+      if (kDebugMode) {
+        debugPrint(
+            '[Rupifi] Non-http scheme launching externally: ${uri.scheme}://${uri.host}');
+      }
       _launchExternally(uri);
       return NavigationDecision.prevent;
     }
@@ -135,8 +141,10 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
     final isBackendWebhook = uri.host.contains('madoverbuilding.com') &&
         (uri.path.contains('rupifi') || uri.path.contains('payment_history'));
     if (isBackendWebhook) {
-      debugPrint(
-          '[Rupifi] ⏳ Backend webhook URL – letting webview follow redirect chain: ${uri.host}${uri.path}');
+      if (kDebugMode) {
+        debugPrint(
+            '[Rupifi] Backend webhook URL follows redirect chain: ${uri.host}${uri.path}');
+      }
       return NavigationDecision.navigate;
     }
     return NavigationDecision.navigate;

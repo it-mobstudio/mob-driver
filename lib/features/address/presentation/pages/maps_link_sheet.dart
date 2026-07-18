@@ -217,8 +217,9 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
     // wrong step whenever it was actually the reverse-geocode call that
     // failed rather than the link parsing — split so the real cause shows.
     (double, double)? coordinates;
+    String finalUrl;
     try {
-      final finalUrl = await _followRedirects(link);
+      finalUrl = await _followRedirects(link);
       coordinates = _extractLatLng(finalUrl);
     } catch (e) {
       if (!mounted) return;
@@ -229,6 +230,20 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
       return;
     }
     if (coordinates == null) {
+      // Links shared for a named place (a business, a hotel listing) carry
+      // no raw coordinates at all — Google resolves those via an internal
+      // feature id, leaving only a free-text address in `q=`/`query=`.
+      // Resolve that text the same way search-as-you-type does instead of
+      // failing outright.
+      final placeText = _extractPlaceQueryText(finalUrl);
+      final resolvedByText =
+          placeText == null ? null : await _resolvePlaceByText(placeText);
+      if (resolvedByText != null) {
+        setState(() => _resolvedLocation = resolvedByText);
+        await _checkServiceability(resolvedByText.pincode);
+        if (mounted) setState(() => _resolving = false);
+        return;
+      }
       if (!mounted) return;
       setState(() {
         _error = "Couldn't read a location from that link.";
@@ -279,9 +294,25 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
     return response.realUri.toString();
   }
 
+  /// Every query-parameter name Google's various maps.google.com /
+  /// google.com/maps URL shapes have used for "the place this link points
+  /// to" — search links (`q`/`query`), the newer share-link API
+  /// (`query` again), and older directions links (`daddr`, `destination`,
+  /// `ll`). Checked as both a coordinate pair and, in
+  /// [_extractPlaceQueryText], free text.
+  static const _locationParamNames = [
+    'q',
+    'query',
+    'daddr',
+    'destination',
+    'll'
+  ];
+
   /// Checks the most precise pattern first: Google's internal `!3d..!4d..`
-  /// marks the exact dropped pin, while `@lat,lng` is only the camera
-  /// center (can drift from the actual pin on a place page).
+  /// marks the exact dropped pin, `@lat,lng` is the camera center (can drift
+  /// from the actual pin on a place page), and the various
+  /// `q=`/`daddr=`/etc. params cover links that encode the coordinate pair
+  /// directly instead.
   (double, double)? _extractLatLng(String url) {
     final pinMatch = RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)').firstMatch(url);
     if (pinMatch != null) {
@@ -295,14 +326,50 @@ class _MapsLinkSheetState extends State<_MapsLinkSheet> {
       final lng = double.tryParse(atMatch.group(2)!);
       if (lat != null && lng != null) return (lat, lng);
     }
-    final qMatch =
-        RegExp(r'[?&](?:q|query)=(-?\d+\.\d+),(-?\d+\.\d+)').firstMatch(url);
+    final paramGroup = _locationParamNames.join('|');
+    final qMatch = RegExp('[?&](?:$paramGroup)=(-?\\d+\\.\\d+),(-?\\d+\\.\\d+)')
+        .firstMatch(url);
     if (qMatch != null) {
       final lat = double.tryParse(qMatch.group(1)!);
       final lng = double.tryParse(qMatch.group(2)!);
       if (lat != null && lng != null) return (lat, lng);
     }
     return null;
+  }
+
+  /// Pulls the free-text place name out of whichever "destination" param
+  /// the link used, for links that carry no raw coordinates at all — skips
+  /// `ll` (always a coordinate pair, never a place name) and the numeric
+  /// "lat,lng" case already handled by [_extractLatLng].
+  String? _extractPlaceQueryText(String url) {
+    final paramGroup =
+        _locationParamNames.where((name) => name != 'll').join('|');
+    final match = RegExp('[?&](?:$paramGroup)=([^&]+)').firstMatch(url);
+    if (match == null) return null;
+    final text = Uri.decodeQueryComponent(match.group(1)!).trim();
+    if (text.isEmpty) return null;
+    if (RegExp(r'^-?\d+\.\d+,-?\d+\.\d+$').hasMatch(text)) return null;
+    return text;
+  }
+
+  /// Resolves a bare place name/address the same way search-as-you-type
+  /// does: autocomplete for a matching place, then its details for the
+  /// actual coordinates. Returns null on any failure so the caller can fall
+  /// back to the generic "couldn't read a location" error.
+  Future<AddressLocationEntity?> _resolvePlaceByText(String text) async {
+    try {
+      final repository = sl<AddressRepository>();
+      final (suggestions, searchFailure) =
+          await repository.searchLocations(text);
+      if (searchFailure != null || suggestions == null || suggestions.isEmpty) {
+        return null;
+      }
+      final (location, detailsFailure) =
+          await repository.getLocationDetails(suggestions.first.placeId);
+      return detailsFailure != null ? null : location;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _checkServiceability(String pincode) async {

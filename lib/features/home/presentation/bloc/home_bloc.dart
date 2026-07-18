@@ -38,6 +38,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   final HomeRepository _repository;
+  bool _refreshInFlight = false;
 
   Future<void> _onLoad(HomeLoadRequested event, Emitter<HomeState> emit) async {
     if (state is HomeLoaded) return; // already loaded, no re-fetch
@@ -49,21 +50,28 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeRefreshRequested event,
     Emitter<HomeState> emit,
   ) async {
-    final previousData =
-        state is HomeLoaded ? (state as HomeLoaded).data : null;
-    if (previousData == null) emit(HomeLoading());
+    if (_refreshInFlight) return;
+    _refreshInFlight = true;
 
-    final (data, failure) = await _repository.getHomeData();
-    if (failure != null) {
-      AppHaptics.error();
-      emit(
-        previousData == null
-            ? HomeError(failure.message)
-            : HomeLoaded(previousData),
-      );
-      return;
+    try {
+      final previousData =
+          state is HomeLoaded ? (state as HomeLoaded).data : null;
+      if (previousData == null) emit(HomeLoading());
+
+      final (data, failure) = await _repository.getHomeData();
+      if (failure != null) {
+        AppHaptics.error();
+        emit(
+          previousData == null
+              ? HomeError(failure.message)
+              : HomeLoaded(previousData),
+        );
+        return;
+      }
+      emit(HomeLoaded(data!));
+    } finally {
+      _refreshInFlight = false;
     }
-    emit(HomeLoaded(data!));
   }
 
   Future<void> _fetch(Emitter<HomeState> emit) async {

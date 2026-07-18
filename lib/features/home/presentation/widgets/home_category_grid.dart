@@ -1,4 +1,3 @@
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -122,13 +121,17 @@ class HomeCategoryTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          // Fixed height so image box is identical across all tiles
+          // Fixed height so image box is identical across all tiles. A
+          // plain fixed-size Text (not AutoSizeText) so every device renders
+          // this at the exact same size — AutoSizeText's per-device font
+          // shrinking is what produced the ugly single-orphan-letter wraps
+          // ("Laminate" / "s") on some phones; a long label now just
+          // truncates with an ellipsis instead.
           SizedBox(
             height: 30,
-            child: AutoSizeText(
+            child: Text(
               category.name,
               maxLines: 2,
-              minFontSize: 8,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(

@@ -5,7 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:m_o_b_demand_side/core/app_runtime/nav/nav.dart' show appNavigatorKey;
+import 'package:m_o_b_demand_side/core/app_runtime/nav/nav.dart'
+    show appNavigatorKey;
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/location/location_permission_helper.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
@@ -80,7 +81,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _autoDetectStarted) return;
         _autoDetectStarted = true;
-        _detectCurrentLocation();
+        _autoDetectCurrentLocation();
       });
     }
   }
@@ -135,7 +136,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
               ),
             ),
             body: SafeArea(
-              bottom:false,
+              bottom: false,
               child: AddressPickerBody(
                 addresses: _addresses,
                 selectedAddressId: SelectedAddressStore.cached?.id,
@@ -183,7 +184,7 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
         _loadingAddresses = false;
       });
     } else if (state is AddressLocationResolved) {
-      _completeSelection(_toAddressEntity(state.location));
+      _confirmLocationThenSelect(state.location);
     } else if (state is AddressError) {
       setState(() => _loadingAddresses = false);
       TopSnackBar.show(
@@ -194,12 +195,12 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     }
   }
 
-  /// "Add new address" (and the pasted maps-link flow) — confirm a pin on
-  /// the map, then collect receiver details and actually save it to the
-  /// address book (unlike [_toAddressEntity]'s callers, which only set the
-  /// nav bar's browsing location). Defaults to a Bengaluru city-center pin
-  /// when no location is already known; [ConfirmDeliveryLocationPage]
-  /// resolves the real address for it as soon as the map loads.
+  /// "Add new address" — confirm a pin on the map, then collect receiver
+  /// details and actually save it to the address book (unlike
+  /// [_confirmLocationThenSelect]'s callers, which only set the nav bar's
+  /// browsing location). Defaults to a Bengaluru city-center pin when no
+  /// location is already known; [ConfirmDeliveryLocationPage] resolves the
+  /// real address for it as soon as the map loads.
   Future<void> _openMap([AddressLocationEntity? location]) async {
     // Push through appNavigatorKey.currentContext, not this method's own
     // `context` — ConfirmDeliveryLocationPage/AddAddressDetailPage use
@@ -235,6 +236,25 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     if (savedAddress == null) return;
     if (mounted) setState(() => _addresses = [..._addresses, savedAddress]);
     await _completeSelection(savedAddress);
+  }
+
+  /// "Current location", a search pick, and a pasted maps link all resolve
+  /// to a coordinate the user hasn't actually seen placed on a map yet — so
+  /// route every one of them through the same pin-drop confirmation as
+  /// "Add new address" before it becomes the active nav bar location.
+  /// Unlike [_openMap], this never visits [AddAddressDetailPage] or saves a
+  /// new address: these are quick picks for browsing, not adding an address
+  /// to the book.
+  Future<void> _confirmLocationThenSelect(
+      AddressLocationEntity location) async {
+    final navContext = appNavigatorKey.currentContext;
+    if (navContext == null) return;
+    final confirmed = await navContext.push<AddressEntity>(
+      ConfirmDeliveryLocationPage.routePath,
+      extra: location,
+    );
+    if (confirmed == null) return;
+    await _completeSelection(confirmed);
   }
 
   Future<void> _editAddress(AddressEntity address) async {
@@ -288,11 +308,67 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     }
   }
 
-  /// Converts a resolved search/GPS lookup straight into an [AddressEntity]
-  /// for [_completeSelection] — mirrors the same conversion
-  /// [ConfirmDeliveryLocationPage._confirm] does, minus the interactive map
-  /// step: picking a suggestion or "Current location" should apply directly
-  /// to the nav bar, not detour through drag-to-confirm.
+  Future<void> _openMapsLinkSheet() async {
+    final location = await showMapsLinkSheet(context);
+    if (!mounted || location == null) return;
+    await _confirmLocationThenSelect(location);
+  }
+
+  /// The "Current location" pill — always routes through the map
+  /// pin-confirmation flow, same as a search pick or a pasted maps link.
+  Future<void> _detectCurrentLocation() async {
+    final location = await _resolveCurrentDeviceLocation();
+    if (location == null) return;
+    await _confirmLocationThenSelect(location);
+  }
+
+  /// Silent onboarding convenience for a brand-new signup or a user with no
+  /// saved address yet: pre-fills the delivery location from GPS the moment
+  /// this page loads, with no tap from the user at all. Yanking someone who
+  /// never touched anything into a full-screen map to confirm a pin would be
+  /// a worse first impression than just trusting the GPS fix outright, so —
+  /// unlike [_detectCurrentLocation] — this applies it directly and never
+  /// visits [ConfirmDeliveryLocationPage].
+  Future<void> _autoDetectCurrentLocation() async {
+    final location = await _resolveCurrentDeviceLocation();
+    if (location == null) return;
+    await _completeSelection(_toAddressEntity(location));
+  }
+
+  /// Shared GPS fetch + reverse-geocode step behind both
+  /// [_detectCurrentLocation] and [_autoDetectCurrentLocation].
+  Future<AddressLocationEntity?> _resolveCurrentDeviceLocation() async {
+    if (_detectingLocation) return null;
+    setState(() => _detectingLocation = true);
+    try {
+      if (!await ensureLocationPermission(context)) return null;
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      final (location, failure) = await _addressRepository.reverseGeocode(
+        position.latitude,
+        position.longitude,
+      );
+      if (!mounted) return null;
+      if (failure != null || location == null) {
+        _showError(
+            failure?.message ?? 'Unable to resolve your current address.');
+        return null;
+      }
+      return location;
+    } catch (_) {
+      _showError('Unable to detect your current location.');
+      return null;
+    } finally {
+      if (mounted) setState(() => _detectingLocation = false);
+    }
+  }
+
+  /// Converts a resolved GPS fix straight into an [AddressEntity] for the
+  /// silent [_autoDetectCurrentLocation] path only — every user-initiated
+  /// pick goes through [_confirmLocationThenSelect] instead.
   AddressEntity _toAddressEntity(AddressLocationEntity location) {
     return AddressEntity(
       latitude: location.latitude,
@@ -322,40 +398,6 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
     final direct = postalCode?.trim() ?? '';
     if (RegExp(r'^[1-9][0-9]{5}$').hasMatch(direct)) return direct;
     return RegExp(r'\b[1-9][0-9]{5}\b').firstMatch(address)?.group(0) ?? '';
-  }
-
-  Future<void> _openMapsLinkSheet() async {
-    final location = await showMapsLinkSheet(context);
-    if (!mounted || location == null) return;
-    await _openMap(location);
-  }
-
-  Future<void> _detectCurrentLocation() async {
-    if (_detectingLocation) return;
-    setState(() => _detectingLocation = true);
-    try {
-      if (!await ensureLocationPermission(context)) return;
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-      final (location, failure) = await _addressRepository.reverseGeocode(
-        position.latitude,
-        position.longitude,
-      );
-      if (!mounted) return;
-      if (failure != null || location == null) {
-        _showError(
-            failure?.message ?? 'Unable to resolve your current address.');
-        return;
-      }
-      await _completeSelection(_toAddressEntity(location));
-    } catch (_) {
-      _showError('Unable to detect your current location.');
-    } finally {
-      if (mounted) setState(() => _detectingLocation = false);
-    }
   }
 
   void _showError(String message) {

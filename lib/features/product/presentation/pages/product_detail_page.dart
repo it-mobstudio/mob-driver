@@ -124,10 +124,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (_) => VariantSelectionSheet(
         product: product,
         quantityResolver: (productId) => cartQtyByProductId[productId] ?? 0,

@@ -200,8 +200,9 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       return;
     }
     setState(() => _isRupifiHandoffInProgress = true);
-    debugPrint(
-        '[Rupifi] Opening WebView for payment URL: ${entity.paymentUrl}');
+    if (kDebugMode) {
+      debugPrint('[Rupifi] Opening WebView for payment URL: ${entity.paymentUrl}');
+    }
     final result = await Navigator.of(context).push<RupifiPaymentResult>(
       MaterialPageRoute(
         builder: (_) => RupifiPaymentWebviewPage(paymentUrl: entity.paymentUrl),
@@ -209,8 +210,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     );
     if (!mounted) return;
     setState(() => _isRupifiHandoffInProgress = false);
-    debugPrint(
-        '[Rupifi] WebView closed – result: ${result == null ? 'null (dismissed)' : 'status=${result.status}  orderId=${result.orderId}  isCompleted=${result.isCompleted}  isCancelled=${result.isCancelled}'}');
+    if (kDebugMode) {
+      debugPrint(
+          '[Rupifi] WebView closed result: ${result == null ? 'null (dismissed)' : 'status=${result.status} orderId=${result.orderId} isCompleted=${result.isCompleted} isCancelled=${result.isCancelled}'}');
+    }
     if (result == null || result.isCancelled) return;
     if (!result.isCompleted) {
       _router.go(
@@ -241,8 +244,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
         currency: result.currency ?? '',
       ),
     );
-    debugPrint(
-        '[Rupifi] ▶ CheckoutRupifiStatusCheckRequested fired – platformOrderId=$platformOrderId  currency=${result.currency}');
+    if (kDebugMode) {
+      debugPrint(
+          '[Rupifi] CheckoutRupifiStatusCheckRequested platformOrderId=$platformOrderId currency=${result.currency}');
+    }
   }
 
   // Called when Razorpay radio is tapped — triggers order creation immediately

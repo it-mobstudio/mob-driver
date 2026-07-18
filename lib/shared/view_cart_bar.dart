@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -261,10 +262,12 @@ class _MiniImage extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: url.isNotEmpty
-            ? Image.network(
-                url,
+            ? CachedNetworkImage(
+                imageUrl: url,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const _Placeholder(),
+                memCacheWidth: 64,
+                placeholder: (_, __) => const _Placeholder(),
+                errorWidget: (_, __, ___) => const _Placeholder(),
               )
             : const _Placeholder(),
       ),

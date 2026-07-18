@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
+import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
@@ -662,6 +663,55 @@ class _ProductListingPageState extends State<ProductListingPage> {
       return ErrorStateView(
         message: errorMessage!,
         onRetry: _retryInitialLoad,
+      );
+    }
+
+    if (visibleProducts.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.search_off_rounded,
+                size: 42,
+                color: Color(0xFF8A94A6),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'No products found',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0A243F),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  height: 22 / 16,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _selectedFilterCount > 0
+                    ? 'Try clearing filters or exploring another category.'
+                    : 'Try exploring another category or request a quote.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF67696D),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  height: 18 / 12,
+                ),
+              ),
+              if (_selectedFilterCount > 0) ...[
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: _clearSelectedFilters,
+                  child: const Text('Clear filters'),
+                ),
+              ],
+            ],
+          ),
+        ),
       );
     }
 

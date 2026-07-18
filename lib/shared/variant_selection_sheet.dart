@@ -55,6 +55,10 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
     super.dispose();
   }
 
+  double _listBottomPadding() {
+    return MediaQuery.paddingOf(context).bottom > 0 ? 16.0 : 12.0;
+  }
+
   // Rough content-height estimate so the sheet opens at roughly the right
   // size for 2-3 variants vs. 40-50 of them, instead of either wasting empty
   // space or always defaulting to a fixed fraction of the screen. Anything
@@ -63,12 +67,15 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
   double _fractionForRowCount(int rowCount) {
     final screenHeight = MediaQuery.of(context).size.height;
     if (screenHeight <= 0) return 0.4;
-    const chromeHeight = 96.0; // drag handle + title row + divider
-    const listPadding = 36.0; // ListView top/bottom padding
-    const rowHeight = 88.0; // row content (76) + separator (12)
+    const chromeHeight = 81.0; // drag handle + title row + divider
+    final listPadding = 16.0 + _listBottomPadding();
+    const rowContentHeight = 76.0;
+    const separatorHeight = 12.0;
     final visibleRows = rowCount.clamp(1, 5);
-    final contentHeight =
-        chromeHeight + listPadding + (visibleRows * rowHeight);
+    final contentHeight = chromeHeight +
+        listPadding +
+        (visibleRows * rowContentHeight) +
+        ((visibleRows - 1) * separatorHeight);
     return (contentHeight / screenHeight).clamp(_minFraction, _maxFraction);
   }
 
@@ -142,7 +149,7 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
         });
         final target = _fractionForRowCount(_variantRows.length);
         if (_sheetController.isAttached) {
-          _sheetController.animateTo(
+          await _sheetController.animateTo(
             target,
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOut,
@@ -208,6 +215,7 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
         _isLoading ? 0.4 : _fractionForRowCount(_variantRows.length);
     final minFraction =
         (initialFraction - 0.12).clamp(_minFraction, initialFraction);
+    final bottomPadding = _listBottomPadding();
 
     return DraggableScrollableSheet(
       controller: _sheetController,
@@ -227,6 +235,7 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
               ),
               child: SafeArea(
                 top: false,
+                bottom: false,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -264,8 +273,12 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
                           ? const Center(child: CircularProgressIndicator())
                           : ListView.separated(
                               controller: scrollController,
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                              padding: EdgeInsets.fromLTRB(
+                                16,
+                                16,
+                                16,
+                                bottomPadding,
+                              ),
                               itemCount: _variantRows.length,
                               separatorBuilder: (_, __) =>
                                   const SizedBox(height: 12),

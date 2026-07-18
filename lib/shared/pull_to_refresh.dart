@@ -11,14 +11,27 @@ class PullToRefresh extends StatefulWidget {
     super.key,
     required this.onRefresh,
     required this.child,
+    this.revealedChildBuilder,
     this.playSound = false,
     this.showSpinner = false,
+    this.spinnerTopOffset = 16,
+    this.spinnerSize = 48,
+    this.revealContentOnRefresh = false,
+    this.contentRevealExtent = 96,
+    this.dimContentOnRefresh = true,
   });
 
   final Future<void> Function() onRefresh;
   final Widget child;
+  final Widget Function(BuildContext context, double revealOffset)?
+      revealedChildBuilder;
   final bool playSound;
   final bool showSpinner;
+  final double spinnerTopOffset;
+  final double spinnerSize;
+  final bool revealContentOnRefresh;
+  final double contentRevealExtent;
+  final bool dimContentOnRefresh;
 
   @override
   State<PullToRefresh> createState() => _PullToRefreshState();
@@ -29,6 +42,9 @@ class _PullToRefreshState extends State<PullToRefresh> {
   bool _soundReady = false;
 
   bool _refreshing = false;
+  Future<void>? _refreshFuture;
+  Timer? _dragRevealResetTimer;
+  double _dragRevealOffset = 0;
 
   // Tracks whether the in-progress touch gesture is an actual pull-down
   // (top → refresh) versus a normal scroll that merely started at the top
@@ -68,10 +84,13 @@ class _PullToRefreshState extends State<PullToRefresh> {
     if (!defaultScrollNotificationPredicate(notification)) return false;
 
     if (notification is ScrollStartNotification) {
+      _dragRevealResetTimer?.cancel();
       _currentGestureIsPull = null;
+      _setDragRevealOffset(0);
       return true;
     }
     if (notification is ScrollEndNotification) {
+      if (!_refreshing) _scheduleDragRevealReset();
       return true;
     }
 
@@ -88,31 +107,125 @@ class _PullToRefreshState extends State<PullToRefresh> {
       }
     }
 
+    if (_currentGestureIsPull == false) {
+      _setDragRevealOffset(0);
+      return false;
+    }
+
+    _updateDragRevealOffset(notification);
     return _currentGestureIsPull ?? true;
   }
 
+  void _updateDragRevealOffset(ScrollNotification notification) {
+    if (!widget.revealContentOnRefresh || _refreshing) return;
+    if (notification.metrics.pixels > notification.metrics.minScrollExtent) {
+      _setDragRevealOffset(0);
+      return;
+    }
+
+    double nextOffset = _dragRevealOffset;
+    if (notification is OverscrollNotification && notification.overscroll < 0) {
+      nextOffset -= notification.overscroll;
+    } else if (notification is ScrollUpdateNotification) {
+      final delta = notification.dragDetails?.delta.dy ?? 0;
+      if (delta > 0) {
+        nextOffset += delta;
+      } else if (delta < 0) {
+        nextOffset += delta;
+      }
+    }
+
+    _setDragRevealOffset(
+      nextOffset.clamp(0, widget.contentRevealExtent).toDouble(),
+    );
+  }
+
+  void _setDragRevealOffset(double value) {
+    if (_dragRevealOffset == value || !mounted) return;
+    setState(() => _dragRevealOffset = value);
+  }
+
+  void _scheduleDragRevealReset() {
+    _dragRevealResetTimer?.cancel();
+    _dragRevealResetTimer = Timer(const Duration(milliseconds: 220), () {
+      if (!mounted || _refreshing) return;
+      _setDragRevealOffset(0);
+    });
+  }
+
   Future<void> _handleRefresh() async {
+    final activeRefresh = _refreshFuture;
+    if (activeRefresh != null) return activeRefresh;
+    _dragRevealResetTimer?.cancel();
+    if (mounted) {
+      setState(() => _refreshing = true);
+    } else {
+      _refreshing = true;
+    }
+
+    final refreshFuture = _runRefresh();
+    _refreshFuture = refreshFuture;
+    return refreshFuture;
+  }
+
+  Future<void> _runRefresh() async {
     AppHaptics.lightTap();
     if (widget.playSound && _soundReady) {
       unawaited(_soundPlayer.seek(Duration.zero));
       unawaited(_soundPlayer.play());
     }
-    setState(() => _refreshing = true);
     try {
       await widget.onRefresh();
     } finally {
-      if (mounted) setState(() => _refreshing = false);
+      _refreshFuture = null;
+      if (mounted) {
+        setState(() {
+          _refreshing = false;
+          _dragRevealOffset = 0;
+        });
+      }
     }
   }
 
   @override
   void dispose() {
+    _dragRevealResetTimer?.cancel();
     _soundPlayer.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final contentOffset =
+        widget.revealContentOnRefresh && _refreshing
+            ? widget.contentRevealExtent
+            : _dragRevealOffset;
+    final contentOpacity =
+        widget.dimContentOnRefresh && _refreshing ? 0.5 : 1.0;
+    final showRefreshSpinner = widget.showSpinner &&
+        (_refreshing ||
+            (widget.revealContentOnRefresh && _dragRevealOffset > 8));
+    final revealedChildBuilder = widget.revealedChildBuilder;
+    final refreshChild = revealedChildBuilder != null
+        ? revealedChildBuilder(context, contentOffset)
+        : TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: contentOffset),
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            builder: (context, offset, child) {
+              return Transform.translate(
+                offset: Offset(0, offset),
+                child: child,
+              );
+            },
+            child: AnimatedOpacity(
+              opacity: contentOpacity,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOut,
+              child: widget.child,
+            ),
+          );
+
     return Stack(
       alignment: Alignment.topCenter,
       children: [
@@ -124,17 +237,12 @@ class _PullToRefreshState extends State<PullToRefresh> {
           elevation: 0,
           strokeWidth: 0.01,
           triggerMode: RefreshIndicatorTriggerMode.onEdge,
-          child: AnimatedOpacity(
-            opacity: _refreshing ? 0.5 : 1,
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOut,
-            child: widget.child,
-          ),
+          child: refreshChild,
         ),
-        if (_refreshing && widget.showSpinner)
-          const Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: _RefreshSpinner(),
+        if (showRefreshSpinner)
+          Positioned(
+            top: widget.spinnerTopOffset,
+            child: _RefreshSpinner(size: widget.spinnerSize),
           ),
       ],
     );
@@ -143,14 +251,20 @@ class _PullToRefreshState extends State<PullToRefresh> {
 
 /// Team-provided Lottie loader shown while a pull-to-refresh is in flight.
 class _RefreshSpinner extends StatelessWidget {
-  const _RefreshSpinner();
+  const _RefreshSpinner({required this.size});
+
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    return Lottie.asset(
-      'assets/lottiejson/Spinner_pull.json',
-      repeat: true,
-      animate: true,
+    return SizedBox.square(
+      dimension: size,
+      child: Lottie.asset(
+        'assets/lottiejson/Spinner_pull.json',
+        repeat: true,
+        animate: true,
+        fit: BoxFit.contain,
+      ),
     );
   }
 }

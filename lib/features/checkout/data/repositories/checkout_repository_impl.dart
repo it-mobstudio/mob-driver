@@ -73,26 +73,28 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
         orderId: orderId,
         signature: signature,
       );
-      debugPrint('🔵 RAZORPAY VERIFY RESPONSE: $body');
+      if (kDebugMode) debugPrint('RAZORPAY VERIFY RESPONSE: $body');
       if (body['status'] == false) {
         final msg =
             body['message']?.toString() ?? 'Payment verification failed.';
-        debugPrint('🔴 RAZORPAY VERIFY FAILED: $msg');
+        if (kDebugMode) debugPrint('RAZORPAY VERIFY FAILED: $msg');
         return (null, BusinessFailure(msg));
       }
       final data = body['data'] is Map
           ? Map<String, dynamic>.from(body['data'] as Map)
           : body;
-      debugPrint('🟢 RAZORPAY VERIFY DATA: $data');
+      if (kDebugMode) debugPrint('RAZORPAY VERIFY DATA: $data');
       final entity = PlacedOrderEntity.fromMap(data);
-      debugPrint('🟢 RAZORPAY ORDER ID: ${entity.orderId}');
+      if (kDebugMode) debugPrint('RAZORPAY ORDER ID: ${entity.orderId}');
       return (entity, null);
     } on DioException catch (e) {
-      debugPrint(
-          '🔴 RAZORPAY VERIFY DIO ERROR: ${e.response?.statusCode} ${e.response?.data}');
+      if (kDebugMode) {
+        debugPrint(
+            'RAZORPAY VERIFY DIO ERROR: ${e.response?.statusCode} ${e.response?.data}');
+      }
       return (null, e.toAppFailure());
     } catch (e) {
-      debugPrint('🔴 RAZORPAY VERIFY EXCEPTION: $e');
+      if (kDebugMode) debugPrint('RAZORPAY VERIFY EXCEPTION: $e');
       return (null, UnknownFailure(e.toString()));
     }
   }
@@ -108,8 +110,10 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     String paymentFor = '',
   }) async {
     try {
-      debugPrint(
-          '🔵 SUBORDER DETAILS REQUEST: platformOrderId=$platformOrderId merchantPaymentRefId=$merchantPaymentRefId paymentId=$paymentId');
+      if (kDebugMode) {
+        debugPrint(
+            'SUBORDER DETAILS REQUEST: platformOrderId=$platformOrderId merchantPaymentRefId=$merchantPaymentRefId paymentId=$paymentId');
+      }
       final body = await _datasource.getSuborderDetails(
         platformOrderId: platformOrderId,
         paymentGateway: paymentGateway,
@@ -128,24 +132,26 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
             ? paymentFor
             : (paymentGateway.isNotEmpty ? 'CART' : ''),
       );
-      debugPrint('🔵 SUBORDER DETAILS RESPONSE: $body');
+      if (kDebugMode) debugPrint('SUBORDER DETAILS RESPONSE: $body');
       if (body['status'] == false) {
         final msg =
             body['message']?.toString() ?? 'Payment verification failed.';
-        debugPrint('🔴 SUBORDER DETAILS FAILED: $msg');
+        if (kDebugMode) debugPrint('SUBORDER DETAILS FAILED: $msg');
         return (null, BusinessFailure(msg));
       }
       final data = body['data'] is Map
           ? Map<String, dynamic>.from(body['data'] as Map)
           : body;
-      debugPrint('🟢 SUBORDER DATA: $data');
+      if (kDebugMode) debugPrint('SUBORDER DATA: $data');
       return (PlacedOrderEntity.fromMap(data), null);
     } on DioException catch (e) {
-      debugPrint(
-          '🔴 SUBORDER DETAILS DIO ERROR: ${e.response?.statusCode} ${e.response?.data}');
+      if (kDebugMode) {
+        debugPrint(
+            'SUBORDER DETAILS DIO ERROR: ${e.response?.statusCode} ${e.response?.data}');
+      }
       return (null, e.toAppFailure());
     } catch (e) {
-      debugPrint('🔴 SUBORDER DETAILS EXCEPTION: $e');
+      if (kDebugMode) debugPrint('SUBORDER DETAILS EXCEPTION: $e');
       return (null, UnknownFailure(e.toString()));
     }
   }

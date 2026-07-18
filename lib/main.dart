@@ -64,9 +64,7 @@ void main() {
     await SentryFlutter.init(
       (options) {
         options.dsn = AppConfig.sentryDsn;
-        // 100% for now to see full API/perf volume; dial down once traffic
-        // patterns are known.
-        options.tracesSampleRate = 1.0;
+        options.tracesSampleRate = kDebugMode ? 1.0 : 0.2;
         options.environment = kDebugMode ? 'development' : 'production';
       },
       appRunner: () => runApp(const AppBootstrap()),
@@ -94,7 +92,9 @@ class _AppBootstrapState extends State<AppBootstrap> {
   late final Future<void> _bootstrapFuture = _bootstrap();
 
   Future<void> _bootstrap() async {
-    final splashDelay = Future<void>.delayed(const Duration(seconds: 3));
+    final splashDelay = Future<void>.delayed(
+      Duration(milliseconds: kDebugMode ? 800 : 1200),
+    );
 
     try {
       await SystemChrome.setPreferredOrientations([
@@ -154,16 +154,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             home: const SplashScreen(),
-            builder: kIsWeb
-                ? (context, child) => Container(
-                      color: const Color(0xFF1A1A2E),
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 430),
-                        child: ClipRect(child: child!),
-                      ),
-                    )
-                : null,
+            builder: _buildMobileViewport,
           );
         }
         return const MyApp();
@@ -310,19 +301,27 @@ class MyAppState extends State<MyApp> {
         ),
         themeMode: ThemeMode.light,
         routerConfig: _router,
-        builder: kIsWeb
-            ? (context, child) => Container(
-                  color: const Color(0xFF1A1A2E),
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 430),
-                    child: ClipRect(child: child!),
-                  ),
-                )
-            : null,
+        builder: _buildMobileViewport,
       ),
     );
   }
+}
+
+Widget _buildMobileViewport(BuildContext context, Widget? child) {
+  if (child == null) return const SizedBox.shrink();
+
+  final width = MediaQuery.sizeOf(context).width;
+  final shouldConstrain = kIsWeb || width > 480;
+  if (!shouldConstrain) return child;
+
+  return Container(
+    color: kIsWeb ? const Color(0xFF1A1A2E) : const Color(0xFFEAF0F8),
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 430),
+      child: ClipRect(child: child),
+    ),
+  );
 }
 
 class _MobPageTransitionsBuilder extends PageTransitionsBuilder {

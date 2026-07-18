@@ -99,6 +99,16 @@ class _ProductRailSectionState extends State<ProductRailSection> {
               // the ProductRailSection level never reaches the cards after first
               // render. Each BlocBuilder is an independent subscriber.
               return BlocBuilder<CartBloc, CartState>(
+                buildWhen: (previous, current) {
+                  if (previous is! CartLoaded || current is! CartLoaded) {
+                    return previous.runtimeType != current.runtimeType;
+                  }
+                  final productId = product.addToCartProductId;
+                  return previous.quantityFor(productId) !=
+                          current.quantityFor(productId) ||
+                      previous.isUpdatingFor(productId) !=
+                          current.isUpdatingFor(productId);
+                },
                 builder: (context, cartState) {
                   final cart = cartState is CartLoaded ? cartState : null;
                   return ItemCard(

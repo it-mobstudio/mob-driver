@@ -120,25 +120,6 @@ class _TopSnackBarOverlayState extends State<_TopSnackBarOverlay>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Transform.translate(
-                    offset: const Offset(0, -1),
-                    child: SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.asset(
-                            'assets/images/app_icon.png',
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       widget.message,

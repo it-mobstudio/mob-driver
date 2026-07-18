@@ -47,7 +47,6 @@ class _ConfirmDeliveryLocationPageState
   late AddressLocationEntity _resolved;
   bool _resolvingAddress = false;
   bool _detectingLocation = false;
-  bool _canShowUserLocation = false;
 
   @override
   void initState() {
@@ -125,7 +124,16 @@ class _ConfirmDeliveryLocationPageState
               target: _pickedLatLng,
               zoom: 16,
             ),
-            myLocationEnabled: _canShowUserLocation,
+            // Deliberately off: this screen's whole job is "the pin fixed at
+            // screen center is your delivery point" (the Blinkit/Swiggy
+            // pin-drop pattern). Google's native blue dot tracks the device's
+            // live GPS fix independently of the camera/pin, and since that's
+            // a *different* location source than the one-shot fix
+            // `_useCurrentLocation` centers the pin on, the two visibly
+            // disagree — especially in dense urban areas — reading as "which
+            // one is my actual location?" instead of a single, unambiguous
+            // pin the user has to be sure to place.
+            myLocationEnabled: false,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
             onMapCreated: (controller) => _controllerReady.complete(controller),
@@ -146,7 +154,7 @@ class _ConfirmDeliveryLocationPageState
               mainAxisSize: MainAxisSize.min,
               children: [
                 _tooltip(),
-                const SizedBox(height: 8),
+                const SizedBox(height: 13),
                 Transform.translate(
                   offset: const Offset(0, -2),
                   child: const _MapPin(),
@@ -213,11 +221,11 @@ class _ConfirmDeliveryLocationPageState
       alignment: Alignment.bottomCenter,
       children: [
         Container(
-          width: 260,
+          // width: 260,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: const Color(0xFF202020),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -228,30 +236,30 @@ class _ConfirmDeliveryLocationPageState
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   height: 16 / 12,
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Please place the pin accurately on the map',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 12,
-                  height: 16 / 12,
-                ),
-              ),
+              // const SizedBox(height: 2),
+              // Text(
+              //   'Please place the pin accurately on the map',
+              //   textAlign: TextAlign.center,
+              //   style: GoogleFonts.inter(
+              //     color: Colors.white,
+              //     fontSize: 12,
+              //     height: 16 / 12,
+              //   ),
+              // ),
             ],
           ),
         ),
         Positioned(
-          bottom: -7,
+          bottom: -6,
           child: Transform.rotate(
             angle: 0.785398,
             child: Container(
-              width: 14,
-              height: 14,
+              width: 12,
+              height: 12,
               color: const Color(0xFF202020),
             ),
           ),
@@ -478,9 +486,6 @@ class _ConfirmDeliveryLocationPageState
     setState(() => _detectingLocation = true);
     try {
       if (!await ensureLocationPermission(context)) return;
-      if (mounted && !_canShowUserLocation) {
-        setState(() => _canShowUserLocation = true);
-      }
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,

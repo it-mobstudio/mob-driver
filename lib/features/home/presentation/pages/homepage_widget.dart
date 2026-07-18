@@ -9,6 +9,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/features/home/domain/entities/home_entity.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_brand_grid.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_category_grid.dart';
@@ -44,12 +45,16 @@ class HomepageWidget extends StatefulWidget {
 class _HomepageWidgetState extends State<HomepageWidget> {
   final ScrollController _scrollController = ScrollController();
   late final VoidCallback _homeTabReselectionCallback;
+  Future<void>? _homeRefreshFuture;
   bool _showBackToTop = false;
   bool _checkingAddressGate = true;
   bool _addressGateRedirecting = false;
   bool _referralDialogShown = false;
 
   static const double _scrollThreshold = 400;
+  static const double _homeRefreshSpinnerTop = 168;
+  static const double _homeRefreshSpinnerSize = 56;
+  static const double _homeRefreshRevealExtent = 96;
 
   @override
   void initState() {
@@ -142,6 +147,137 @@ class _HomepageWidgetState extends State<HomepageWidget> {
     );
   }
 
+  Future<void> _refreshHome() {
+    final activeRefresh = _homeRefreshFuture;
+    if (activeRefresh != null) return activeRefresh;
+
+    final refreshFuture = _runHomeRefresh();
+    _homeRefreshFuture = refreshFuture;
+    void clearActiveRefresh() {
+      if (_homeRefreshFuture == refreshFuture) {
+        _homeRefreshFuture = null;
+      }
+    }
+
+    refreshFuture.then(
+      (_) => clearActiveRefresh(),
+      onError: (_, __) => clearActiveRefresh(),
+    );
+    return refreshFuture;
+  }
+
+  Future<void> _runHomeRefresh() async {
+    final bloc = context.read<HomeBloc>();
+    bloc.add(HomeRefreshRequested());
+    await bloc.stream.firstWhere(
+      (state) => state is HomeLoaded || state is HomeError,
+    );
+  }
+
+  Widget _buildHomeLoadedScroll(HomeEntity data, double revealOffset) {
+    return CustomScrollView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: ClampingScrollPhysics(),
+      ),
+      slivers: [
+        const SliverToBoxAdapter(child: HomeHeader()),
+        const SliverPersistentHeader(
+          pinned: true,
+          delegate: _StickySearchDelegate(),
+        ),
+        _HomeRefreshRevealGap(revealOffset: revealOffset),
+        const SliverToBoxAdapter(child: HomePromoBanner()),
+        const SliverToBoxAdapter(
+          child: SectionTitle(
+            title: 'Explore by categories',
+            topPadding: 24,
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: HomeCategoryGrid(
+            categories: data.categories,
+            isLoading: false,
+            hasError: false,
+          ),
+        ),
+        const SliverToBoxAdapter(
+          child: SectionTitle(title: 'Top brands for you'),
+        ),
+        const SliverToBoxAdapter(child: HomeBrandGrid()),
+        const SliverToBoxAdapter(child: HomeSavingsCard()),
+        const SliverToBoxAdapter(child: HomeMagicQuoteCard()),
+        ...data.productSections.asMap().entries.map((entry) {
+          final section = entry.value;
+          return SliverToBoxAdapter(
+            key: ValueKey(
+              section.id.isNotEmpty ? section.id : section.title,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ProductRailSection(
+                  title: section.title,
+                  products: section.products,
+                ),
+                // if (entry.key == 0)
+                //   const HomeWhyChooseCard(),
+              ],
+            ),
+          );
+        }),
+        const SliverToBoxAdapter(child: HomeRewardCard()),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height:
+                kScrollBottomClearance + MediaQuery.paddingOf(context).bottom,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHomeErrorScroll(String message, double revealOffset) {
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: ClampingScrollPhysics(),
+      ),
+      slivers: [
+        const SliverToBoxAdapter(child: HomeHeader()),
+        const SliverPersistentHeader(
+          pinned: true,
+          delegate: _StickySearchDelegate(),
+        ),
+        _HomeRefreshRevealGap(revealOffset: revealOffset),
+        SliverFillRemaining(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 40,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(message),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () =>
+                        context.read<HomeBloc>().add(HomeRefreshRequested()),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
@@ -171,75 +307,15 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                       HomeLoaded(:final data) => PullToRefresh(
                           playSound: true,
                           showSpinner: true,
-                          onRefresh: () async {
-                            final bloc = context.read<HomeBloc>();
-                            bloc.add(HomeRefreshRequested());
-                            await bloc.stream.firstWhere(
-                              (s) => s is HomeLoaded || s is HomeError,
-                            );
-                          },
-                          child: CustomScrollView(
-                            controller: _scrollController,
-                            slivers: [
-                              const SliverToBoxAdapter(child: HomeHeader()),
-                              const SliverPersistentHeader(
-                                pinned: true,
-                                delegate: _StickySearchDelegate(),
-                              ),
-                              const SliverToBoxAdapter(
-                                  child: HomePromoBanner()),
-                              const SliverToBoxAdapter(
-                                child: SectionTitle(
-                                    title: 'Explore by categories',
-                                    topPadding: 24),
-                              ),
-                              SliverToBoxAdapter(
-                                child: HomeCategoryGrid(
-                                  categories: data.categories,
-                                  isLoading: false,
-                                  hasError: false,
-                                ),
-                              ),
-                              const SliverToBoxAdapter(
-                                  child: SectionTitle(
-                                      title: 'Top brands for you')),
-                              const SliverToBoxAdapter(child: HomeBrandGrid()),
-                              const SliverToBoxAdapter(
-                                  child: HomeSavingsCard()),
-                              const SliverToBoxAdapter(
-                                  child: HomeMagicQuoteCard()),
-                              ...data.productSections
-                                  .asMap()
-                                  .entries
-                                  .map((entry) {
-                                return SliverToBoxAdapter(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      ProductRailSection(
-                                        title: entry.value.title,
-                                        products: entry.value.products,
-                                      ),
-                                      // if (entry.key == 0)
-                                      //   const HomeWhyChooseCard(),
-                                    ],
-                                  ),
-                                );
-                              }),
-                              const SliverToBoxAdapter(child: HomeRewardCard()),
-                              // Worst case: ViewCartBar pill AND the bottom
-                              // nav bar both visible at once (resting state
-                              // after scrolling to the end, cart
-                              // populated) — anything less and the last
-                              // item's text ends up hidden behind them.
-                              SliverToBoxAdapter(
-                                child: SizedBox(
-                                  height: kScrollBottomClearance +
-                                      MediaQuery.paddingOf(context).bottom,
-                                ),
-                              ),
-                            ],
-                          ),
+                          spinnerTopOffset: _homeRefreshSpinnerTop,
+                          spinnerSize: _homeRefreshSpinnerSize,
+                          revealContentOnRefresh: true,
+                          contentRevealExtent: _homeRefreshRevealExtent,
+                          dimContentOnRefresh: false,
+                          onRefresh: _refreshHome,
+                          revealedChildBuilder: (_, revealOffset) =>
+                              _buildHomeLoadedScroll(data, revealOffset),
+                          child: _buildHomeLoadedScroll(data, 0),
                         ),
                       HomeLoading() ||
                       HomeInitial() =>
@@ -247,45 +323,15 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                       HomeError(:final message) => PullToRefresh(
                           playSound: true,
                           showSpinner: true,
-                          onRefresh: () async {
-                            final bloc = context.read<HomeBloc>();
-                            bloc.add(HomeRefreshRequested());
-                            await bloc.stream.firstWhere(
-                              (s) => s is HomeLoaded || s is HomeError,
-                            );
-                          },
-                          child: CustomScrollView(
-                            slivers: [
-                              const SliverToBoxAdapter(child: HomeHeader()),
-                              const SliverPersistentHeader(
-                                pinned: true,
-                                delegate: _StickySearchDelegate(),
-                              ),
-                              SliverFillRemaining(
-                                child: Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(32),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.error_outline,
-                                            size: 40, color: Colors.red),
-                                        const SizedBox(height: 12),
-                                        Text(message),
-                                        const SizedBox(height: 12),
-                                        ElevatedButton(
-                                          onPressed: () => context
-                                              .read<HomeBloc>()
-                                              .add(HomeRefreshRequested()),
-                                          child: const Text('Retry'),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          spinnerTopOffset: _homeRefreshSpinnerTop,
+                          spinnerSize: _homeRefreshSpinnerSize,
+                          revealContentOnRefresh: true,
+                          contentRevealExtent: _homeRefreshRevealExtent,
+                          dimContentOnRefresh: false,
+                          onRefresh: _refreshHome,
+                          revealedChildBuilder: (_, revealOffset) =>
+                              _buildHomeErrorScroll(message, revealOffset),
+                          child: _buildHomeErrorScroll(message, 0),
                         ),
                     };
                   },
@@ -374,6 +420,35 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_StickySearchDelegate oldDelegate) => false;
+}
+
+class _HomeRefreshRevealGap extends StatelessWidget {
+  const _HomeRefreshRevealGap({required this.revealOffset});
+
+  final double revealOffset;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: revealOffset),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        builder: (context, height, child) {
+          return Container(
+            height: height,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF0A3C35), Color(0xFF0A3C35)],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 // ── Home skeleton ─────────────────────────────────────────────────────────────

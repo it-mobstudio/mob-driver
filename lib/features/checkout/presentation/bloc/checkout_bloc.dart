@@ -330,12 +330,14 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     CheckoutRupifiStatusCheckRequested event,
     Emitter<CheckoutState> emit,
   ) async {
-    debugPrint(
-        '[Rupifi] _onRupifiStatusCheck → platformOrderId=${event.platformOrderId}');
-    debugPrint('[Rupifi]   merchantPaymentRefId=${event.merchantPaymentRefId}');
-    debugPrint('[Rupifi]   paymentId=${event.paymentId}');
-    debugPrint('[Rupifi]   transactionId=${event.transactionId}');
-    debugPrint('[Rupifi]   currency=${event.currency}');
+    if (kDebugMode) {
+      debugPrint(
+          '[Rupifi] _onRupifiStatusCheck platformOrderId=${event.platformOrderId}');
+      debugPrint('[Rupifi] merchantPaymentRefId=${event.merchantPaymentRefId}');
+      debugPrint('[Rupifi] paymentId=${event.paymentId}');
+      debugPrint('[Rupifi] transactionId=${event.transactionId}');
+      debugPrint('[Rupifi] currency=${event.currency}');
+    }
     emit(CheckoutLoading());
     final (order, failure) = await _repository.getSuborderDetails(
       platformOrderId: event.platformOrderId,
@@ -345,13 +347,18 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
       transactionId: event.transactionId,
     );
     if (failure != null) {
-      debugPrint('[Rupifi] ❌ getSuborderDetails FAILED: ${failure.message}');
+      if (kDebugMode) {
+        debugPrint('[Rupifi] getSuborderDetails FAILED: ${failure.message}');
+      }
       AppHaptics.error();
       emit(CheckoutPaymentFailed(failure.message));
     } else {
-      debugPrint(
-          '[Rupifi] ✅ getSuborderDetails SUCCESS – orderId=${order!.orderId}');
-      emit(CheckoutOrderPlaced(order));
+      final placedOrder = order!;
+      if (kDebugMode) {
+        debugPrint(
+            '[Rupifi] getSuborderDetails SUCCESS orderId=${placedOrder.orderId}');
+      }
+      emit(CheckoutOrderPlaced(placedOrder));
     }
   }
 }

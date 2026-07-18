@@ -97,31 +97,31 @@ class _SupportHeader extends StatelessWidget {
       height: 66,
       color: Colors.white,
       alignment: Alignment.topCenter,
-      child: SizedBox(
-        width: 343,
-        height: 48,
-        child: Stack(
-          children: [
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: InkWell(
-                onTap: onBack,
-                child: const SizedBox(
-                  width: 48,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: AppBackIcon(size: 14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SizedBox(
+          height: 48,
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: InkWell(
+                  onTap: onBack,
+                  child: const SizedBox(
+                    width: 48,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: AppBackIcon(size: 14),
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 30,
-              top: 13,
-              child: SizedBox(
-                width: 281,
+              Positioned(
+                left: 48,
+                right: 48,
+                top: 13,
                 child: Text(
                   'mob support',
                   maxLines: 1,
@@ -135,8 +135,8 @@ class _SupportHeader extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
