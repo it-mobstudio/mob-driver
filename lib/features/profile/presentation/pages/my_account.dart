@@ -69,10 +69,13 @@ class _MyAccountWidgetState extends State<MyAccountWidget> {
 
   Future<void> _checkAppVersion() async {
     final info = await fetchAppVersionInfo();
-    if (!mounted || info == null || info.latestVersion.trim().isEmpty) return;
+    if (!mounted || info == null) return;
     final packageInfo = await PackageInfo.fromPlatform();
-    final outdated = isVersionOlder(packageInfo.version, info.latestVersion);
-    if (!mounted || !outdated) return;
+    final decision = evaluateAppUpdate(
+      info: info,
+      currentVersion: packageInfo.version,
+    );
+    if (!mounted || decision == null || !decision.updateAvailable) return;
     setState(() {
       _versionInfo = info;
       _updateAvailable = true;
@@ -207,15 +210,16 @@ class _ProfileBody extends StatelessWidget {
                         onTap: () => context.push(ReferralPage.routePath),
                       ),
                       const SizedBox(height: 16),
-                      // Always visible — "App update available" opens the
-                      // update dialog; once there's nothing to update it
-                      // just shows the current app version instead, same as
-                      // Blinkit's account menu.
-                      _AppUpdateCard(
-                        updateAvailable: updateAvailable,
-                        onTap: () => _showUpdateAvailable(context, versionInfo),
-                      ),
-                      const SizedBox(height: 16),
+                      // Only shown when an update is actually available —
+                      // hidden once the app is up to date.
+                      if (updateAvailable) ...[
+                        _AppUpdateCard(
+                          updateAvailable: updateAvailable,
+                          onTap: () =>
+                              _showUpdateAvailable(context, versionInfo),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       _MenuCard(
                         items: [
                           _MenuItem(

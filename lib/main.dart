@@ -12,6 +12,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'backend/analytics/analytics_service.dart';
 import 'backend/firebase/firebase_config.dart';
 import 'core/app_runtime/fcm_token_sync.dart';
+import 'core/app_runtime/app_update_prompt.dart';
 import 'core/app_runtime/push_notification_service.dart';
 import 'core/auth/auth_session.dart';
 import 'core/config/app_config.dart';
@@ -200,6 +201,12 @@ class MyAppState extends State<MyApp> {
     _isAuthenticated = AuthSession.instance.isAuthenticated;
     _router = createRouter(_appStateNotifier);
     AuthSession.instance.addListener(_handleAuthSessionChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = appNavigatorKey.currentContext;
+      if (context != null) {
+        unawaited(checkAndShowAppUpdatePrompt(context));
+      }
+    });
   }
 
   void _handleAuthSessionChanged() {
