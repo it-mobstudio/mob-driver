@@ -87,6 +87,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
             body: LayoutBuilder(
               builder: (context, constraints) {
                 final headerHeight = constraints.maxHeight * .5;
+                final bodyHeight = constraints.maxHeight - headerHeight;
 
                 return Column(
                   children: [
@@ -97,72 +98,95 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                     Expanded(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: Text(
-                                'Log in or sign up',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  color: AppColors.primaryText,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                  height: 24 / 16,
-                                ),
-                              ),
-                            ),
-                            AppTextField(
-                              controller: _mobileController,
-                              focusNode: _mobileFocusNode,
-                              hintText: 'Enter mobile number',
-                              keyboardType: TextInputType.phone,
-                              textInputAction: TextInputAction.done,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(10),
-                              ],
-                              prefixIcon: const _PhonePrefix(),
-                              onFieldSubmitted: (_) => _submit(context),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: ElevatedButton(
-                                onPressed:
-                                    isLoading ? null : () => _submit(context),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: isLoading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation(
-                                            Colors.white,
-                                          ),
-                                        ),
-                                      )
-                                    : Text(
-                                        'Continue',
-                                        style: GoogleFonts.inter(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                          height: 21 / 14,
-                                        ),
+                        child: ConstrainedBox(
+                          // Forces the column to be at least as tall as the
+                          // space below the banner, so the legal text is
+                          // pushed to the screen bottom (per wireframe) when
+                          // there's slack. As the keyboard opens and shrinks
+                          // bodyHeight, the enforced minimum shrinks too, so
+                          // the content scrolls normally instead of the
+                          // legal text getting pinned on top of it.
+                          constraints: BoxConstraints(minHeight: bodyHeight),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 24,
+                                    ),
+                                    child: Text(
+                                      'Log in or sign up',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        color: AppColors.primaryText,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                        height: 24 / 16,
                                       ),
+                                    ),
+                                  ),
+                                  AppTextField(
+                                    controller: _mobileController,
+                                    focusNode: _mobileFocusNode,
+                                    hintText: 'Enter mobile number',
+                                    keyboardType: TextInputType.phone,
+                                    textInputAction: TextInputAction.done,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(10),
+                                    ],
+                                    prefixIcon: const _PhonePrefix(),
+                                    onFieldSubmitted: (_) => _submit(context),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 48,
+                                    child: ElevatedButton(
+                                      onPressed: isLoading
+                                          ? null
+                                          : () => _submit(context),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: isLoading
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation(
+                                                  Colors.white,
+                                                ),
+                                              ),
+                                            )
+                                          : Text(
+                                              'Continue',
+                                              style: GoogleFonts.inter(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                                height: 21 / 14,
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                              _legalText(),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -170,9 +194,6 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                 );
               },
             ),
-            floatingActionButtonLocation:
-                FloatingActionButtonLocation.centerFloat,
-            floatingActionButton: _legalText(),
           ),
         );
       },
@@ -219,33 +240,30 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
       height: 16 / 11,
     );
 
-    return SizedBox(
-      width: MediaQuery.sizeOf(context).width,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text.rich(
-          TextSpan(
-            children: [
-              const TextSpan(
-                text: 'By clicking continue you agree to our ',
-                style: regularStyle,
-              ),
-              TextSpan(
-                text: 'Terms and Conditions',
-                style: linkStyle,
-                recognizer: _termsRecognizer,
-              ),
-              const TextSpan(text: ' and ', style: mediumStyle),
-              TextSpan(
-                text: 'Privacy Statement',
-                style: linkStyle,
-                recognizer: _privacyRecognizer,
-              ),
-              const TextSpan(text: '. ', style: mediumStyle),
-            ],
-          ),
-          textAlign: TextAlign.left,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            const TextSpan(
+              text: 'By clicking continue you agree to our ',
+              style: regularStyle,
+            ),
+            TextSpan(
+              text: 'Terms and Conditions',
+              style: linkStyle,
+              recognizer: _termsRecognizer,
+            ),
+            const TextSpan(text: ' and ', style: mediumStyle),
+            TextSpan(
+              text: 'Privacy Statement',
+              style: linkStyle,
+              recognizer: _privacyRecognizer,
+            ),
+            const TextSpan(text: '. ', style: mediumStyle),
+          ],
         ),
+        textAlign: TextAlign.left,
       ),
     );
   }

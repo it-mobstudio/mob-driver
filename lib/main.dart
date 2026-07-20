@@ -201,12 +201,21 @@ class MyAppState extends State<MyApp> {
     _isAuthenticated = AuthSession.instance.isAuthenticated;
     _router = createRouter(_appStateNotifier);
     AuthSession.instance.addListener(_handleAuthSessionChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = appNavigatorKey.currentContext;
-      if (context != null) {
-        unawaited(checkAndShowAppUpdatePrompt(context));
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback(_runAppUpdateCheck);
+  }
+
+  // The router's Navigator isn't guaranteed to be attached to
+  // appNavigatorKey on the very first frame after MyApp mounts, so a single
+  // post-frame check can silently find a null context and skip the update
+  // check (including the API call) forever. Retry each frame until the
+  // navigator context is actually available.
+  void _runAppUpdateCheck(Duration _) {
+    final context = appNavigatorKey.currentContext;
+    if (context == null) {
+      WidgetsBinding.instance.addPostFrameCallback(_runAppUpdateCheck);
+      return;
+    }
+    unawaited(checkAndShowAppUpdatePrompt(context));
   }
 
   void _handleAuthSessionChanged() {
