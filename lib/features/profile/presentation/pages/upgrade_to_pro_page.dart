@@ -9,6 +9,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:m_o_b_demand_side/shared/validators/gst_validator.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
@@ -42,10 +43,6 @@ class _UpgradeToProViewState extends State<_UpgradeToProView> {
   static const _blue = Color(0xFF0360E5);
   static const _muted = Color(0xFF596378);
 
-  // Ported verbatim from mob-web's gstRegex — same pattern already used in
-  // project_form_sheet.dart.
-  static final _gstRegex = RegExp(r'^[0-3|9][0-9][a-zA-Z0-9]{13}$');
-
   final _gstinController = TextEditingController();
   final _businessNameController = TextEditingController();
 
@@ -66,7 +63,7 @@ class _UpgradeToProViewState extends State<_UpgradeToProView> {
 
   bool get _canSubmit =>
       !_submitting &&
-      _gstRegex.hasMatch(_gstinController.text.trim()) &&
+      isValidRequiredGst(_gstinController.text) &&
       _businessNameController.text.trim().isNotEmpty;
 
   void _submitUpgrade() {
@@ -319,6 +316,7 @@ class _UpgradeToProViewState extends State<_UpgradeToProView> {
                 label: 'GSTIN*',
                 controller: _gstinController,
                 textCapitalization: TextCapitalization.characters,
+                inputFormatters: gstInputFormatters,
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 16),

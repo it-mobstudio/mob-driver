@@ -84,15 +84,31 @@ class ProductVariantOption {
   const ProductVariantOption({
     required this.value,
     required this.mobSku,
+    this.slug = '',
+    this.isAvailable = true,
+    this.inStock = true,
+    this.stockStatus = '',
   });
 
   final String value;
   final String mobSku;
+  final String slug;
+  final bool isAvailable;
+  final bool inStock;
+  final String stockStatus;
+
+  bool get isSelectable =>
+      isAvailable && inStock && stockStatus.toUpperCase() != 'OUT_OF_STOCK';
 
   factory ProductVariantOption.fromMap(Map<String, dynamic> map) {
     return ProductVariantOption(
       value: map['value']?.toString() ?? '',
-      mobSku: map['mob_sku']?.toString() ?? '',
+      mobSku: (map['mob_sku'] ?? map['sku'] ?? '').toString(),
+      slug: map['slug']?.toString() ?? '',
+      isAvailable:
+          map['is_available'] == null || _parseBool(map['is_available']),
+      inStock: map['in_stock'] == null || _parseBool(map['in_stock']),
+      stockStatus: map['stock_status']?.toString() ?? '',
     );
   }
 }
@@ -294,6 +310,8 @@ class ProductChildRef {
       badgeOption: parent.badgeOption,
       stock: stock,
       stockDetailsStock: stock,
+      stockBar: parent.stockBar,
+      stockBarColor: parent.stockBarColor,
       quickEcommerceEnabled:
           quickEcommerceEnabled || parent.quickEcommerceEnabled,
       childProducts: const <ProductChildRef>[],
@@ -328,6 +346,8 @@ class ProductModel {
     required this.badgeOption,
     required this.stock,
     required this.stockDetailsStock,
+    required this.stockBar,
+    required this.stockBarColor,
     required this.quickEcommerceEnabled,
     required this.childProducts,
   });
@@ -357,6 +377,8 @@ class ProductModel {
   final String badgeOption;
   final num stock;
   final num stockDetailsStock;
+  final num stockBar;
+  final String stockBarColor;
   final bool quickEcommerceEnabled;
   final List<ProductChildRef> childProducts;
 
@@ -400,9 +422,35 @@ class ProductModel {
     return parsed > 0 ? parsed.toInt() : 0;
   }
 
-  bool get isOutOfStockForQuickProduct =>
-      isQuickEcommerceEnabled &&
-      (hasVariants ? !hasVariantLevelStock : availableStock <= 0);
+  int get quickStockBarLevel {
+    if (availableStock > 10) return 3;
+    final parsed = stockBar.toInt();
+    if (parsed < 0) return 0;
+    if (parsed == 0 && availableStock > 0) return 1;
+    if (parsed > 3) return 3;
+    return parsed;
+  }
+
+  String get quickStockColor {
+    if (availableStock > 10) return 'green';
+    final color = stockBarColor.trim().toLowerCase();
+    return color == 'green' || color == 'yellow' ? color : 'red';
+  }
+
+  String get quickStockText {
+    if (availableStock > 10) return 'Stock: Available';
+    if (availableStock > 0) return 'Stock: $availableStock Available';
+    return 'Stock: Out of stock';
+  }
+
+  bool get isOutOfStockForQuickProduct {
+    if (!isQuickEcommerceEnabled) return false;
+    if (availableStock > 0) return false;
+    if (!hasVariants) return true;
+    if (activeVariantSelections.isNotEmpty) return true;
+    return !hasVariantLevelStock;
+  }
+
   bool get shouldShowNotify =>
       badgeOption.toLowerCase() == 'sold out' || isOutOfStockForQuickProduct;
 
@@ -541,6 +589,13 @@ class ProductModel {
       stock: num.tryParse(map['stock']?.toString() ?? '0') ?? 0,
       stockDetailsStock:
           num.tryParse(stockDetails['stock']?.toString() ?? '0') ?? 0,
+      stockBar: num.tryParse(
+            (stockDetails['stock_bar'] ?? map['stock_bar'] ?? '0').toString(),
+          ) ??
+          0,
+      stockBarColor:
+          (stockDetails['stock_bar_color'] ?? map['stock_bar_color'] ?? 'red')
+              .toString(),
       quickEcommerceEnabled: _parseBool(map['quick_ecommerce_enabled']),
       childProducts: childProductsList
           .whereType<Map>()

@@ -137,19 +137,127 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   void _selectVariant(
     BuildContext context,
+    ProductModel product,
     String key,
     ProductVariantOption option,
   ) {
+    if (!option.isSelectable) return;
+    final nextSelectedVariants = <String, String>{
+      ...product.activeVariantSelections,
+      for (final entry in _selectedVariants.entries)
+        if (entry.value != null && entry.value!.trim().isNotEmpty)
+          entry.key: entry.value!,
+      key: option.value,
+    };
+    final resolvedCombination = _resolveSelectedCombination(
+      product,
+      nextSelectedVariants,
+    );
+    final requestSlug = resolvedCombination?.slug.isNotEmpty == true
+        ? resolvedCombination!.slug
+        : option.slug.isNotEmpty
+            ? option.slug
+            : product.slug.isNotEmpty
+                ? product.slug
+                : widget.slug;
+    final mobSku = resolvedCombination?.mobSku.isNotEmpty == true
+        ? resolvedCombination!.mobSku
+        : option.mobSku.isNotEmpty
+            ? option.mobSku
+            : null;
+
     setState(() {
-      _selectedVariants[key] = option.value;
+      _selectedVariants
+        ..clear()
+        ..addAll(nextSelectedVariants);
     });
     context.read<ProductBloc>().add(
           ProductDetailRequested(
-            slug: widget.slug,
-            mobSku: option.mobSku.isNotEmpty ? option.mobSku : null,
+            slug: requestSlug,
+            mobSku: mobSku,
+            variantSelections: nextSelectedVariants,
           ),
         );
   }
+
+  ProductVariantCombination? _resolveSelectedCombination(
+    ProductModel product,
+    Map<String, String> selectedVariants,
+  ) {
+    if (product.variantCombinations.isEmpty || selectedVariants.isEmpty) {
+      return null;
+    }
+
+    final selectedEntries = selectedVariants.entries
+        .where((entry) => entry.key.trim().isNotEmpty && entry.value.isNotEmpty)
+        .toList();
+    if (selectedEntries.isEmpty) return null;
+
+    bool valueMatches(String left, String right) {
+      final normalizedLeft = _normalizeVariantValue(left);
+      final normalizedRight = _normalizeVariantValue(right);
+      if (normalizedLeft == normalizedRight) return true;
+      return _looseNormalizeVariantValue(normalizedLeft) ==
+          _looseNormalizeVariantValue(normalizedRight);
+    }
+
+    String attributeValue(
+      ProductVariantCombination combination,
+      String selectedKey,
+    ) {
+      final exact = combination.attributes[selectedKey];
+      if (exact != null) return exact;
+      final normalizedSelectedKey = _normalizeVariantKey(selectedKey);
+      for (final entry in combination.attributes.entries) {
+        if (_normalizeVariantKey(entry.key) == normalizedSelectedKey) {
+          return entry.value;
+        }
+      }
+      for (final entry in combination.attributes.entries) {
+        final key = _normalizeVariantKey(entry.key);
+        if (key.contains(normalizedSelectedKey) ||
+            normalizedSelectedKey.contains(key)) {
+          return entry.value;
+        }
+      }
+      return '';
+    }
+
+    for (final combination in product.variantCombinations) {
+      final allMatch = selectedEntries.every(
+        (entry) => valueMatches(
+          attributeValue(combination, entry.key),
+          entry.value,
+        ),
+      );
+      if (allMatch) return combination;
+    }
+
+    ProductVariantCombination? bestMatch;
+    var bestScore = -1;
+    for (final combination in product.variantCombinations) {
+      var score = 0;
+      for (final entry in selectedEntries) {
+        if (valueMatches(attributeValue(combination, entry.key), entry.value)) {
+          score += 1;
+        }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = combination;
+      }
+    }
+    return bestScore > 0 ? bestMatch : null;
+  }
+
+  String _normalizeVariantKey(String value) =>
+      value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  String _normalizeVariantValue(String value) =>
+      value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+  String _looseNormalizeVariantValue(String value) =>
+      value.replaceAll(RegExp(r'[^a-z0-9.]'), '');
 
   ProductModel _productForSeller(ProductModel product) {
     final seller = _selectedSeller;
@@ -188,6 +296,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       badgeOption: product.badgeOption,
       stock: seller.stock,
       stockDetailsStock: seller.stock,
+      stockBar: product.stockBar,
+      stockBarColor: product.stockBarColor,
       quickEcommerceEnabled:
           seller.quickEcommerceEnabled || product.quickEcommerceEnabled,
       childProducts: product.childProducts,
@@ -332,7 +442,20 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                     final bloc = context.read<ProductBloc>();
                                     bloc.add(
                                       ProductDetailRefreshRequested(
-                                        slug: widget.slug,
+                                        slug: product.slug.isNotEmpty
+                                            ? product.slug
+                                            : widget.slug,
+                                        mobSku: product.mobSku.isNotEmpty
+                                            ? product.mobSku
+                                            : null,
+                                        variantSelections: {
+                                          ...product.activeVariantSelections,
+                                          for (final entry
+                                              in _selectedVariants.entries)
+                                            if (entry.value != null &&
+                                                entry.value!.trim().isNotEmpty)
+                                              entry.key: entry.value!,
+                                        },
                                       ),
                                     );
                                     await bloc.stream.firstWhere(
@@ -365,7 +488,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                           selectedVariants: _selectedVariants,
                                           onSelect: (key, option) =>
                                               _selectVariant(
-                                                  context, key, option),
+                                            context,
+                                            product,
+                                            key,
+                                            option,
+                                          ),
                                           onMoreOptions:
                                               product.variantOptionCount > 8 ||
                                                       product.childProducts
@@ -974,6 +1101,8 @@ class ProductDetailBottomBar extends StatelessWidget {
               showCounter: true,
               quantity: quantity,
               isFetchingCart: isUpdating,
+              isSoldOut: product.isOutOfStockForQuickProduct,
+              availableStock: product.availableStock,
               openVariantsOnAdd: false,
               height: 48,
               onQuantityChanged: (nextQuantity) =>
@@ -1070,6 +1199,10 @@ class ProductDetailBottomBar extends StatelessWidget {
           : () {
               if (shouldNotify) {
                 onNotifyTap(product);
+                return;
+              }
+              if (product.hasVariants) {
+                onVariantsTap();
                 return;
               }
               onCartQuantityChanged(product, 1);

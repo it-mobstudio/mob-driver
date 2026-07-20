@@ -9,6 +9,7 @@ import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/credit/domain/entities/business_segment_entity.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/bloc/credit_bloc.dart';
+import 'package:m_o_b_demand_side/shared/validators/gst_validator.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
@@ -256,16 +257,8 @@ class _CreditApplySheetState extends State<_CreditApplySheet> {
                                             showClearButton: false,
                                             textCapitalization:
                                                 TextCapitalization.characters,
-                                            inputFormatters: [
-                                              LengthLimitingTextInputFormatter(
-                                                15,
-                                              ),
-                                            ],
-                                            validator: (value) => (value ==
-                                                        null ||
-                                                    value.trim().length < 15)
-                                                ? 'Enter a valid 15-character GSTIN'
-                                                : null,
+                                            inputFormatters: gstInputFormatters,
+                                            validator: requiredGstValidator,
                                           ),
                                           const SizedBox(height: 20),
                                           _segmentDropdown(),

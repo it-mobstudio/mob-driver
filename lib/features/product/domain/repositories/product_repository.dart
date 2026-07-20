@@ -24,6 +24,7 @@ abstract interface class ProductRepository {
   Future<(ProductDetailsEntity?, AppFailure?)> getProductDetail({
     required String slug,
     String? mobSku,
+    Map<String, String> variantSelections = const <String, String>{},
   });
 
   Future<(List<ProductEntity>?, AppFailure?)> searchProducts({

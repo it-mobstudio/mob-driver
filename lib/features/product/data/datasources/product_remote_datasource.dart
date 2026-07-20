@@ -23,6 +23,7 @@ abstract interface class ProductRemoteDatasource {
   Future<Map<String, dynamic>> getProductDetail({
     required String slug,
     String? mobSku,
+    Map<String, String> variantSelections = const <String, String>{},
   });
 
   Future<dynamic> searchProducts({required String query, int page = 1});
@@ -90,11 +91,19 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
   Future<Map<String, dynamic>> getProductDetail({
     required String slug,
     String? mobSku,
+    Map<String, String> variantSelections = const <String, String>{},
   }) async {
+    final selectedEntries = variantSelections.entries
+        .where((entry) => entry.key.trim().isNotEmpty && entry.value.isNotEmpty)
+        .toList();
     final response = await _dio.get<dynamic>(
       '/home/$slug/get_product_details/',
-      queryParameters:
-          (mobSku != null && mobSku.isNotEmpty) ? {'mob_sku': mobSku} : null,
+      queryParameters: <String, dynamic>{
+        if (selectedEntries.isNotEmpty)
+          'variant_type': selectedEntries.map((entry) => entry.key).join(','),
+        for (final entry in selectedEntries) entry.key: entry.value,
+        if (mobSku != null && mobSku.isNotEmpty) 'mob_sku': mobSku,
+      },
     );
     return _toMap(response.data);
   }

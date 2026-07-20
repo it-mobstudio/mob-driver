@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/shared/validators/gst_validator.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'rfq_success_page.dart';
 
@@ -201,7 +202,12 @@ class _RfqFormPageState extends State<RfqFormPage> {
                 decoration: deco('Email Id')),
             const SizedBox(height: 12),
             TextFormField(
-                controller: _gst, decoration: deco('GSTIN (optional)')),
+              controller: _gst,
+              decoration: deco('GSTIN (optional)'),
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: gstInputFormatters,
+              validator: optionalGstValidator,
+            ),
             const SizedBox(height: 12),
             TextFormField(controller: _city, decoration: deco('City')),
             const SizedBox(height: 12),

@@ -8,9 +8,14 @@ import 'package:m_o_b_demand_side/features/product/domain/repositories/product_r
 sealed class ProductEvent {}
 
 final class ProductDetailRequested extends ProductEvent {
-  ProductDetailRequested({required this.slug, this.mobSku});
+  ProductDetailRequested({
+    required this.slug,
+    this.mobSku,
+    this.variantSelections = const <String, String>{},
+  });
   final String slug;
   final String? mobSku;
+  final Map<String, String> variantSelections;
 }
 
 /// Pull-to-refresh — reloads the same product without emitting
@@ -18,9 +23,14 @@ final class ProductDetailRequested extends ProductEvent {
 /// existing page stays visible under the pull-to-refresh indicator instead
 /// of being replaced by the full-page skeleton.
 final class ProductDetailRefreshRequested extends ProductEvent {
-  ProductDetailRefreshRequested({required this.slug, this.mobSku});
+  ProductDetailRefreshRequested({
+    required this.slug,
+    this.mobSku,
+    this.variantSelections = const <String, String>{},
+  });
   final String slug;
   final String? mobSku;
+  final Map<String, String> variantSelections;
 }
 
 final class ProductListRequested extends ProductEvent {
@@ -183,6 +193,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     final (result, failure) = await _repository.getProductDetail(
       slug: event.slug,
       mobSku: event.mobSku,
+      variantSelections: event.variantSelections,
     );
     if (failure != null) {
       AppHaptics.error();
@@ -202,6 +213,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     final (result, failure) = await _repository.getProductDetail(
       slug: event.slug,
       mobSku: event.mobSku,
+      variantSelections: event.variantSelections,
     );
     if (failure != null) {
       AppHaptics.error();

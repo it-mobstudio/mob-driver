@@ -33,9 +33,14 @@ final class RfqSubmitRequested extends RfqEvent {
   final Map<String, dynamic> payload;
 }
 
-final class RfqQuoteAcceptedLocally extends RfqEvent {
-  RfqQuoteAcceptedLocally(this.quoteId);
+final class RfqQuoteAcceptRequested extends RfqEvent {
+  RfqQuoteAcceptRequested({
+    required this.quoteId,
+    required this.rfqId,
+  });
+
   final String quoteId;
+  final String rfqId;
 }
 
 final class RfqPaymentCompletedLocally extends RfqEvent {
@@ -122,7 +127,7 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     on<RfqNextPageRequested>(_onNextPage);
     on<RfqDetailRequested>(_onDetail);
     on<RfqSubmitRequested>(_onSubmit);
-    on<RfqQuoteAcceptedLocally>(_onQuoteAcceptedLocally);
+    on<RfqQuoteAcceptRequested>(_onQuoteAcceptRequested);
     on<RfqPaymentCompletedLocally>(_onPaymentCompletedLocally);
     on<CartRfqSubmitRequested>(_onCartRfqSubmit);
   }
@@ -231,12 +236,21 @@ class RfqBloc extends Bloc<RfqEvent, RfqState> {
     }
   }
 
-  void _onQuoteAcceptedLocally(
-    RfqQuoteAcceptedLocally event,
+  Future<void> _onQuoteAcceptRequested(
+    RfqQuoteAcceptRequested event,
     Emitter<RfqState> emit,
-  ) {
+  ) async {
     final currentState = state;
     if (currentState case RfqDetailLoaded(:final rfq)) {
+      final (success, failure) = await _repository.acceptRfqQuote(
+        quoteId: event.quoteId,
+        rfqId: event.rfqId,
+      );
+      if (failure != null || !success) {
+        AppHaptics.error();
+        emit(RfqError(failure?.message ?? 'Failed to accept quote.'));
+        return;
+      }
       final quotes = rfq.quotes
           .map((q) => q.quoteId == event.quoteId
               ? q.copyWith(quoteStatus: 'Accepted')

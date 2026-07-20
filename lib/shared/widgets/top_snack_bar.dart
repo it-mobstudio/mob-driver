@@ -94,87 +94,92 @@ class _TopSnackBarOverlayState extends State<_TopSnackBarOverlay>
       TopSnackBarType.error => const Color(0xFFF0483E),
     };
     final topInset = MediaQuery.paddingOf(context).top;
-    final toast = ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        bottom: Radius.circular(14),
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: accent,
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(14),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(22, topInset + 7, 16, 9),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.message,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        height: 17 / 12,
+    final toast = LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.clamp(0.0, 430.0).toDouble();
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.14),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 52),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 13),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            widget.message,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              height: 18 / 13,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: SizedBox(
-                height: 2,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                  ),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 1, end: 0),
-                    duration: widget.duration,
-                    curve: Curves.linear,
-                    builder: (context, value, child) {
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: FractionallySizedBox(
-                          widthFactor: value,
-                          child: child,
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: SizedBox(
+                        height: 2,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                          ),
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 1, end: 0),
+                            duration: widget.duration,
+                            curve: Curves.linear,
+                            builder: (context, value, child) {
+                              return Align(
+                                alignment: Alignment.centerLeft,
+                                child: FractionallySizedBox(
+                                  widthFactor: value,
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: ColoredBox(
+                              color: Colors.white.withValues(alpha: 0.65),
+                            ),
+                          ),
                         ),
-                      );
-                    },
-                    child: ColoredBox(
-                      color: Colors.white.withValues(alpha: 0.65),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
 
     return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
+      top: topInset + 12,
+      left: 16,
+      right: 16,
       child: IgnorePointer(
         child: Material(
           color: Colors.transparent,
@@ -188,7 +193,7 @@ class _TopSnackBarOverlayState extends State<_TopSnackBarOverlay>
               return Opacity(
                 opacity: value,
                 child: Transform.translate(
-                  offset: Offset(0, -10 * (1 - value)),
+                  offset: Offset(0, -12 * (1 - value)),
                   child: child,
                 ),
               );

@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/file_tile.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
+import 'package:m_o_b_demand_side/shared/validators/gst_validator.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
 /// The "Send us your BOQ" intake form: file dropzone + picked-file tiles,
@@ -280,15 +281,8 @@ class UploadScreen extends StatelessWidget {
                 gstController,
                 optional: true,
                 hint: '15-digit GSTIN',
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(15),
-                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                ],
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (text.isEmpty) return null;
-                  return text.length == 15 ? null : 'Enter a valid GSTIN';
-                },
+                inputFormatters: gstInputFormatters,
+                validator: optionalGstValidator,
               ),
               const SizedBox(height: 18),
               _field(

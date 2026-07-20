@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/address/domain/repositories/address_r
 import 'package:m_o_b_demand_side/features/profile/domain/entities/profile_entity.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/constants/india_location_options.dart';
+import 'package:m_o_b_demand_side/shared/validators/gst_validator.dart';
 import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
@@ -20,9 +21,6 @@ const _blue = Color(0xFF0360E5);
 const _muted = Color(0xFF767C8F);
 
 final _phoneRegex = RegExp(r'^\d{10}$');
-// Ported verbatim from mob-web's gstRegex (reusableFunction.js) — the odd
-// `[0-3|9]` class (with a literal pipe) is what the server actually accepts.
-final _gstRegex = RegExp(r'^[0-3|9][0-9][a-zA-Z0-9]{13}$');
 
 /// Opens the Add/Edit project bottom sheet. Pass [existing] to edit.
 ///
@@ -627,7 +625,7 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
           label: 'GST (optional)',
           controller: _gstController,
           textCapitalization: TextCapitalization.characters,
-          inputFormatters: [LengthLimitingTextInputFormatter(15)],
+          inputFormatters: gstInputFormatters,
           validator: _gstValidator,
         ),
         const SizedBox(height: 12),
@@ -788,10 +786,7 @@ class _ProjectFormSheetState extends State<_ProjectFormSheet> {
   }
 
   String? _gstValidator(String? value) {
-    final v = value?.trim() ?? '';
-    if (v.isEmpty) return null;
-    if (!_gstRegex.hasMatch(v)) return 'Enter a valid GSTIN';
-    return null;
+    return optionalGstValidator(value);
   }
 }
 

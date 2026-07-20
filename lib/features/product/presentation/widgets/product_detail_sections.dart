@@ -629,10 +629,10 @@ class _DynamicDetailRow extends StatelessWidget {
           Text(
             item.title,
             style: GoogleFonts.inter(
-              color: const Color(0xFF57627A),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              height: 16 / 11,
+              color: const Color(0xFF0A243F),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              height: 16 / 12,
             ),
           ),
           const SizedBox(width: 8),
@@ -1171,7 +1171,13 @@ class VariantOptionsSection extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final keys = groupedVariants.keys.toList();
+    final keys = _orderedVariantKeys(groupedVariants);
+    final activeSelections = <String, String>{
+      ...product.activeVariantSelections,
+      for (final entry in selectedVariants.entries)
+        if (entry.value != null && entry.value!.trim().isNotEmpty)
+          entry.key: entry.value!,
+    };
 
     return _DetailCard(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
@@ -1196,41 +1202,34 @@ class VariantOptionsSection extends StatelessWidget {
                     groupedVariants[key] ?? const <ProductVariantOption>[];
                 final activeValue = selectedVariants[key] ??
                     product.activeVariantSelections[key];
-                final optionRecords = [
-                  for (var i = 0; i < options.length; i++)
-                    (option: options[i], index: i),
-                ];
-                final selectedRecordIndex = activeValue == null
-                    ? -1
-                    : optionRecords.indexWhere(
-                        (record) => record.option.value == activeValue,
-                      );
-                final displayRecords = selectedRecordIndex <= 0
-                    ? optionRecords
-                    : [
-                        optionRecords[selectedRecordIndex],
-                        ...optionRecords.where(
-                          (record) =>
-                              record.index !=
-                              optionRecords[selectedRecordIndex].index,
-                        ),
-                      ];
-
                 Widget chip(ProductVariantOption opt, int idx) {
                   final selected = activeValue == opt.value ||
-                      (activeValue == null && idx == 0);
+                      (activeValue == null && idx == 0 && opt.isSelectable);
+                  final isEnabled = selected ||
+                      _isOptionAvailableForSelection(
+                        variantType: key,
+                        optionValue: opt.value,
+                        selectedOptions: activeSelections,
+                        orderedKeys: keys,
+                        fallbackOption: opt,
+                      );
                   return _VariantChip(
                     label: opt.value,
                     isSelected: selected,
                     isColorChip: false,
-                    onTap: () => onSelect(key, opt),
+                    isEnabled: isEnabled,
+                    onTap: isEnabled ? () => onSelect(key, opt) : null,
                   );
                 }
 
                 if (options.length > 8) {
-                  final topRowCount = (displayRecords.length / 2).ceil();
-                  final topRow = displayRecords.take(topRowCount).toList();
-                  final bottomRow = displayRecords.skip(topRowCount).toList();
+                  final optionRecords = [
+                    for (var i = 0; i < options.length; i++)
+                      (option: options[i], index: i),
+                  ];
+                  final topRowCount = (optionRecords.length / 2).ceil();
+                  final topRow = optionRecords.take(topRowCount).toList();
+                  final bottomRow = optionRecords.skip(topRowCount).toList();
 
                   Widget railRow(
                     List<({ProductVariantOption option, int index})> records,
@@ -1266,13 +1265,18 @@ class VariantOptionsSection extends StatelessWidget {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    for (final record in displayRecords)
-                      chip(record.option, record.index),
+                    for (var i = 0; i < options.length; i++)
+                      chip(options[i], i),
                   ],
                 );
               }),
               const SizedBox(height: 14),
             ],
+          if (product.isQuickEcommerceEnabled) ...[
+            const SizedBox(height: 2),
+            _QuickStockStatusRow(product: product),
+            const SizedBox(height: 12),
+          ],
         ],
       ),
     );
@@ -1285,7 +1289,7 @@ class VariantOptionsSection extends StatelessWidget {
     }
 
     if (variants.isNotEmpty) {
-      return variants;
+      return _orderGroupedVariants(variants);
     }
     if (product.childProducts.isEmpty) {
       return const <String, List<ProductVariantOption>>{};
@@ -1311,12 +1315,15 @@ class VariantOptionsSection extends StatelessWidget {
             ProductVariantOption(
               value: value,
               mobSku: child.mobSku,
+              slug: child.slug,
+              isAvailable: child.stock > 0,
+              inStock: child.stock > 0,
             ),
           );
         }
       }
     }
-    return grouped;
+    return _orderGroupedVariants(grouped);
   }
 
   Map<String, List<ProductVariantOption>> _groupFromVariantCombinations() {
@@ -1324,31 +1331,48 @@ class VariantOptionsSection extends StatelessWidget {
       return const <String, List<ProductVariantOption>>{};
     }
 
-    final orderedKeys = product.variantAttributes.isNotEmpty
-        ? product.variantAttributes
-        : product.variantCombinations.first.attributes.keys.toList();
+    final combinationKeys = <String>[];
+    for (final combination in product.variantCombinations) {
+      for (final key in combination.attributes.keys) {
+        if (!combinationKeys.any((item) => _sameVariantKey(item, key))) {
+          combinationKeys.add(key);
+        }
+      }
+    }
+    final orderedKeys = _orderedKeysFrom(combinationKeys);
 
     final grouped = <String, List<ProductVariantOption>>{};
     for (final key in orderedKeys) {
       // All unique values for this attribute across every combination
-      final allValues = product.variantCombinations
-          .map((item) => item.attributes[key]?.trim() ?? '')
-          .where((value) => value.isNotEmpty)
-          .toSet()
-          .toList();
+      final allValues = <String>[];
+      for (final combination in product.variantCombinations) {
+        final value = _attributeValue(combination, key).trim();
+        if (value.isEmpty) continue;
+        if (!allValues.any((item) => _variantValueMatches(item, value))) {
+          allValues.add(value);
+        }
+      }
       // available_options gives a preferred order; append any extras not listed
-      final orderedValues = product.availableOptions[key] ?? const <String>[];
+      final orderedValues = _availableOptionValuesForKey(key);
       final values = orderedValues.isNotEmpty
           ? [
-              ...orderedValues,
-              ...allValues.where((v) => !orderedValues.contains(v)),
+              ...orderedValues.where(
+                (value) => allValues.any(
+                  (item) => _variantValueMatches(item, value),
+                ),
+              ),
+              ...allValues.where(
+                (value) => !orderedValues.any(
+                  (item) => _variantValueMatches(item, value),
+                ),
+              ),
             ]
           : allValues;
 
       final options = <ProductVariantOption>[];
       for (final value in values) {
         final matchingCombination = product.variantCombinations.firstWhere(
-          (item) => (item.attributes[key]?.trim() ?? '') == value,
+          (item) => _variantValueMatches(_attributeValue(item, key), value),
           orElse: () => const ProductVariantCombination(
             attributes: <String, String>{},
             mobSku: '',
@@ -1364,6 +1388,10 @@ class VariantOptionsSection extends StatelessWidget {
           ProductVariantOption(
             value: value,
             mobSku: matchingCombination.mobSku,
+            slug: matchingCombination.slug,
+            isAvailable: matchingCombination.isAvailable,
+            inStock: matchingCombination.inStock,
+            stockStatus: matchingCombination.stockStatus,
           ),
         );
       }
@@ -1375,6 +1403,172 @@ class VariantOptionsSection extends StatelessWidget {
 
     return grouped;
   }
+
+  Map<String, List<ProductVariantOption>> _orderGroupedVariants(
+    Map<String, List<ProductVariantOption>> grouped,
+  ) {
+    if (grouped.isEmpty) return grouped;
+
+    final ordered = <String, List<ProductVariantOption>>{};
+    for (final key in _orderedVariantKeys(grouped)) {
+      final options = grouped[key] ?? const <ProductVariantOption>[];
+      ordered[key] = _orderedOptionsForKey(key, options);
+    }
+    return ordered;
+  }
+
+  List<String> _orderedVariantKeys(
+      Map<String, List<ProductVariantOption>> map) {
+    return _orderedKeysFrom(map.keys.toList());
+  }
+
+  List<String> _orderedKeysFrom(List<String> keys) {
+    if (product.variantAttributes.isEmpty) return keys;
+
+    final ordered = <String>[];
+    for (final attr in product.variantAttributes) {
+      final matchingKey = keys.cast<String?>().firstWhere(
+            (key) => key != null && _sameVariantKey(key, attr),
+            orElse: () => null,
+          );
+      if (matchingKey != null &&
+          !ordered.any((item) => _sameVariantKey(item, matchingKey))) {
+        ordered.add(matchingKey);
+      }
+    }
+    for (final key in keys) {
+      if (!ordered.any((item) => _sameVariantKey(item, key))) {
+        ordered.add(key);
+      }
+    }
+    return ordered;
+  }
+
+  List<ProductVariantOption> _orderedOptionsForKey(
+    String key,
+    List<ProductVariantOption> options,
+  ) {
+    final preferredValues = _availableOptionValuesForKey(key);
+    if (preferredValues.isEmpty) return options;
+
+    final ordered = <ProductVariantOption>[];
+    for (final value in preferredValues) {
+      final matchingOption = options.cast<ProductVariantOption?>().firstWhere(
+            (option) =>
+                option != null && _variantValueMatches(option.value, value),
+            orElse: () => null,
+          );
+      if (matchingOption != null &&
+          !ordered.any(
+            (option) =>
+                _variantValueMatches(option.value, matchingOption.value),
+          )) {
+        ordered.add(matchingOption);
+      }
+    }
+    for (final option in options) {
+      if (!ordered
+          .any((item) => _variantValueMatches(item.value, option.value))) {
+        ordered.add(option);
+      }
+    }
+    return ordered;
+  }
+
+  List<String> _availableOptionValuesForKey(String key) {
+    for (final entry in product.availableOptions.entries) {
+      if (_sameVariantKey(entry.key, key)) {
+        return entry.value;
+      }
+    }
+    return const <String>[];
+  }
+
+  bool _isOptionAvailableForSelection({
+    required String variantType,
+    required String optionValue,
+    required Map<String, String> selectedOptions,
+    required List<String> orderedKeys,
+    required ProductVariantOption fallbackOption,
+  }) {
+    if (product.variantCombinations.isEmpty) {
+      return fallbackOption.isSelectable;
+    }
+
+    final currentTypeIndex = orderedKeys.indexOf(variantType);
+    final shouldUseCascadeOrder = currentTypeIndex > -1;
+    return product.variantCombinations.any((combination) {
+      if (!_isCombinationSelectable(combination)) return false;
+      if (!_variantValueMatches(
+        _attributeValue(combination, variantType),
+        optionValue,
+      )) {
+        return false;
+      }
+
+      return selectedOptions.entries.every((entry) {
+        if (entry.key == variantType || entry.value.isEmpty) return true;
+        if (shouldUseCascadeOrder) {
+          final selectedTypeIndex = orderedKeys.indexOf(entry.key);
+          if (selectedTypeIndex == -1 || selectedTypeIndex > currentTypeIndex) {
+            return true;
+          }
+        }
+        return _variantValueMatches(
+          _attributeValue(combination, entry.key),
+          entry.value,
+        );
+      });
+    });
+  }
+
+  bool _isCombinationSelectable(ProductVariantCombination combination) {
+    return combination.isAvailable &&
+        combination.inStock &&
+        combination.stockStatus.toUpperCase() != 'OUT_OF_STOCK';
+  }
+
+  String _attributeValue(
+    ProductVariantCombination combination,
+    String variantType,
+  ) {
+    final exact = combination.attributes[variantType];
+    if (exact != null) return exact;
+    final normalizedType = _normalizeVariantKey(variantType);
+    for (final entry in combination.attributes.entries) {
+      if (_normalizeVariantKey(entry.key) == normalizedType) {
+        return entry.value;
+      }
+    }
+    for (final entry in combination.attributes.entries) {
+      final key = _normalizeVariantKey(entry.key);
+      if (key.contains(normalizedType) || normalizedType.contains(key)) {
+        return entry.value;
+      }
+    }
+    return '';
+  }
+
+  bool _sameVariantKey(String left, String right) {
+    return _normalizeVariantKey(left) == _normalizeVariantKey(right);
+  }
+
+  bool _variantValueMatches(String left, String right) {
+    final normalizedLeft = _normalizeVariantValue(left);
+    final normalizedRight = _normalizeVariantValue(right);
+    if (normalizedLeft == normalizedRight) return true;
+    return _looseNormalizeVariantValue(normalizedLeft) ==
+        _looseNormalizeVariantValue(normalizedRight);
+  }
+
+  String _normalizeVariantKey(String value) =>
+      value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  String _normalizeVariantValue(String value) =>
+      value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+  String _looseNormalizeVariantValue(String value) =>
+      value.replaceAll(RegExp(r'[^a-z0-9.]'), '');
 
   String _beautifyVariantKey(String key) {
     return key
@@ -1512,6 +1706,63 @@ class _RewardLine extends StatelessWidget {
   }
 }
 
+class _QuickStockStatusRow extends StatelessWidget {
+  const _QuickStockStatusRow({required this.product});
+
+  final ProductModel product;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (product.quickStockColor) {
+      'green' => const Color(0xFF00A889),
+      'yellow' => const Color(0xFFE3A008),
+      _ => const Color(0xFFE53935),
+    };
+    final level = product.quickStockBarLevel;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        SizedBox(
+          width: 26,
+          height: 22,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: List.generate(3, (index) {
+              final bar = index + 1;
+              final isActive = bar > 3 - level;
+              return Container(
+                width: 5,
+                height: 8.0 + (index * 4),
+                margin: EdgeInsets.only(right: index == 2 ? 0 : 3),
+                decoration: BoxDecoration(
+                  color: isActive ? color : const Color(0xFFE1E6ED),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          product.quickStockText,
+          textHeightBehavior: const TextHeightBehavior(
+            applyHeightToFirstAscent: false,
+            applyHeightToLastDescent: false,
+          ),
+          style: GoogleFonts.inter(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            height: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _DiscountBadge extends StatelessWidget {
   const _DiscountBadge({required this.discount});
 
@@ -1545,15 +1796,24 @@ class _VariantChip extends StatelessWidget {
     required this.isSelected,
     required this.isColorChip,
     required this.onTap,
+    this.isEnabled = true,
   });
 
   final String label;
   final bool isSelected;
   final bool isColorChip;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool isEnabled;
 
   @override
   Widget build(BuildContext context) {
+    final selectedColor =
+        isEnabled ? const Color(0xFF0A243F) : const Color(0xFF8B95A5);
+    final textColor = isSelected
+        ? Colors.white
+        : isEnabled
+            ? const Color(0xFF0A243F)
+            : const Color(0xFF9AA4B2);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -1566,10 +1826,13 @@ class _VariantChip extends StatelessWidget {
           0,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0A243F) : Colors.white,
+          color: isSelected
+              ? selectedColor
+              : isEnabled
+                  ? Colors.white
+                  : const Color(0xFFF2F4F7),
           border: Border.all(
-            color:
-                isSelected ? const Color(0xFF0A243F) : const Color(0xFFDFE4EC),
+            color: isSelected ? selectedColor : const Color(0xFFDFE4EC),
           ),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -1591,7 +1854,7 @@ class _VariantChip extends StatelessWidget {
             Text(
               label,
               style: GoogleFonts.inter(
-                color: isSelected ? Colors.white : const Color(0xFF0A243F),
+                color: textColor,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 height: 16 / 11,

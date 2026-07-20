@@ -106,6 +106,29 @@ class RfqRepositoryImpl implements RfqRepository {
   }
 
   @override
+  Future<(bool, AppFailure?)> acceptRfqQuote({
+    required String quoteId,
+    required String rfqId,
+  }) async {
+    try {
+      final body = await _datasource.acceptRfqQuote({
+        'quote_id': quoteId,
+        'rfq_id': rfqId,
+        'quote_status': 'Accepted',
+      });
+      if (body['status'] == false) {
+        final msg = body['message']?.toString() ?? 'Failed to accept quote.';
+        return (false, BusinessFailure(msg));
+      }
+      return (true, null);
+    } on DioException catch (e) {
+      return (false, e.toAppFailure());
+    } catch (e) {
+      return (false, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<(String?, AppFailure?)> createCartQuoteRequest(
     Map<String, dynamic> payload,
   ) async {

@@ -19,6 +19,7 @@ const List<({String label, String value})> _kRfqFilterOptions = [
   (label: 'Quote Accepted', value: 'Quote Accepted'),
   (label: 'Order Created', value: 'Order Created'),
 ];
+const _showConfirmAndPayAction = false;
 
 class RfqPage extends StatefulWidget {
   const RfqPage({super.key});
@@ -687,33 +688,34 @@ class _RfqCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(
-                    width: 148,
-                    height: 36,
-                    child: ElevatedButton(
-                      onPressed: () => context.push(
-                        RfqDetailsPage.routePath,
-                        extra: item.id,
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0360E5),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  if (_showConfirmAndPayAction)
+                    SizedBox(
+                      width: 148,
+                      height: 36,
+                      child: ElevatedButton(
+                        onPressed: () => context.push(
+                          RfqDetailsPage.routePath,
+                          extra: item.id,
                         ),
-                        padding: EdgeInsets.zero,
-                      ),
-                      child: Text(
-                        'Confirm & pay',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          height: 18 / 12,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0360E5),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: Text(
+                          'Confirm & pay',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            height: 18 / 12,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),

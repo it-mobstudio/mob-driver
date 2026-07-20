@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/mob_support_page.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
 /// The saved-address-picker UI, shared by the nav bar's full-page
@@ -119,8 +121,15 @@ class AddressPickerBody extends StatelessWidget {
                   isSelected: selectedAddressId != null &&
                       selectedAddressId == address.id,
                   onTap: () => onSelectAddress(address),
-                  onEdit: () => onEditAddress(address),
-                  onDelete: () => onDeleteAddress(address),
+                  onEdit: _isMobCreditAddress(address)
+                      ? null
+                      : () => onEditAddress(address),
+                  onDelete: _isMobCreditAddress(address)
+                      ? null
+                      : () => onDeleteAddress(address),
+                  onContactSupport: _isMobCreditAddress(address)
+                      ? () => context.push(MobSupportPage.routePath)
+                      : null,
                 ),
               ),
             ),
@@ -409,7 +418,7 @@ class _EmptySavedAddress extends StatelessWidget {
 }
 
 /// A single saved-address row: name (+ "SELECTED" badge), address text,
-/// tag/project pills, and the edit/delete overflow menu.
+/// tag/project pills, and the overflow action menu.
 class AddressPickerCard extends StatelessWidget {
   const AddressPickerCard({
     super.key,
@@ -417,6 +426,7 @@ class AddressPickerCard extends StatelessWidget {
     required this.onTap,
     this.onEdit,
     this.onDelete,
+    this.onContactSupport,
     this.isSelected = false,
   });
 
@@ -425,6 +435,7 @@ class AddressPickerCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onContactSupport;
 
   static const _navy = Color(0xFF0A243F);
   static const _muted = Color(0xFF596378);
@@ -438,6 +449,10 @@ class AddressPickerCard extends StatelessWidget {
             ? address.locationName.trim()
             : 'Saved address');
     final addressText = _fullAddressText(address);
+    final isMobCreditAddress = _isMobCreditAddress(address);
+    final showActionMenu = isMobCreditAddress
+        ? onContactSupport != null
+        : (onEdit != null || onDelete != null);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -496,7 +511,7 @@ class AddressPickerCard extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 6,
                     children: [
-                      if (_isMobCreditAddress(address))
+                      if (isMobCreditAddress)
                         const _MobCreditTag()
                       else if (address.addressTag.trim().isNotEmpty)
                         _AddressPill(
@@ -516,7 +531,7 @@ class AddressPickerCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (onEdit != null || onDelete != null) ...[
+            if (showActionMenu) ...[
               const SizedBox(width: 16),
               PopupMenuButton<String>(
                 padding: EdgeInsets.zero,
@@ -525,10 +540,17 @@ class AddressPickerCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 onSelected: (value) {
+                  if (value == 'support') onContactSupport?.call();
                   if (value == 'edit') onEdit?.call();
                   if (value == 'delete') onDelete?.call();
                 },
                 itemBuilder: (context) => [
+                  if (isMobCreditAddress && onContactSupport != null)
+                    const PopupMenuItem(
+                      value: 'support',
+                      child: Text('Contact support'),
+                    )
+                  else ...[
                   if (onEdit != null)
                     const PopupMenuItem(
                       value: 'edit',
@@ -539,6 +561,7 @@ class AddressPickerCard extends StatelessWidget {
                       value: 'delete',
                       child: Text('Delete address'),
                     ),
+                  ],
                 ],
                 child: Container(
                   width: 26,

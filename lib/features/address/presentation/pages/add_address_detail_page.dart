@@ -10,6 +10,7 @@ import 'package:m_o_b_demand_side/features/address/domain/entities/address_entit
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/bloc/address_bloc.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
+import 'package:m_o_b_demand_side/shared/validators/gst_validator.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
@@ -405,7 +406,8 @@ class _AddAddressDetailPageState extends State<AddAddressDetailPage> {
             controller: _gstController,
             hintText: 'GSTIN (optional)',
             textCapitalization: TextCapitalization.characters,
-            inputFormatters: [LengthLimitingTextInputFormatter(15)],
+            inputFormatters: gstInputFormatters,
+            validator: optionalGstValidator,
           ),
         ],
       ),

@@ -133,10 +133,14 @@ class ProductRepositoryImpl implements ProductRepository {
   Future<(ProductDetailsEntity?, AppFailure?)> getProductDetail({
     required String slug,
     String? mobSku,
+    Map<String, String> variantSelections = const <String, String>{},
   }) async {
     try {
-      final body =
-          await _datasource.getProductDetail(slug: slug, mobSku: mobSku);
+      final body = await _datasource.getProductDetail(
+        slug: slug,
+        mobSku: mobSku,
+        variantSelections: variantSelections,
+      );
       final data = _data(body);
       final productRaw = data['product'];
       final productMap =

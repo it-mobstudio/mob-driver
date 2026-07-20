@@ -139,6 +139,17 @@ String _formatPreferredBrands(dynamic raw) {
   return text.trim();
 }
 
+List<dynamic> _normalizeQuotes(dynamic raw) {
+  if (raw is List) return raw;
+  if (raw is Map) {
+    return raw.values.expand((value) {
+      if (value is List) return value;
+      return [value];
+    }).toList();
+  }
+  return const <dynamic>[];
+}
+
 class RfqEntity {
   const RfqEntity({
     required this.id,
@@ -274,8 +285,7 @@ class RfqEntity {
         .toList();
 
     final rfqOrderId = (order['order_id'] ?? '').toString();
-    final quotesRaw =
-        map['quotes'] is List ? map['quotes'] as List : <dynamic>[];
+    final quotesRaw = _normalizeQuotes(map['quotes']);
     // Individual quote objects in the API's `quotes` array never carry their
     // own `rfq_order` — the web app stitches the single RFQ-level `order`
     // onto each quote before rendering (see mob-web's
@@ -283,8 +293,14 @@ class RfqEntity {
     // re-attaching it per quote). Mirror that here instead of reading a key
     // that's never present on the raw quote map.
     final quotes = quotesRaw
-        .whereType<Map>()
-        .map((e) => RfqQuoteEntity.fromMap(Map<String, dynamic>.from(e)))
+        .asMap()
+        .entries
+        .where((entry) => entry.value is Map)
+        .map((entry) {
+          final quoteMap = Map<String, dynamic>.from(entry.value as Map);
+          quoteMap['index'] ??= entry.key + 1;
+          return RfqQuoteEntity.fromMap(quoteMap);
+        })
         .map((quote) => quote.isConvertedToOrder && quote.orderId.isEmpty
             ? quote.copyWith(orderId: rfqOrderId)
             : quote)

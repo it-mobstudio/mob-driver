@@ -56,7 +56,12 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
   }
 
   double _listBottomPadding() {
-    return MediaQuery.paddingOf(context).bottom > 0 ? 16.0 : 12.0;
+    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = mediaQuery.viewPadding.bottom >
+            mediaQuery.padding.bottom
+        ? mediaQuery.viewPadding.bottom
+        : mediaQuery.padding.bottom;
+    return bottomInset + 24.0;
   }
 
   // Rough content-height estimate so the sheet opens at roughly the right
@@ -354,7 +359,17 @@ class _VariantListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final price = product.vendorPricing.vendorSellingPrice;
     final mrp = product.maximumRetailPrice;
+    final discount = product.vendorPricing.discount.round();
     final rowLabel = label.isNotEmpty ? label : product.title;
+    final stock = product.availableStock;
+    final showStockCaption =
+        product.isQuickEcommerceEnabled && stock <= 10;
+    final stockCaption = stock > 0 ? '$stock Available' : 'Out of stock';
+    final stockCaptionColor = switch (product.quickStockColor) {
+      'green' => const Color(0xFF00A889),
+      'yellow' => const Color(0xFFE3A008),
+      _ => const Color(0xFFE53935),
+    };
 
     void openProductDetail() {
       if (product.slug.isEmpty) return;
@@ -447,6 +462,18 @@ class _VariantListRow extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (discount > 0) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '$discount% off',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF01A685),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            height: 18 / 12,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -456,16 +483,35 @@ class _VariantListRow extends StatelessWidget {
           const SizedBox(width: 12),
           SizedBox(
             width: 88,
-            child: ProductCartActionButton(
-              product: product,
-              style: ProductCartActionButtonStyle.rail,
-              showCounter: !product.shouldShowNotify && quantity > 0,
-              quantity: quantity > 0 ? quantity : 1,
-              isFetchingCart: isUpdating,
-              onAdd: (quantity) => onChanged(quantity),
-              onAddForQuote: (quantity) => onChanged(quantity),
-              onQuantityChanged: onChanged,
-              onNotify: onNotify,
+            child: Column(
+              children: [
+                ProductCartActionButton(
+                  product: product,
+                  style: ProductCartActionButtonStyle.rail,
+                  showCounter: !product.shouldShowNotify && quantity > 0,
+                  quantity: quantity > 0 ? quantity : 1,
+                  isFetchingCart: isUpdating,
+                  onAdd: (quantity) => onChanged(quantity),
+                  onAddForQuote: (quantity) => onChanged(quantity),
+                  onQuantityChanged: onChanged,
+                  onNotify: onNotify,
+                ),
+                if (showStockCaption) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    stockCaption,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: stockCaptionColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      height: 14 / 10,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

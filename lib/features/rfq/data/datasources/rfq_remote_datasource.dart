@@ -4,6 +4,7 @@ abstract interface class RfqRemoteDatasource {
   Future<dynamic> getRfqList({int page = 1, String? search});
   Future<Map<String, dynamic>> getRfqDetail(String id);
   Future<Map<String, dynamic>> submitRfq(Map<String, dynamic> payload);
+  Future<Map<String, dynamic>> acceptRfqQuote(Map<String, dynamic> payload);
   Future<Map<String, dynamic>> createCartQuoteRequest(
     Map<String, dynamic> payload,
   );
@@ -37,6 +38,19 @@ class RfqRemoteDatasourceImpl implements RfqRemoteDatasource {
   @override
   Future<Map<String, dynamic>> submitRfq(Map<String, dynamic> payload) async {
     final response = await _dio.post<dynamic>('/rfq/submit/', data: payload);
+    final raw = response.data;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return {};
+  }
+
+  @override
+  Future<Map<String, dynamic>> acceptRfqQuote(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post<dynamic>(
+      '/rfq/accept_or_reject_quote/',
+      data: payload,
+    );
     final raw = response.data;
     if (raw is Map) return Map<String, dynamic>.from(raw);
     return {};

@@ -141,6 +141,12 @@ class _RfqDetailsBody extends StatelessWidget {
         rfq.preferredBrands.isNotEmpty ||
         rfq.comments.isNotEmpty ||
         rfq.deliveryInstructions.isNotEmpty;
+    final allQuotes = [
+      ...rfq.convertedToOrderQuotes,
+      ...rfq.acceptedQuotes,
+      ...rfq.magicQuotes,
+      ...rfq.newQuotes,
+    ];
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -165,14 +171,6 @@ class _RfqDetailsBody extends StatelessWidget {
                 _MetaLine(date: date, address: _rfqAddress(rfq)),
                 const SizedBox(height: 18),
                 progressCard,
-                for (final quote in rfq.convertedToOrderQuotes) ...[
-                  const SizedBox(height: 16),
-                  _RealQuoteCard(quote: quote, disableAccept: true),
-                ],
-                for (final quote in rfq.acceptedQuotes) ...[
-                  const SizedBox(height: 16),
-                  _RealQuoteCard(quote: quote, disableAccept: true),
-                ],
               ],
             ),
           ),
@@ -198,6 +196,8 @@ class _RfqDetailsBody extends StatelessWidget {
                   _MagicQuoteDescriptionRow()
                 else if (rfq.newQuotes.isNotEmpty)
                   const _QuoteSupportInstruction()
+                else if (allQuotes.isNotEmpty)
+                  const SizedBox.shrink()
                 else
                   Text(
                     'Our team is working on it. We will reach back to '
@@ -210,16 +210,15 @@ class _RfqDetailsBody extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(height: 16),
-                if (rfq.magicQuotes.isNotEmpty) ...[
-                  for (final quote in rfq.magicQuotes) ...[
-                    _RealQuoteCard(quote: quote, disableAccept: true),
-                    const SizedBox(height: 16),
-                  ],
-                ] else if (rfq.newQuotes.isNotEmpty)
-                  for (final quote in rfq.newQuotes) ...[
+                if (allQuotes.isNotEmpty)
+                  for (final quote in allQuotes) ...[
                     _RealQuoteCard(
                       quote: quote,
-                      disableAccept: rfq.acceptedQuotes.isNotEmpty ||
+                      rfqId: rfq.id,
+                      disableAccept: quote.isConvertedToOrder ||
+                          quote.isAccepted ||
+                          quote.isMagicQuote ||
+                          rfq.acceptedQuotes.isNotEmpty ||
                           rfq.status == 'Order Created',
                     ),
                     const SizedBox(height: 16),
@@ -867,11 +866,17 @@ const _quoteActionRowPadding = EdgeInsets.fromLTRB(0, 16, 0, 0);
 const _quoteActionButtonPadding = EdgeInsets.all(10);
 const _quoteActionButtonHeight = 36.0;
 const _quoteActionButtonGap = 12.0;
+const _showConfirmAndPayAction = false;
 
 class _RealQuoteCard extends StatelessWidget {
-  const _RealQuoteCard({required this.quote, this.disableAccept = false});
+  const _RealQuoteCard({
+    required this.quote,
+    required this.rfqId,
+    this.disableAccept = false,
+  });
 
   final RfqQuoteEntity quote;
+  final String rfqId;
   final bool disableAccept;
 
   bool get _canAccept => quote.isNew && !quote.isMagicQuote && !disableAccept;
@@ -1058,9 +1063,12 @@ class _RealQuoteCard extends StatelessWidget {
                               timeText: dateText,
                             );
                             if (!context.mounted || confirmed != true) return;
-                            context
-                                .read<RfqBloc>()
-                                .add(RfqQuoteAcceptedLocally(quote.quoteId));
+                            context.read<RfqBloc>().add(
+                                  RfqQuoteAcceptRequested(
+                                    quoteId: quote.quoteId,
+                                    rfqId: rfqId,
+                                  ),
+                                );
                           },
                         ),
                       _QuoteActionButton(
@@ -1079,7 +1087,8 @@ class _RealQuoteCard extends StatelessWidget {
                             extra: quote.orderId,
                           ),
                         ),
-                      if (quote.checkoutUrl.isNotEmpty)
+                      if (_showConfirmAndPayAction &&
+                          quote.checkoutUrl.isNotEmpty)
                         _QuoteActionButton(
                           label: 'Confirm & pay',
                           variant: _QuoteActionButtonVariant.filled,

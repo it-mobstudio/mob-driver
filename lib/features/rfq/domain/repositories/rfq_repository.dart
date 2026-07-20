@@ -8,6 +8,10 @@ abstract interface class RfqRepository {
   });
   Future<(RfqEntity?, AppFailure?)> getRfqDetail(String id);
   Future<(bool, AppFailure?)> submitRfq(Map<String, dynamic> payload);
+  Future<(bool, AppFailure?)> acceptRfqQuote({
+    required String quoteId,
+    required String rfqId,
+  });
 
   /// Creates a quote request from the items currently in the cart.
   Future<(String?, AppFailure?)> createCartQuoteRequest(
