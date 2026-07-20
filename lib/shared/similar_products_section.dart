@@ -12,6 +12,7 @@ class SimilarProductsSection extends StatelessWidget {
     this.title = 'View similar items',
     this.quantityResolver,
     this.isUpdatingResolver,
+    this.borderRadius,
   });
 
   final List<ProductModel> products;
@@ -25,13 +26,18 @@ class SimilarProductsSection extends StatelessWidget {
   /// Optional BLoC-connected quantity resolver for accurate cart counts.
   final int Function(String productId)? quantityResolver;
   final bool Function(String productId)? isUpdatingResolver;
+  final BorderRadius? borderRadius;
 
   @override
   Widget build(BuildContext context) {
     if (products.isEmpty) return const SizedBox.shrink();
 
-    return ColoredBox(
-      color: Colors.white,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: borderRadius,
+      ),
+      clipBehavior: borderRadius == null ? Clip.none : Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

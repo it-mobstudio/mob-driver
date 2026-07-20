@@ -185,6 +185,7 @@ class _TrackingTimelineItem {
 
 _TrackingTimelineStage _timelineStageFromState(_TrackingState state) {
   return switch (state) {
+    _TrackingState.cancelled => _TrackingTimelineStage.placed,
     _TrackingState.delayed => _TrackingTimelineStage.packing,
     _TrackingState.packing => _TrackingTimelineStage.packing,
     _TrackingState.packed => _TrackingTimelineStage.packed,
@@ -605,17 +606,20 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                             arrivingIn: arrivingIn,
                             statusText: trackStatusText,
                             normalStatusTime: normalStatusTime,
-                            onNormalStatusTap: isQuickOrder
-                                ? null
-                                : () => _showOrderStatusSheet(
-                                      context,
-                                      timelineItems,
-                                    ),
+                            onNormalStatusTap:
+                                isQuickOrder || trackingState.isCancelled
+                                    ? null
+                                    : () => _showOrderStatusSheet(
+                                          context,
+                                          timelineItems,
+                                        ),
                           ),
                           Padding(
                             padding: EdgeInsets.fromLTRB(
                               16,
-                              trackingState.isDelayed ? 10 : 30,
+                              trackingState.isDelayed || trackingState.isCancelled
+                                  ? 10
+                                  : 30,
                               16,
                               0,
                             ),
@@ -624,6 +628,11 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                                 if (trackingState.isDelayed) ...[
                                   const SizedBox(height: 16),
                                   const _DelayedInfoCard(),
+                                  const SizedBox(height: 12),
+                                ],
+                                if (trackingState.isCancelled) ...[
+                                  const SizedBox(height: 16),
+                                  const _CancelledInfoCard(),
                                   const SizedBox(height: 12),
                                 ],
                                 if (!trackingState.isDelivered) ...[
@@ -657,7 +666,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                                 ),
                                 const SizedBox(height: 12),
                                 const _TrackingHelpCard(),
-                                if (!_hasReview) ...[
+                                if (!_hasReview &&
+                                    !trackingState.isCancelled) ...[
                                   const SizedBox(height: 12),
                                   _TrackingRatingCard(
                                     suborderId: orderNumber,
@@ -1262,12 +1272,14 @@ class _EtaCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            SvgPicture.asset(
-              'assets/images/Track-Arrow.svg',
-              width: 24,
-              height: 24,
-            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 12),
+              SvgPicture.asset(
+                'assets/images/Track-Arrow.svg',
+                width: 24,
+                height: 24,
+              ),
+            ],
           ],
         ),
       ),
@@ -1276,7 +1288,11 @@ class _EtaCard extends StatelessWidget {
 
   Widget _quickOrderCard() {
     final etaText = arrivingIn.trim().isNotEmpty ? arrivingIn.trim() : '--';
-    final title = state.isDelayed ? 'Delayed' : etaText;
+    final title = state.isCancelled
+        ? 'Cancelled'
+        : state.isDelayed
+            ? 'Delayed'
+            : etaText;
     final subtitle = state.isDelivered
         ? deliveryDate
         : state.isDelayed && statusText.trim().isNotEmpty
@@ -1376,6 +1392,13 @@ class _EtaCard extends StatelessWidget {
   }
 
   Widget _quickOrderStatusIcon() {
+    if (state.isCancelled) {
+      return SvgPicture.asset(
+        'assets/images/cancel-cross.svg',
+        width: 24,
+        height: 24,
+      );
+    }
     if (state.isDelayed) {
       return SvgPicture.asset(
         'assets/images/delayedicon.svg',
@@ -1432,6 +1455,41 @@ class _DelayedInfoCard extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w500,
           height: 16 / 12,
+        ),
+      ),
+    );
+  }
+}
+
+class _CancelledInfoCard extends StatelessWidget {
+  const _CancelledInfoCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDEDEDE)),
+        gradient: const LinearGradient(
+          begin: Alignment.centerRight,
+          end: Alignment.centerLeft,
+          colors: [
+            Color(0xFFFFFFFF),
+            Color(0xFFFFE2DE),
+          ],
+          stops: [0.0009, 0.999],
+        ),
+      ),
+      child: Text(
+        'This order has been cancelled. Any applicable charges will be '
+        'refunded to your original payment method.',
+        style: GoogleFonts.inter(
+          color: _TrackingColors.navy,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          height: 18 / 12,
         ),
       ),
     );
@@ -1587,11 +1645,11 @@ class _TrackingItemsCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             GestureDetector(
-                                onTap: () => Clipboard.setData(
-                                    ClipboardData(text: orderNumber)),
-                                child: SvgPicture.asset(
-                                  'assets/images/copy.svg',
-                                )),
+                              onTap: () => _copyOrderNumber(context),
+                              child: SvgPicture.asset(
+                                'assets/images/copy.svg',
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 20),
@@ -1630,6 +1688,16 @@ class _TrackingItemsCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _copyOrderNumber(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: orderNumber));
+    if (!context.mounted) return;
+    TopSnackBar.show(
+      context,
+      message: 'Order ID copied',
+      type: TopSnackBarType.success,
     );
   }
 }
@@ -2665,6 +2733,7 @@ class ReferralEarnCard extends StatelessWidget {
 }
 
 enum _TrackingState {
+  cancelled,
   delayed,
   packing,
   packed,
@@ -2675,6 +2744,9 @@ enum _TrackingState {
     final value =
         status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
     final compactValue = value.replaceAll(' ', '');
+    if (value.contains('cancel') || compactValue.contains('cancel')) {
+      return _TrackingState.cancelled;
+    }
     if (value.contains('delay') || compactValue.contains('delay')) {
       return _TrackingState.delayed;
     }
@@ -2710,6 +2782,7 @@ enum _TrackingState {
 
   String get subtitle {
     return switch (this) {
+      _TrackingState.cancelled => 'Order cancelled',
       _TrackingState.delayed => 'Your order is delayed',
       _TrackingState.delivered => 'Delivered',
       _TrackingState.outForDelivery => 'Out for delivery',
@@ -2720,6 +2793,7 @@ enum _TrackingState {
 
   String get heroAsset {
     return switch (this) {
+      _TrackingState.cancelled => 'assets/images/Cancelled.webp',
       _TrackingState.delayed => 'assets/images/Packing_your_order.webp',
       _TrackingState.delivered => 'assets/images/Delivered.webp',
       _TrackingState.outForDelivery => 'assets/images/Out_for_delivery.webp',
@@ -2736,6 +2810,8 @@ enum _TrackingState {
   }
 
   bool get isDelivered => this == _TrackingState.delivered;
+
+  bool get isCancelled => this == _TrackingState.cancelled;
 
   bool get isDelayed => this == _TrackingState.delayed;
 

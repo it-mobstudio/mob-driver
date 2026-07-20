@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/core/network/platform_header.dart';
 
 class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._dio);
@@ -9,6 +10,7 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    addPlatformHeader(options.headers);
     final token = AuthSession.instance.accessToken;
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -31,6 +33,7 @@ class AuthInterceptor extends Interceptor {
       if (newToken != null && newToken.isNotEmpty) {
         try {
           final retryOptions = err.requestOptions;
+          addPlatformHeader(retryOptions.headers);
           retryOptions.headers['Authorization'] = 'Bearer $newToken';
           final response = await _dio.fetch<dynamic>(retryOptions);
           handler.resolve(response);

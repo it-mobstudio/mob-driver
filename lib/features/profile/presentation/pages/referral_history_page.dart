@@ -113,7 +113,7 @@ class _ReferralHistoryViewState extends State<_ReferralHistoryView> {
                 );
               },
             ),
-            FrostedNavBar(),
+            const FrostedNavBar(),
           ],
         ),
       ),

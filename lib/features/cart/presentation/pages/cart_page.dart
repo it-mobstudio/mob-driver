@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/nav/nav.dart' show appNavigatorKey;
+import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/features/address/data/local/selected_address_store.dart';
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
@@ -11,12 +12,16 @@ import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_de
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
 import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
+import 'package:m_o_b_demand_side/features/cart/domain/repositories/cart_repository.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_sections.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
 import 'package:m_o_b_demand_side/features/home/domain/store_delivery_label.dart';
+import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
+import 'package:m_o_b_demand_side/features/product/domain/repositories/product_repository.dart';
 import 'package:m_o_b_demand_side/shared/error_state_view.dart';
+import 'package:m_o_b_demand_side/shared/similar_products_section.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class CartPage extends StatefulWidget {
@@ -33,6 +38,7 @@ class _CartPageState extends State<CartPage> {
   AddressEntity? _selectedDeliveryAddress;
   AddressEntity? _storedAddress;
   List<AddressEntity> _savedAddresses = const [];
+  List<ProductModel> _suggestedProducts = const [];
   String _deliveryLabel = '';
   bool _isStoreOpen = true;
 
@@ -42,6 +48,16 @@ class _CartPageState extends State<CartPage> {
     _loadStoredAddress();
     _loadSavedAddresses();
     _loadStoreDeliveryLabel();
+    _loadSuggestedProducts();
+  }
+
+  Future<void> _loadSuggestedProducts() async {
+    final (products, failure) =
+        await sl<CartRepository>().getSuggestedProducts();
+    if (!mounted || failure != null || products == null || products.isEmpty) {
+      return;
+    }
+    setState(() => _suggestedProducts = products);
   }
 
   Future<void> _loadStoreDeliveryLabel() async {
@@ -215,6 +231,25 @@ class _CartPageState extends State<CartPage> {
                       ),
                     // const ViewCouponsTile(),
                     // const SizedBox(height: 8),
+                    if (_suggestedProducts.isNotEmpty) ...[
+                      SimilarProductsSection(
+                        title: 'You might also like',
+                        products: _suggestedProducts,
+                        borderRadius: BorderRadius.circular(12),
+                        quantityResolver: (productId) =>
+                            _cartQuantityFor(summary, productId),
+                        isUpdatingResolver: (productId) =>
+                            updatingItemKey == productId,
+                        onCartQuantityChanged: (product, quantity) =>
+                            _updateSuggestedProductQuantity(
+                          context,
+                          product,
+                          quantity,
+                        ),
+                        onNotifyTap: _handleSuggestedNotifyTap,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
                     OrderDetailsCard(
                       subtotal: summary.subtotal,
                       shipping: summary.shipping,
@@ -246,6 +281,63 @@ class _CartPageState extends State<CartPage> {
   double _effectiveTotal(CartSummaryEntity summary) {
     if (summary.total > 0) return summary.total;
     return summary.subtotal + summary.shipping;
+  }
+
+  int _cartQuantityFor(CartSummaryEntity summary, String vendorProductId) {
+    for (final item in summary.items) {
+      if (item.vendorProductId == vendorProductId) return item.qty;
+    }
+    return 0;
+  }
+
+  Future<void> _updateSuggestedProductQuantity(
+    BuildContext context,
+    ProductModel product,
+    int quantity,
+  ) async {
+    if (quantity < 0) return;
+
+    final stock = product.availableStock;
+    var nextQuantity = quantity;
+    if (stock > 0 && quantity > stock) {
+      nextQuantity = stock;
+      TopSnackBar.show(
+        context,
+        message: 'Only $stock units available. Quantity updated to $stock.',
+        type: TopSnackBarType.info,
+      );
+    }
+
+    final cartItem = CartItem(
+      title: product.title,
+      imageAsset: product.primaryImageUrl,
+      qty: nextQuantity,
+      unitPrice: product.vendorPricing.vendorSellingPrice.toDouble(),
+      sellerCode: 'STORE',
+      vendorProductId: product.addToCartProductId,
+    );
+    context.read<CartBloc>().add(
+          CartQuantityUpdateRequested(item: cartItem, newQty: nextQuantity),
+        );
+  }
+
+  Future<void> _handleSuggestedNotifyTap(ProductModel product) async {
+    final productId = int.tryParse(product.id);
+    final phoneNumber = AuthSession.instance.phoneNumber;
+    if (productId == null || phoneNumber == null) return;
+
+    final (success, failure) = await sl<ProductRepository>().notifyOutOfStock(
+      productId: productId,
+      phoneNumber: phoneNumber,
+    );
+    if (!mounted) return;
+    TopSnackBar.show(
+      context,
+      message: success
+          ? "We'll notify you when this is back in stock."
+          : failure?.message ?? 'Unable to set up notification.',
+      type: success ? TopSnackBarType.success : TopSnackBarType.error,
+    );
   }
 
   void _updateCartQuantity(BuildContext context, CartItem item, int quantity) {

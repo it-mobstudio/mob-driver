@@ -11,6 +11,7 @@ abstract interface class CartRemoteDatasource {
     String? vendorProductId,
   });
   Future<Map<String, dynamic>> updateCartRedeem(Map<String, dynamic> payload);
+  Future<dynamic> getSuggestedProducts();
 }
 
 class CartRemoteDatasourceImpl implements CartRemoteDatasource {
@@ -70,6 +71,14 @@ class CartRemoteDatasourceImpl implements CartRemoteDatasource {
       queryParameters: {'userDetails': true},
     );
     return _extractData(response.data);
+  }
+
+  @override
+  Future<dynamic> getSuggestedProducts() async {
+    final response = await _dio.get<dynamic>(
+      '/orders/cart/suggested-products/',
+    );
+    return response.data;
   }
 
   Map<String, dynamic> _extractData(dynamic raw) {

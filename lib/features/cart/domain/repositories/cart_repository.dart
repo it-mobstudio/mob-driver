@@ -1,5 +1,6 @@
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
+import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 
 abstract interface class CartRepository {
   Future<(CartSummaryEntity?, AppFailure?)> getCart({bool outOfStock = false});
@@ -21,4 +22,6 @@ abstract interface class CartRepository {
     required bool usePoints,
     required int points,
   });
+
+  Future<(List<ProductModel>?, AppFailure?)> getSuggestedProducts();
 }

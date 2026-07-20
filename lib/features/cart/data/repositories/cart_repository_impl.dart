@@ -4,6 +4,7 @@ import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/cart/data/datasources/cart_remote_datasource.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/repositories/cart_repository.dart';
+import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 
 class CartRepositoryImpl implements CartRepository {
   CartRepositoryImpl(this._datasource);
@@ -91,6 +92,25 @@ class CartRepositoryImpl implements CartRepository {
         'points': points,
       });
       return (_buildSummary(data), null);
+    } on DioException catch (e) {
+      return (null, e.toAppFailure());
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(List<ProductModel>?, AppFailure?)> getSuggestedProducts() async {
+    try {
+      final raw = await _datasource.getSuggestedProducts();
+      final products = _extractSuggestedProductList(raw)
+          .whereType<Map>()
+          .map((item) => ProductModel.fromMap(
+                _suggestedProductMap(Map<String, dynamic>.from(item)),
+              ))
+          .where((product) => product.id.isNotEmpty || product.title.isNotEmpty)
+          .toList();
+      return (products, null);
     } on DioException catch (e) {
       return (null, e.toAppFailure());
     } catch (e) {
@@ -495,6 +515,94 @@ class CartRepositoryImpl implements CartRepository {
   List<Map<String, dynamic>> _mapList(dynamic v) {
     if (v is! List) return const [];
     return v.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  List<dynamic> _extractSuggestedProductList(dynamic raw) {
+    if (raw is List) return raw;
+    if (raw is! Map) return const [];
+
+    final body = Map<String, dynamic>.from(raw);
+    final data = body['data'];
+    if (data is List) return data;
+    if (data is Map) {
+      final dataMap = Map<String, dynamic>.from(data);
+      for (final key in const [
+        'suggested_products',
+        'suggestedProducts',
+        'products',
+        'results',
+        'items',
+      ]) {
+        final value = dataMap[key];
+        if (value is List) return value;
+      }
+      if (dataMap['product'] is Map || dataMap['item_name_title'] != null) {
+        return [dataMap];
+      }
+    }
+
+    for (final key in const [
+      'suggested_products',
+      'suggestedProducts',
+      'products',
+      'results',
+      'items',
+    ]) {
+      final value = body[key];
+      if (value is List) return value;
+    }
+    if (body['product'] is Map || body['item_name_title'] != null) {
+      return [body];
+    }
+    return const [];
+  }
+
+  Map<String, dynamic> _suggestedProductMap(Map<String, dynamic> item) {
+    final productRaw = item['product'];
+    final vendorPricing = {
+      'vendor_product_id': item['vendor_product_id'],
+      'vendor_selling_price': item['vendor_selling_price'],
+      'maximum_retail_price': item['maximum_retail_price'],
+      'discount': item['discount'],
+      'tax': item['tax'],
+      'quick_ecommerce_enabled': item['quick_ecommerce_enabled'],
+      'stock': item['stock'],
+      'stock_details': item['stock_details'],
+    };
+    if (productRaw is Map) {
+      final product = Map<String, dynamic>.from(productRaw);
+      return {
+        ...item,
+        ...product,
+        'id': product['id'] ?? product['product_id'],
+        'item_name_title': product['item_name_title'] ??
+            product['product_name'] ??
+            item['item_name_title'],
+        'images': _suggestedProductImages(product),
+        'vendorPricings': vendorPricing,
+      };
+    }
+    return {
+      ...item,
+      'id': item['id'] ?? item['product_id'],
+      'images': _suggestedProductImages(item),
+      'vendorPricings': vendorPricing,
+    };
+  }
+
+  List<Map<String, dynamic>> _suggestedProductImages(
+    Map<String, dynamic> product,
+  ) {
+    if (product['images'] is List) {
+      return _mapList(product['images']);
+    }
+    final image = (product['product_image'] ?? product['image'] ?? '')
+        .toString()
+        .trim();
+    if (image.isEmpty) return const [];
+    return [
+      {'image': image},
+    ];
   }
 
   int _listLen(dynamic v) => v is List ? v.length : 0;

@@ -58,14 +58,15 @@ class _HomeHeaderState extends State<HomeHeader> {
         : _selectedAddressText(selectedAddress);
 
     final isOpen = storeStatus?.isOpen ?? true;
-    // Figma shows the raw store message as a small subtitle above a bold
-    // "Currently closed" status line when closed — distinct from the shared
+    // Figma shows a small "Scheduled after ..." subtitle above a bold
+    // "Delivery tomorrow"/"Delivery today" headline when closed, both derived
+    // from the raw store message — distinct from the shared
     // storeDeliveryLabel() used by cart/checkout (which mirrors web's single
     // raw-message line and has no dedicated "closed" wording of its own).
-    final closedSubtitle =
-        storeStatus != null && !isOpen ? storeStatus.message.trim() : '';
+    final closedParts = storeClosedDeliveryParts(storeStatus);
+    final closedSubtitle = !isOpen ? closedParts.subtitle : '';
     final deliveryText =
-        !isOpen ? 'Currently closed' : storeDeliveryLabel(storeStatus);
+        !isOpen ? closedParts.title : storeDeliveryLabel(storeStatus);
     final deliveryIcon = storeStatus?.isOpen == false
         ? 'assets/images/timer-delivery.svg'
         : 'assets/images/thunder.svg';

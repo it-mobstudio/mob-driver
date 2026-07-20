@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:http/http.dart' as http;
+import 'package:m_o_b_demand_side/core/network/platform_header.dart';
 import 'package:equatable/equatable.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:mime_type/mime_type.dart';
@@ -504,6 +505,7 @@ class ApiManager {
     http.Client? client,
   }) async {
     final requestHeaders = Map<String, dynamic>.from(headers);
+    addPlatformHeader(requestHeaders);
     final requestParams = Map<String, dynamic>.from(params);
     var resolvedApiUrl = apiUrl;
 

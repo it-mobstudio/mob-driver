@@ -1731,7 +1731,7 @@ class _QuickStockStatusRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: List.generate(3, (index) {
               final bar = index + 1;
-              final isActive = bar > 3 - level;
+              final isActive = bar <= level;
               return Container(
                 width: 5,
                 height: 8.0 + (index * 4),

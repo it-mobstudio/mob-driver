@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '/backend/api_requests/api_manager.dart';
 import '/core/config/app_config.dart';
+import '/core/network/platform_header.dart';
 import '/features/address/data/local/recent_address_searches_store.dart';
 import '/features/address/data/local/selected_address_store.dart';
 
@@ -278,7 +279,7 @@ class AuthSession extends ChangeNotifier {
     final uri = AppConfig.apiUri(_authRefreshPath);
     final response = await http.post(
       uri,
-      headers: const {'Content-Type': 'application/json'},
+      headers: jsonHeadersWithPlatform(),
       body: jsonEncode({
         'refresh_token': refreshToken,
         'refreshToken': refreshToken,
