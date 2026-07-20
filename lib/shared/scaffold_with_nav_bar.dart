@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_apply_sheet.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/referral_page.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 
@@ -52,6 +53,8 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
   void _onTap(int index) {
     final isCurrentTab = index == widget.navigationShell.currentIndex;
     final isHomeReselected = isCurrentTab && index == 0;
+
+    if (!isCurrentTab) closeCreditApplySheet();
 
     if (!isCurrentTab || isHomeReselected) {
       AppHaptics.tabSelection();
@@ -182,8 +185,7 @@ class _MainBottomNavigationBar extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   AnimatedSwitcher(
-                                    duration:
-                                        const Duration(milliseconds: 180),
+                                    duration: const Duration(milliseconds: 180),
                                     transitionBuilder: (child, animation) =>
                                         ScaleTransition(
                                       scale: animation,
@@ -200,8 +202,7 @@ class _MainBottomNavigationBar extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   AnimatedDefaultTextStyle(
-                                    duration:
-                                        const Duration(milliseconds: 180),
+                                    duration: const Duration(milliseconds: 180),
                                     style: GoogleFonts.inter(
                                       color: isSelected
                                           ? Colors.black

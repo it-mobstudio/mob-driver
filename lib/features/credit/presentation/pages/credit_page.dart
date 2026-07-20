@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_apply_sheet.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_documents_sheet.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_faq_page.dart';
 import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
@@ -113,10 +114,7 @@ class CreditPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 40),
                     MobCreditFaqRow(
-                      onTap: () => _openExternal(
-                        context,
-                        'https://madoverbuildings.com/home/faq?key=faq',
-                      ),
+                      onTap: () => context.push(MobCreditFaqPage.routePath),
                     ),
                     showBackButton
                         ? const SizedBox(height: 20)
@@ -200,18 +198,6 @@ class CreditPage extends StatelessWidget {
       TopSnackBar.show(
         context,
         message: 'Unable to open WhatsApp',
-        type: TopSnackBarType.error,
-      );
-    }
-  }
-
-  static Future<void> _openExternal(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
-      TopSnackBar.show(
-        context,
-        message: 'Unable to open link.',
         type: TopSnackBarType.error,
       );
     }
