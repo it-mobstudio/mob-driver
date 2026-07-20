@@ -12,18 +12,32 @@ import 'package:m_o_b_demand_side/features/credit/presentation/bloc/credit_bloc.
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
-Future<void> showCreditApplySheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+VoidCallback? _dismissCreditApplySheet;
+
+void closeCreditApplySheet() => _dismissCreditApplySheet?.call();
+
+Future<void> showCreditApplySheet(BuildContext context) async {
+  VoidCallback? dismiss;
+  await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.6),
-    builder: (ctx) => BlocProvider(
-      create: (_) => sl<CreditBloc>()..add(CreditSegmentsRequested()),
-      child: const _CreditApplySheet(),
-    ),
+    builder: (sheetContext) {
+      dismiss ??= () {
+        if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+      };
+      _dismissCreditApplySheet = dismiss;
+      return BlocProvider(
+        create: (_) => sl<CreditBloc>()..add(CreditSegmentsRequested()),
+        child: const _CreditApplySheet(),
+      );
+    },
   );
+  if (identical(_dismissCreditApplySheet, dismiss)) {
+    _dismissCreditApplySheet = null;
+  }
 }
 
 class _CreditApplySheet extends StatefulWidget {

@@ -12,6 +12,7 @@ import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_page.dar
 import 'package:m_o_b_demand_side/features/categories/presentation/pages/categories_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/credit_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_dashboard_page.dart';
+import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_faq_page.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_order_review_page.dart';
@@ -185,8 +186,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
           final extra = state.extra is Map<String, dynamic>
               ? state.extra as Map<String, dynamic>
               : <String, dynamic>{};
-          final fromSignup =
-              state.uri.queryParameters['fromSignup'] == 'true';
+          final fromSignup = state.uri.queryParameters['fromSignup'] == 'true';
           final hideBack = state.uri.queryParameters['hideBack'] == 'true';
           return AddressSelectionWidget(
             returnToHome: fromSignup || extra['returnToHome'] == true,
@@ -559,6 +559,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         path: MobCreditDashboardPage.routePath,
         parentNavigatorKey: appNavigatorKey,
         builder: (context, state) => const MobCreditDashboardPage(),
+      ),
+      GoRoute(
+        name: MobCreditFaqPage.routeName,
+        path: MobCreditFaqPage.routePath,
+        parentNavigatorKey: appNavigatorKey,
+        builder: (context, state) => const MobCreditFaqPage(),
       ),
       GoRoute(
         name: PersonalInfoPage.routeName,
