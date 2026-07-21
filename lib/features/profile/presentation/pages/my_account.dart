@@ -244,10 +244,17 @@ class _ProfileBody extends StatelessWidget {
                           _MenuItem(
                             iconAsset: 'assets/images/mobcreditprofile.svg',
                             label: 'mob Credit',
-                            onTap: () => context.push(
-                              MobCreditProfilePage.routePath,
-                              extra: {'showBackButton': true},
-                            ),
+                            onTap: () {
+                              final isMobCreditActive =
+                                  resolveMobCreditStatus(account) ==
+                                      MobCreditStatus.active;
+                              context.push(
+                                isMobCreditActive
+                                    ? MobCreditDashboardPage.routePath
+                                    : MobCreditProfilePage.routePath,
+                                extra: {'showBackButton': true},
+                              );
+                            },
                           ),
                           _MenuItem(
                             iconAsset: 'assets/images/myprojects.svg',
@@ -382,7 +389,7 @@ class _ProfileBody extends StatelessWidget {
     }
   }
 
-  static const _androidPackageId = 'com.madoverbuildings.mobileapp';
+  static const _androidPackageId = 'com.madoverbuildings.app';
 
   static Future<void> _openAppStore() async {
     final Uri uri;

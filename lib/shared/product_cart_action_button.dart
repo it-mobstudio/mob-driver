@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 enum ProductCartActionButtonStyle {
   defaultStyle,
@@ -97,6 +98,13 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
   @override
   void didUpdateWidget(ProductCartActionButton oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.product.addToCartProductId !=
+        widget.product.addToCartProductId) {
+      _quantityDebounce?.cancel();
+      _quantityDebounce = null;
+      _quantity = widget.quantity <= 0 ? 1 : widget.quantity;
+      return;
+    }
     // Skip while a debounced tap hasn't been sent yet — otherwise a parent
     // rebuild triggered by something unrelated (e.g. redeem points) can
     // clobber taps the user just made with the still-stale server quantity.
@@ -214,6 +222,19 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
       _quantityDebounce = null;
       widget.onQuantityChanged?.call(capped);
     });
+  }
+
+  void _showStockLimitToast() {
+    AppHaptics.lightTap();
+    final stock = _resolvedAvailableStock;
+    final message = stock != null && stock > 0
+        ? 'Sorry, we have only $stock pieces available for this item!'
+        : 'Sorry, this item is currently out of stock.';
+    TopSnackBar.show(
+      context,
+      message: message,
+      type: TopSnackBarType.stock,
+    );
   }
 
   int? get _resolvedAvailableStock {
@@ -626,9 +647,11 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
             width: 40,
             height: _height,
             icon: Icons.add,
-            onPressed: _isBusy || !canIncrease
+            onPressed: _isBusy
                 ? null
-                : () => _updateQuantity(_quantity + 1),
+                : canIncrease
+                    ? () => _updateQuantity(_quantity + 1)
+                    : _showStockLimitToast,
           ),
         ],
       ),
@@ -699,14 +722,16 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                 _QuantityIconButton(
                   leading: false,
                   icon: Icons.add,
-                  onPressed: _isBusy || !canIncrease
-                      ? null
-                      : () => _updateQuantity(_quantity + 1),
                   width: 38,
                   height: _height,
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
                   disabledColor: Colors.white.withValues(alpha: 0.45),
+                  onPressed: _isBusy
+                      ? null
+                      : canIncrease
+                          ? () => _updateQuantity(_quantity + 1)
+                          : _showStockLimitToast,
                 ),
               ],
             ),
@@ -771,9 +796,11 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
           _QuantityIconButton(
             leading: false,
             icon: Icons.add,
-            onPressed: _isBusy || !canIncrease
+            onPressed: _isBusy
                 ? null
-                : () => _updateQuantity(_quantity + 1),
+                : canIncrease
+                    ? () => _updateQuantity(_quantity + 1)
+                    : _showStockLimitToast,
             width: 26,
             height: _cartActionHeight,
             iconSize: 14,

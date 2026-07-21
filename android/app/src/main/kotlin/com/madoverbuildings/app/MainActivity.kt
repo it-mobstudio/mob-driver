@@ -1,4 +1,4 @@
-package com.madoverbuildings.mobileapp
+package com.madoverbuildings.app
 
 import android.app.Activity
 import android.content.ActivityNotFoundException

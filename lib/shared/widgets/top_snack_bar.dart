@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 
-enum TopSnackBarType { success, info, error }
+enum TopSnackBarType { success, info, error, stock }
 
 class TopSnackBar {
   TopSnackBar._();
@@ -88,11 +89,6 @@ class _TopSnackBarOverlayState extends State<_TopSnackBarOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final accent = switch (widget.type) {
-      TopSnackBarType.success => const Color(0xFF329537),
-      TopSnackBarType.info => const Color(0xFF329537),
-      TopSnackBarType.error => const Color(0xFFF0483E),
-    };
     final topInset = MediaQuery.paddingOf(context).top;
     final toast = LayoutBuilder(
       builder: (context, constraints) {
@@ -100,74 +96,50 @@ class _TopSnackBarOverlayState extends State<_TopSnackBarOverlay>
         return Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxWidth),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.14),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 52),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 13),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            widget.message,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              height: 18 / 13,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 24,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: ColoredBox(
+                  color: Colors.white,
+                  child: SizedBox(
+                    height: 62,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 18, 12),
+                      child: Row(
+                        children: [
+                          SvgPicture.asset(
+                            _iconAsset,
+                            width: 38,
+                            height: 38,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              widget.message,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF0A243F),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                height: 16 / 12,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: SizedBox(
-                        height: 2,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                          ),
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween(begin: 1, end: 0),
-                            duration: widget.duration,
-                            curve: Curves.linear,
-                            builder: (context, value, child) {
-                              return Align(
-                                alignment: Alignment.centerLeft,
-                                child: FractionallySizedBox(
-                                  widthFactor: value,
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: ColoredBox(
-                              color: Colors.white.withValues(alpha: 0.65),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -178,9 +150,13 @@ class _TopSnackBarOverlayState extends State<_TopSnackBarOverlay>
 
     return Positioned(
       top: topInset + 12,
-      left: 16,
-      right: 16,
-      child: IgnorePointer(
+      left: 20,
+      right: 20,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragEnd: (details) {
+          if ((details.primaryVelocity ?? 0) < -250) _dismiss();
+        },
         child: Material(
           color: Colors.transparent,
           child: AnimatedBuilder(
@@ -202,5 +178,28 @@ class _TopSnackBarOverlayState extends State<_TopSnackBarOverlay>
         ),
       ),
     );
+  }
+
+  String get _iconAsset {
+    return switch (widget.type) {
+      TopSnackBarType.success => 'assets/images/toasticons/success.svg',
+      TopSnackBarType.error => 'assets/images/toasticons/failure.svg',
+      TopSnackBarType.stock => 'assets/images/toasticons/stock.svg',
+      TopSnackBarType.info => _infoIconAsset,
+    };
+  }
+
+  String get _infoIconAsset {
+    final text = widget.message.toLowerCase();
+    if (text.contains('stock') ||
+        text.contains('available') ||
+        text.contains('pieces') ||
+        text.contains('item')) {
+      return 'assets/images/toasticons/stock.svg';
+    }
+    if (text.contains('copied') || text.contains('copy')) {
+      return 'assets/images/toasticons/copied.svg';
+    }
+    return 'assets/images/toasticons/success.svg';
   }
 }

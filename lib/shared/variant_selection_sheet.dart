@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -34,12 +36,19 @@ class VariantSelectionSheet extends StatefulWidget {
 
 class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
   final Map<String, int> _localQuantities = <String, int>{};
+  final Set<String> _pendingProductIds = <String>{};
+  // Holds the latest quantity requested for a row while a previous request
+  // for that same row is still in flight, so a fast burst of +/- taps isn't
+  // silently dropped by the in-flight guard below — it's replayed once the
+  // current request settles.
+  final Map<String, int> _queuedQuantities = <String, int>{};
   List<_VariantRowData> _variantRows = <_VariantRowData>[];
   bool _isLoading = true;
 
   final _sheetController = DraggableScrollableController();
   static const double _minFraction = 0.28;
   static const double _maxFraction = 0.82;
+  static const Duration _cartUpdateSettleDelay = Duration(milliseconds: 650);
 
   @override
   void initState() {
@@ -164,39 +173,78 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
     }
   }
 
+  String _rowKey(ProductModel product) {
+    final parts = [
+      product.id,
+      product.mobSku,
+      product.slug,
+      product.title,
+      product.addToCartProductId,
+    ].map((value) => value.trim()).where((value) => value.isNotEmpty);
+    return parts.isNotEmpty ? parts.join('|') : product.hashCode.toString();
+  }
+
   int _quantityFor(ProductModel product) {
-    final id = product.addToCartProductId;
+    final rowKey = _rowKey(product);
     // A local edit always wins: quantityResolver closes over a snapshot of
     // the cart taken when this sheet was opened (it's a modal route, not a
     // descendant of whatever BlocBuilder keeps the grid's resolver fresh),
     // so it never updates again for the lifetime of this sheet.
-    if (_localQuantities.containsKey(id)) {
-      return _localQuantities[id]!;
+    if (_localQuantities.containsKey(rowKey)) {
+      return _localQuantities[rowKey]!;
     }
     final resolver = widget.quantityResolver;
     if (resolver != null) {
-      return resolver(id);
+      return resolver(product.addToCartProductId);
     }
     return 0;
   }
 
   bool _isUpdating(ProductModel product) {
+    if (_pendingProductIds.contains(_rowKey(product))) return true;
     final resolver = widget.isUpdatingResolver;
     return resolver?.call(product.addToCartProductId) ?? false;
   }
 
   Future<void> _changeQuantity(ProductModel product, int quantity) async {
     if (!mounted) return;
-    setState(() {
-      if (quantity > 0) {
-        _localQuantities[product.addToCartProductId] = quantity;
+    final rowKey = _rowKey(product);
+    if (_pendingProductIds.contains(rowKey)) {
+      // Another update for this row is already in flight — remember the
+      // latest requested quantity instead of dropping it, and replay it
+      // once the in-flight one settles.
+      if (quantity == _quantityFor(product)) {
+        _queuedQuantities.remove(rowKey);
       } else {
-        _localQuantities.remove(product.addToCartProductId);
+        _queuedQuantities[rowKey] = quantity;
+      }
+      return;
+    }
+    if (quantity == _quantityFor(product)) return;
+    setState(() {
+      _pendingProductIds.add(rowKey);
+      if (quantity > 0) {
+        _localQuantities[rowKey] = quantity;
+      } else {
+        _localQuantities.remove(rowKey);
       }
     });
-    final callback = widget.onCartQuantityChanged;
-    if (callback != null) {
-      await callback(product, quantity);
+    try {
+      final callback = widget.onCartQuantityChanged;
+      if (callback != null) {
+        await callback(product, quantity);
+      }
+      await Future<void>.delayed(_cartUpdateSettleDelay);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _pendingProductIds.remove(rowKey);
+        });
+      }
+      final queued = _queuedQuantities.remove(rowKey);
+      if (queued != null && mounted) {
+        unawaited(_changeQuantity(product, queued));
+      }
     }
   }
 
@@ -290,6 +338,9 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
                               itemBuilder: (context, index) {
                                 final row = _variantRows[index];
                                 return _VariantListRow(
+                                  key: ValueKey<String>(
+                                    _rowKey(row.product),
+                                  ),
                                   product: row.product,
                                   label: row.label,
                                   quantity: _quantityFor(row.product),
@@ -340,6 +391,7 @@ class _VariantRowData {
 
 class _VariantListRow extends StatelessWidget {
   const _VariantListRow({
+    super.key,
     required this.product,
     required this.label,
     required this.quantity,
@@ -361,15 +413,6 @@ class _VariantListRow extends StatelessWidget {
     final mrp = product.maximumRetailPrice;
     final discount = product.vendorPricing.discount.round();
     final rowLabel = label.isNotEmpty ? label : product.title;
-    final stock = product.availableStock;
-    final showStockCaption =
-        product.isQuickEcommerceEnabled && stock <= 10;
-    final stockCaption = stock > 0 ? '$stock Available' : 'Out of stock';
-    final stockCaptionColor = switch (product.quickStockColor) {
-      'green' => const Color(0xFF00A889),
-      'yellow' => const Color(0xFFE3A008),
-      _ => const Color(0xFFE53935),
-    };
 
     void openProductDetail() {
       if (product.slug.isEmpty) return;
@@ -482,36 +525,33 @@ class _VariantListRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           SizedBox(
-            width: 88,
-            child: Column(
-              children: [
-                ProductCartActionButton(
-                  product: product,
-                  style: ProductCartActionButtonStyle.rail,
-                  showCounter: !product.shouldShowNotify && quantity > 0,
-                  quantity: quantity > 0 ? quantity : 1,
-                  isFetchingCart: isUpdating,
-                  onAdd: (quantity) => onChanged(quantity),
-                  onAddForQuote: (quantity) => onChanged(quantity),
-                  onQuantityChanged: onChanged,
-                  onNotify: onNotify,
-                ),
-                if (showStockCaption) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    stockCaption,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      color: stockCaptionColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      height: 14 / 10,
-                    ),
-                  ),
-                ],
-              ],
+            // Wide enough for the rail counter's two 38px +/- buttons plus
+            // a 2-digit quantity in between — at 88px there's only ~12px
+            // left for the number itself, so quantities >= 10 got clipped
+            // to nothing by the Text's overflow: ellipsis.
+            width: 104,
+            child: ProductCartActionButton(
+              key: ValueKey<String>(
+                [
+                  product.id,
+                  product.mobSku,
+                  product.slug,
+                  product.title,
+                  product.addToCartProductId,
+                ]
+                    .map((value) => value.trim())
+                    .where((value) => value.isNotEmpty)
+                    .join('|'),
+              ),
+              product: product,
+              style: ProductCartActionButtonStyle.rail,
+              showCounter: !product.shouldShowNotify && quantity > 0,
+              quantity: quantity > 0 ? quantity : 1,
+              isFetchingCart: isUpdating,
+              onAdd: (quantity) => onChanged(quantity),
+              onAddForQuote: (quantity) => onChanged(quantity),
+              onQuantityChanged: onChanged,
+              onNotify: onNotify,
             ),
           ),
         ],

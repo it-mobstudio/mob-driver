@@ -5,7 +5,7 @@ import 'package:m_o_b_demand_side/core/app_runtime/app_version_checker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const _androidPackageId = 'com.madoverbuildings.mobileapp';
+const _androidPackageId = 'com.madoverbuildings.app';
 
 bool _appUpdatePromptShown = false;
 

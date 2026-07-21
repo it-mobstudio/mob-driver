@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:535354268820:android:a8d99c9097880338722881",
+        "android_client_info": {
+          "package_name": "com.madoverbuildings.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHDw8rdr0UKPPZLaGN6coPBgqzPM-Q4Qk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:535354268820:android:0cbd9221f3787ef9722881",
         "android_client_info": {
           "package_name": "com.madoverbuildings.mobileapp"
