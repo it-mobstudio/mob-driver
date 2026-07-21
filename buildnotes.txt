@@ -20,7 +20,8 @@ Clean Logs
 >>flutter run -d emulator-5554
 >>flutter doctor -v
 
->>Key pass - mobit$1234
+>>Key pass - mobit$1234(old)
+New Mob$1234
 
 Build Release location
 >>D:\Praveen\MOB\Projects\mob-mobileapp\build\app\outputs\bundle\release
