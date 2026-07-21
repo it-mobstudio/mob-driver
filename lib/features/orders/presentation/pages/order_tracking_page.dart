@@ -550,6 +550,14 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       trackPayload,
       const ['order_status_text', 'orderStatusText', 'status_text', 'text'],
     );
+    final helperText = _mapString(
+      trackPayload,
+      const ['helper_text', 'helperText'],
+    );
+    final cancelTime = _mapString(
+      trackPayload,
+      const ['order_cancel_time', 'orderCancelTime'],
+    );
     final detailTrackingEvents = shipment?.trackingEvents.isNotEmpty == true
         ? shipment!.trackingEvents
         : order?.trackingEvents ?? const <OrderTrackingEventEntity>[];
@@ -605,6 +613,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                             isQuickOrder: isQuickOrder,
                             arrivingIn: arrivingIn,
                             statusText: trackStatusText,
+                            cancelTime: cancelTime,
                             normalStatusTime: normalStatusTime,
                             onNormalStatusTap:
                                 isQuickOrder || trackingState.isCancelled
@@ -617,7 +626,11 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                           Padding(
                             padding: EdgeInsets.fromLTRB(
                               16,
-                              trackingState.isDelayed || trackingState.isCancelled
+                              trackingState.isDelayed ||
+                                      trackingState.isCancelled ||
+                                      (trackingState == _TrackingState.packing &&
+                                          isQuickOrder &&
+                                          helperText.isNotEmpty)
                                   ? 10
                                   : 30,
                               16,
@@ -627,12 +640,30 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                               children: [
                                 if (trackingState.isDelayed) ...[
                                   const SizedBox(height: 16),
-                                  const _DelayedInfoCard(),
+                                  _InfoHelperCard(
+                                    text: helperText.isNotEmpty
+                                        ? helperText
+                                        : _defaultDelayedHelperText,
+                                  ),
                                   const SizedBox(height: 12),
                                 ],
                                 if (trackingState.isCancelled) ...[
                                   const SizedBox(height: 16),
-                                  const _CancelledInfoCard(),
+                                  _InfoHelperCard(
+                                    text: helperText.isNotEmpty
+                                        ? helperText
+                                        : _defaultCancelledHelperText,
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                                if (trackingState == _TrackingState.packing &&
+                                    isQuickOrder &&
+                                    helperText.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  _InfoHelperCard(
+                                    text: helperText,
+                                    gradientEndColor: const Color(0xFFFFEFD4),
+                                  ),
                                   const SizedBox(height: 12),
                                 ],
                                 if (!trackingState.isDelivered) ...[
@@ -1007,6 +1038,7 @@ class _TrackingHeroSection extends StatelessWidget {
     required this.isQuickOrder,
     required this.arrivingIn,
     required this.statusText,
+    required this.cancelTime,
     required this.normalStatusTime,
     required this.onNormalStatusTap,
   });
@@ -1017,6 +1049,7 @@ class _TrackingHeroSection extends StatelessWidget {
   final bool isQuickOrder;
   final String arrivingIn;
   final String statusText;
+  final String cancelTime;
   final String normalStatusTime;
   final VoidCallback? onNormalStatusTap;
 
@@ -1055,6 +1088,7 @@ class _TrackingHeroSection extends StatelessWidget {
                   isQuickOrder: isQuickOrder,
                   arrivingIn: arrivingIn,
                   statusText: statusText,
+                  cancelTime: cancelTime,
                   normalStatusTime: normalStatusTime,
                   onTap: onNormalStatusTap,
                 ),
@@ -1197,6 +1231,7 @@ class _EtaCard extends StatelessWidget {
     required this.isQuickOrder,
     required this.arrivingIn,
     required this.statusText,
+    required this.cancelTime,
     required this.normalStatusTime,
     required this.onTap,
   });
@@ -1207,6 +1242,7 @@ class _EtaCard extends StatelessWidget {
   final bool isQuickOrder;
   final String arrivingIn;
   final String statusText;
+  final String cancelTime;
   final String normalStatusTime;
   final VoidCallback? onTap;
 
@@ -1295,9 +1331,11 @@ class _EtaCard extends StatelessWidget {
             : etaText;
     final subtitle = state.isDelivered
         ? deliveryDate
-        : state.isDelayed && statusText.trim().isNotEmpty
-            ? statusText.trim()
-            : state.subtitle;
+        : state.isCancelled && cancelTime.trim().isNotEmpty
+            ? 'Cancelled on ${cancelTime.trim()}'
+            : state.isDelayed && statusText.trim().isNotEmpty
+                ? statusText.trim()
+                : state.subtitle;
 
     return Container(
       height: 88,
@@ -1413,6 +1451,17 @@ class _EtaCard extends StatelessWidget {
         height: 24,
       );
     }
+    // Packing hasn't actually started yet (order placed outside operating
+    // hours) — arrivingIn carries "Tomorrow"/"Today" instead of a countdown,
+    // so the green "in progress" thunder icon would be misleading here.
+    final normalizedEta = arrivingIn.trim().toLowerCase();
+    if (normalizedEta == 'tomorrow' || normalizedEta == 'today') {
+      return SvgPicture.asset(
+        'assets/images/timer-delivery.svg',
+        width: 24,
+        height: 24,
+      );
+    }
     return SvgPicture.asset(
       'assets/images/thunder.svg',
       width: 24,
@@ -1425,8 +1474,29 @@ class _EtaCard extends StatelessWidget {
   }
 }
 
-class _DelayedInfoCard extends StatelessWidget {
-  const _DelayedInfoCard();
+const _defaultDelayedHelperText =
+    "Your order is taking a little longer than expected.\n"
+    "We're treating it as a priority and working to deliver it\n"
+    "as quickly as possible.";
+
+const _defaultCancelledHelperText =
+    'This order has been cancelled. Any applicable charges will be '
+    'refunded to your original payment method.';
+
+// Shared by the delayed/cancelled/"packing hasn't started yet" (e.g.
+// Tomorrow/Today) banners — the backend's `helper_text` drives the copy for
+// all of them, with the pre-`helper_text` hardcoded strings kept as a
+// fallback for older API responses that don't send it.
+class _InfoHelperCard extends StatelessWidget {
+  const _InfoHelperCard({
+    required this.text,
+    this.gradientEndColor = const Color(0xFFFFE2DE),
+  });
+
+  final String text;
+  // FFE2DE (red-tinted) for delayed/cancelled, FFEFD4 (amber-tinted) for the
+  // packing-hasn't-started-yet banners (Tomorrow/Today).
+  final Color gradientEndColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1436,55 +1506,18 @@ class _DelayedInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFDEDEDE)),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.centerRight,
           end: Alignment.centerLeft,
           colors: [
-            Color(0xFFFFFFFF),
-            Color(0xFFFFE2DE),
+            const Color(0xFFFFFFFF),
+            gradientEndColor,
           ],
-          stops: [0.0009, 0.999],
+          stops: const [0.0009, 0.999],
         ),
       ),
       child: Text(
-        "Your order is taking a little longer than expected.\n"
-        "We're treating it as a priority and working to deliver it\n"
-        "as quickly as possible.",
-        style: GoogleFonts.inter(
-          color: _TrackingColors.navy,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          height: 16 / 12,
-        ),
-      ),
-    );
-  }
-}
-
-class _CancelledInfoCard extends StatelessWidget {
-  const _CancelledInfoCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFDEDEDE)),
-        gradient: const LinearGradient(
-          begin: Alignment.centerRight,
-          end: Alignment.centerLeft,
-          colors: [
-            Color(0xFFFFFFFF),
-            Color(0xFFFFE2DE),
-          ],
-          stops: [0.0009, 0.999],
-        ),
-      ),
-      child: Text(
-        'This order has been cancelled. Any applicable charges will be '
-        'refunded to your original payment method.',
+        text,
         style: GoogleFonts.inter(
           color: _TrackingColors.navy,
           fontSize: 12,

@@ -377,18 +377,6 @@ class _ProfileBody extends StatelessWidget {
     }
   }
 
-  static Future<void> _openWhatsapp(BuildContext context) async {
-    final uri = Uri.parse('https://wa.me/918970415365');
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
-      TopSnackBar.show(
-        context,
-        message: 'Unable to open WhatsApp.',
-        type: TopSnackBarType.error,
-      );
-    }
-  }
-
   static const _androidPackageId = 'com.madoverbuildings.app';
 
   static Future<void> _openAppStore() async {
@@ -449,24 +437,127 @@ class _ProfileBody extends StatelessWidget {
   static Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
+      barrierColor: Colors.black.withValues(alpha: .6),
+      builder: (dialogContext) => const _LogoutDialog(),
     );
     if (confirmed == true) {
       await AuthSession.instance.signOut();
     }
+  }
+}
+
+class _LogoutDialog extends StatelessWidget {
+  const _LogoutDialog();
+
+  static const _navy = Color(0xFF0A243F);
+  static const _red = Color(0xFFF0483E);
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: const ShapeDecoration(
+                color: Color(0xFFFDE4E2),
+                shape: OvalBorder(),
+              ),
+              child: SvgPicture.asset(
+                'assets/images/logout.svg',
+                width: 24,
+                height: 24,
+                colorFilter: const ColorFilter.mode(_red, BlendMode.srcIn),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Logout',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                color: _navy,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                height: 26 / 18,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Are you sure you want to logout?',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF596378),
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                height: 20 / 14,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () =>
+                          Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _navy,
+                        side: const BorderSide(color: Color(0xFFDEDEDE)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          height: 21 / 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: _red,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Logout',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          height: 21 / 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
