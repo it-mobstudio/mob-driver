@@ -6,6 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const _androidPackageId = 'com.madoverbuildings.app';
+const _iosAppId = '6784914110';
 
 bool _appUpdatePromptShown = false;
 
