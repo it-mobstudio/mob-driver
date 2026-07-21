@@ -399,7 +399,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         backgroundColor: Colors.white,
         body: AnnotatedRegion<SystemUiOverlayStyle>(
           value: const SystemUiOverlayStyle(
-            statusBarColor: Colors.white,
+            statusBarColor: Colors.transparent,
             statusBarIconBrightness: Brightness.dark,
             statusBarBrightness: Brightness.light,
           ),
@@ -607,9 +607,10 @@ class _ProductDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final safeTop = MediaQuery.paddingOf(context).top;
     Widget content = Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: safeTop + 48,
+      padding: EdgeInsets.fromLTRB(16, safeTop, 16, 0),
       color: showSurface
           ? Colors.white.withValues(alpha: 0.72)
           : Colors.transparent,
@@ -642,10 +643,7 @@ class _ProductDetailHeader extends StatelessWidget {
       );
     }
 
-    return SafeArea(
-      bottom: false,
-      child: content,
-    );
+    return content;
   }
 }
 

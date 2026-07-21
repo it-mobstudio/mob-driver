@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/uploaded_file.dart';
@@ -139,17 +140,29 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
               if (didPop) return;
               _handleBack();
             },
-            child: Scaffold(
-              backgroundColor: _bg,
-              body: SafeArea(
-                child: Column(
-                  children: [
-                    _header(),
-                    Expanded(child: _body(submitting)),
-                  ],
-                ),
+            child: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: const SystemUiOverlayStyle(
+                statusBarColor: Colors.white,
+                statusBarIconBrightness: Brightness.dark,
+                statusBarBrightness: Brightness.light,
               ),
-              bottomNavigationBar: _bottomBar(submitting),
+              child: Scaffold(
+                backgroundColor: Colors.white,
+                body: SafeArea(
+                  child: Column(
+                    children: [
+                      _header(),
+                      Expanded(
+                        child: ColoredBox(
+                          color: _bg,
+                          child: _body(submitting),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                bottomNavigationBar: _bottomBar(submitting),
+              ),
             ),
           );
         },
