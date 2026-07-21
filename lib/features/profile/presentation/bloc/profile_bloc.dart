@@ -63,6 +63,8 @@ final class ProjectUpdateRequested extends ProfileEvent {
   final String? imageFilename;
 }
 
+final class AccountDeletionRequested extends ProfileEvent {}
+
 // ── States ───────────────────────────────────────────────────────────────────
 
 sealed class ProfileState {}
@@ -144,6 +146,15 @@ final class ProjectSaveError extends ProfileState {
   final String message;
 }
 
+final class AccountDeletionSubmitting extends ProfileState {}
+
+final class AccountDeletionSubmitted extends ProfileState {}
+
+final class AccountDeletionError extends ProfileState {
+  AccountDeletionError(this.message);
+  final String message;
+}
+
 // ── BLoC (factory) ───────────────────────────────────────────────────────────
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
@@ -156,6 +167,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<ProjectsLoadRequested>(_onLoadProjects);
     on<ProjectCreateRequested>(_onCreateProject);
     on<ProjectUpdateRequested>(_onUpdateProject);
+    on<AccountDeletionRequested>(_onRequestAccountDeletion);
   }
 
   final ProfileRepository _repository;
@@ -330,6 +342,21 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     } else {
       emit(ProjectSaved());
       add(ProjectsLoadRequested());
+    }
+  }
+
+  Future<void> _onRequestAccountDeletion(
+    AccountDeletionRequested event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(AccountDeletionSubmitting());
+    final (success, failure) = await _repository.requestAccountDeletion();
+    if (failure != null || !success) {
+      AppHaptics.error();
+      emit(AccountDeletionError(
+          failure?.message ?? 'Unable to submit request.'));
+    } else {
+      emit(AccountDeletionSubmitted());
     }
   }
 

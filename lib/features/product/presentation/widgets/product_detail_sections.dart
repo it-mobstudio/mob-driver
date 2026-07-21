@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/credit/presentation/pages/mob_credit_profile_page.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 import 'package:m_o_b_demand_side/features/product/presentation/pages/brand_product_search_page.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/pages/upgrade_to_pro_page.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
@@ -364,9 +365,13 @@ class ProductInfoBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final price = product.vendorPricing.vendorSellingPrice;
+    final rfqPrice = product.vendorPricing.rfqPrice;
     final oldPrice = product.maximumRetailPrice;
+    final tax = _formatTaxPercent(product.tax);
     final discount = product.vendorPricing.discount;
     final brand = product.brandName.trim();
+    final showProPriceUnlock =
+        !isProfessional && rfqPrice > 0 && rfqPrice < price;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -452,7 +457,7 @@ class ProductInfoBlock extends StatelessWidget {
                     const SizedBox(width: 12),
                     Flexible(
                       child: Text(
-                        'Inclusive of 18% tax/ unit',
+                        'Inclusive of $tax tax/ unit',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -465,6 +470,10 @@ class ProductInfoBlock extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (showProPriceUnlock) ...[
+                  const SizedBox(height: 14),
+                  _ProPriceUnlockStrip(price: rfqPrice),
+                ],
                 const SizedBox(height: 12),
                 _RewardLine(price: price),
               ],
@@ -474,6 +483,82 @@ class ProductInfoBlock extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ProPriceUnlockStrip extends StatelessWidget {
+  const _ProPriceUnlockStrip({required this.price});
+
+  final num price;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: () => context.push(UpgradeToProPage.routePath),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: const LinearGradient(
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+              colors: [
+                Color(0x26FFF4CA),
+                Color(0xFFFFEDE5),
+              ],
+            ),
+          ),
+          child: Row(
+            children: [
+              SvgPicture.asset(
+                'assets/images/downarrow-pro.svg',
+                width: 16,
+                height: 9,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '\u20B9${price.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0A243F),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  height: 18 / 13,
+                ),
+              ),
+              const SizedBox(width: 12),
+              SvgPicture.asset(
+                'assets/images/proprice.svg',
+                height: 20,
+              ),
+              const Spacer(),
+              Text(
+                'Unlock',
+                textAlign: TextAlign.right,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF0360E5),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  height: 18 / 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _formatTaxPercent(num value) {
+  final normalized = value > 0 ? value : 18;
+  final text = normalized % 1 == 0
+      ? normalized.toStringAsFixed(0)
+      : normalized.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  return '$text%';
 }
 
 class ProductDivider extends StatelessWidget {
@@ -1272,11 +1357,6 @@ class VariantOptionsSection extends StatelessWidget {
               }),
               const SizedBox(height: 14),
             ],
-          if (product.isQuickEcommerceEnabled) ...[
-            const SizedBox(height: 2),
-            _QuickStockStatusRow(product: product),
-            const SizedBox(height: 12),
-          ],
         ],
       ),
     );
@@ -1702,63 +1782,6 @@ class _RewardLine extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _QuickStockStatusRow extends StatelessWidget {
-  const _QuickStockStatusRow({required this.product});
-
-  final ProductModel product;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (product.quickStockColor) {
-      'green' => const Color(0xFF00A889),
-      'yellow' => const Color(0xFFE3A008),
-      _ => const Color(0xFFE53935),
-    };
-    final level = product.quickStockBarLevel;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        SizedBox(
-          width: 26,
-          height: 22,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(3, (index) {
-              final bar = index + 1;
-              final isActive = bar <= level;
-              return Container(
-                width: 5,
-                height: 8.0 + (index * 4),
-                margin: EdgeInsets.only(right: index == 2 ? 0 : 3),
-                decoration: BoxDecoration(
-                  color: isActive ? color : const Color(0xFFE1E6ED),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              );
-            }),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          product.quickStockText,
-          textHeightBehavior: const TextHeightBehavior(
-            applyHeightToFirstAscent: false,
-            applyHeightToLastDescent: false,
-          ),
-          style: GoogleFonts.inter(
-            color: color,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            height: 1,
-          ),
-        ),
-      ],
     );
   }
 }

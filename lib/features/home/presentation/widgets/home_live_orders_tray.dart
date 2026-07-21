@@ -223,12 +223,14 @@ class _OrdersTrayOverlay extends StatelessWidget {
           valueListenable: navBarVisible,
           builder: (context, isNavBarVisible, _) {
             final bottomInset = MediaQuery.paddingOf(context).bottom;
-            final navOffset =
-                hasCart && !isNavBarVisible ? -kBottomNavBarHeight : 0.0;
+            final hiddenNavOffset =
+                isNavBarVisible ? 0.0 : -kBottomNavBarHeight;
             final collapsedBottom = bottomInset +
                 kViewCartBarGap +
-                navOffset +
-                (hasCart ? kViewCartBarHeight + _stackedGap : 0);
+                hiddenNavOffset +
+                (hasCart
+                    ? kViewCartBarHeight + _stackedGap
+                    : 0);
 
             return Positioned.fill(
               child: Stack(

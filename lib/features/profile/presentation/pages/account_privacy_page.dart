@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/di/injection.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+final _privacyPolicyUri =
+    Uri.parse('https://madoverbuildings.com/home/faq?key=privacyPolicy');
+
+/// Captures the page's [ProfileBloc] and re-provides it to the sheet: a
+/// modal bottom sheet route is a sibling of the page's route in the
+/// Navigator/Overlay, not a descendant of the page's `BlocProvider`, so the
+/// ambient bloc wouldn't otherwise be reachable from inside it.
 Future<void> _showDeleteAccountSheet(BuildContext context) {
+  final bloc = context.read<ProfileBloc>();
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: false,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: .6),
-    builder: (context) => const _DeleteAccountSheet(),
+    builder: (context) => BlocProvider.value(
+      value: bloc,
+      child: const _DeleteAccountSheet(),
+    ),
   );
 }
 
@@ -22,6 +38,18 @@ class AccountPrivacyPage extends StatelessWidget {
   static const routePath = '/account-privacy';
 
   static const _navy = Color(0xFF0A243F);
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<ProfileBloc>(),
+      child: const _AccountPrivacyView(),
+    );
+  }
+}
+
+class _AccountPrivacyView extends StatelessWidget {
+  const _AccountPrivacyView();
 
   @override
   Widget build(BuildContext context) {
@@ -152,11 +180,19 @@ class _PrivacyPolicyCard extends StatelessWidget {
 class _ViewAllButton extends StatelessWidget {
   const _ViewAllButton();
 
+  Future<void> _openPrivacyPolicy(BuildContext context) async {
+    final opened =
+        await launchUrl(_privacyPolicyUri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      TopSnackBar.show(context, message: 'Unable to open privacy policy.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Center(
       child: TextButton(
-        onPressed: () {},
+        onPressed: () => _openPrivacyPolicy(context),
         style: TextButton.styleFrom(
           foregroundColor: const Color(0xFF0360E5),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -279,134 +315,171 @@ class _DeleteAccountSheet extends StatelessWidget {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final bottomPadding = bottomInset > 0 ? bottomInset : 16.0;
 
-    return SizedBox(
-      height: 516,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          Positioned(
-            top: 60,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: EdgeInsets.fromLTRB(16, 40, 16, bottomPadding),
-              decoration: const ShapeDecoration(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Image.asset(
-                    'assets/images/deleteimage.webp',
-                    width: 190,
-                    height: 136,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 28),
-                  Text(
-                    "We're sorry to see you go",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      color: AccountPrivacyPage._navy,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      height: 26 / 18,
+    return BlocConsumer<ProfileBloc, ProfileState>(
+      listener: (context, state) {
+        if (state is AccountDeletionSubmitted) {
+          TopSnackBar.show(
+            context,
+            message: 'Your account deletion request has been submitted',
+            type: TopSnackBarType.success,
+          );
+          Navigator.of(context).pop();
+        } else if (state is AccountDeletionError) {
+          TopSnackBar.show(
+            context,
+            message: state.message,
+            type: TopSnackBarType.error,
+          );
+        }
+      },
+      builder: (context, state) {
+        final submitting = state is AccountDeletionSubmitting;
+
+        return SizedBox(
+          height: 516,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
+            children: [
+              Positioned(
+                top: 60,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(16, 40, 16, bottomPadding),
+                  decoration: const ShapeDecoration(
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Please submit a request below, and our team\n'
-                    'will contact you shortly to complete the\n'
-                    'deletion.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      color: AccountPrivacyPage._navy,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      height: 20 / 14,
-                    ),
-                  ),
-                  const Spacer(),
-                  Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFF0483E),
-                              side: const BorderSide(
-                                color: Color(0xFFF0483E),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Submit request',
-                              maxLines: 1,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                height: 21 / 14,
-                              ),
-                            ),
-                          ),
+                      Image.asset(
+                        'assets/images/deleteimage.webp',
+                        width: 190,
+                        height: 136,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(height: 28),
+                      Text(
+                        "We're sorry to see you go",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          color: AccountPrivacyPage._navy,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          height: 26 / 18,
                         ),
                       ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: ElevatedButton.styleFrom(
-                              elevation: 0,
-                              backgroundColor: const Color(0xFF0360E5),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Go back',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                height: 21 / 14,
+                      const SizedBox(height: 12),
+                      Text(
+                        'Please submit a request below, and our team\n'
+                        'will contact you shortly to complete the\n'
+                        'deletion.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          color: AccountPrivacyPage._navy,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          height: 20 / 14,
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: OutlinedButton(
+                                onPressed: submitting
+                                    ? null
+                                    : () => context
+                                        .read<ProfileBloc>()
+                                        .add(AccountDeletionRequested()),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFF0483E),
+                                  side: const BorderSide(
+                                    color: Color(0xFFF0483E),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: submitting
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Color(0xFFF0483E),
+                                        ),
+                                      )
+                                    : Text(
+                                        'Submit request',
+                                        maxLines: 1,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          height: 21 / 14,
+                                        ),
+                                      ),
                               ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: ElevatedButton(
+                                onPressed: submitting
+                                    ? null
+                                    : () => Navigator.of(context).pop(),
+                                style: ElevatedButton.styleFrom(
+                                  elevation: 0,
+                                  backgroundColor: const Color(0xFF0360E5),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Go back',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    height: 21 / 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          Positioned(
-            top: 0,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => Navigator.of(context).pop(),
-              child: SvgPicture.asset(
-                'assets/images/close.svg',
-                width: 44,
-                height: 44,
+              Positioned(
+                top: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: submitting ? null : () => Navigator.of(context).pop(),
+                  child: SvgPicture.asset(
+                    'assets/images/close.svg',
+                    width: 44,
+                    height: 44,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

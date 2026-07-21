@@ -8,6 +8,7 @@ class VendorPricing {
     required this.vendorProductId,
     required this.bmpId,
     required this.quickEcommerceEnabled,
+    this.rfqPrice = 0,
   });
 
   final num vendorSellingPrice;
@@ -16,6 +17,7 @@ class VendorPricing {
   final String vendorProductId;
   final String bmpId;
   final bool quickEcommerceEnabled;
+  final num rfqPrice;
 
   factory VendorPricing.fromMap(Map<String, dynamic> map) {
     return VendorPricing(
@@ -26,6 +28,7 @@ class VendorPricing {
       vendorProductId: map['vendor_product_id']?.toString() ?? '',
       bmpId: map['bmp_id']?.toString() ?? '',
       quickEcommerceEnabled: _parseBool(map['quick_ecommerce_enabled']),
+      rfqPrice: num.tryParse(map['rfq_price']?.toString() ?? '0') ?? 0,
     );
   }
 }
@@ -39,6 +42,7 @@ class ProductSellerOffer {
     required this.bmpId,
     required this.quickEcommerceEnabled,
     required this.stock,
+    this.rfqPrice = 0,
   });
 
   final num vendorSellingPrice;
@@ -48,8 +52,12 @@ class ProductSellerOffer {
   final String bmpId;
   final bool quickEcommerceEnabled;
   final num stock;
+  final num rfqPrice;
 
   factory ProductSellerOffer.fromMap(Map<String, dynamic> map) {
+    final vendorPricingMap = map['vendorPricings'] is Map
+        ? Map<String, dynamic>.from(map['vendorPricings'] as Map)
+        : <String, dynamic>{};
     return ProductSellerOffer(
       vendorSellingPrice:
           num.tryParse(map['vendor_selling_price']?.toString() ?? '0') ?? 0,
@@ -58,6 +66,11 @@ class ProductSellerOffer {
       vendorProductId: map['vendor_product_id']?.toString() ?? '',
       bmpId: (map['bmp_id'] ?? map['routing_id'] ?? '').toString(),
       quickEcommerceEnabled: _parseBool(map['quick_ecommerce_enabled']),
+      rfqPrice: num.tryParse(
+            (vendorPricingMap['rfq_price'] ?? map['rfq_price'] ?? '0')
+                .toString(),
+          ) ??
+          0,
       stock: num.tryParse(
             (map['stock'] ??
                     (map['stock_details'] is Map
@@ -189,6 +202,7 @@ class ProductChildRef {
     required this.productPrice,
     required this.maximumRetailPrice,
     required this.discount,
+    required this.rfqPrice,
     required this.quickEcommerceEnabled,
     required this.variantInfo,
   });
@@ -203,6 +217,7 @@ class ProductChildRef {
   final num productPrice;
   final num maximumRetailPrice;
   final num discount;
+  final num rfqPrice;
   final bool quickEcommerceEnabled;
   final List<ProductChildVariantInfo> variantInfo;
 
@@ -252,6 +267,11 @@ class ProductChildRef {
             (map['discount'] ?? vendorPricingMap['discount'] ?? '0').toString(),
           ) ??
           0,
+      rfqPrice: num.tryParse(
+            (vendorPricingMap['rfq_price'] ?? map['rfq_price'] ?? '0')
+                .toString(),
+          ) ??
+          0,
       quickEcommerceEnabled: _parseBool(
         map['quick_ecommerce_enabled'] ??
             vendorPricingMap['quick_ecommerce_enabled'],
@@ -276,6 +296,7 @@ class ProductChildRef {
       maximumRetailPrice: maximumRetailPrice > 0
           ? maximumRetailPrice
           : parent.maximumRetailPrice,
+      tax: parent.tax,
       rating: parent.rating,
       reviewCount: parent.reviewCount,
       productDescription: parent.productDescription,
@@ -292,6 +313,7 @@ class ProductChildRef {
         bmpId: parent.vendorPricing.bmpId,
         quickEcommerceEnabled:
             quickEcommerceEnabled || parent.vendorPricing.quickEcommerceEnabled,
+        rfqPrice: rfqPrice > 0 ? rfqPrice : parent.vendorPricing.rfqPrice,
       ),
       images: imageUrl.isNotEmpty
           ? <ProductImageRef>[ProductImageRef(url: imageUrl)]
@@ -326,6 +348,7 @@ class ProductModel {
     required this.title,
     required this.mobSku,
     required this.maximumRetailPrice,
+    required this.tax,
     required this.rating,
     required this.reviewCount,
     required this.productDescription,
@@ -357,6 +380,7 @@ class ProductModel {
   final String title;
   final String mobSku;
   final num maximumRetailPrice;
+  final num tax;
   final num rating;
   final int reviewCount;
   final String productDescription;
@@ -518,6 +542,10 @@ class ProductModel {
                 .toString(),
           ) ??
           0,
+      tax: num.tryParse(
+            (map['tax'] ?? vendorPricingMap['tax'] ?? '18').toString(),
+          ) ??
+          18,
       rating: num.tryParse(map['rating']?.toString() ?? '0') ?? 0,
       reviewCount: int.tryParse(map['review_count']?.toString() ?? '0') ?? 0,
       productDescription: map['product_description']?.toString() ?? '',

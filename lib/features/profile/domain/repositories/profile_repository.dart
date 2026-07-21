@@ -33,4 +33,6 @@ abstract interface class ProfileRepository {
     Uint8List? imageBytes,
     String? imageFilename,
   });
+
+  Future<(bool, AppFailure?)> requestAccountDeletion();
 }

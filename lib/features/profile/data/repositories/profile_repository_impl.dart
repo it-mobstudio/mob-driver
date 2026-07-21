@@ -247,4 +247,23 @@ class ProfileRepositoryImpl implements ProfileRepository {
       return (false, UnknownFailure(e.toString()));
     }
   }
+
+  @override
+  Future<(bool, AppFailure?)> requestAccountDeletion() async {
+    try {
+      final body = await _datasource.requestAccountDeletion();
+      if (body['status'] == false) {
+        return (
+          false,
+          BusinessFailure(
+              body['message']?.toString() ?? 'Unable to submit request.'),
+        );
+      }
+      return (true, null);
+    } on DioException catch (e) {
+      return (false, e.toAppFailure());
+    } catch (e) {
+      return (false, UnknownFailure(e.toString()));
+    }
+  }
 }
