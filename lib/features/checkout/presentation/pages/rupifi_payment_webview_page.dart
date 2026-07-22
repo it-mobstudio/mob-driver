@@ -78,15 +78,28 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
     if (kDebugMode) debugPrint('[Rupifi] _onNavigationRequest: ${request.url}');
     if (uri == null) return NavigationDecision.navigate;
 
-    // Backend's app-scheme completion redirect (mobdemandside:// / uat
-    // variant, host "checkout"), e.g.
-    // mobdemandsideuat://checkout/success?...&merchantPaymentRefId=...
+    // Backend's app-scheme completion redirect (mobdemandside:// / uat /
+    // live variant, host "checkout"), e.g.
+    // mobdemandsidelive://checkout/success?...&merchantPaymentRefId=...
     // Must be checked before the generic non-http scheme branch below,
     // otherwise it gets mistaken for a UPI app handoff and never completes
     // the WebView flow.
-    final isAppSchemeRedirect =
-        (uri.scheme == 'mobdemandside' || uri.scheme == 'mobdemandsideuat') &&
-            uri.host == 'checkout';
+    //
+    // Android's WebView/Chromium sometimes delivers this with a single
+    // slash — mobdemandsidelive:/checkout/success?... — dropping the "//"
+    // authority marker for unregistered custom schemes. That parses with an
+    // empty uri.host and "checkout" as the first path segment instead, so
+    // both forms must be accepted or the redirect is missed entirely on
+    // Android (it then falls through to the external-launch branch below,
+    // which can't complete the in-app payment flow).
+    final firstPathSegment =
+        uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '';
+    final isAppSchemeRedirect = const {
+          'mobdemandside',
+          'mobdemandsideuat',
+          'mobdemandsidelive',
+        }.contains(uri.scheme) &&
+        (uri.host == 'checkout' || firstPathSegment == 'checkout');
     if (isAppSchemeRedirect) {
       if (kDebugMode) {
         debugPrint('[Rupifi] App-scheme redirect detected');
@@ -160,8 +173,7 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
       if (!launched && mounted) {
         TopSnackBar.show(
           context,
-          message: 'No UPI app found to complete this payment. '
-              'Please install GPay, PhonePe, or Paytm and try again.',
+          message: 'Unable to complete this payment. Please try again.',
           type: TopSnackBarType.error,
         );
       }
@@ -169,7 +181,7 @@ class _RupifiPaymentWebviewPageState extends State<RupifiPaymentWebviewPage> {
       if (mounted) {
         TopSnackBar.show(
           context,
-          message: 'Unable to open the UPI app. Please try again.',
+          message: 'Unable to complete this payment. Please try again.',
           type: TopSnackBarType.error,
         );
       }
