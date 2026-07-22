@@ -149,11 +149,20 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
-    _checkoutBloc.add(
-      CheckoutRazorpayPaymentFailed(
-        response.message ?? 'Payment failed. Please try again.',
-      ),
-    );
+    // Android's Razorpay SDK sometimes reports the underlying checkout
+    // webview's cancel/back-out as a literal "undefined" or "null" string in
+    // response.message rather than leaving it null, so a plain `??` fallback
+    // still lets that garbage string through to the user.
+    final rawMessage = response.message?.trim() ?? '';
+    final hasUsableMessage = rawMessage.isNotEmpty &&
+        rawMessage.toLowerCase() != 'undefined' &&
+        rawMessage.toLowerCase() != 'null';
+    final message = response.code == Razorpay.PAYMENT_CANCELLED
+        ? 'Payment cancelled.'
+        : hasUsableMessage
+            ? rawMessage
+            : 'Payment failed. Please try again.';
+    _checkoutBloc.add(CheckoutRazorpayPaymentFailed(message));
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {}

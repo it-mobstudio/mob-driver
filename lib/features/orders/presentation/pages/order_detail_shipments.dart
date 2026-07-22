@@ -477,15 +477,9 @@ class _SuborderFileThumbnail extends StatelessWidget {
           height: 88,
           color: const Color(0xFFF1F1F2),
           child: file.fileUrl.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: file.fileUrl,
-                  fit: BoxFit.cover,
-                  memCacheWidth: 176,
-                  placeholder: (_, __) => const ImageShimmer(),
-                  errorWidget: (_, __, ___) => const Icon(
-                    Icons.insert_drive_file_outlined,
-                    color: Color(0xFF8A8A8A),
-                  ),
+              ? _SuborderFilePreviewContent(
+                  url: file.fileUrl,
+                  compact: true,
                 )
               : const Icon(
                   Icons.insert_drive_file_outlined,
@@ -542,27 +536,28 @@ class _SuborderFilePreviewOverlayState
               itemBuilder: (context, index) {
                 final fileUrl =
                     widget.files.isEmpty ? '' : widget.files[index].fileUrl;
+                final type = _SuborderFileType.fromUrl(fileUrl);
+                final content = Center(
+                  child: fileUrl.isNotEmpty
+                      ? _SuborderFilePreviewContent(url: fileUrl)
+                      : const Icon(
+                          Icons.insert_drive_file_outlined,
+                          color: Colors.white,
+                          size: 64,
+                        ),
+                );
+                if (!type.isImage) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: content,
+                  );
+                }
                 return InteractiveViewer(
                   minScale: 1,
                   maxScale: 4,
-                  child: Center(
-                    child: fileUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: fileUrl,
-                            fit: BoxFit.contain,
-                            memCacheWidth: 1100,
-                            placeholder: (_, __) => const ImageShimmer(),
-                            errorWidget: (_, __, ___) => const Icon(
-                              Icons.insert_drive_file_outlined,
-                              color: Colors.white,
-                              size: 64,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.insert_drive_file_outlined,
-                            color: Colors.white,
-                            size: 64,
-                          ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: content,
                   ),
                 );
               },
@@ -600,4 +595,247 @@ class _SuborderFilePreviewOverlayState
       ),
     );
   }
+}
+
+enum _SuborderFileType {
+  svg,
+  image,
+  pdf,
+  spreadsheet,
+  document,
+  unknown;
+
+  bool get isImage => this == svg || this == image;
+
+  static _SuborderFileType fromUrl(String url) {
+    final extension = _fileExtension(url);
+    if (extension == 'svg') return svg;
+    if (const {'jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'}.contains(extension)) {
+      return image;
+    }
+    if (extension == 'pdf') return pdf;
+    if (const {'xls', 'xlsx', 'csv'}.contains(extension)) return spreadsheet;
+    if (const {'doc', 'docx'}.contains(extension)) return document;
+    return unknown;
+  }
+}
+
+class _SuborderFilePreviewContent extends StatelessWidget {
+  const _SuborderFilePreviewContent({
+    required this.url,
+    this.compact = false,
+  });
+
+  final String url;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final type = _SuborderFileType.fromUrl(url);
+    return switch (type) {
+      _SuborderFileType.svg => _NetworkSvgPreview(url: url, compact: compact),
+      _SuborderFileType.image => _NetworkImagePreview(
+          url: url,
+          compact: compact,
+        ),
+      _ => _DocumentPreview(url: url, type: type, compact: compact),
+    };
+  }
+}
+
+class _NetworkImagePreview extends StatelessWidget {
+  const _NetworkImagePreview({required this.url, required this.compact});
+
+  final String url;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: compact ? BoxFit.cover : BoxFit.contain,
+      memCacheWidth: compact ? 176 : 1100,
+      placeholder: (_, __) => const ImageShimmer(),
+      errorWidget: (_, __, ___) => _FileFallbackIcon(compact: compact),
+    );
+  }
+}
+
+class _NetworkSvgPreview extends StatelessWidget {
+  const _NetworkSvgPreview({required this.url, required this.compact});
+
+  final String url;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.network(
+      url,
+      fit: BoxFit.contain,
+      placeholderBuilder: (_) => const ImageShimmer(),
+      width: compact ? 68 : null,
+      height: compact ? 68 : null,
+    );
+  }
+}
+
+class _DocumentPreview extends StatelessWidget {
+  const _DocumentPreview({
+    required this.url,
+    required this.type,
+    required this.compact,
+  });
+
+  final String url;
+  final _SuborderFileType type;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return _FileFallbackIcon(compact: true, type: type);
+    }
+    final fileName = _fileName(url);
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 360),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _FileFallbackIcon(compact: false, type: type),
+          const SizedBox(height: 16),
+          Text(
+            fileName,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              color: const Color(0xFF0A243F),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              height: 20 / 14,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${_fileTypeLabel(type)} file',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF596378),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 18 / 12,
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0360E5),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () => _openAttachmentUrl(context, url),
+              child: Text(
+                'Open file',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  height: 20 / 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FileFallbackIcon extends StatelessWidget {
+  const _FileFallbackIcon({
+    required this.compact,
+    this.type = _SuborderFileType.unknown,
+  });
+
+  final bool compact;
+  final _SuborderFileType type;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (type) {
+      _SuborderFileType.pdf => const Color(0xFFE53935),
+      _SuborderFileType.spreadsheet => const Color(0xFF138A43),
+      _SuborderFileType.document => const Color(0xFF0360E5),
+      _ => compact ? const Color(0xFF8A8A8A) : const Color(0xFF596378),
+    };
+    final icon = switch (type) {
+      _SuborderFileType.pdf => Icons.picture_as_pdf_outlined,
+      _SuborderFileType.spreadsheet => Icons.table_chart_outlined,
+      _SuborderFileType.document => Icons.description_outlined,
+      _ => Icons.insert_drive_file_outlined,
+    };
+    return Icon(
+      icon,
+      color: color,
+      size: compact ? 34 : 72,
+    );
+  }
+}
+
+Future<void> _openAttachmentUrl(BuildContext context, String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null) {
+    TopSnackBar.show(
+      context,
+      message: 'Unable to open file',
+      type: TopSnackBarType.error,
+    );
+    return;
+  }
+  final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!opened && context.mounted) {
+    TopSnackBar.show(
+      context,
+      message: 'Unable to open file',
+      type: TopSnackBarType.error,
+    );
+  }
+}
+
+String _fileExtension(String url) {
+  final path = Uri.tryParse(url)?.path ?? url;
+  final parts = path.split('/').where((part) => part.isNotEmpty).toList();
+  final name = parts.isEmpty ? '' : parts.last;
+  final dotIndex = name.lastIndexOf('.');
+  if (dotIndex == -1 || dotIndex == name.length - 1) return '';
+  return name.substring(dotIndex + 1).toLowerCase();
+}
+
+String _fileName(String url) {
+  final path = Uri.tryParse(url)?.path ?? url;
+  final parts = path.split('/').where((part) => part.isNotEmpty).toList();
+  final name = parts.isEmpty ? '' : parts.last;
+  if (name.isEmpty) return 'Attachment';
+  return Uri.decodeComponent(name);
+}
+
+String _fileTypeLabel(_SuborderFileType type) {
+  return switch (type) {
+    _SuborderFileType.pdf => 'PDF',
+    _SuborderFileType.spreadsheet => 'Spreadsheet',
+    _SuborderFileType.document => 'Document',
+    _SuborderFileType.svg => 'SVG',
+    _SuborderFileType.image => 'Image',
+    _ => 'Attachment',
+  };
 }
