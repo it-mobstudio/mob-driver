@@ -40,12 +40,14 @@ class _ReferralView extends StatelessWidget {
           final isLoading = state is ProfileLoading || state is ProfileInitial;
           final summary = state is ReferralSummaryLoaded ? state.summary : null;
           final cachedReferral = _cachedReferralData();
-          final referralCode = (summary?.referralCode.trim().isNotEmpty ?? false)
-              ? summary!.referralCode.trim()
-              : cachedReferral.code;
-          final referralLink = (summary?.referralLink.trim().isNotEmpty ?? false)
-              ? summary!.referralLink.trim()
-              : cachedReferral.link;
+          final referralCode =
+              (summary?.referralCode.trim().isNotEmpty ?? false)
+                  ? summary!.referralCode.trim()
+                  : cachedReferral.code;
+          final referralLink =
+              (summary?.referralLink.trim().isNotEmpty ?? false)
+                  ? summary!.referralLink.trim()
+                  : cachedReferral.link;
           final canShare = referralCode.isNotEmpty;
 
           return Column(
@@ -76,43 +78,59 @@ class _ReferralView extends StatelessWidget {
                   ),
                 ),
               ),
-              SafeArea(
-                top: false,
-                left: false,
-                right: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: canShare
-                          ? () => _shareReferral(
-                                context,
-                                referralCode,
-                                referralLink,
-                              )
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        elevation: 0,
-                        backgroundColor: const Color(0xFF0A243F),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Share referral link',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              height: 21 / 14,
-                            ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromARGB(255, 66, 60, 60)
+                          .withValues(alpha: 0.22),
+                      offset: const Offset(0, -3),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  left: false,
+                  right: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: canShare
+                            ? () => _shareReferral(
+                                  context,
+                                  referralCode,
+                                  referralLink,
+                                )
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          backgroundColor: const Color(0xFF0A243F),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Share referral link',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                height: 21 / 14,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
