@@ -37,55 +37,54 @@ class SortBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      child: SizedBox(
-        height: 304,
-        child: Material(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              SizedBox(
-                height: 54,
-                child: Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    Text(
-                      'Sort by',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        height: 22 / 15,
-                      ),
+      child: Material(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 54,
+              child: Row(
+                children: [
+                  const SizedBox(width: 16),
+                  Text(
+                    'Sort by',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0A243F),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      height: 22 / 15,
                     ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(
-                        Icons.close,
-                        color: Color(0xFF0A243F),
-                        size: 22,
-                      ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Color(0xFF0A243F),
+                      size: 22,
                     ),
-                    const SizedBox(width: 4),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
               ),
-              const Divider(height: 1, thickness: 1, color: Color(0xFFE7E7E7)),
-              const SizedBox(height: 14),
-              ...ProductSortOption.values.map(
-                (option) => _SortOptionRow(
-                  option: option,
-                  selected: option == selectedOption,
-                  onTap: () {
-                    onOptionSelected(option);
-                    Navigator.pop(context);
-                  },
-                ),
+            ),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE7E7E7)),
+            const SizedBox(height: 14),
+            ...ProductSortOption.values.map(
+              (option) => _SortOptionRow(
+                option: option,
+                selected: option == selectedOption,
+                onTap: () {
+                  onOptionSelected(option);
+                  Navigator.pop(context);
+                },
               ),
-            ],
-          ),
+            ),
+            SizedBox(height: MediaQuery.paddingOf(context).bottom > 0 ? 4 : 12),
+          ],
         ),
       ),
     );

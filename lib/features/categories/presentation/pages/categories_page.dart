@@ -6,6 +6,7 @@ import 'package:m_o_b_demand_side/features/home/data/models/home_models.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/pages/homepage_widget.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_category_grid.dart';
+import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_not_serviceable_body.dart';
 import 'package:m_o_b_demand_side/shared/pull_to_refresh.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
@@ -36,13 +37,13 @@ class _CategoriesPageState extends State<CategoriesPage> {
           Expanded(
             child: BlocBuilder<HomeBloc, HomeState>(
               builder: (context, state) {
-                if (state is HomeLoaded) {
-                  return _CategoriesContent(categories: state.data.categories);
-                }
-                if (state is HomeError) {
-                  return _CategoriesError(message: state.message);
-                }
-                return const _CategoriesSkeleton();
+                return switch (state) {
+                  HomeLoaded(:final data) =>
+                    _CategoriesContent(categories: data.categories),
+                  HomeError(:final message) => _CategoriesError(message: message),
+                  HomeNotServiceable() => const HomeNotServiceableBody(),
+                  HomeLoading() || HomeInitial() => const _CategoriesSkeleton(),
+                };
               },
             ),
           ),

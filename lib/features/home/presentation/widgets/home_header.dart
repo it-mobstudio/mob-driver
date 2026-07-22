@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
@@ -11,6 +12,7 @@ import 'package:m_o_b_demand_side/features/address/domain/repositories/address_r
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
 import 'package:m_o_b_demand_side/features/home/domain/entities/home_entity.dart';
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
+import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/domain/store_delivery_label.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
@@ -71,6 +73,7 @@ class _HomeHeaderState extends State<HomeHeader> {
         ? 'assets/images/timer-delivery.svg'
         : 'assets/images/thunder.svg';
     final profilePictureUrl = _profilePictureUrl();
+    final notServiceable = context.watch<HomeBloc>().state is HomeNotServiceable;
 
     return Container(
       color: const Color(0xFF0A3C35),
@@ -88,7 +91,13 @@ class _HomeHeaderState extends State<HomeHeader> {
                     children: [
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 250),
-                        child: _storeStatusLoading
+                        child: notServiceable
+                            ? const Padding(
+                                key: ValueKey('delivery-not-serviceable'),
+                                padding: EdgeInsets.symmetric(vertical: 5),
+                                child: _NotServiceablePill(),
+                              )
+                            : _storeStatusLoading
                             ? const Padding(
                                 key: ValueKey('delivery-loading'),
                                 padding: EdgeInsets.symmetric(vertical: 5),
@@ -245,6 +254,7 @@ class _HomeHeaderState extends State<HomeHeader> {
     if (!mounted || selected == null) return;
     await SelectedAddressStore.save(selected);
     setState(() => _selectedAddress = selected);
+    _refreshHomeForSelectedCity();
   }
 
   Future<void> _loadSelectedAddress() async {
@@ -265,6 +275,7 @@ class _HomeHeaderState extends State<HomeHeader> {
       await SelectedAddressStore.save(firstSavedAddress);
       if (!mounted) return;
       setState(() => _selectedAddress = firstSavedAddress);
+      _refreshHomeForSelectedCity();
       return;
     }
 
@@ -284,6 +295,14 @@ class _HomeHeaderState extends State<HomeHeader> {
     if (!mounted || selected == null) return;
     await SelectedAddressStore.save(selected);
     setState(() => _selectedAddress = selected);
+    _refreshHomeForSelectedCity();
+  }
+
+  void _refreshHomeForSelectedCity() {
+    if (!mounted) return;
+    context.read<HomeBloc>().add(HomeRefreshRequested());
+    setState(() => _storeStatusLoading = true);
+    _loadStoreStatus();
   }
 
   Future<void> _loadStoreStatus() async {
@@ -308,6 +327,32 @@ class _HomeHeaderState extends State<HomeHeader> {
       return address.formattedAddress.trim();
     }
     return address.locationName.trim();
+  }
+}
+
+class _NotServiceablePill extends StatelessWidget {
+  const _NotServiceablePill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SvgPicture.asset('assets/images/error.svg', width: 20, height: 20),
+        const SizedBox(width: 8),
+        Text(
+          'Not serviceable',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+            height: 28 / 19,
+          ),
+        ),
+      ],
+    );
   }
 }
 

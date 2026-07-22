@@ -571,8 +571,6 @@ class _SearchHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.mic_none),
                 ],
               ),
             ),

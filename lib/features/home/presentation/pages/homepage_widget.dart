@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,7 @@ import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_brand_
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_category_grid.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_header.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_live_orders_tray.dart';
+import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_not_serviceable_body.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_magicquote_card.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_promo_banner.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/widgets/home_reward_card.dart';
@@ -79,6 +81,7 @@ class _HomepageWidgetState extends State<HomepageWidget> {
     if (failure == null && addresses != null && addresses.isNotEmpty) {
       await SelectedAddressStore.save(addresses.first);
       if (!mounted) return;
+      context.read<HomeBloc>().add(HomeRefreshRequested());
       setState(() => _checkingAddressGate = false);
       _showReferralDialogIfNeeded();
       return;
@@ -170,7 +173,8 @@ class _HomepageWidgetState extends State<HomepageWidget> {
     final bloc = context.read<HomeBloc>();
     bloc.add(HomeRefreshRequested());
     await bloc.stream.firstWhere(
-      (state) => state is HomeLoaded || state is HomeError,
+      (state) =>
+          state is HomeLoaded || state is HomeError || state is HomeNotServiceable,
     );
   }
 
@@ -278,9 +282,22 @@ class _HomepageWidgetState extends State<HomepageWidget> {
     );
   }
 
+  Widget _buildNotServiceableScroll() {
+    return const CustomScrollView(
+      physics: AlwaysScrollableScrollPhysics(
+        parent: ClampingScrollPhysics(),
+      ),
+      slivers: [
+        SliverToBoxAdapter(child: HomeHeader()),
+        SliverFillRemaining(child: HomeNotServiceableBody()),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
+    final notServiceable = context.watch<HomeBloc>().state is HomeNotServiceable;
 
     if (_checkingAddressGate || _addressGateRedirecting) {
       return const Scaffold(
@@ -289,38 +306,46 @@ class _HomepageWidgetState extends State<HomepageWidget> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Fixed strip so the dark header extends behind the status bar
-          // without the scrolling sticky search bar reserving that same
-          // inset again (that double-reservation was the variable-height
-          // gap seen above the search box on tall-status-bar devices).
-          Container(height: topInset, color: const Color(0xFF0A3C35)),
-          Expanded(
-            child: Stack(
-              children: [
-                BlocBuilder<HomeBloc, HomeState>(
-                  builder: (context, state) {
-                    return switch (state) {
-                      HomeLoaded(:final data) => PullToRefresh(
-                          playSound: true,
-                          showSpinner: true,
-                          spinnerTopOffset: _homeRefreshSpinnerTop,
-                          spinnerSize: _homeRefreshSpinnerSize,
-                          revealContentOnRefresh: true,
-                          contentRevealExtent: _homeRefreshRevealExtent,
-                          dimContentOnRefresh: false,
-                          onRefresh: _refreshHome,
-                          revealedChildBuilder: (_, revealOffset) =>
-                              _buildHomeLoadedScroll(data, revealOffset),
-                          child: _buildHomeLoadedScroll(data, 0),
-                        ),
-                      HomeLoading() ||
-                      HomeInitial() =>
-                        const _HomeLoadingSkeleton(),
-                      HomeError(:final message) => PullToRefresh(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF0A3C35),
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemStatusBarContrastEnforced: false,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            // Fixed strip so the dark header extends behind the status bar
+            // without the scrolling sticky search bar reserving that same
+            // inset again (that double-reservation was the variable-height
+            // gap seen above the search box on tall-status-bar devices).
+            Container(height: topInset, color: const Color(0xFF0A3C35)),
+            Expanded(
+              child: Stack(
+                children: [
+                  BlocBuilder<HomeBloc, HomeState>(
+                    builder: (context, state) {
+                      return switch (state) {
+                        HomeLoaded(:final data) => PullToRefresh(
+                            playSound: true,
+                            showSpinner: true,
+                            spinnerTopOffset: _homeRefreshSpinnerTop,
+                            spinnerSize: _homeRefreshSpinnerSize,
+                            revealContentOnRefresh: true,
+                            contentRevealExtent: _homeRefreshRevealExtent,
+                            dimContentOnRefresh: false,
+                            onRefresh: _refreshHome,
+                            revealedChildBuilder: (_, revealOffset) =>
+                                _buildHomeLoadedScroll(data, revealOffset),
+                            child: _buildHomeLoadedScroll(data, 0),
+                          ),
+                        HomeLoading() ||
+                        HomeInitial() =>
+                          const _HomeLoadingSkeleton(),
+                        HomeNotServiceable() => _buildNotServiceableScroll(),
+                        HomeError(:final message) => PullToRefresh(
                           playSound: true,
                           showSpinner: true,
                           spinnerTopOffset: _homeRefreshSpinnerTop,
@@ -347,14 +372,17 @@ class _HomepageWidgetState extends State<HomepageWidget> {
                     ),
                   ),
                 ),
-                const HomeLiveOrdersTray(),
-                const ViewCartBar(),
+                if (!notServiceable) ...[
+                  const HomeLiveOrdersTray(),
+                  const ViewCartBar(),
+                ],
               ],
             ),
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }
 

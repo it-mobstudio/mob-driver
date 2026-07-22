@@ -148,7 +148,7 @@ Future<void> setupDependencies() async {
 
   // Singletons — persist across navigation (cart badge, home data)
   sl.registerLazySingleton<CartBloc>(() => CartBloc(sl()));
-  sl.registerLazySingleton<HomeBloc>(() => HomeBloc(sl()));
+  sl.registerLazySingleton<HomeBloc>(() => HomeBloc(sl(), sl()));
 
   // Factories — fresh state per screen visit
   sl.registerFactory<AddressBloc>(() => AddressBloc(sl()));

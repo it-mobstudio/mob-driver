@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:m_o_b_demand_side/core/network/selected_city_query.dart';
 
 abstract interface class ProductRemoteDatasource {
   Future<Map<String, dynamic>> browseProducts({
@@ -56,10 +57,12 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
     String? sortBy,
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
   }) async {
+    final cityQuery = await selectedCityQueryParameter();
     final response = await _dio.get<dynamic>(
       '/home/$categorySlug/browse_products/',
       queryParameters: <String, dynamic>{
         ...queryParameters,
+        ...cityQuery,
         'page': page,
         'is_professional': isProfessional,
         if (sortBy != null && sortBy.trim().isNotEmpty)
@@ -76,9 +79,11 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
     required String category,
     String? subCategory,
   }) async {
+    final cityQuery = await selectedCityQueryParameter();
     final response = await _dio.get<dynamic>(
       '/home/get_filters/',
       queryParameters: <String, dynamic>{
+        ...cityQuery,
         'category': category,
         if (subCategory != null && subCategory.trim().isNotEmpty)
           'sub_category': subCategory.trim(),
@@ -96,9 +101,12 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
     final selectedEntries = variantSelections.entries
         .where((entry) => entry.key.trim().isNotEmpty && entry.value.isNotEmpty)
         .toList();
+    final cityQuery = await selectedCityQueryParameter();
+    final city = cityQuery['city']?.toString().trim() ?? '';
     final response = await _dio.get<dynamic>(
       '/home/$slug/get_product_details/',
       queryParameters: <String, dynamic>{
+        if (city.isNotEmpty) 'cities': city,
         if (selectedEntries.isNotEmpty)
           'variant_type': selectedEntries.map((entry) => entry.key).join(','),
         for (final entry in selectedEntries) entry.key: entry.value,
@@ -110,9 +118,14 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
 
   @override
   Future<dynamic> searchProducts({required String query, int page = 1}) async {
+    final cityQuery = await selectedCityQueryParameter();
     final response = await _dio.get<dynamic>(
       '/home/product_search/',
-      queryParameters: {'search': query, 'page': page},
+      queryParameters: {
+        ...cityQuery,
+        'search': query,
+        'page': page,
+      },
     );
     return response.data;
   }
@@ -125,10 +138,12 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
     String? sortBy,
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
   }) async {
+    final cityQuery = await selectedCityQueryParameter();
     final response = await _dio.get<dynamic>(
       '/home/product_search/',
       queryParameters: <String, dynamic>{
         ...queryParameters,
+        ...cityQuery,
         'search': query,
         'page': page,
         'is_professional': isProfessional,
@@ -144,11 +159,13 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
     required String query,
     Map<String, dynamic> extraParams = const <String, dynamic>{},
   }) async {
+    final cityQuery = await selectedCityQueryParameter();
     final response = await _dio.get<dynamic>(
       '/home/get_filters/',
       queryParameters: <String, dynamic>{
-        'search': query,
         ...extraParams,
+        ...cityQuery,
+        'search': query,
       },
     );
     return response.data;
