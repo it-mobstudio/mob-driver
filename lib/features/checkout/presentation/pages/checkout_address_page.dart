@@ -533,6 +533,8 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                                 null ||
                                             (showCartDeliveryAddress &&
                                                 summary.hasDeliveryAddress);
+                                    final isMissingDeliveryAddress =
+                                        !hasEffectiveDeliveryAddress;
                                     final effectiveBillingAddress =
                                         _effectiveBillingAddress(
                                       summary,
@@ -593,6 +595,8 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                               project: _selectedDelivery
                                                       ?.projectName ??
                                                   '',
+                                              isMissingDeliveryAddress:
+                                                  isMissingDeliveryAddress,
                                               actionLabel: hasAnyAddress
                                                   ? 'Change'
                                                   : 'Add',
@@ -749,6 +753,7 @@ class _DeliveryAddressCard extends StatelessWidget {
     required this.name,
     required this.address,
     required this.phone,
+    required this.isMissingDeliveryAddress,
     required this.actionLabel,
     required this.onAction,
     this.tag = '',
@@ -758,6 +763,7 @@ class _DeliveryAddressCard extends StatelessWidget {
   final String name;
   final String address;
   final String phone;
+  final bool isMissingDeliveryAddress;
   final String actionLabel;
   final VoidCallback onAction;
   final String tag;
@@ -765,7 +771,7 @@ class _DeliveryAddressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = name.trim().isNotEmpty ? name.trim() : 'Add address';
+    final displayName = name.trim();
     final displayAddress = address.trim().isNotEmpty
         ? address.trim()
         : 'Select a delivery address to continue';
@@ -775,8 +781,11 @@ class _DeliveryAddressCard extends StatelessWidget {
     final showTag = displayTag.isNotEmpty && !_isMobCreditTag(displayTag);
     final hasPills = showTag || displayProject.isNotEmpty;
 
-    return _CheckoutCard(
+    final card = _CheckoutCard(
       padding: const EdgeInsets.all(12),
+      border: isMissingDeliveryAddress
+          ? Border.all(color: const Color(0xFFF0483E))
+          : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -788,8 +797,10 @@ class _DeliveryAddressCard extends StatelessWidget {
                 Text.rich(
                   TextSpan(
                     children: [
-                      const TextSpan(
-                        text: 'Deliver to:',
+                      TextSpan(
+                        text: displayName.isEmpty
+                            ? 'Delivery address'
+                            : 'Deliver to:',
                         style: TextStyle(
                           color: Color(0xFF67696D),
                           fontSize: 14,
@@ -798,16 +809,17 @@ class _DeliveryAddressCard extends StatelessWidget {
                           height: 1.43,
                         ),
                       ),
-                      TextSpan(
-                        text: ' $displayName',
-                        style: const TextStyle(
-                          color: Color(0xFF0A243F),
-                          fontSize: 14,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w600,
-                          height: 1.43,
+                      if (displayName.isNotEmpty)
+                        TextSpan(
+                          text: ' $displayName',
+                          style: const TextStyle(
+                            color: Color(0xFF0A243F),
+                            fontSize: 14,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                            height: 1.43,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -871,6 +883,26 @@ class _DeliveryAddressCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (!isMissingDeliveryAddress) return card;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        card,
+        const SizedBox(height: 6),
+        Text(
+          'Please add delivery address',
+          style: GoogleFonts.inter(
+            color: const Color(0xFFF0483E),
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            height: 18 / 12,
+          ),
+        ),
+      ],
     );
   }
 }

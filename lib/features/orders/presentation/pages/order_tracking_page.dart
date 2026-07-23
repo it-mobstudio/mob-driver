@@ -134,6 +134,19 @@ bool _isQuickOrderResponse(Map<String, dynamic>? map) {
       value != '0';
 }
 
+bool _isNormalOrderResponse(Map<String, dynamic>? map) {
+  final value = _mapString(
+    _trackOrderPayload(map),
+    const ['is_quick_order', 'isQuickOrder'],
+  ).toLowerCase();
+  return value == 'normal_order' ||
+      value == 'normal' ||
+      value == 'store_order' ||
+      value == 'store' ||
+      value == 'false' ||
+      value == '0';
+}
+
 String _formatTrackingDate(DateTime date) {
   const months = [
     'Jan',
@@ -455,6 +468,17 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   }
 
   Future<void> _loadTrackOrder() async {
+    if (_order?.isQuickCommerceOrder == false) {
+      if (_trackOrderLoading || _trackOrderBody != null) {
+        _trackOrderRequestId++;
+        setState(() {
+          _trackOrderBody = null;
+          _trackOrderLoading = false;
+        });
+      }
+      return;
+    }
+
     final suborderId = _selectedShipment?.id.trim() ?? '';
     if (suborderId.isEmpty) {
       if (_trackOrderLoading) setState(() => _trackOrderLoading = false);
@@ -549,11 +573,19 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     final trackingStatus =
         shipmentStatus.isNotEmpty ? shipmentStatus : orderStatus;
     final trackPayload = _trackOrderPayload(_trackOrderBody);
-    final trackOrderStatus = _mapString(
+    final rawTrackOrderStatus = _mapString(
       trackPayload,
       const ['order_status', 'orderStatus', 'status'],
     );
-    final isDelayed = _mapBool(trackPayload, const ['is_delayed', 'isDelayed']);
+    final isNormalOrderResponse = _isNormalOrderResponse(_trackOrderBody);
+    final showQwikBadge = _trackOrderBody == null
+        ? order?.isQuickCommerceOrder ?? false
+        : _isQuickOrderResponse(_trackOrderBody);
+    final allowTrackOrderPresentation = !isNormalOrderResponse;
+    final trackOrderStatus =
+        allowTrackOrderPresentation ? rawTrackOrderStatus : '';
+    final isDelayed = allowTrackOrderPresentation &&
+        _mapBool(trackPayload, const ['is_delayed', 'isDelayed']);
     final statusText =
         trackOrderStatus.isNotEmpty ? trackOrderStatus : trackingStatus;
     final statusState = _TrackingState.fromStatus(statusText);
@@ -575,20 +607,23 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     );
     final deliveryDate = trackDeliveryDate;
     final todayOrTomorrowStatus = _todayOrTomorrowLabel(trackOrderStatus);
-    final isQuickOrder = todayOrTomorrowStatus.isNotEmpty
-        ? true
-        : _trackOrderBody == null
-            ? order?.isQuickCommerceOrder ?? false
-            : _isQuickOrderResponse(_trackOrderBody);
+    final isQuickOrder = todayOrTomorrowStatus.isNotEmpty || showQwikBadge;
     final rawArrivingIn =
         _mapString(trackPayload, const ['arriving_in', 'arrivingIn', 'eta']);
     final arrivingIn = todayOrTomorrowStatus.isNotEmpty
         ? todayOrTomorrowStatus
         : rawArrivingIn;
-    final trackStatusText = _mapString(
-      trackPayload,
-      const ['order_status_text', 'orderStatusText', 'status_text', 'text'],
-    );
+    final trackStatusText = allowTrackOrderPresentation
+        ? _mapString(
+            trackPayload,
+            const [
+              'order_status_text',
+              'orderStatusText',
+              'status_text',
+              'text',
+            ],
+          )
+        : '';
     final helperText = _mapString(
       trackPayload,
       const ['helper_text', 'helperText'],
@@ -609,7 +644,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       trackingState: trackingState,
       trackingEvents: detailTrackingEvents.isNotEmpty
           ? detailTrackingEvents
-          : _trackingEvents(_trackOrderBody),
+          : allowTrackOrderPresentation
+              ? _trackingEvents(_trackOrderBody)
+              : const <OrderTrackingEventEntity>[],
     );
     final normalStatusTime =
         _currentTrackingTimelineTime(timelineItems, trackingState);
@@ -653,6 +690,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                             deliveryDate: deliveryDate,
                             deliverySlot: deliverySlot,
                             isQuickOrder: isQuickOrder,
+                            showQwikBadge: showQwikBadge,
                             arrivingIn: arrivingIn,
                             statusText: trackStatusText,
                             cancelTime: cancelTime,
@@ -1106,6 +1144,7 @@ class _TrackingHeroSection extends StatelessWidget {
     required this.deliveryDate,
     required this.deliverySlot,
     required this.isQuickOrder,
+    required this.showQwikBadge,
     required this.arrivingIn,
     required this.statusText,
     required this.cancelTime,
@@ -1118,6 +1157,7 @@ class _TrackingHeroSection extends StatelessWidget {
   final String deliveryDate;
   final String deliverySlot;
   final bool isQuickOrder;
+  final bool showQwikBadge;
   final String arrivingIn;
   final String statusText;
   final String cancelTime;
@@ -1158,6 +1198,7 @@ class _TrackingHeroSection extends StatelessWidget {
                   deliveryDate: deliveryDate,
                   deliverySlot: deliverySlot,
                   isQuickOrder: isQuickOrder,
+                  showQwikBadge: showQwikBadge,
                   arrivingIn: arrivingIn,
                   statusText: statusText,
                   cancelTime: cancelTime,
@@ -1339,6 +1380,7 @@ class _EtaCard extends StatelessWidget {
     required this.deliveryDate,
     required this.deliverySlot,
     required this.isQuickOrder,
+    required this.showQwikBadge,
     required this.arrivingIn,
     required this.statusText,
     required this.cancelTime,
@@ -1351,6 +1393,7 @@ class _EtaCard extends StatelessWidget {
   final String deliveryDate;
   final String deliverySlot;
   final bool isQuickOrder;
+  final bool showQwikBadge;
   final String arrivingIn;
   final String statusText;
   final String cancelTime;
@@ -1508,24 +1551,25 @@ class _EtaCard extends StatelessWidget {
               ],
             ),
           ),
-          Positioned(
-            top: 19,
-            right: 16,
-            child: Container(
-              height: 26,
-              width: 86,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF6E6),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              alignment: Alignment.center,
-              child: SvgPicture.asset(
-                'assets/images/qwik.svg',
-                width: 54,
-                height: 14,
+          if (showQwikBadge)
+            Positioned(
+              top: 19,
+              right: 16,
+              child: Container(
+                height: 26,
+                width: 86,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF6E6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: SvgPicture.asset(
+                  'assets/images/qwik.svg',
+                  width: 54,
+                  height: 14,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
