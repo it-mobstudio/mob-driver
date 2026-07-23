@@ -362,8 +362,8 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
 
   Future<void> _openAddressFlow(BuildContext context) async {
     // Same shortcut as cart/AddressSelectionWidget: straight to the
-    // map-confirm step (defaulting to a Bengaluru pin) then the receiver
-    // detail form, instead of a whole separate search screen.
+    // map-confirm step (centering on current GPS when no location is known)
+    // then the receiver detail form, instead of a whole separate search screen.
     //
     // Both pushes deliberately go through appNavigatorKey.currentContext
     // rather than this method's own `context` parameter: ConfirmDeliveryLocationPage

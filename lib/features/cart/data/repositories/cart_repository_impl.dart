@@ -478,6 +478,8 @@ class CartRepositoryImpl implements CartRepository {
               fallback: 'Address'),
           project: _str(m, const ['project_name', 'project']),
           gstNumber: _str(m, const ['gst_number', 'gst_no', 'gstin']),
+          isMobCredit: m['mob_credit'] == true ||
+              m['mob_credit']?.toString().trim().toLowerCase() == 'true',
         ));
       }
     }

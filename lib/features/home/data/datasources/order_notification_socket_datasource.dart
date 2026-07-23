@@ -226,6 +226,49 @@ class OrderNotificationPreview {
     return RegExp(r'_\d+$').hasMatch(orderId.trim()) ? orderId.trim() : '';
   }
 
+  // Round-trips this preview through the local on-disk cache — distinct from
+  // fromMap()/the raw backend payload shape, since this only ever reads back
+  // what we ourselves wrote (our own field names, not order_status/sub_text/etc.).
+  Map<String, dynamic> toCacheMap() => {
+        'title': title,
+        'subtitle': subtitle,
+        'status': status,
+        'orderId': orderId,
+        'suborderId': suborderId,
+      };
+
+  static OrderNotificationPreview? fromCacheMap(dynamic raw) {
+    if (raw is! Map) return null;
+    final title = (raw['title'] ?? '').toString();
+    if (title.isEmpty) return null;
+    return OrderNotificationPreview(
+      title: title,
+      subtitle: (raw['subtitle'] ?? '').toString(),
+      status: (raw['status'] ?? '').toString(),
+      orderId: (raw['orderId'] ?? '').toString(),
+      suborderId: (raw['suborderId'] ?? '').toString(),
+    );
+  }
+
+  // A delivered/cancelled order has nothing left to live-track — the home
+  // tray auto-clears these instead of keeping them cached indefinitely like
+  // an in-progress order (which is meant to keep reappearing until resolved).
+  bool get isTerminal => _isDeliveredStatus(status) || _isCancelledStatus(status);
+
+  static bool _isDeliveredStatus(String status) {
+    final value =
+        status.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    if (value.isEmpty) return false;
+    return value.contains('delivered') ||
+        value.contains('completed') ||
+        value.contains('received') ||
+        value.contains('fulfilled');
+  }
+
+  static bool _isCancelledStatus(String status) {
+    return status.trim().toLowerCase().contains('cancel');
+  }
+
   factory OrderNotificationPreview.fromMap(Map<String, dynamic> map) {
     final status = _firstString([
       map['order_status'],

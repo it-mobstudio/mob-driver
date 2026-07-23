@@ -673,68 +673,56 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
         color: const Color(0xFF0360E5),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: _isSubmitting
-          ? const Center(
-              child: SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _QuantityIconButton(
-                  leading: true,
-                  icon: Icons.remove,
-                  onPressed:
-                      _isBusy ? null : () => _updateQuantity(_quantity - 1),
-                  width: 38,
-                  height: _height,
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  disabledColor: Colors.white.withValues(alpha: 0.45),
-                ),
-                Expanded(
-                  child: Center(
-                    child: AnimatedSwitcher(
-                      duration: _cartActionAnimationDuration,
-                      transitionBuilder: _fadeScaleTransition,
-                      child: Text(
-                        '$_quantity',
-                        key: ValueKey<int>(_quantity),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          height: 20 / 14,
-                        ),
-                      ),
-                    ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _QuantityIconButton(
+            leading: true,
+            icon: Icons.remove,
+            onPressed: _isBusy ? null : () => _updateQuantity(_quantity - 1),
+            width: 38,
+            height: _height,
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            disabledColor: Colors.white.withValues(alpha: 0.45),
+          ),
+          Expanded(
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: _cartActionAnimationDuration,
+                transitionBuilder: _fadeScaleTransition,
+                child: Text(
+                  '$_quantity',
+                  key: ValueKey<int>(_quantity),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    height: 20 / 14,
                   ),
                 ),
-                _QuantityIconButton(
-                  leading: false,
-                  icon: Icons.add,
-                  width: 38,
-                  height: _height,
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  disabledColor: Colors.white.withValues(alpha: 0.45),
-                  onPressed: _isBusy
-                      ? null
-                      : canIncrease
-                          ? () => _updateQuantity(_quantity + 1)
-                          : _showStockLimitToast,
-                ),
-              ],
+              ),
             ),
+          ),
+          _QuantityIconButton(
+            leading: false,
+            icon: Icons.add,
+            width: 38,
+            height: _height,
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            disabledColor: Colors.white.withValues(alpha: 0.45),
+            onPressed: _isBusy
+                ? null
+                : canIncrease
+                    ? () => _updateQuantity(_quantity + 1)
+                    : _showStockLimitToast,
+          ),
+        ],
+      ),
     );
   }
 

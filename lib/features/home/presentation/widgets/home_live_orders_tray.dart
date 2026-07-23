@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'package:m_o_b_demand_side/features/home/data/datasources/order_notificat
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/presentation/pages/order_tracking_page.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeLiveOrdersTray extends StatefulWidget {
   const HomeLiveOrdersTray({super.key});
@@ -27,10 +29,25 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
   static List<OrderNotificationPreview> _cachedOrders = const [];
   static String _cachedPhoneNumber = '';
   static String _dismissedPhoneNumber = '';
+  // When each currently-cached order first turned terminal (delivered/
+  // cancelled) — static, like the caches above, so the grace period is
+  // measured in real wall-clock time and survives this State object being
+  // disposed/recreated (e.g. a bottom-nav tab switch) rather than resetting.
+  static final Map<String, DateTime> _terminalSince = <String, DateTime>{};
+  static const _terminalGracePeriod = Duration(seconds: 8);
+  // A full app kill (Android's "close all" in the recents switcher, or the
+  // OS reaping the process) wipes every static field above — there's no
+  // other in-memory state to fall back on, and the socket only pushes on
+  // new status transitions, not on reconnect. So on the very first init of
+  // this process, hydrate the caches from disk before doing anything else;
+  // this guard makes sure that only happens once, not on every tab switch.
+  static bool _hydratedFromDisk = false;
+  static const _diskCacheKey = 'home_live_orders_cache_v1';
   bool _expanded = false;
   bool _dismissed = false;
   bool _socketPaused = false;
   StreamSubscription<List<OrderNotificationPreview>>? _ordersSubscription;
+  Timer? _terminalSweepTimer;
   List<OrderNotificationPreview> _orders = const [];
   String _phoneNumber = '';
 
@@ -39,7 +56,72 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     AuthSession.instance.addListener(_syncSocket);
+    if (_hydratedFromDisk) {
+      _syncSocket();
+    } else {
+      _hydrateFromDiskThenSync();
+    }
+  }
+
+  Future<void> _hydrateFromDiskThenSync() async {
+    await _loadCacheFromDisk();
+    _hydratedFromDisk = true;
+    if (!mounted) return;
     _syncSocket();
+  }
+
+  Future<void> _loadCacheFromDisk() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_diskCacheKey);
+      if (raw == null || raw.isEmpty) return;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return;
+      final phone = (decoded['phone'] ?? '').toString();
+      final ordersRaw = decoded['orders'];
+      if (phone.isEmpty || ordersRaw is! List) return;
+      final orders = ordersRaw
+          .map(OrderNotificationPreview.fromCacheMap)
+          .whereType<OrderNotificationPreview>()
+          .toList(growable: false);
+      if (orders.isEmpty) return;
+      final terminalSinceRaw = decoded['terminalSince'];
+      if (terminalSinceRaw is Map) {
+        for (final entry in terminalSinceRaw.entries) {
+          final millis = entry.value;
+          if (millis is int) {
+            _terminalSince[entry.key.toString()] =
+                DateTime.fromMillisecondsSinceEpoch(millis);
+          }
+        }
+      }
+      _cachedOrders = orders;
+      _cachedPhoneNumber = phone;
+    } catch (_) {
+      // Corrupt/unreadable cache — fall through with nothing restored, the
+      // socket will repopulate it as soon as the next update arrives.
+    }
+  }
+
+  Future<void> _persistCacheToDisk() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_cachedOrders.isEmpty || _cachedPhoneNumber.isEmpty) {
+        await prefs.remove(_diskCacheKey);
+        return;
+      }
+      final payload = jsonEncode({
+        'phone': _cachedPhoneNumber,
+        'orders': _cachedOrders.map((o) => o.toCacheMap()).toList(),
+        'terminalSince': _terminalSince.map(
+          (key, value) => MapEntry(key, value.millisecondsSinceEpoch),
+        ),
+      });
+      await prefs.setString(_diskCacheKey, payload);
+    } catch (_) {
+      // Best-effort — losing the disk cache just means a future kill falls
+      // back to waiting on the socket again, same as before this existed.
+    }
   }
 
   @override
@@ -47,6 +129,7 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
     WidgetsBinding.instance.removeObserver(this);
     AuthSession.instance.removeListener(_syncSocket);
     _ordersSubscription?.cancel();
+    _terminalSweepTimer?.cancel();
     super.dispose();
   }
 
@@ -54,6 +137,15 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _socketPaused = false;
+      // A dismissal only holds for the session it happened in — reopening
+      // the app (backgrounded or fully closed) brings a still-live order
+      // notification back instead of hiding it forever, since Android/iOS
+      // often keep this isolate (and its static dismissed-state) alive
+      // across a "close" that doesn't actually kill the process.
+      _dismissedPhoneNumber = '';
+      if (_dismissed) {
+        setState(() => _dismissed = false);
+      }
       if (_ordersSubscription == null) {
         _syncSocket(force: true);
       }
@@ -73,17 +165,30 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
     if (!force && digitsPhone == _phoneNumber) return;
     _ordersSubscription?.cancel();
     _ordersSubscription = null;
+    // Re-derive from the cache through the same terminal-expiry filter used
+    // everywhere else — otherwise a Delivered/Cancelled order that expired
+    // while this widget was disposed (tab switch) or the app was backgrounded
+    // would flash back into view here before the next real purge got a
+    // chance to run.
+    final cachedForPhone =
+        digitsPhone.isNotEmpty && digitsPhone == _cachedPhoneNumber
+            ? _purgeExpiredTerminalOrders(_cachedOrders)
+            : const <OrderNotificationPreview>[];
+    if (cachedForPhone.length != _cachedOrders.length ||
+        digitsPhone != _cachedPhoneNumber) {
+      _cachedOrders = cachedForPhone;
+      unawaited(_persistCacheToDisk());
+    }
     setState(() {
       _phoneNumber = digitsPhone;
       _dismissed = digitsPhone.isNotEmpty &&
           digitsPhone == _dismissedPhoneNumber &&
           digitsPhone == _cachedPhoneNumber &&
-          _cachedOrders.isNotEmpty;
+          cachedForPhone.isNotEmpty;
       _expanded = false;
-      _orders = digitsPhone.isNotEmpty && digitsPhone == _cachedPhoneNumber
-          ? _cachedOrders
-          : const [];
+      _orders = cachedForPhone;
     });
+    _scheduleTerminalSweep();
     if (_socketPaused || digitsPhone.isEmpty) return;
     _ordersSubscription = _datasource.watch(phoneNumber: digitsPhone).listen(
           _onOrders,
@@ -94,13 +199,16 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
   void _onOrders(List<OrderNotificationPreview> nextOrders) {
     if (!mounted || nextOrders.isEmpty) return;
     final mergedOrders = _mergeOrders(_orders, nextOrders);
+    final purgedOrders = _purgeExpiredTerminalOrders(mergedOrders);
     setState(() {
       _dismissed = false;
       _dismissedPhoneNumber = '';
-      _orders = mergedOrders;
+      _orders = purgedOrders;
       _cachedPhoneNumber = _phoneNumber;
       _cachedOrders = _orders;
     });
+    unawaited(_persistCacheToDisk());
+    _scheduleTerminalSweep();
   }
 
   List<OrderNotificationPreview> _mergeOrders(
@@ -122,6 +230,79 @@ class _HomeLiveOrdersTrayState extends State<HomeLiveOrdersTray>
       updated.add(order);
     }
     return updated.take(5).toList(growable: false);
+  }
+
+  // Drops any order that's been terminal (Delivered/Cancelled) for longer
+  // than the grace period, and stamps the first-seen time for any order
+  // that's terminal but not yet tracked. Keyed off wall-clock time (not a
+  // counter/tick) so a purge computed after the app was backgrounded for
+  // hours correctly drops it immediately instead of waiting out a fresh
+  // grace period.
+  List<OrderNotificationPreview> _purgeExpiredTerminalOrders(
+    List<OrderNotificationPreview> orders,
+  ) {
+    final now = DateTime.now();
+    final keptOrders = <OrderNotificationPreview>[];
+    final presentKeys = <String>{};
+    for (final order in orders) {
+      final key = _orderKey(order);
+      if (key.isNotEmpty) presentKeys.add(key);
+      if (!order.isTerminal) {
+        if (key.isNotEmpty) _terminalSince.remove(key);
+        keptOrders.add(order);
+        continue;
+      }
+      final becameTerminalAt = _terminalSince.putIfAbsent(key, () => now);
+      if (now.difference(becameTerminalAt) < _terminalGracePeriod) {
+        keptOrders.add(order);
+      }
+      // else: past its grace period — drop it, it's fully expired.
+    }
+    // Forget tracking for keys that aren't part of this list at all anymore
+    // (e.g. already dropped by an earlier purge) so the map doesn't grow
+    // unbounded over a long-lived session.
+    _terminalSince.removeWhere((key, _) => !presentKeys.contains(key));
+    return keptOrders;
+  }
+
+  // Keeps the tray honest between socket messages: without this, an order
+  // that turns terminal would only ever get re-evaluated (and removed) the
+  // next time a new message arrives or the widget resyncs — it could sit
+  // on-screen well past its grace period if neither happens for a while.
+  void _scheduleTerminalSweep() {
+    _terminalSweepTimer?.cancel();
+    _terminalSweepTimer = null;
+    if (!mounted) return;
+    final now = DateTime.now();
+    Duration? nextDelay;
+    for (final order in _orders) {
+      if (!order.isTerminal) continue;
+      final becameTerminalAt = _terminalSince[_orderKey(order)];
+      if (becameTerminalAt == null) continue;
+      final remaining =
+          _terminalGracePeriod - now.difference(becameTerminalAt);
+      if (nextDelay == null || remaining < nextDelay) {
+        nextDelay = remaining;
+      }
+    }
+    if (nextDelay == null) return;
+    _terminalSweepTimer = Timer(
+      nextDelay < Duration.zero ? Duration.zero : nextDelay,
+      _sweepTerminalOrders,
+    );
+  }
+
+  void _sweepTerminalOrders() {
+    if (!mounted) return;
+    final purgedOrders = _purgeExpiredTerminalOrders(_orders);
+    if (purgedOrders.length != _orders.length) {
+      setState(() {
+        _orders = purgedOrders;
+        _cachedOrders = purgedOrders;
+      });
+      unawaited(_persistCacheToDisk());
+    }
+    _scheduleTerminalSweep();
   }
 
   String _orderKey(OrderNotificationPreview order) {

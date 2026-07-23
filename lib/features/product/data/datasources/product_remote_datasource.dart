@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:m_o_b_demand_side/core/network/selected_city_query.dart';
 
 abstract interface class ProductRemoteDatasource {
@@ -58,19 +59,29 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
   }) async {
     final cityQuery = await selectedCityQueryParameter();
+    final path = '/home/$categorySlug/browse_products/';
+    final params = <String, dynamic>{
+      ...queryParameters,
+      ...cityQuery,
+      'page': page,
+      'is_professional': isProfessional,
+      if (sortBy != null && sortBy.trim().isNotEmpty)
+        'sort_by': sortBy.trim(),
+      if (subCategory != null && subCategory.trim().isNotEmpty)
+        'sub_category': subCategory.trim(),
+    };
+    final stopwatch = Stopwatch()..start();
     final response = await _dio.get<dynamic>(
-      '/home/$categorySlug/browse_products/',
-      queryParameters: <String, dynamic>{
-        ...queryParameters,
-        ...cityQuery,
-        'page': page,
-        'is_professional': isProfessional,
-        if (sortBy != null && sortBy.trim().isNotEmpty)
-          'sort_by': sortBy.trim(),
-        if (subCategory != null && subCategory.trim().isNotEmpty)
-          'sub_category': subCategory.trim(),
-      },
+      path,
+      queryParameters: params,
     );
+    stopwatch.stop();
+    if (kDebugMode) {
+      debugPrint(
+        '[BrowseProducts] ${stopwatch.elapsedMilliseconds}ms '
+        '${response.requestOptions.uri}',
+      );
+    }
     return _toMap(response.data);
   }
 

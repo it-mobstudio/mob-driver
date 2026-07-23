@@ -12,6 +12,7 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/entities/order_entity.dart';
 import 'package:m_o_b_demand_side/features/orders/domain/repositories/orders_repository.dart';
 import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
+import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
@@ -72,6 +73,26 @@ bool _mapBool(
     if (text == 'true' || text == '1' || text == 'yes') return true;
   }
   return false;
+}
+
+String _todayOrTomorrowLabel(String raw) {
+  final value = raw.trim().toLowerCase();
+  if (value == 'today') return 'Today';
+  if (value == 'tomorrow' || value == 'tommorrow') return 'Tomorrow';
+  return '';
+}
+
+String _todayOrTomorrowHelperText(String label) {
+  final value = label.trim().toLowerCase();
+  if (value == 'today') {
+    return "Thanks for your order! We'll begin processing it today "
+        'after 10:00 AM when our operations resume.';
+  }
+  if (value == 'tomorrow') {
+    return "Thanks for your order! We'll begin processing it tomorrow "
+        'after 10:00 AM when our operations resume.';
+  }
+  return '';
 }
 
 Map<String, dynamic>? _trackOrderPayload(Map<String, dynamic>? map) {
@@ -371,6 +392,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       _selectedInitialShipment(widget.shipment, _shipments);
   late bool _hasReview = _selectedShipment?.hasReview ?? false;
   Map<String, dynamic>? _trackOrderBody;
+  late bool _trackOrderLoading =
+      _selectedShipment?.id.trim().isNotEmpty == true;
+  int _trackOrderRequestId = 0;
   bool _shipmentMenuOpen = false;
   Timer? _ratingPromptTimer;
   bool _ratingPromptShown = false;
@@ -432,15 +456,26 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
 
   Future<void> _loadTrackOrder() async {
     final suborderId = _selectedShipment?.id.trim() ?? '';
-    if (suborderId.isEmpty) return;
-
-    final (body, failure) = await sl<OrdersRepository>().trackOrder(suborderId);
-    if (!mounted) return;
-    if (failure != null) {
-      debugPrint('track_order failed: ${failure.message}');
+    if (suborderId.isEmpty) {
+      if (_trackOrderLoading) setState(() => _trackOrderLoading = false);
       return;
     }
-    setState(() => _trackOrderBody = body);
+
+    final requestId = ++_trackOrderRequestId;
+    if (!_trackOrderLoading) {
+      setState(() => _trackOrderLoading = true);
+    }
+    final (body, failure) = await sl<OrdersRepository>().trackOrder(suborderId);
+    if (!mounted || requestId != _trackOrderRequestId) return;
+    if (failure != null) {
+      debugPrint('track_order failed: ${failure.message}');
+      setState(() => _trackOrderLoading = false);
+      return;
+    }
+    setState(() {
+      _trackOrderBody = body;
+      _trackOrderLoading = false;
+    });
     debugPrint('track_order response: $_trackOrderBody');
   }
 
@@ -496,7 +531,6 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     );
     final selectedShipmentNumber =
         selectedShipmentIndex >= 0 ? selectedShipmentIndex + 1 : 1;
-    final showShipmentSelector = shipments.length > 1;
     final items = shipment?.items.isNotEmpty == true
         ? shipment!.items
         : order?.items ?? const <OrderItemEntity>[];
@@ -526,26 +560,31 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     final trackingState = isDelayed && !statusState.isDelivered
         ? _TrackingState.delayed
         : statusState;
+    final showShipmentSelector =
+        shipments.length > 1 && !trackingState.isDelivered;
+    final headerTitle = trackingState.isDelivered
+        ? 'Shipment $selectedShipmentNumber'
+        : 'Track order';
     final deliverySlot = shipment?.deliverySlot ?? '';
     // final vendorName = shipment?.vendorName ?? '';
     // final vehicleAssigned = shipment?.vehicleAssigned ?? false;
     final invoiceUrl = shipment?.proformaInvoiceUrl ?? '';
-    final formattedDeliveryDate = () {
-      final raw = shipment?.deliveryDate.trim() ?? '';
-      if (raw.isEmpty) return '';
-      try {
-        return _formatTrackingDate(DateTime.parse(raw).toLocal());
-      } catch (_) {
-        return raw;
-      }
-    }();
-    final deliveryDate =
-        formattedDeliveryDate.isNotEmpty ? formattedDeliveryDate : '';
-    final isQuickOrder = _trackOrderBody == null
-        ? order?.isQuickCommerceOrder ?? false
-        : _isQuickOrderResponse(_trackOrderBody);
-    final arrivingIn =
+    final trackDeliveryDate = _mapString(
+      trackPayload,
+      const ['delivery_date', 'deliveryDate'],
+    );
+    final deliveryDate = trackDeliveryDate;
+    final todayOrTomorrowStatus = _todayOrTomorrowLabel(trackOrderStatus);
+    final isQuickOrder = todayOrTomorrowStatus.isNotEmpty
+        ? true
+        : _trackOrderBody == null
+            ? order?.isQuickCommerceOrder ?? false
+            : _isQuickOrderResponse(_trackOrderBody);
+    final rawArrivingIn =
         _mapString(trackPayload, const ['arriving_in', 'arrivingIn', 'eta']);
+    final arrivingIn = todayOrTomorrowStatus.isNotEmpty
+        ? todayOrTomorrowStatus
+        : rawArrivingIn;
     final trackStatusText = _mapString(
       trackPayload,
       const ['order_status_text', 'orderStatusText', 'status_text', 'text'],
@@ -554,6 +593,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       trackPayload,
       const ['helper_text', 'helperText'],
     );
+    final quickOrderHelperText = todayOrTomorrowStatus.isNotEmpty
+        ? _todayOrTomorrowHelperText(todayOrTomorrowStatus)
+        : helperText;
     final cancelTime = _mapString(
       trackPayload,
       const ['order_cancel_time', 'orderCancelTime'],
@@ -580,7 +622,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
           children: [
             Column(
               children: [
-                _TrackingHeader(title: trackingState.headerTitle),
+                _TrackingHeader(title: headerTitle),
                 Expanded(
                   child: SingleChildScrollView(
                     child: DecoratedBox(
@@ -615,8 +657,11 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                             statusText: trackStatusText,
                             cancelTime: cancelTime,
                             normalStatusTime: normalStatusTime,
+                            isLoading: _trackOrderLoading,
                             onNormalStatusTap:
-                                isQuickOrder || trackingState.isCancelled
+                                _trackOrderLoading ||
+                                        isQuickOrder ||
+                                        trackingState.isCancelled
                                     ? null
                                     : () => _showOrderStatusSheet(
                                           context,
@@ -630,92 +675,97 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                                       trackingState.isCancelled ||
                                       (trackingState == _TrackingState.packing &&
                                           isQuickOrder &&
-                                          helperText.isNotEmpty)
+                                          quickOrderHelperText.isNotEmpty)
                                   ? 10
                                   : 30,
                               16,
                               0,
                             ),
-                            child: Column(
-                              children: [
-                                if (trackingState.isDelayed) ...[
-                                  const SizedBox(height: 16),
-                                  _InfoHelperCard(
-                                    text: helperText.isNotEmpty
-                                        ? helperText
-                                        : _defaultDelayedHelperText,
+                            child: _trackOrderLoading
+                                ? const _TrackingCardsSkeleton()
+                                : Column(
+                                    children: [
+                                      if (trackingState.isDelayed) ...[
+                                        const SizedBox(height: 16),
+                                        _InfoHelperCard(
+                                          text: helperText.isNotEmpty
+                                              ? helperText
+                                              : _defaultDelayedHelperText,
+                                        ),
+                                        const SizedBox(height: 12),
+                                      ],
+                                      if (trackingState.isCancelled) ...[
+                                        const SizedBox(height: 16),
+                                        _InfoHelperCard(
+                                          text: helperText.isNotEmpty
+                                              ? helperText
+                                              : _defaultCancelledHelperText,
+                                        ),
+                                        const SizedBox(height: 12),
+                                      ],
+                                      if (trackingState ==
+                                              _TrackingState.packing &&
+                                          isQuickOrder &&
+                                          quickOrderHelperText.isNotEmpty) ...[
+                                        const SizedBox(height: 16),
+                                        _InfoHelperCard(
+                                          text: quickOrderHelperText,
+                                          gradientEndColor:
+                                              const Color(0xFFFFEFD4),
+                                        ),
+                                        const SizedBox(height: 12),
+                                      ],
+                                      if (!trackingState.isDelivered) ...[
+                                        // if (vehicleAssigned) ...[
+                                        //   _DeliveryPartnerCard(vendorName: vendorName),
+                                        //   const SizedBox(height: 12),
+                                        // ],
+                                        _DeliveryAddressCard(
+                                          address: address,
+                                          deliveryName: deliveryName,
+                                          deliveryPhone: deliveryPhone,
+                                        ),
+                                        const SizedBox(height: 12),
+                                      ],
+                                      if (trackingState.canDownloadInvoice &&
+                                          invoiceUrl.isNotEmpty) ...[
+                                        _DownloadInvoiceButton(
+                                            invoiceUrl: invoiceUrl),
+                                        const SizedBox(height: 12),
+                                      ],
+                                      _TrackingItemsCard(
+                                        items: items,
+                                        orderNumber: orderNumber,
+                                        onViewSummary:
+                                            order == null || shipment == null
+                                                ? null
+                                                : () => context.push(
+                                                      '/order-detail',
+                                                      extra: order.id,
+                                                    ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      const _TrackingHelpCard(),
+                                      if (!_hasReview &&
+                                          !trackingState.isCancelled) ...[
+                                        const SizedBox(height: 12),
+                                        _TrackingRatingCard(
+                                          suborderId: orderNumber,
+                                          onReviewSubmitted: () =>
+                                              setState(() => _hasReview = true),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 20),
+                                      ReferralEarnCard(
+                                        onTap: () {
+                                          context.push('/refer-a-friend');
+                                        },
+                                        backgroundSvg:
+                                            'assets/images/giftbox.webp',
+                                      ),
+                                      const SizedBox(height: 32),
+                                    ],
                                   ),
-                                  const SizedBox(height: 12),
-                                ],
-                                if (trackingState.isCancelled) ...[
-                                  const SizedBox(height: 16),
-                                  _InfoHelperCard(
-                                    text: helperText.isNotEmpty
-                                        ? helperText
-                                        : _defaultCancelledHelperText,
-                                  ),
-                                  const SizedBox(height: 12),
-                                ],
-                                if (trackingState == _TrackingState.packing &&
-                                    isQuickOrder &&
-                                    helperText.isNotEmpty) ...[
-                                  const SizedBox(height: 16),
-                                  _InfoHelperCard(
-                                    text: helperText,
-                                    gradientEndColor: const Color(0xFFFFEFD4),
-                                  ),
-                                  const SizedBox(height: 12),
-                                ],
-                                if (!trackingState.isDelivered) ...[
-                                  // if (vehicleAssigned) ...[
-                                  //   _DeliveryPartnerCard(vendorName: vendorName),
-                                  //   const SizedBox(height: 12),
-                                  // ],
-                                  _DeliveryAddressCard(
-                                    address: address,
-                                    deliveryName: deliveryName,
-                                    deliveryPhone: deliveryPhone,
-                                  ),
-                                  const SizedBox(height: 12),
-                                ],
-                                if (trackingState.canDownloadInvoice &&
-                                    invoiceUrl.isNotEmpty) ...[
-                                  _DownloadInvoiceButton(
-                                      invoiceUrl: invoiceUrl),
-                                  const SizedBox(height: 12),
-                                ],
-                                _TrackingItemsCard(
-                                  items: items,
-                                  orderNumber: orderNumber,
-                                  onViewSummary:
-                                      order == null || shipment == null
-                                          ? null
-                                          : () => context.push(
-                                                '/order-detail',
-                                                extra: order.id,
-                                              ),
-                                ),
-                                const SizedBox(height: 12),
-                                const _TrackingHelpCard(),
-                                if (!_hasReview &&
-                                    !trackingState.isCancelled) ...[
-                                  const SizedBox(height: 12),
-                                  _TrackingRatingCard(
-                                    suborderId: orderNumber,
-                                    onReviewSubmitted: () =>
-                                        setState(() => _hasReview = true),
-                                  ),
-                                ],
-                                const SizedBox(height: 20),
-                                ReferralEarnCard(
-                                  onTap: () {
-                                    context.push('/refer-a-friend');
-                                  },
-                                  backgroundSvg: 'assets/images/giftbox.webp',
-                                ),
-                                const SizedBox(height: 32),
-                              ],
-                            ),
                           ),
                         ],
                       ),
@@ -1030,6 +1080,26 @@ class _TrackingHeader extends StatelessWidget {
   }
 }
 
+class _TrackingCardsSkeleton extends StatelessWidget {
+  const _TrackingCardsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        SkeletonBox(height: 124, borderRadius: 16),
+        SizedBox(height: 12),
+        SkeletonBox(height: 150, borderRadius: 16),
+        SizedBox(height: 12),
+        SkeletonBox(height: 72, borderRadius: 16),
+        SizedBox(height: 12),
+        SkeletonBox(height: 96, borderRadius: 16),
+        SizedBox(height: 32),
+      ],
+    );
+  }
+}
+
 class _TrackingHeroSection extends StatelessWidget {
   const _TrackingHeroSection({
     required this.state,
@@ -1040,6 +1110,7 @@ class _TrackingHeroSection extends StatelessWidget {
     required this.statusText,
     required this.cancelTime,
     required this.normalStatusTime,
+    required this.isLoading,
     required this.onNormalStatusTap,
   });
 
@@ -1051,6 +1122,7 @@ class _TrackingHeroSection extends StatelessWidget {
   final String statusText;
   final String cancelTime;
   final String normalStatusTime;
+  final bool isLoading;
   final VoidCallback? onNormalStatusTap;
 
   @override
@@ -1090,6 +1162,7 @@ class _TrackingHeroSection extends StatelessWidget {
                   statusText: statusText,
                   cancelTime: cancelTime,
                   normalStatusTime: normalStatusTime,
+                  isLoading: isLoading,
                   onTap: onNormalStatusTap,
                 ),
               ),
@@ -1223,6 +1296,43 @@ class _TrackingHero extends StatelessWidget {
   }
 }
 
+class _EtaCardSkeleton extends StatelessWidget {
+  const _EtaCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 88,
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDEDEDE)),
+      ),
+      child: const Row(
+        children: [
+          SkeletonBox(width: 24, height: 24, borderRadius: 12),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 128, height: 22, borderRadius: 8),
+                SizedBox(height: 8),
+                SkeletonBox(width: 170, height: 14, borderRadius: 6),
+              ],
+            ),
+          ),
+          SizedBox(width: 12),
+          SkeletonBox(width: 86, height: 26, borderRadius: 12),
+        ],
+      ),
+    );
+  }
+}
+
 class _EtaCard extends StatelessWidget {
   const _EtaCard({
     required this.state,
@@ -1233,6 +1343,7 @@ class _EtaCard extends StatelessWidget {
     required this.statusText,
     required this.cancelTime,
     required this.normalStatusTime,
+    required this.isLoading,
     required this.onTap,
   });
 
@@ -1244,10 +1355,12 @@ class _EtaCard extends StatelessWidget {
   final String statusText;
   final String cancelTime;
   final String normalStatusTime;
+  final bool isLoading;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) return const _EtaCardSkeleton();
     if (isQuickOrder) return _quickOrderCard();
 
     final title = state.subtitle;
@@ -1333,7 +1446,7 @@ class _EtaCard extends StatelessWidget {
         ? deliveryDate
         : state.isCancelled && cancelTime.trim().isNotEmpty
             ? 'Cancelled on ${cancelTime.trim()}'
-            : state.isDelayed && statusText.trim().isNotEmpty
+            : statusText.trim().isNotEmpty
                 ? statusText.trim()
                 : state.subtitle;
 
@@ -1350,7 +1463,7 @@ class _EtaCard extends StatelessWidget {
           Positioned(
             left: 16,
             top: 16,
-            right: 112,
+            right: 16,
             height: 56,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2832,13 +2945,6 @@ enum _TrackingState {
       _TrackingState.outForDelivery => 'assets/images/Out_for_delivery.webp',
       _TrackingState.packed => 'assets/images/Your_order_is_packed.webp',
       _TrackingState.packing => 'assets/images/Packing_your_order.webp',
-    };
-  }
-
-  String get headerTitle {
-    return switch (this) {
-      _TrackingState.delivered => 'Shipment 1',
-      _ => 'Track order',
     };
   }
 

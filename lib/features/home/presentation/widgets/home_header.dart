@@ -10,6 +10,7 @@ import 'package:m_o_b_demand_side/features/address/data/local/selected_address_s
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:m_o_b_demand_side/features/home/domain/entities/home_entity.dart';
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
@@ -74,6 +75,9 @@ class _HomeHeaderState extends State<HomeHeader> {
         : 'assets/images/thunder.svg';
     final profilePictureUrl = _profilePictureUrl();
     final notServiceable = context.watch<HomeBloc>().state is HomeNotServiceable;
+    final cartState = context.watch<CartBloc>().state;
+    final mobStarLevel =
+        cartState is CartLoaded ? cartState.summary.account.membership : 'Bronze';
 
     return Container(
       color: const Color(0xFF0A3C35),
@@ -199,14 +203,29 @@ class _HomeHeaderState extends State<HomeHeader> {
               InkWell(
                 onTap: () => context.push(MobstarPage.routePath),
                 borderRadius: BorderRadius.circular(18),
-                child: Container(
+                child: SizedBox(
                   width: 72,
                   height: 36,
-                  alignment: Alignment.center,
-                  child: SvgPicture.asset(
-                    'assets/images/mobstaricon.svg',
-                    width: 72,
-                    height: 36,
+                  child: Stack(
+                    children: [
+                      SvgPicture.asset(
+                        'assets/images/mobstaricon_base.svg',
+                        width: 72,
+                        height: 36,
+                      ),
+                      // Positioned to match the star's bounding box from the
+                      // original flat mobstaricon.svg (x: 8.04-27.02,
+                      // y: 9-27.02) so swapping tiers doesn't shift the star.
+                      Positioned(
+                        left: 8,
+                        top: 9,
+                        child: SvgPicture.asset(
+                          _mobStarAsset(mobStarLevel),
+                          width: 19,
+                          height: 18,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -327,6 +346,20 @@ class _HomeHeaderState extends State<HomeHeader> {
       return address.formattedAddress.trim();
     }
     return address.locationName.trim();
+  }
+
+  // Mirrors the same level->asset mapping used on my_account.dart and
+  // mobstar_page.dart, so the header badge always matches the tier shown on
+  // the full mobSTAR pages.
+  String _mobStarAsset(String level) {
+    final lower = level.toLowerCase();
+    if (lower.contains('diamond') || lower.contains('dimond')) {
+      return 'assets/images/mobStar/dimond.svg';
+    }
+    if (lower.contains('platinum')) return 'assets/images/mobStar/platinum.svg';
+    if (lower.contains('gold')) return 'assets/images/mobStar/gold.svg';
+    if (lower.contains('silver')) return 'assets/images/mobStar/silver.svg';
+    return 'assets/images/mobStar/bronze.svg';
   }
 }
 

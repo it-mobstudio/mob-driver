@@ -200,9 +200,9 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   /// "Add new address" — confirm a pin on the map, then collect receiver
   /// details and actually save it to the address book (unlike
   /// [_confirmLocationThenSelect]'s callers, which only set the nav bar's
-  /// browsing location). Defaults to a Bengaluru city-center pin when no
-  /// location is already known; [ConfirmDeliveryLocationPage] resolves the
-  /// real address for it as soon as the map loads.
+  /// browsing location). When no location is already known, the map starts
+  /// from the device's current GPS location; Bengaluru is only the inert
+  /// route-extra fallback until the GPS fix arrives.
   Future<void> _openMap([AddressLocationEntity? location]) async {
     // Push through appNavigatorKey.currentContext, not this method's own
     // `context` — ConfirmDeliveryLocationPage/AddAddressDetailPage use

@@ -504,9 +504,13 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                         final isLoading = checkoutState is CheckoutLoading;
                         final isPaymentBlocked =
                             isLoading || _isRupifiHandoffInProgress;
+                        final isMobCreditAddressSelected =
+                            _isMobCreditBillingAddress(summary);
                         final isPaymentMethodReady = summary.total <= 0 ||
                             (_paymentOption == 1 && _razorpayEntity != null) ||
-                            (_paymentOption == 0 && _rupifiEntity != null);
+                            (_paymentOption == 0 &&
+                                _rupifiEntity != null &&
+                                isMobCreditAddressSelected);
                         return Column(
                           children: [
                             _PaymentHeader(onBack: () => _goBack(context)),
@@ -602,6 +606,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                             const _MobCreditOverlimitBanner(),
                                           _MobCreditPaymentCard(
                                             selected: summary.total > 0 &&
+                                                isMobCreditAddressSelected &&
                                                 summary.mobCreditAccountStatus ==
                                                     'ACTIVE' &&
                                                 summary.total <=
@@ -614,10 +619,15 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                                 summary.mobCreditAccountStatus,
                                             isDisabled: summary.total <= 0 ||
                                                 isPaymentBlocked ||
+                                                !isMobCreditAddressSelected ||
                                                 summary.mobCreditAccountStatus !=
                                                     'ACTIVE' ||
                                                 summary.total >
                                                     summary.mobCreditBalance,
+                                            disabledMessage:
+                                                !isMobCreditAddressSelected
+                                                    ? 'Select your mobCREDIT address to use mobCREDIT.'
+                                                    : null,
                                             onTap: () => _onMobCreditSelected(
                                               summary.cartId,
                                               summary.total,
@@ -713,6 +723,20 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     }
 
     return summary.usePoints ? _lastMobstarApplicableAmount : 0;
+  }
+
+  bool _isMobCreditBillingAddress(CartSummaryEntity summary) {
+    final selectedId = summary.billingAddressId.trim();
+    if (selectedId.isEmpty) return false;
+    for (final address in summary.savedAddresses) {
+      final tag = address.tag.trim().toLowerCase();
+      final isMobCreditAddress =
+          address.isMobCredit || tag == 'mobcredit' || tag == 'mob credit';
+      if (address.addressId.trim() == selectedId && isMobCreditAddress) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
@@ -977,6 +1001,7 @@ class _MobCreditPaymentCard extends StatelessWidget {
     required this.onTap,
     this.status,
     this.isDisabled = false,
+    this.disabledMessage,
   });
 
   final bool selected;
@@ -985,8 +1010,11 @@ class _MobCreditPaymentCard extends StatelessWidget {
   final VoidCallback onTap;
   final String? status;
   final bool isDisabled;
+  final String? disabledMessage;
 
   String get _disabledMessage {
+    final customMessage = disabledMessage?.trim() ?? '';
+    if (customMessage.isNotEmpty) return customMessage;
     if (total <= 0) return 'No payable amount for mobCREDIT.';
     if (status == 'AMOUNT_DUE') {
       return 'Clear your outstanding due to use mobCREDIT.';

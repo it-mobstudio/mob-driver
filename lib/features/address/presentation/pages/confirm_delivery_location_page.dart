@@ -47,6 +47,9 @@ class _ConfirmDeliveryLocationPageState
   late AddressLocationEntity _resolved;
   bool _resolvingAddress = false;
   bool _detectingLocation = false;
+  bool _myLocationEnabled = false;
+  LatLng? _currentDeviceLatLng;
+  double? _currentDeviceAccuracy;
   // Panning over open water (or anywhere with no landmarks to settle on)
   // fires onCameraIdle repeatedly in quick succession, launching overlapping
   // reverse-geocode calls whose responses can land out of order — without
@@ -65,13 +68,35 @@ class _ConfirmDeliveryLocationPageState
       widget.initialLocation.latitude,
       widget.initialLocation.longitude,
     );
-    // "Add new address" opens this with a bare default pin (no resolved
-    // address yet) — detect-location/search callers already pass a fully
-    // resolved location, so this is a no-op for them.
-    if (_resolved.formattedAddress.trim().isEmpty) {
-      _reverseGeocode(_pickedLatLng);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_isBlankInitialLocation) {
+        unawaited(_useCurrentLocation());
+      } else {
+        unawaited(_requestMapLocationPermission());
+      }
+    });
+  }
+
+  Future<void> _requestMapLocationPermission() async {
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (!mounted) return;
+    final canShowLocation = permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
+    if (_myLocationEnabled != canShowLocation) {
+      setState(() => _myLocationEnabled = canShowLocation);
     }
   }
+
+  bool get _isBlankInitialLocation =>
+      widget.initialLocation.formattedAddress.trim().isEmpty &&
+      widget.initialLocation.city.trim().isEmpty &&
+      widget.initialLocation.state.trim().isEmpty &&
+      widget.initialLocation.pincode.trim().isEmpty &&
+      widget.initialLocation.locationName.trim().isEmpty;
 
   @override
   void dispose() {
@@ -133,18 +158,10 @@ class _ConfirmDeliveryLocationPageState
               target: _pickedLatLng,
               zoom: 16,
             ),
-            // Deliberately off: this screen's whole job is "the pin fixed at
-            // screen center is your delivery point" (the Blinkit/Swiggy
-            // pin-drop pattern). Google's native blue dot tracks the device's
-            // live GPS fix independently of the camera/pin, and since that's
-            // a *different* location source than the one-shot fix
-            // `_useCurrentLocation` centers the pin on, the two visibly
-            // disagree — especially in dense urban areas — reading as "which
-            // one is my actual location?" instead of a single, unambiguous
-            // pin the user has to be sure to place.
-            myLocationEnabled: false,
+            myLocationEnabled: _myLocationEnabled,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
+            circles: _currentLocationCircles,
             onMapCreated: (controller) => _controllerReady.complete(controller),
             onCameraMove: (position) => _pickedLatLng = position.target,
             onCameraIdle: () => _scheduleReverseGeocode(_pickedLatLng),
@@ -156,19 +173,36 @@ class _ConfirmDeliveryLocationPageState
           top: 16,
           child: _searchBar(),
         ),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _tooltip(),
-                const SizedBox(height: 13),
-                Transform.translate(
-                  offset: const Offset(0, -2),
-                  child: const _MapPin(),
-                ),
-              ],
+        // The black pin tip must land exactly on the map's true center, since
+        // that's the point `_pickedLatLng` (== camera target) resolves the
+        // address for. The SVG has a small green shadow below the tip, so the
+        // block is anchored slightly below center instead of using its bottom
+        // edge directly.
+        Positioned.fill(
+          child: IgnorePointer(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const pinTipInsetFromBottom = 2.6;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom:
+                          (constraints.maxHeight / 2) - pinTipInsetFromBottom,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _tooltip(),
+                          const SizedBox(height: 13),
+                          const _MapPin(),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -511,6 +545,13 @@ class _ConfirmDeliveryLocationPageState
       );
       final location = LatLng(position.latitude, position.longitude);
       _pickedLatLng = location;
+      if (mounted) {
+        setState(() {
+          _myLocationEnabled = true;
+          _currentDeviceLatLng = location;
+          _currentDeviceAccuracy = position.accuracy;
+        });
+      }
       final controller = await _controllerReady.future;
       await controller.animateCamera(
         CameraUpdate.newLatLngZoom(location, 16),
@@ -530,6 +571,29 @@ class _ConfirmDeliveryLocationPageState
       const Duration(milliseconds: 350),
       () => _reverseGeocode(location),
     );
+  }
+
+  Set<Circle> get _currentLocationCircles {
+    final location = _currentDeviceLatLng;
+    if (location == null) return const <Circle>{};
+    return {
+      Circle(
+        circleId: const CircleId('current_location_accuracy'),
+        center: location,
+        radius: (_currentDeviceAccuracy ?? 18).clamp(18, 80).toDouble(),
+        fillColor: const Color(0xFF1A73E8).withValues(alpha: 0.18),
+        strokeColor: const Color(0xFF1A73E8).withValues(alpha: 0.28),
+        strokeWidth: 1,
+      ),
+      Circle(
+        circleId: const CircleId('current_location_dot'),
+        center: location,
+        radius: 3,
+        fillColor: const Color(0xFF1A73E8),
+        strokeColor: Colors.white,
+        strokeWidth: 2,
+      ),
+    };
   }
 
   Future<void> _reverseGeocode(LatLng location) async {
