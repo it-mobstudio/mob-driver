@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
@@ -544,7 +545,11 @@ class _SearchHeader extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search),
+                  SvgPicture.asset(
+                  'assets/images/Searchicon.svg',
+                  width: 16,
+                  height: 16,
+                ),
                   const SizedBox(width: 8),
                   Expanded(
                     // The rotating hint can't live in TextField.hintText

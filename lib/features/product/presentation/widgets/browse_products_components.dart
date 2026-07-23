@@ -1112,11 +1112,14 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSelected = selectedCount > 0;
+    final maxChipWidth =
+        (MediaQuery.sizeOf(context).width - 32).clamp(120.0, 280.0).toDouble();
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 36,
+        constraints: BoxConstraints(maxWidth: maxChipWidth),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFF4F8FF) : Colors.white,
@@ -1141,12 +1144,16 @@ class _FilterChip extends StatelessWidget {
               ),
               const SizedBox(width: 8),
             ],
-            Text(
-              isSelected ? '$label ($selectedCount)' : label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF0A243F),
+            Flexible(
+              child: Text(
+                isSelected ? '$label ($selectedCount)' : label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF0A243F),
+                ),
               ),
             ),
             if (isSelected && onClear != null) ...[
