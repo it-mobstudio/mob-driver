@@ -466,7 +466,7 @@ class _EmptyWallet extends StatelessWidget {
             width: 136,
             height: 136,
             child: Image.asset(
-              'assets/images/wallet_empty.png',
+              'assets/images/emptywallet.webp',
               fit: BoxFit.contain,
             ),
           ),

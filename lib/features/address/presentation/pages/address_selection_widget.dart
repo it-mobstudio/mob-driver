@@ -136,7 +136,9 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
               ),
             ),
             body: SafeArea(
-              bottom: false,
+              top: false,
+              left: false,
+              right: false,
               child: AddressPickerBody(
                 addresses: _addresses,
                 selectedAddressId: SelectedAddressStore.cached?.id,
@@ -344,7 +346,8 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   }
 
   bool _hasRequiredLocationFields(AddressLocationEntity location) {
-    final pincode = _resolvePincode(location.pincode, location.formattedAddress);
+    final pincode =
+        _resolvePincode(location.pincode, location.formattedAddress);
     return location.city.trim().isNotEmpty &&
         location.state.trim().isNotEmpty &&
         pincode.isNotEmpty;
