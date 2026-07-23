@@ -62,8 +62,20 @@ class _MobstarView extends StatefulWidget {
   }
 
   static String _trimNumber(double value) {
-    if (value % 1 == 0) return value.toStringAsFixed(0);
+    if (value % 1 == 0) return value.toStringAsFixed(1);
     return value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+  }
+
+  static String _pointsMultiplier(MobstarEntity mobstar) {
+    final membership = mobstar.membership.toLowerCase();
+    if (membership.contains('diamond') || membership.contains('dimond')) {
+      return '2';
+    }
+    if (membership.contains('platinum')) return '1.75';
+    if (membership.contains('gold')) return '1.5';
+    if (membership.contains('silver')) return '1.25';
+    if (membership.contains('bronze')) return '1.0';
+    return _trimNumber(mobstar.percentage);
   }
 
   static String _levelAsset(String level) {
@@ -94,7 +106,7 @@ class _MobstarViewState extends State<_MobstarView> {
     final valueText = mobstar.actualMoney % 1 == 0
         ? mobstar.actualMoney.toStringAsFixed(0)
         : mobstar.actualMoney.toStringAsFixed(2);
-    final rewardText = '${_MobstarView._trimNumber(mobstar.percentage)}X points';
+    final rewardText = '${_MobstarView._pointsMultiplier(mobstar)}X points';
 
     return Scaffold(
       backgroundColor: const Color(0xFF090A15),
@@ -405,8 +417,7 @@ class _MobstarViewState extends State<_MobstarView> {
                       expanded: _expandedFaqIndex == indexedEntry.$1,
                       onExpansionChanged: (expanded) {
                         setState(() {
-                          _expandedFaqIndex =
-                              expanded ? indexedEntry.$1 : null;
+                          _expandedFaqIndex = expanded ? indexedEntry.$1 : null;
                         });
                       },
                     ),
@@ -423,7 +434,6 @@ class _MobstarViewState extends State<_MobstarView> {
       ),
     );
   }
-
 }
 
 class _MobstarLogo extends StatelessWidget {
