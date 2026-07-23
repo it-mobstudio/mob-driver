@@ -163,7 +163,8 @@ class _PrivacyPolicyCard extends StatelessWidget {
             'website might contain links or promotional details from other websites. '
             'MOB recommends referring to their privacy policies if you are accessing '
             'their website. MOB indemnifies itself against all data use on and '
-            'reservations made via third party websites/agents.',
+            'reservations made via third party websites/agents.'
+            'Request to delete account will be initiated to admin team & we will check all records based on criteria account will be deactivated in 7 days.',
             style: GoogleFonts.inter(
               color: const Color(0xFF596378),
               fontSize: 12,
@@ -181,8 +182,8 @@ class _ViewAllButton extends StatelessWidget {
   const _ViewAllButton();
 
   Future<void> _openPrivacyPolicy(BuildContext context) async {
-    final opened =
-        await launchUrl(_privacyPolicyUri, mode: LaunchMode.externalApplication);
+    final opened = await launchUrl(_privacyPolicyUri,
+        mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
       TopSnackBar.show(context, message: 'Unable to open privacy policy.');
     }
