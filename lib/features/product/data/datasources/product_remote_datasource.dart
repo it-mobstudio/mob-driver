@@ -102,11 +102,10 @@ class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
         .where((entry) => entry.key.trim().isNotEmpty && entry.value.isNotEmpty)
         .toList();
     final cityQuery = await selectedCityQueryParameter();
-    final city = cityQuery['city']?.toString().trim() ?? '';
     final response = await _dio.get<dynamic>(
       '/home/$slug/get_product_details/',
       queryParameters: <String, dynamic>{
-        if (city.isNotEmpty) 'cities': city,
+        ...cityQuery,
         if (selectedEntries.isNotEmpty)
           'variant_type': selectedEntries.map((entry) => entry.key).join(','),
         for (final entry in selectedEntries) entry.key: entry.value,

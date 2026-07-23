@@ -10,7 +10,6 @@ abstract interface class AddressRemoteDatasource {
   Future<Map<String, dynamic>> getLocationDetails(String placeId);
   Future<Map<String, dynamic>> reverseGeocode(
       double latitude, double longitude);
-  Future<Map<String, dynamic>> checkServiceability(String pincode);
 }
 
 class AddressRemoteDatasourceImpl implements AddressRemoteDatasource {
@@ -107,15 +106,6 @@ class AddressRemoteDatasourceImpl implements AddressRemoteDatasource {
         'latlng': '$latitude,$longitude',
         'key': AppConfig.googleMapsApiKey,
       },
-    );
-    return _toMap(response.data);
-  }
-
-  @override
-  Future<Map<String, dynamic>> checkServiceability(String pincode) async {
-    final response = await _dio.get<dynamic>(
-      '/utility/serviceble/',
-      queryParameters: {'pincode': pincode},
     );
     return _toMap(response.data);
   }

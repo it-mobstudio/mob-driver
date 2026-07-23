@@ -277,47 +277,6 @@ class AddressRepositoryImpl implements AddressRepository {
     }
   }
 
-  @override
-  Future<(bool, AppFailure?)> checkServiceability(String pincode) async {
-    try {
-      final body = await _datasource.checkServiceability(pincode);
-      final data = body['data'] is Map
-          ? Map<String, dynamic>.from(body['data'] as Map)
-          : body;
-      return (_serviceableFrom(data, body), null);
-    } on DioException catch (error) {
-      return (true, error.toAppFailure());
-    } catch (error) {
-      return (true, UnknownFailure(error.toString()));
-    }
-  }
-
-  // The exact response shape isn't pinned down yet, so this checks every
-  // plausible key/casing rather than a single one — and a failed/ambiguous
-  // check fails open (serviceable) so a flaky endpoint never blocks the
-  // whole home page for an area that's actually fine.
-  bool _serviceableFrom(Map<String, dynamic> data, Map<String, dynamic> body) {
-    for (final source in [data, body]) {
-      for (final key in const [
-        'is_serviceable',
-        'isServiceable',
-        'serviceable',
-        'is_location_serviceable',
-        'isLocationServiceable',
-      ]) {
-        final value = source[key];
-        if (value is bool) return value;
-        if (value != null) {
-          final text = value.toString().trim().toLowerCase();
-          if (text == 'true' || text == '1') return true;
-          if (text == 'false' || text == '0') return false;
-        }
-      }
-    }
-    if (body['status'] is bool) return body['status'] as bool;
-    return true;
-  }
-
   List<dynamic> _extractList(dynamic raw) {
     if (raw is List) return raw;
     if (raw is Map) {

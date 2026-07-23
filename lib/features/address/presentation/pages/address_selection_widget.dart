@@ -332,7 +332,22 @@ class _AddressSelectionWidgetState extends State<AddressSelectionWidget> {
   Future<void> _autoDetectCurrentLocation() async {
     final location = await _resolveCurrentDeviceLocation();
     if (location == null) return;
+    // A GPS fix with no city/state/pincode behind it (e.g. an unmapped area,
+    // or a stray fix out over water) isn't safe to apply silently — fall
+    // back to the normal pin-confirmation flow so the user can adjust it,
+    // same as every other manual pick.
+    if (!_hasRequiredLocationFields(location)) {
+      await _confirmLocationThenSelect(location);
+      return;
+    }
     await _completeSelection(_toAddressEntity(location));
+  }
+
+  bool _hasRequiredLocationFields(AddressLocationEntity location) {
+    final pincode = _resolvePincode(location.pincode, location.formattedAddress);
+    return location.city.trim().isNotEmpty &&
+        location.state.trim().isNotEmpty &&
+        pincode.isNotEmpty;
   }
 
   /// Shared GPS fetch + reverse-geocode step behind both

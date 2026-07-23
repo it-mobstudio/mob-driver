@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
@@ -36,46 +35,6 @@ class _SearchPageState extends State<SearchPage> {
 
   // --- local storage (recently searched)
   static const _historyKey = 'search_history_v1';
-  static const _defaultRecentSearches = <String>[
-    'Fevicol',
-    'Cement',
-    'Wall putty',
-    'Asian paints',
-    'Greenply',
-    'Greenply',
-    'Bricks',
-    'Kajaria tiles',
-  ];
-  static const _defaultCategorySuggestions = <String>[
-    'Cement',
-    'Cement mixer',
-    'Sustainable cement',
-    'White cement',
-    'Cement board',
-    'Ready mix cement',
-  ];
-  static const _defaultProductSuggestions = <_FallbackProductSuggestion>[
-    _FallbackProductSuggestion(
-      title: 'JK Cement White Max Portland',
-      asset: 'assets/images/Brands/zuari.webp',
-    ),
-    _FallbackProductSuggestion(
-      title: 'Ultratech Cement',
-      asset: 'assets/images/Brands/ultratech.webp',
-    ),
-    _FallbackProductSuggestion(
-      title: 'MOB Ready Mix Cement',
-      asset: 'assets/images/moblogo.svg',
-    ),
-    _FallbackProductSuggestion(
-      title: 'MOB Ultra Cement',
-      asset: 'assets/images/Mobitem.svg',
-    ),
-    _FallbackProductSuggestion(
-      title: 'Neoseal Solvent Cement',
-      asset: 'assets/images/Brands/Roff.webp',
-    ),
-  ];
   // "Trending in your area" — hidden for now, kept for easy restoration.
   // static const _trendingItems = <_TrendingSearchItem>[
   //   _TrendingSearchItem(
@@ -365,7 +324,9 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _searchHistoryView() {
-    final recentSearches = history.isEmpty ? _defaultRecentSearches : history;
+    if (history.isEmpty) {
+      return const Expanded(child: SizedBox.shrink());
+    }
     return Expanded(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 0, 24),
@@ -404,7 +365,7 @@ class _SearchPageState extends State<SearchPage> {
             child: Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: recentSearches.take(8).map(_recentChip).toList(),
+              children: history.take(8).map(_recentChip).toList(),
             ),
           ),
           // "Trending in your area" — hidden for now, kept for easy
@@ -544,29 +505,26 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     final showsBrandSuggestions = _brandSuggestions.isNotEmpty;
-    final categoryTerms = showsBrandSuggestions
-        ? _brandSuggestions.take(6).toList()
-        : _defaultCategorySuggestions;
+    final categoryTerms = _brandSuggestions.take(6).toList();
+    final showsProductSuggestions = _suggestions.isNotEmpty;
 
     return Expanded(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           if (_loading) const LinearProgressIndicator(minHeight: 1),
-          _suggestionSectionHeader('BRANDS'),
-          ...categoryTerms.map(
-            (term) => _categorySuggestionRow(
-              term,
-              onTap: showsBrandSuggestions
-                  ? () => _openBrand(term)
-                  : () => _submitSearch(term),
+          if (showsBrandSuggestions) ...[
+            _suggestionSectionHeader('BRANDS'),
+            ...categoryTerms.map(
+              (term) => _categorySuggestionRow(
+                term,
+                onTap: () => _openBrand(term),
+              ),
             ),
-          ),
-          _suggestionSectionHeader('PRODUCTS'),
-          if (_suggestions.isNotEmpty) ...[
+          ],
+          if (showsProductSuggestions) ...[
+            _suggestionSectionHeader('PRODUCTS'),
             ..._suggestions.take(8).map(_productTile),
-          ] else ...[
-            ..._defaultProductSuggestions.map(_fallbackProductTile),
           ],
         ],
       ),
@@ -645,29 +603,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _fallbackProductTile(_FallbackProductSuggestion item) {
-    return _productSuggestionRow(
-      title: item.title,
-      image: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: item.asset.endsWith('.svg')
-            ? SvgPicture.asset(
-                item.asset,
-                fit: BoxFit.contain,
-              )
-            : Image.asset(
-                item.asset,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.image_outlined,
-                  color: Color(0xFF767C8F),
-                ),
-              ),
-      ),
-      onTap: () => _submitSearch(item.title),
-    );
-  }
-
   Widget _productSuggestionRow({
     required String title,
     required Widget image,
@@ -715,16 +650,6 @@ class _SearchPageState extends State<SearchPage> {
       ),
     );
   }
-}
-
-class _FallbackProductSuggestion {
-  const _FallbackProductSuggestion({
-    required this.title,
-    required this.asset,
-  });
-
-  final String title;
-  final String asset;
 }
 
 /* "Trending in your area" — hidden for now, kept for easy restoration.

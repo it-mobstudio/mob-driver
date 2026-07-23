@@ -22,8 +22,4 @@ abstract interface class AddressRepository {
     double latitude,
     double longitude,
   );
-
-  /// Checks whether MOB currently delivers to [pincode]. Backed by
-  /// `/utility/serviceble/?pincode=...`.
-  Future<(bool, AppFailure?)> checkServiceability(String pincode);
 }

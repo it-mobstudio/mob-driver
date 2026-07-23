@@ -47,6 +47,14 @@ class _ConfirmDeliveryLocationPageState
   late AddressLocationEntity _resolved;
   bool _resolvingAddress = false;
   bool _detectingLocation = false;
+  // Panning over open water (or anywhere with no landmarks to settle on)
+  // fires onCameraIdle repeatedly in quick succession, launching overlapping
+  // reverse-geocode calls whose responses can land out of order — without
+  // this guard, an older response can overwrite a newer one and flip
+  // _resolved back and forth, which reads as the confirm card blinking.
+  int _reverseGeocodeRequestId = 0;
+  Timer? _reverseGeocodeDebounce;
+  String? _lastReverseGeocodeKey;
 
   @override
   void initState() {
@@ -67,6 +75,7 @@ class _ConfirmDeliveryLocationPageState
 
   @override
   void dispose() {
+    _reverseGeocodeDebounce?.cancel();
     if (_controllerReady.isCompleted) {
       _controllerReady.future.then((controller) => controller.dispose());
     }
@@ -138,7 +147,7 @@ class _ConfirmDeliveryLocationPageState
             zoomControlsEnabled: false,
             onMapCreated: (controller) => _controllerReady.complete(controller),
             onCameraMove: (position) => _pickedLatLng = position.target,
-            onCameraIdle: () => _reverseGeocode(_pickedLatLng),
+            onCameraIdle: () => _scheduleReverseGeocode(_pickedLatLng),
           ),
         ),
         Positioned(
@@ -414,7 +423,10 @@ class _ConfirmDeliveryLocationPageState
             child: Text(
               _resolved.formattedAddress.isEmpty
                   ? 'Move the map to choose a location'
-                  : _resolved.formattedAddress,
+                  : !_resolvingAddress && !_hasRequiredFields
+                      ? "We couldn't find a deliverable address here. "
+                          'Please choose a different location.'
+                      : _resolved.formattedAddress,
               style: GoogleFonts.inter(
                 color: _bodyText,
                 fontSize: 12,
@@ -427,7 +439,9 @@ class _ConfirmDeliveryLocationPageState
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: _resolvingAddress || _resolved.formattedAddress.isEmpty
+              onPressed: _resolvingAddress ||
+                      _resolved.formattedAddress.isEmpty ||
+                      !_hasRequiredFields
                   ? null
                   : _confirm,
               style: ElevatedButton.styleFrom(
@@ -454,6 +468,10 @@ class _ConfirmDeliveryLocationPageState
   }
 
   Future<void> _applyResolvedLocation(AddressLocationEntity location) async {
+    _reverseGeocodeDebounce?.cancel();
+    _lastReverseGeocodeKey = _reverseGeocodeKey(
+      LatLng(location.latitude, location.longitude),
+    );
     setState(() {
       _resolved = location;
       _pickedLatLng = LatLng(location.latitude, location.longitude);
@@ -497,6 +515,7 @@ class _ConfirmDeliveryLocationPageState
       await controller.animateCamera(
         CameraUpdate.newLatLngZoom(location, 16),
       );
+      _lastReverseGeocodeKey = null;
       await _reverseGeocode(location);
     } catch (_) {
       _showMessage('Unable to detect your current location.');
@@ -505,24 +524,70 @@ class _ConfirmDeliveryLocationPageState
     }
   }
 
+  void _scheduleReverseGeocode(LatLng location) {
+    _reverseGeocodeDebounce?.cancel();
+    _reverseGeocodeDebounce = Timer(
+      const Duration(milliseconds: 350),
+      () => _reverseGeocode(location),
+    );
+  }
+
   Future<void> _reverseGeocode(LatLng location) async {
     if (!mounted) return;
+    final requestKey = _reverseGeocodeKey(location);
+    if (_lastReverseGeocodeKey == requestKey) return;
+    _lastReverseGeocodeKey = requestKey;
+    final requestId = ++_reverseGeocodeRequestId;
     setState(() => _resolvingAddress = true);
     final (resolved, failure) = await _addressRepository.reverseGeocode(
       location.latitude,
       location.longitude,
     );
-    if (!mounted) return;
-    if (failure == null && resolved != null) {
-      setState(() => _resolved = resolved);
-    }
-    setState(() => _resolvingAddress = false);
+    if (!mounted || requestId != _reverseGeocodeRequestId) return;
+    setState(() {
+      _resolved = failure == null && resolved != null
+          ? resolved
+          : _unresolvedLocation(location);
+      _resolvingAddress = false;
+    });
+  }
+
+  String _reverseGeocodeKey(LatLng location) {
+    return '${location.latitude.toStringAsFixed(5)},'
+        '${location.longitude.toStringAsFixed(5)}';
+  }
+
+  AddressLocationEntity _unresolvedLocation(LatLng location) {
+    return AddressLocationEntity(
+      latitude: location.latitude,
+      longitude: location.longitude,
+      formattedAddress: 'Unavailable location',
+      city: '',
+      state: '',
+      pincode: '',
+      sublocality: '',
+      locationName: 'Location unavailable',
+    );
   }
 
   String _resolvePincode(String? postalCode, String address) {
     final direct = postalCode?.trim() ?? '';
     if (RegExp(r'^[1-9][0-9]{5}$').hasMatch(direct)) return direct;
     return RegExp(r'\b[1-9][0-9]{5}\b').firstMatch(address)?.group(0) ?? '';
+  }
+
+  // Blocks pins with no real address behind them (e.g. dropped in the sea
+  // or a mountain range) from ever being confirmed — pincode/city/state are
+  // mandatory downstream (order routing, serviceability checks), so an
+  // address missing any of them shouldn't be selectable in the first place.
+  bool get _hasRequiredFields {
+    final pincode = _resolvePincode(
+      _resolved.pincode,
+      _resolved.formattedAddress,
+    );
+    return _resolved.city.trim().isNotEmpty &&
+        _resolved.state.trim().isNotEmpty &&
+        pincode.isNotEmpty;
   }
 
   void _confirm() {
