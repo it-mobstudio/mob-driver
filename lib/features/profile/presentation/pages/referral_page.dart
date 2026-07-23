@@ -99,11 +99,9 @@ class _ReferralView extends StatelessWidget {
                   right: false,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minWidth: double.infinity,
-                        minHeight: 48,
-                      ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48,
                       child: ElevatedButton(
                         onPressed: canShare
                             ? () => _shareReferral(
@@ -231,33 +229,31 @@ class _ReferralHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: Colors.white,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: onBack,
-                  padding: EdgeInsets.zero,
-                  alignment: Alignment.centerLeft,
-                  icon: const AppBackIcon(),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 60, 16, 10),
+        child: SizedBox(
+          height: 48,
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: onBack,
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerLeft,
+                icon: const AppBackIcon(),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onSearch,
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerRight,
+                icon: SvgPicture.asset(
+                  'assets/images/Searchicon.svg',
+                  width: 16,
+                  height: 16,
+                  color: const Color(0xFF0A243F),
                 ),
-                const Spacer(),
-                IconButton(
-                  onPressed: onSearch,
-                  padding: EdgeInsets.zero,
-                  alignment: Alignment.centerRight,
-                  icon: const Icon(
-                    Icons.search,
-                    size: 24,
-                    color: Color(0xFF0A243F),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -277,24 +273,17 @@ class _ReferralPromoSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasReferralCode = referralCode.trim().isNotEmpty;
-    final promoImageHeight = MediaQuery.sizeOf(context).height * 0.17;
-    final rewardCardsTop = 161 + promoImageHeight + 4;
-    final backgroundHeight = rewardCardsTop + 79;
-    final gradientTop = 161 + (promoImageHeight * 92 / 205);
-    final disclaimerTop = rewardCardsTop + 186;
-    final sectionHeight = disclaimerTop + 50;
-
     return SizedBox(
-      height: sectionHeight,
+      height: 590,
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
-          Positioned(
+          const Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: backgroundHeight,
-            child: const DecoratedBox(
+            height: 449,
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(
@@ -303,12 +292,12 @@ class _ReferralPromoSection extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
+          const Positioned(
             left: 0,
             right: 0,
-            top: gradientTop,
-            height: backgroundHeight - gradientTop,
-            child: const DecoratedBox(
+            top: 253,
+            height: 196,
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.vertical(
                   bottom: Radius.circular(20),
@@ -334,7 +323,7 @@ class _ReferralPromoSection extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 30,
+            top: 40,
             child: Text(
               'Get ₹1000',
               style: GoogleFonts.inter(
@@ -393,20 +382,20 @@ class _ReferralPromoSection extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 145,
-            left: 30,
-            right: 30,
-            height: promoImageHeight,
+            top: 161,
+            left: 34,
+            right: 34,
+            height: 205,
             child: Image.asset(
               'assets/images/Referandearnapp.webp',
               fit: BoxFit.contain,
             ),
           ),
-          Positioned(
-            top: rewardCardsTop,
+          const Positioned(
+            top: 370,
             left: 16,
             right: 16,
-            child: const SizedBox(
+            child: SizedBox(
               height: 166,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,7 +422,7 @@ class _ReferralPromoSection extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: disclaimerTop,
+            top: 556,
             left: 16,
             right: 16,
             child: Text(
@@ -466,13 +455,11 @@ class _YourReferralsCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: double.infinity,
-            minHeight: 74,
-          ),
+        child: SizedBox(
+          width: double.infinity,
+          height: 74,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 Expanded(

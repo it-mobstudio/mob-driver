@@ -575,7 +575,6 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        bottom: false,
         child: Stack(
           children: [
             Column(
