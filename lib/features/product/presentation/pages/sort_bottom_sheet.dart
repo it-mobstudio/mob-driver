@@ -35,12 +35,12 @@ class SortBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Material(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        clipBehavior: Clip.antiAlias,
+    return Material(
+      color: Colors.white,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      clipBehavior: Clip.antiAlias,
+      child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -83,7 +83,7 @@ class SortBottomSheet extends StatelessWidget {
                 },
               ),
             ),
-            SizedBox(height: MediaQuery.paddingOf(context).bottom > 0 ? 4 : 12),
+            const SizedBox(height: 12),
           ],
         ),
       ),
