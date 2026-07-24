@@ -863,7 +863,7 @@ class _StepLine extends StatelessWidget {
 }
 
 const _quoteActionRowPadding = EdgeInsets.fromLTRB(0, 16, 0, 0);
-const _quoteActionButtonPadding = EdgeInsets.all(10);
+const _quoteActionButtonPadding = EdgeInsets.symmetric(horizontal: 10);
 const _quoteActionButtonHeight = 36.0;
 const _quoteActionButtonGap = 12.0;
 const _showConfirmAndPayAction = false;
