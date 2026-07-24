@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' hide TextDirection;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/di/injection.dart';
@@ -93,6 +94,34 @@ String _todayOrTomorrowHelperText(String label) {
         'after 10:00 AM when our operations resume.';
   }
   return '';
+}
+
+DateTime? _parseTrackOrderCreatedAt(String raw) {
+  final value = raw.trim();
+  if (value.isEmpty) return null;
+  try {
+    return DateTime.parse(value).toLocal();
+  } catch (_) {
+    for (final pattern in const [
+      'dd MMM yyyy, hh:mm a',
+      'd MMM yyyy, hh:mm a',
+      'dd MMM yyyy, h:mm a',
+      'd MMM yyyy, h:mm a',
+    ]) {
+      try {
+        return DateFormat(pattern).parse(value).toLocal();
+      } catch (_) {}
+    }
+  }
+  return null;
+}
+
+bool _isWithinQuickOrderWorkingHours(String createdAt) {
+  final created = _parseTrackOrderCreatedAt(createdAt);
+  if (created == null || created.weekday == DateTime.sunday) return false;
+  final start = DateTime(created.year, created.month, created.day, 10);
+  final end = DateTime(created.year, created.month, created.day, 17);
+  return !created.isBefore(start) && created.isBefore(end);
 }
 
 Map<String, dynamic>? _trackOrderPayload(Map<String, dynamic>? map) {
@@ -606,12 +635,22 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       const ['delivery_date', 'deliveryDate'],
     );
     final deliveryDate = trackDeliveryDate;
-    final todayOrTomorrowStatus = _todayOrTomorrowLabel(trackOrderStatus);
-    final isQuickOrder = todayOrTomorrowStatus.isNotEmpty || showQwikBadge;
     final rawArrivingIn =
         _mapString(trackPayload, const ['arriving_in', 'arrivingIn', 'eta']);
-    final arrivingIn = todayOrTomorrowStatus.isNotEmpty
-        ? todayOrTomorrowStatus
+    final rawCreatedAt = _mapString(
+      trackPayload,
+      const ['created_at', 'createdAt'],
+    );
+    final todayOrTomorrowStatus = _todayOrTomorrowLabel(trackOrderStatus);
+    final useArrivingInForToday = todayOrTomorrowStatus == 'Today' &&
+        rawArrivingIn.isNotEmpty &&
+        _isWithinQuickOrderWorkingHours(rawCreatedAt);
+    final displayTodayOrTomorrowStatus =
+        useArrivingInForToday ? '' : todayOrTomorrowStatus;
+    final isQuickOrder =
+        displayTodayOrTomorrowStatus.isNotEmpty || showQwikBadge;
+    final arrivingIn = displayTodayOrTomorrowStatus.isNotEmpty
+        ? displayTodayOrTomorrowStatus
         : rawArrivingIn;
     final trackStatusText = allowTrackOrderPresentation
         ? _mapString(
@@ -628,8 +667,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       trackPayload,
       const ['helper_text', 'helperText'],
     );
-    final quickOrderHelperText = todayOrTomorrowStatus.isNotEmpty
-        ? _todayOrTomorrowHelperText(todayOrTomorrowStatus)
+    final quickOrderHelperText = displayTodayOrTomorrowStatus.isNotEmpty
+        ? _todayOrTomorrowHelperText(displayTodayOrTomorrowStatus)
         : helperText;
     final cancelTime = _mapString(
       trackPayload,
