@@ -348,7 +348,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: CartPage.routeName,
         path: CartPage.routePath,
         parentNavigatorKey: appNavigatorKey,
-        builder: (context, state) => const CartPage(),
+        builder: (context, state) => CartPage(
+          reloadCartOnOpen: state.uri.queryParameters['cartUpdated'] == 'true',
+        ),
       ),
       GoRoute(
         name: CheckoutAddressPage.routeName,

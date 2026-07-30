@@ -10,7 +10,10 @@ import 'package:m_o_b_demand_side/features/address/data/local/selected_address_s
 import 'package:m_o_b_demand_side/features/address/domain/entities/address_entity.dart';
 import 'package:m_o_b_demand_side/features/address/domain/repositories/address_repository.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/address_selection_widget.dart';
+import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
+import 'package:m_o_b_demand_side/features/cart/domain/repositories/cart_repository.dart';
 import 'package:m_o_b_demand_side/features/cart/presentation/bloc/cart_bloc.dart';
+import 'package:m_o_b_demand_side/features/checkout/domain/repositories/checkout_repository.dart';
 import 'package:m_o_b_demand_side/features/home/domain/entities/home_entity.dart';
 import 'package:m_o_b_demand_side/features/home/domain/repositories/home_repository.dart';
 import 'package:m_o_b_demand_side/features/home/presentation/bloc/home_bloc.dart';
@@ -18,6 +21,7 @@ import 'package:m_o_b_demand_side/features/home/domain/store_delivery_label.dart
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/mobstar_page.dart';
 import 'package:m_o_b_demand_side/features/profile/presentation/pages/my_account.dart';
 import 'package:m_o_b_demand_side/shared/skeleton_loader.dart';
+import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 class HomeHeader extends StatefulWidget {
   const HomeHeader({super.key});
@@ -35,6 +39,7 @@ class _HomeHeaderState extends State<HomeHeader> {
   void initState() {
     super.initState();
     AuthSession.instance.addListener(_onAuthSessionChanged);
+    SelectedAddressStore.addListener(_onSelectedAddressChanged);
     _loadSelectedAddress();
     _loadStoreStatus();
   }
@@ -42,6 +47,7 @@ class _HomeHeaderState extends State<HomeHeader> {
   @override
   void dispose() {
     AuthSession.instance.removeListener(_onAuthSessionChanged);
+    SelectedAddressStore.removeListener(_onSelectedAddressChanged);
     super.dispose();
   }
 
@@ -260,6 +266,12 @@ class _HomeHeaderState extends State<HomeHeader> {
     setState(() {});
   }
 
+  void _onSelectedAddressChanged() {
+    if (!mounted) return;
+    setState(() => _selectedAddress = SelectedAddressStore.cached);
+    _refreshHomeForSelectedCity();
+  }
+
   String _profilePictureUrl() {
     return AppConfig.resolveMediaUrl(
       AuthSession.instance.userDetails?['profile_picture']?.toString(),
@@ -272,8 +284,43 @@ class _HomeHeaderState extends State<HomeHeader> {
     );
     if (!mounted || selected == null) return;
     await SelectedAddressStore.save(selected);
-    setState(() => _selectedAddress = selected);
-    _refreshHomeForSelectedCity();
+    await _syncDeliveryAddressToOrder(selected);
+  }
+
+  Future<void> _syncDeliveryAddressToOrder(AddressEntity address) async {
+    final deliveryId = int.tryParse(address.id) ?? 0;
+    if (deliveryId == 0) return;
+
+    CartSummaryEntity? summary;
+    final cartState = context.read<CartBloc>().state;
+    if (cartState is CartLoaded) {
+      summary = cartState.summary;
+    } else {
+      final (loadedSummary, failure) = await sl<CartRepository>().getCart();
+      if (!mounted || failure != null) return;
+      summary = loadedSummary;
+    }
+    if (summary == null) return;
+
+    final cartId = int.tryParse(summary.cartId) ?? 0;
+    if (cartId == 0) return;
+
+    final result = await sl<CheckoutRepository>().updateAddressToOrder({
+      'cart_id': cartId,
+      'order_delivery_address': deliveryId,
+      'order_billing_address': deliveryId,
+    });
+    final failure = result.$2;
+    if (!mounted) return;
+    if (failure != null) {
+      TopSnackBar.show(
+        context,
+        message: failure.message,
+        type: TopSnackBarType.error,
+      );
+      return;
+    }
+    context.read<CartBloc>().add(CartLoadRequested());
   }
 
   Future<void> _loadSelectedAddress() async {
@@ -292,9 +339,6 @@ class _HomeHeaderState extends State<HomeHeader> {
     if (failure == null && addresses != null && addresses.isNotEmpty) {
       final firstSavedAddress = addresses.first;
       await SelectedAddressStore.save(firstSavedAddress);
-      if (!mounted) return;
-      setState(() => _selectedAddress = firstSavedAddress);
-      _refreshHomeForSelectedCity();
       return;
     }
 
@@ -313,8 +357,6 @@ class _HomeHeaderState extends State<HomeHeader> {
     );
     if (!mounted || selected == null) return;
     await SelectedAddressStore.save(selected);
-    setState(() => _selectedAddress = selected);
-    _refreshHomeForSelectedCity();
   }
 
   void _refreshHomeForSelectedCity() {

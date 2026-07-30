@@ -26,18 +26,24 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   }
 
   @override
-  Future<AppFailure?> updateAddressToOrder(Map<String, dynamic> payload) async {
+  Future<(bool, AppFailure?)> updateAddressToOrder(
+      Map<String, dynamic> payload) async {
     try {
       final body = await _datasource.updateAddressToOrder(payload);
       if (body['status'] == false) {
         final msg = body['message']?.toString() ?? 'Failed to update address.';
-        return BusinessFailure(msg);
+        return (false, BusinessFailure(msg));
       }
-      return null;
+      final data = body['data'] is Map
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : const <String, dynamic>{};
+      final addressChanged =
+          body['address_changed'] == true || data['address_changed'] == true;
+      return (addressChanged, null);
     } on DioException catch (e) {
-      return e.toAppFailure();
+      return (false, e.toAppFailure());
     } catch (e) {
-      return UnknownFailure(e.toString());
+      return (false, UnknownFailure(e.toString()));
     }
   }
 

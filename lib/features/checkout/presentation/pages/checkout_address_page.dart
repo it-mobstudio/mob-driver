@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
@@ -45,6 +46,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
   bool _selectedAddressLoaded = false;
   AddressEntity? _selectedDelivery;
   AddressEntity? _selectedBilling;
+  bool _cartNeedsReview = false;
 
   // null = not checked yet, true = serviceable, false = not serviceable
   bool? _pincodeValid;
@@ -61,7 +63,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
     _loadSelectedAddress();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _cartBloc.add(CartLoadRequested(outOfStock: true));
+      _cartBloc.add(CartLoadRequested());
     });
   }
 
@@ -472,7 +474,12 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
           listener: (context, checkoutState) {
             if (!mounted) return;
             if (checkoutState is CheckoutAddressUpdated) {
-              context.push(CheckoutPaymentPage.routePath);
+              if (checkoutState.addressChanged) {
+                setState(() => _cartNeedsReview = true);
+                _cartBloc.add(CartLoadRequested());
+              } else {
+                context.push(CheckoutPaymentPage.routePath);
+              }
             } else if (checkoutState is CheckoutError) {
               TopSnackBar.show(
                 context,
@@ -504,7 +511,7 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                   message: message,
                                   onRetry: () => context
                                       .read<CartBloc>()
-                                      .add(CartLoadRequested(outOfStock: true)),
+                                      .add(CartLoadRequested()),
                                 ),
                               CartRequiresLogin() => const Center(
                                   child: Text('Please login to continue.'),
@@ -545,26 +552,24 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                         .addPostFrameCallback((_) {
                                       if (!mounted) return;
                                       _autoSelectDefaultAddresses(addresses);
-                                      final pincode =
-                                          _selectedDelivery
-                                                      ?.pincode.isNotEmpty ==
-                                                  true
-                                              ? _selectedDelivery!.pincode
-                                              : showCartDeliveryAddress
-                                                  ? summary.shippingPincode
-                                                  : '';
+                                      final pincode = _selectedDelivery
+                                                  ?.pincode.isNotEmpty ==
+                                              true
+                                          ? _selectedDelivery!.pincode
+                                          : showCartDeliveryAddress
+                                              ? summary.shippingPincode
+                                              : '';
                                       _checkPincode(pincode);
                                     });
 
                                     return Stack(
                                       children: [
                                         ListView(
-                                          padding:
-                                              const EdgeInsets.fromLTRB(
+                                          padding: EdgeInsets.fromLTRB(
                                             16,
                                             16,
                                             16,
-                                            118,
+                                            _cartNeedsReview ? 190 : 118,
                                           ),
                                           children: [
                                             if (_pincodeValid == false)
@@ -675,13 +680,21 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
                                             ),
                                           ],
                                         ),
-                                        BottomCheckoutBar(
-                                          label: 'Continue to payment',
-                                          isDisabled: !_canContinue(summary),
-                                          isLoading: isUpdatingAddress,
-                                          onProceed: () =>
-                                              _continueToPayment(summary),
-                                        ),
+                                        if (_cartNeedsReview)
+                                          _ReviewCartBottomBar(
+                                            isLoading: isUpdatingAddress,
+                                            onReviewCart: () => context.go(
+                                              '/cart?cartUpdated=true',
+                                            ),
+                                          )
+                                        else
+                                          BottomCheckoutBar(
+                                            label: 'Continue to payment',
+                                            isDisabled: !_canContinue(summary),
+                                            isLoading: isUpdatingAddress,
+                                            onProceed: () =>
+                                                _continueToPayment(summary),
+                                          ),
                                       ],
                                     );
                                   },
@@ -696,6 +709,133 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _CartUpdatedReviewBanner extends StatelessWidget {
+  const _CartUpdatedReviewBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SvgPicture.asset(
+          'assets/images/error-bg.svg',
+          width: 38,
+          height: 38,
+        ),
+        const SizedBox(width: 16),
+        const Expanded(
+          child: Text(
+            'Your cart has been updated for your new location.Please review before checkout.',
+            style: TextStyle(
+              color: Color(0xFF0A243F),
+              fontSize: 14,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewCartBottomBar extends StatelessWidget {
+  const _ReviewCartBottomBar({
+    required this.onReviewCart,
+    this.isLoading = false,
+  });
+
+  final VoidCallback onReviewCart;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Container(
+        padding: EdgeInsets.only(bottom: bottomInset + 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 16),
+              child: _CartUpdatedReviewBanner(),
+            ),
+            Container(
+              height: 1,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5E5E5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    offset: const Offset(0, 9),
+                    blurRadius: 24,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : onReviewCart,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0360E5),
+                    disabledBackgroundColor: const Color(0xFFB0C4DE),
+                    foregroundColor: Colors.white,
+                    disabledForegroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Review cart',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                            height: 1.25,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

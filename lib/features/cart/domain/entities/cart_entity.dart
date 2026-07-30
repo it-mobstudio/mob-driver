@@ -190,6 +190,8 @@ class CartSummaryEntity {
     required this.savedAddresses,
     required this.mobCreditBalance,
     required this.account,
+    this.outOfStockItems = const <CartItem>[],
+    this.checkoutDisabled = false,
     this.isReferralOnlyWallet = false,
     this.isWalletUsageLimited = false,
     this.walletNote = '',
@@ -254,6 +256,8 @@ class CartSummaryEntity {
   /// mobCREDIT balance available for the user (from user_details in cart API).
   final double mobCreditBalance;
   final CartAccountEntity account;
+  final List<CartItem> outOfStockItems;
+  final bool checkoutDisabled;
 
   /// Wallet restriction flags from API. The referral-limit note should only
   /// show when both are true, matching web checkout.
@@ -270,6 +274,7 @@ class CartSummaryEntity {
   bool get isEmpty => itemCount == 0 && items.isEmpty;
   bool get hasRfqItems => rfqItemCount > 0;
   bool get hasDeliveryAddress => shippingAddress.trim().isNotEmpty;
+  bool get hasOutOfStockItems => outOfStockItems.isNotEmpty;
 
   Map<String, List<CartItem>> get itemsBySeller {
     final bySeller = <String, List<CartItem>>{};
@@ -310,6 +315,8 @@ class CartSummaryEntity {
     savedAddresses: <CartAddressEntity>[],
     mobCreditBalance: 0,
     account: CartAccountEntity.empty,
+    outOfStockItems: <CartItem>[],
+    checkoutDisabled: false,
     isReferralOnlyWallet: false,
     isWalletUsageLimited: false,
   );

@@ -178,7 +178,12 @@ class _CheckoutOrderReviewPageState extends State<CheckoutOrderReviewPage> {
           // update request was still in flight).
           if (!mounted) return;
           if (checkoutState is CheckoutAddressUpdated) {
-            _router.push(CheckoutPaymentPage.routePath);
+            if (checkoutState.addressChanged) {
+              context.read<CartBloc>().add(CartLoadRequested());
+              _router.go('/cart?cartUpdated=true');
+            } else {
+              _router.push(CheckoutPaymentPage.routePath);
+            }
           } else if (checkoutState is CheckoutError) {
             TopSnackBar.show(
               context,

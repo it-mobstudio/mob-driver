@@ -97,7 +97,10 @@ final class CheckoutSummaryLoaded extends CheckoutState {
   final CheckoutSummaryEntity summary;
 }
 
-final class CheckoutAddressUpdated extends CheckoutState {}
+final class CheckoutAddressUpdated extends CheckoutState {
+  CheckoutAddressUpdated({required this.addressChanged});
+  final bool addressChanged;
+}
 
 final class CheckoutRazorpayOrderCreated extends CheckoutState {
   CheckoutRazorpayOrderCreated(this.entity);
@@ -155,12 +158,13 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     Emitter<CheckoutState> emit,
   ) async {
     emit(CheckoutLoading());
-    final failure = await _repository.updateAddressToOrder(event.payload);
+    final (addressChanged, failure) =
+        await _repository.updateAddressToOrder(event.payload);
     if (failure != null) {
       AppHaptics.error();
       emit(CheckoutError(failure.message));
     } else {
-      emit(CheckoutAddressUpdated());
+      emit(CheckoutAddressUpdated(addressChanged: addressChanged));
     }
   }
 

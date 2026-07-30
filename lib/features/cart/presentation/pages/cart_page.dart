@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/nav/nav.dart' show appNavigatorKey;
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
@@ -10,6 +11,7 @@ import 'package:m_o_b_demand_side/features/address/domain/repositories/address_r
 import 'package:m_o_b_demand_side/features/address/presentation/pages/add_address_detail_page.dart';
 import 'package:m_o_b_demand_side/features/address/presentation/pages/confirm_delivery_location_page.dart';
 import 'package:m_o_b_demand_side/features/checkout/presentation/pages/checkout_address_page.dart';
+import 'package:m_o_b_demand_side/features/checkout/domain/repositories/checkout_repository.dart';
 import 'package:m_o_b_demand_side/features/cart/data/models/cart_item.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart';
 import 'package:m_o_b_demand_side/features/cart/domain/repositories/cart_repository.dart';
@@ -28,7 +30,12 @@ class CartPage extends StatefulWidget {
   static const String routeName = 'CartPage';
   static const String routePath = '/cart';
 
-  const CartPage({super.key});
+  const CartPage({
+    super.key,
+    this.reloadCartOnOpen = false,
+  });
+
+  final bool reloadCartOnOpen;
 
   @override
   State<CartPage> createState() => _CartPageState();
@@ -45,10 +52,32 @@ class _CartPageState extends State<CartPage> {
   @override
   void initState() {
     super.initState();
+    SelectedAddressStore.addListener(_onSelectedAddressChanged);
+    if (widget.reloadCartOnOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<CartBloc>().add(CartLoadRequested());
+      });
+    }
     _loadStoredAddress();
     _loadSavedAddresses();
     _loadStoreDeliveryLabel();
     _loadSuggestedProducts();
+  }
+
+  @override
+  void dispose() {
+    SelectedAddressStore.removeListener(_onSelectedAddressChanged);
+    super.dispose();
+  }
+
+  void _onSelectedAddressChanged() {
+    if (!mounted) return;
+    setState(() {
+      _selectedDeliveryAddress = SelectedAddressStore.cached;
+      _storedAddress = SelectedAddressStore.cached;
+    });
+    _loadStoreDeliveryLabel();
   }
 
   Future<void> _loadSuggestedProducts() async {
@@ -181,6 +210,8 @@ class _CartPageState extends State<CartPage> {
     CartSummaryEntity summary,
     String? updatingItemKey,
   ) {
+    final activeItemsBySeller = _activeItemsBySeller(summary);
+    final needsDeliveryAddress = !_hasOrderableDeliveryAddress(summary);
     return Stack(
       children: [
         Column(
@@ -191,7 +222,12 @@ class _CartPageState extends State<CartPage> {
               child: ColoredBox(
                 color: const Color(0xFFF0F0F0),
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 112),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    10,
+                    16,
+                    needsDeliveryAddress ? 166 : 112,
+                  ),
                   children: [
                     ShippingTile(
                       title: _deliveryName(summary),
@@ -204,14 +240,17 @@ class _CartPageState extends State<CartPage> {
                       SavingsStrip(savings: summary.savings),
                     ],
                     const SizedBox(height: 20),
-                    for (final indexed
-                        in summary.itemsBySeller.entries.indexed)
+                    if (summary.hasOutOfStockItems) ...[
+                      OutOfStockItemsCard(items: summary.outOfStockItems),
+                      const SizedBox(height: 20),
+                    ],
+                    for (final indexed in activeItemsBySeller.entries.indexed)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 20),
                         child: SellerSection(
                           sellerCode: indexed.$2.key,
                           sellerItems: indexed.$2.value,
-                          itemStartIndex: summary.itemsBySeller.entries
+                          itemStartIndex: activeItemsBySeller.entries
                               .take(indexed.$1)
                               .fold<int>(0, (sum, e) => sum + e.value.length),
                           deliveryLabel: _deliveryLabel,
@@ -267,13 +306,101 @@ class _CartPageState extends State<CartPage> {
             ),
           ],
         ),
-        BottomCheckoutBar(
-          label: 'Place order',
-          total: _effectiveTotal(summary),
-          onProceed: () =>
-              GoRouter.of(context).push(CheckoutAddressPage.routePath),
-        ),
+        if (needsDeliveryAddress)
+          _CartAddressRequiredBar(
+            canSelectAddress: _savedAddresses.isNotEmpty,
+            onSelectAddress: () => _showAddressBottomSheet(summary),
+            onAddAddress: _openAddressFlow,
+          )
+        else
+          BottomCheckoutBar(
+            label: 'Place order',
+            total: _effectiveTotal(summary),
+            isDisabled: activeItemsBySeller.isEmpty,
+            onProceed: () =>
+                GoRouter.of(context).push(CheckoutAddressPage.routePath),
+          ),
       ],
+    );
+  }
+
+  Future<void> _showCartModifiedDialog() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Uh oh! Your cart has been\nmodified',
+                        style: const TextStyle(
+                          color: Color(0xFF0A243F),
+                          fontSize: 20,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                          height: 1.32,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => Navigator.of(dialogContext).pop(),
+                      child: SvgPicture.asset(
+                        'assets/images/close-grey.svg',
+                        width: 28,
+                        height: 28,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Prices, quantities, and availability may have changed based on your new delivery location.',
+                  style: TextStyle(
+                    color: Color(0xFF67696D),
+                    fontSize: 13,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 26),
+                SizedBox(
+                  width: double.infinity,
+                  height: 40,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text(
+                      'REVIEW CART',
+                      style: TextStyle(
+                        color: Color(0xFF0360E5),
+                        fontSize: 14,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        height: 1.43,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -281,6 +408,36 @@ class _CartPageState extends State<CartPage> {
   double _effectiveTotal(CartSummaryEntity summary) {
     if (summary.total > 0) return summary.total;
     return summary.subtotal + summary.shipping;
+  }
+
+  Map<String, List<CartItem>> _activeItemsBySeller(CartSummaryEntity summary) {
+    if (!summary.hasOutOfStockItems) return summary.itemsBySeller;
+
+    final outOfStockKeys = {
+      for (final item in summary.outOfStockItems) _cartItemMatchKey(item),
+    };
+    final bySeller = <String, List<CartItem>>{};
+    for (final item in summary.items) {
+      if (outOfStockKeys.contains(_cartItemMatchKey(item))) continue;
+      bySeller.putIfAbsent(item.sellerCode, () => <CartItem>[]).add(item);
+    }
+    return bySeller;
+  }
+
+  String _cartItemMatchKey(CartItem item) {
+    if (item.cartItemId.trim().isNotEmpty) {
+      return 'cart:${item.cartItemId.trim()}';
+    }
+    if (item.vendorProductId.trim().isNotEmpty) {
+      return 'vendor:${item.vendorProductId.trim()}';
+    }
+    return 'title:${item.title.trim().toLowerCase()}';
+  }
+
+  bool _hasOrderableDeliveryAddress(CartSummaryEntity summary) {
+    final selected = _selectedDeliveryAddress ?? _storedAddress;
+    if (selected != null) return selected.id.trim().isNotEmpty;
+    return summary.shippingAddressId.trim().isNotEmpty;
   }
 
   int _cartQuantityFor(CartSummaryEntity summary, String vendorProductId) {
@@ -515,6 +672,38 @@ class _CartPageState extends State<CartPage> {
     await SelectedAddressStore.save(address);
     if (!mounted) return;
     setState(() => _storedAddress = SelectedAddressStore.cached);
+    await _syncDeliveryAddressToOrder(address);
+  }
+
+  Future<void> _syncDeliveryAddressToOrder(AddressEntity address) async {
+    final state = context.read<CartBloc>().state;
+    if (state is! CartLoaded) return;
+
+    final cartId = int.tryParse(state.summary.cartId) ?? 0;
+    final deliveryId = int.tryParse(address.id) ?? 0;
+    if (cartId == 0 || deliveryId == 0) return;
+
+    final (addressChanged, failure) =
+        await sl<CheckoutRepository>().updateAddressToOrder({
+      'cart_id': cartId,
+      'order_delivery_address': deliveryId,
+      'order_billing_address': deliveryId,
+    });
+
+    if (!mounted) return;
+    if (failure != null) {
+      TopSnackBar.show(
+        context,
+        message: failure.message,
+        type: TopSnackBarType.error,
+      );
+      return;
+    }
+
+    context.read<CartBloc>().add(CartLoadRequested());
+    if (addressChanged) {
+      await _showCartModifiedDialog();
+    }
   }
 
   // "Add new address" here used to push the whole search screen
@@ -561,5 +750,126 @@ class _CartPageState extends State<CartPage> {
       _storedAddress = savedAddress;
       _savedAddresses = [..._savedAddresses, savedAddress];
     });
+    await _syncDeliveryAddressToOrder(savedAddress);
+  }
+}
+
+class _CartAddressRequiredBar extends StatelessWidget {
+  const _CartAddressRequiredBar({
+    required this.canSelectAddress,
+    required this.onSelectAddress,
+    required this.onAddAddress,
+  });
+
+  final bool canSelectAddress;
+  final VoidCallback onSelectAddress;
+  final VoidCallback onAddAddress;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, bottomInset + 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, -6),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _AddressActionButton(
+                    label: 'Select address',
+                    isPrimary: false,
+                    enabled: canSelectAddress,
+                    onTap: onSelectAddress,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _AddressActionButton(
+                    label: 'Add address',
+                    isPrimary: true,
+                    enabled: true,
+                    onTap: onAddAddress,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddressActionButton extends StatelessWidget {
+  const _AddressActionButton({
+    required this.label,
+    required this.isPrimary,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isPrimary;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeBlue = const Color(0xFF0360E5);
+    final disabledBlue = const Color(0xFFB0C4DE);
+    final borderColor = enabled ? activeBlue : disabledBlue;
+    final textColor = isPrimary
+        ? Colors.white
+        : enabled
+            ? activeBlue
+            : disabledBlue;
+    final backgroundColor = isPrimary
+        ? enabled
+            ? activeBlue
+            : disabledBlue
+        : Colors.white;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled ? onTap : null,
+      child: Container(
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          border: Border.all(color: borderColor),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+            height: 1.43,
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -25,7 +25,7 @@ class CartRemoteDatasourceImpl implements CartRemoteDatasource {
       '/orders/cart/get_cart/',
       queryParameters: {
         'userDetails': true,
-        if (outOfStock) 'out_of_stock': true,
+        'out_of_stock': outOfStock,
       },
     );
     return _extractData(response.data);

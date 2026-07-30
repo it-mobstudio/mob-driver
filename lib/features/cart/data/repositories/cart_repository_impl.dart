@@ -122,6 +122,8 @@ class CartRepositoryImpl implements CartRepository {
 
   CartSummaryEntity _buildSummary(Map<String, dynamic> data) {
     final items = _extractItemMaps(data).map(CartItem.fromMap).toList();
+    final outOfStockItems =
+        _extractOutOfStockItemMaps(data).map(CartItem.fromMap).toList();
     final subtotal = _num(
       data,
       const ['sub_cart_total', 'subTotal', 'subtotal'],
@@ -250,6 +252,9 @@ class CartRepositoryImpl implements CartRepository {
       savedAddresses: savedAddresses,
       mobCreditBalance: mobCreditBalance,
       account: account,
+      outOfStockItems: outOfStockItems,
+      checkoutDisabled:
+          _bool(data, const ['checkout_disabled', 'checkoutDisabled']),
       mobCreditAccountStatus: mobCreditAccountStatus,
       isReferralOnlyWallet: walletObj['is_referral_only_wallet'] == true,
       isWalletUsageLimited: walletObj['is_wallet_usage_limited'] == true,
@@ -274,6 +279,32 @@ class CartRepositoryImpl implements CartRepository {
 
     if (result.isNotEmpty) return result;
     return _fallbackItems(data);
+  }
+
+  List<Map<String, dynamic>> _extractOutOfStockItemMaps(
+    Map<String, dynamic> data,
+  ) {
+    final result = <Map<String, dynamic>>[];
+    for (final key in const [
+      'out_of_stocks',
+      'outOfStocks',
+      'out_of_stock',
+      'outOfStock',
+    ]) {
+      result.addAll(_mapList(data[key]));
+    }
+    final dataMap = _findNestedMap(data, const ['data']);
+    if (dataMap.isNotEmpty) {
+      for (final key in const [
+        'out_of_stocks',
+        'outOfStocks',
+        'out_of_stock',
+        'outOfStock',
+      ]) {
+        result.addAll(_mapList(dataMap[key]));
+      }
+    }
+    return result;
   }
 
   List<Map<String, dynamic>> _fromSubcarts(
@@ -636,6 +667,22 @@ class CartRepositoryImpl implements CartRepository {
       if (v is num) return v;
       final p = num.tryParse(v?.toString() ?? '');
       if (p != null) return p;
+    }
+    return fallback;
+  }
+
+  bool _bool(
+    Map<String, dynamic> map,
+    List<String> keys, {
+    bool fallback = false,
+  }) {
+    for (final k in keys) {
+      final v = map[k];
+      if (v is bool) return v;
+      if (v is num) return v != 0;
+      final normalized = v?.toString().trim().toLowerCase();
+      if (normalized == 'true' || normalized == '1') return true;
+      if (normalized == 'false' || normalized == '0') return false;
     }
     return fallback;
   }

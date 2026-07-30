@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
@@ -8,6 +9,7 @@ import 'package:m_o_b_demand_side/features/cart/domain/entities/cart_entity.dart
 import 'package:m_o_b_demand_side/features/cart/presentation/pages/cart_rfq_request_page.dart';
 import 'package:m_o_b_demand_side/features/cart/widgets/cart_product_details.dart';
 import 'package:m_o_b_demand_side/index.dart';
+import 'package:m_o_b_demand_side/shared/image_shimmer.dart';
 import 'package:m_o_b_demand_side/shared/widgets/address_picker.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
 
@@ -648,6 +650,108 @@ class SellerSection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class OutOfStockItemsCard extends StatelessWidget {
+  const OutOfStockItemsCard({
+    super.key,
+    required this.items,
+  });
+
+  final List<CartItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFFF7973)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${items.length} ${items.length == 1 ? 'item' : 'items'} not in stock',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFFFF3B30),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    height: 20 / 14,
+                  ),
+                ),
+              ),
+              SvgPicture.asset(
+                'assets/images/close-grey.svg',
+                width: 20,
+                height: 20,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const _DashedDivider(),
+          const SizedBox(height: 10),
+          for (final indexed in items.indexed) ...[
+            _OutOfStockItemRow(item: indexed.$2),
+            if (indexed.$1 < items.length - 1) const SizedBox(height: 12),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OutOfStockItemRow extends StatelessWidget {
+  const _OutOfStockItemRow({required this.item});
+
+  final CartItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 42,
+          height: 42,
+          child: item.isNetworkImage
+              ? Opacity(
+                  opacity: 0.35,
+                  child: CachedNetworkImage(
+                    imageUrl: item.imageAsset,
+                    fit: BoxFit.contain,
+                    memCacheWidth: 84,
+                    placeholder: (_, __) => const ImageShimmer(),
+                    errorWidget: (_, __, ___) =>
+                        const ProductImagePlaceholder(),
+                  ),
+                )
+              : const ProductImagePlaceholder(),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            item.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              color: const Color(0xFF758498),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              height: 18 / 12,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

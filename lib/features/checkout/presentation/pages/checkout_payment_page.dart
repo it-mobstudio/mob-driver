@@ -368,6 +368,14 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   void _onProceed(BuildContext context, String cartId, double total,
       CartSummaryEntity summary) {
     if (_isRupifiHandoffInProgress) return;
+    if (summary.checkoutDisabled) {
+      TopSnackBar.show(
+        context,
+        message: 'Please review your cart before placing the order.',
+        type: TopSnackBarType.error,
+      );
+      return;
+    }
     // Zero total — wallet/points covered the full amount, place order directly
     if (total == 0) {
       _checkoutBloc.add(
@@ -504,6 +512,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                         final isLoading = checkoutState is CheckoutLoading;
                         final isPaymentBlocked =
                             isLoading || _isRupifiHandoffInProgress;
+                        final isCheckoutDisabled = summary.checkoutDisabled;
                         final isMobCreditAddressSelected =
                             _isMobCreditBillingAddress(summary);
                         final isPaymentMethodReady = summary.total <= 0 ||
@@ -619,6 +628,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                                 summary.mobCreditAccountStatus,
                                             isDisabled: summary.total <= 0 ||
                                                 isPaymentBlocked ||
+                                                isCheckoutDisabled ||
                                                 !isMobCreditAddressSelected ||
                                                 summary.mobCreditAccountStatus !=
                                                     'ACTIVE' ||
@@ -637,8 +647,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                         ],
                                         _RazorpayTile(
                                           selected: summary.total > 0 &&
+                                              !isCheckoutDisabled &&
                                               _paymentOption == 1,
                                           isDisabled: summary.total <= 0 ||
+                                              isCheckoutDisabled ||
                                               isPaymentBlocked,
                                           onTap: () => _onRazorpaySelected(
                                             summary.cartId,
@@ -668,6 +680,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                           : 'Place your order and pay',
                                       isLoading: isPaymentBlocked,
                                       isDisabled: _isRupifiHandoffInProgress ||
+                                          isCheckoutDisabled ||
                                           !isPaymentMethodReady,
                                       onProceed: () => _onProceed(
                                           context,
