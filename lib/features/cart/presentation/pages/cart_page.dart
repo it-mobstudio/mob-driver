@@ -786,32 +786,34 @@ class _CartAddressRequiredBar extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _AddressActionButton(
-                    label: 'Select address',
-                    isPrimary: false,
-                    enabled: canSelectAddress,
-                    onTap: onSelectAddress,
+        child: canSelectAddress
+            ? Row(
+                children: [
+                  Expanded(
+                    child: _AddressActionButton(
+                      label: 'Select address',
+                      isPrimary: false,
+                      enabled: true,
+                      onTap: onSelectAddress,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _AddressActionButton(
-                    label: 'Add address',
-                    isPrimary: true,
-                    enabled: true,
-                    onTap: onAddAddress,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _AddressActionButton(
+                      label: 'Add address',
+                      isPrimary: true,
+                      enabled: true,
+                      onTap: onAddAddress,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
+                ],
+              )
+            : _AddressActionButton(
+                label: 'Add address',
+                isPrimary: true,
+                enabled: true,
+                onTap: onAddAddress,
+              ),
       ),
     );
   }
