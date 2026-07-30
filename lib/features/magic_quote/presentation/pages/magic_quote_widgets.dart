@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_utils.dart';
@@ -41,9 +42,14 @@ class MagicQuoteCard extends StatelessWidget {
 }
 
 class MagicQuoteSectionTitle extends StatelessWidget {
-  const MagicQuoteSectionTitle(this.title, {super.key});
+  const MagicQuoteSectionTitle(
+    this.title, {
+    super.key,
+    this.fontSize = 16,
+  });
 
   final String title;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +57,270 @@ class MagicQuoteSectionTitle extends StatelessWidget {
       title,
       style: GoogleFonts.inter(
         color: MagicQuoteColors.navy,
-        fontSize: 16,
+        fontSize: fontSize,
         fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class MagicQuoteHowItWorksCard extends StatefulWidget {
+  const MagicQuoteHowItWorksCard({super.key});
+
+  @override
+  State<MagicQuoteHowItWorksCard> createState() =>
+      _MagicQuoteHowItWorksCardState();
+}
+
+class _MagicQuoteHowItWorksCardState extends State<MagicQuoteHowItWorksCard> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return MagicQuoteCard(
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'How it works',
+                    style: GoogleFonts.inter(
+                      color: MagicQuoteColors.navy,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: _expanded ? .5 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: Color(0xFF596378),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFE3E8EF)),
+            const SizedBox(height: 12),
+            const _MagicQuoteStep(
+              number: '1',
+              title: 'Upload list',
+              description: 'Photo, PDF, Excel or text',
+            ),
+            const SizedBox(height: 12),
+            const _MagicQuoteStep(
+              number: '2',
+              title: 'Get Magic AI Quote in 30 secs',
+              description: 'We match brands, sizes & in-stock prices',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MagicQuoteStep extends StatelessWidget {
+  const _MagicQuoteStep({
+    required this.number,
+    required this.title,
+    required this.description,
+  });
+
+  final String number;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Color(0xFFF0F0F0),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            number,
+            style: GoogleFonts.inter(
+              color: MagicQuoteColors.navy,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  color: MagicQuoteColors.navy,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                description,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF767C8F),
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class MagicQuoteHelpCard extends StatelessWidget {
+  const MagicQuoteHelpCard({super.key, required this.onChat});
+
+  final VoidCallback onChat;
+
+  @override
+  Widget build(BuildContext context) {
+    return MagicQuoteCard(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Need help?',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: MagicQuoteColors.navy,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 148,
+                height: 36,
+                child: ElevatedButton.icon(
+                  onPressed: onChat,
+                  icon: SvgPicture.asset(
+                    'assets/images/whatsapp.svg',
+                    width: 18,
+                    height: 18,
+                  ),
+                  label: Text(
+                    'Chat with us',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF37BD68),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Stack(
+                children: [
+                  ClipOval(
+                    child: Image.asset(
+                      'assets/images/mobsupportteam.png',
+                      width: 48,
+                      height: 48,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF35C56F),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'mob team',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: MagicQuoteColors.navy,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          height: 24,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDFF7EC),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            'Online',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: MagicQuoteColors.navy,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Replies under 10 mins',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF7B8496),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

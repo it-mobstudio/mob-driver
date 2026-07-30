@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
 
@@ -493,11 +494,16 @@ class _SearchField extends StatelessWidget {
             fontWeight: FontWeight.w400,
             height: 18 / 12,
           ),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: Color(0xFF0A243F),
-            size: 18,
-          ),
+          prefixIcon: SvgPicture.asset(
+              'assets/images/Searchicon.svg',
+              width: 16,
+              height: 16, 
+            ),
+          //  const Icon(
+          //   Icons.search,
+          //   color: Color(0xFF0A243F),
+          //   size: 18,
+          // ),
           filled: true,
           fillColor: Colors.white,
           contentPadding: EdgeInsets.zero,

@@ -1,11 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/file_tile.dart';
 import 'package:m_o_b_demand_side/features/magic_quote/presentation/pages/magic_quote_widgets.dart';
+import 'package:m_o_b_demand_side/shared/widgets/frosted_nav_bar.dart';
 import 'package:m_o_b_demand_side/shared/validators/gst_validator.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 
@@ -35,6 +34,8 @@ class UploadScreen extends StatelessWidget {
     required this.noteFocusNode,
     required this.pincodeServiceable,
     required this.itemListError,
+    required this.onBack,
+    required this.onOpenWhatsApp,
     required this.onTapDropzone,
     required this.onRemoveFile,
     required this.onPreviewFile,
@@ -57,6 +58,8 @@ class UploadScreen extends StatelessWidget {
   final FocusNode noteFocusNode;
   final bool? pincodeServiceable;
   final String itemListError;
+  final VoidCallback onBack;
+  final VoidCallback onOpenWhatsApp;
   final VoidCallback onTapDropzone;
   final void Function(PickedMagicQuoteFile file) onRemoveFile;
   final void Function(PickedMagicQuoteFile file) onPreviewFile;
@@ -65,40 +68,123 @@ class UploadScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Form(
       key: formKey,
-      child: ListView(
-        padding: EdgeInsets.zero,
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Stack(
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.zero,
-              topRight: Radius.zero,
-              bottomLeft: Radius.circular(14),
-              bottomRight: Radius.circular(14),
-            ),
-            child: Stack(
-              alignment: Alignment.topLeft,
-              children: [
-                Image.asset(
-                  'assets/images/magicquote.jpeg',
-                  width: double.infinity,
-                  fit: BoxFit.contain,
+          ListView(
+            padding: EdgeInsets.zero,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
                 ),
-                // Positioned(
-                //   top: 18,
-                //   left: 20,
-                //   child: SvgPicture.asset(
-                //     'assets/images/banner-spark.svg',
-                //     width: 28,
-                //     height: 28,
-                //   ),
-                // ),
-              ],
+                child: _hero(),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                child: _cards(context),
+              ),
+            ],
+          ),
+          FrostedNavBar(
+            onBack: onBack,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _hero() {
+    return Container(
+      height: 360,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF021107),
+            Color(0xFF007736),
+          ],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          Positioned(
+            top: 101,
+            child: Text(
+              'Share your requirement to get',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                height: 16 / 12,
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-            child: _cards(context),
+          Positioned(
+            top: 120,
+            child: Text(
+              'Magic AI quote ✦',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                height: 48 / 28,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 174,
+            child: Container(
+              height: 30,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFE600),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black,
+                    offset: Offset(-1, 1),
+                  ),
+                ],
+              ),
+              child: Text(
+                'In 60 secs',
+                style: GoogleFonts.inter(
+                  color: MagicQuoteColors.navy,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  height: 14 / 14,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 150,
+            child: ClipRect(
+              child: OverflowBox(
+                alignment: Alignment.bottomCenter,
+                minHeight: 360,
+                maxHeight: 360,
+                child: Image.asset(
+                  'assets/images/magicquote.jpeg',
+                  width: double.infinity,
+                  height: 360,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.bottomCenter,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -109,22 +195,24 @@ class UploadScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const MagicQuoteSectionTitle(
+          'Upload or type item list *',
+          fontSize: 15,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Use at least one option',
+          style: GoogleFonts.inter(
+            color: const Color(0xFF596378),
+            fontSize: 11,
+            height: 16 / 11,
+          ),
+        ),
+        const SizedBox(height: 12),
         MagicQuoteCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const MagicQuoteSectionTitle('Upload or type item list'),
-              const SizedBox(height: 12),
-              Text(
-                'Use at least one option. Photo, PDF, Excel or text - up to 20 MB',
-                style: GoogleFonts.inter(
-                  color: MagicQuoteColors.muted,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 12),
               _dropZone(),
               if (files.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -142,15 +230,12 @@ class UploadScreen extends StatelessWidget {
                       .toList(),
                 ),
               ],
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _field(
                 'Type item list',
                 noteController,
-                hint:
-                    'Add product details, quantities, sizes, or special requirements',
+                hint: 'Type item list',
                 focusNode: noteFocusNode,
-                minLines: 3,
-                maxLines: 4,
                 hasError: itemListError.isNotEmpty,
               ),
               if (itemListError.isNotEmpty) ...[
@@ -164,30 +249,30 @@ class UploadScreen extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _field(
                 'Preferred brands',
                 brandsController,
                 optional: true,
-                hint: 'e.g. Asian Paints, Jaquar, Havells',
+                hint: 'Preferred brands',
               ),
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 20),
+        const MagicQuoteSectionTitle('Your details', fontSize: 15),
+        const SizedBox(height: 12),
         MagicQuoteCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const MagicQuoteSectionTitle('Your details'),
-              const SizedBox(height: 14),
               _field(
                 'Name',
                 nameController,
                 required: true,
                 validator: (value) => _required(value, 'Please enter name'),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               _field(
                 'Phone',
                 phoneController,
@@ -201,7 +286,7 @@ class UploadScreen extends StatelessWidget {
                     ? 'Enter a valid 10-digit phone number'
                     : null,
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               _field(
                 'Delivery pincode',
                 pincodeController,
@@ -239,7 +324,7 @@ class UploadScreen extends StatelessWidget {
                   ],
                 ),
               ],
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -254,7 +339,7 @@ class UploadScreen extends StatelessWidget {
                           _required(value, 'Please enter a valid pincode'),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _field(
                       'State',
@@ -268,14 +353,14 @@ class UploadScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               _field(
                 'Project name',
                 projectController,
                 optional: true,
                 hint: 'e.g. Koramangala site',
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               _field(
                 'GSTIN',
                 gstController,
@@ -284,7 +369,7 @@ class UploadScreen extends StatelessWidget {
                 inputFormatters: gstInputFormatters,
                 validator: optionalGstValidator,
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               _field(
                 'Email',
                 emailController,
@@ -300,7 +385,11 @@ class UploadScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        _infoCard(),
+        _plannedDeliveryCard(),
+        const SizedBox(height: 14),
+        const MagicQuoteHowItWorksCard(),
+        const SizedBox(height: 24),
+        MagicQuoteHelpCard(onChat: onOpenWhatsApp),
       ],
     );
   }
@@ -314,49 +403,42 @@ class UploadScreen extends StatelessWidget {
     );
   }
 
-  Widget _infoCard() {
+  Widget _plannedDeliveryCard() {
     return MagicQuoteCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        alignment: Alignment.centerRight,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF4E4),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: SvgPicture.asset(
-              'assets/images/rfq_truck_timer.svg',
-              width: 30,
-              height: 30,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.only(right: 76),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'How Magic Quote works',
+                  'This is a planned delivery',
                   style: GoogleFonts.inter(
                     color: MagicQuoteColors.navy,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
+                    height: 22 / 15,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
-                  'Upload a BOQ or type your list. We match products and prepare a quote for review.',
+                  'Same/next-day for available stock. Brand timelines apply for custom orders.',
                   style: GoogleFonts.inter(
-                    color: MagicQuoteColors.muted,
-                    fontSize: 13,
-                    height: 1.4,
+                    color: const Color(0xFF596378),
+                    fontSize: 11,
+                    height: 16 / 11,
                   ),
                 ),
               ],
             ),
+          ),
+          Image.asset(
+            'assets/images/mobvehicle.webp',
+            width: 82,
+            height: 54,
+            fit: BoxFit.contain,
           ),
         ],
       ),
@@ -462,106 +544,58 @@ class _UploadDropZoneState extends State<_UploadDropZone> {
       onTap: widget.submitting ? null : widget.onTap,
       onHover: (value) => setState(() => _hovered = value),
       onHighlightChanged: (value) => setState(() => _pressed = value),
-      child: CustomPaint(
-        painter: const _DashedBorderPainter(color: Color(0xFFC5CCD5)),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                width: 54,
-                height: 54,
-                transformAlignment: Alignment.center,
-                transform: Matrix4.identity()
-                  ..scaleByDouble(
-                    _active ? 1.05 : 1.0,
-                    _active ? 1.05 : 1.0,
-                    _active ? 1.05 : 1.0,
-                    1.0,
-                  )
-                  ..rotateZ(_active ? math.pi / 2 : 0),
-                decoration: BoxDecoration(
-                  color:
-                      _active ? const Color(0xFF0A243F) : MagicQuoteColors.navy,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.add, color: Colors.white, size: 32),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: double.infinity,
+        height: 90,
+        decoration: BoxDecoration(
+          color: _active ? const Color(0xFFF2F7F4) : const Color(0xFFF7F7F7),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            Positioned(
+              top: -32,
+              child: SvgPicture.asset(
+                'assets/images/magicquoteadd.svg',
+                width: 64,
+                height: 64,
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.files.isEmpty
-                          ? 'Add your list/ BOQ'
-                          : 'Add more files',
-                      style: GoogleFonts.inter(
-                        color: MagicQuoteColors.navy,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+            ),
+            Positioned(
+              top: 40,
+              left: 8,
+              right: 8,
+              child: Column(
+                children: [
+                  Text(
+                    widget.files.isEmpty
+                        ? 'Add your list/ BOQ'
+                        : 'Add more files',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      color: MagicQuoteColors.navy,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Photo, PDF, Excel or paste text\nMax ${widget.maxFiles} files · 20 MB',
-                      style: GoogleFonts.inter(
-                        color: MagicQuoteColors.muted,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Photo, PDF, Excel or paste text. Max ${widget.maxFiles} files · 20 MB',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      color: MagicQuoteColors.muted,
+                      fontSize: 10,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
-  }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-    final path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          Offset.zero & size,
-          const Radius.circular(14),
-        ),
-      );
-    const dashLength = 5.0;
-    const gapLength = 4.0;
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        canvas.drawPath(
-          metric.extractPath(
-            distance,
-            (distance + dashLength).clamp(0.0, metric.length).toDouble(),
-          ),
-          paint,
-        );
-        distance += dashLength + gapLength;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }

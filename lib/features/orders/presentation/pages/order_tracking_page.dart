@@ -734,22 +734,22 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                             cancelTime: cancelTime,
                             normalStatusTime: normalStatusTime,
                             isLoading: _trackOrderLoading,
-                            onNormalStatusTap:
-                                _trackOrderLoading ||
-                                        isQuickOrder ||
-                                        trackingState.isCancelled
-                                    ? null
-                                    : () => _showOrderStatusSheet(
-                                          context,
-                                          timelineItems,
-                                        ),
+                            onNormalStatusTap: _trackOrderLoading ||
+                                    isQuickOrder ||
+                                    trackingState.isCancelled
+                                ? null
+                                : () => _showOrderStatusSheet(
+                                      context,
+                                      timelineItems,
+                                    ),
                           ),
                           Padding(
                             padding: EdgeInsets.fromLTRB(
                               16,
                               trackingState.isDelayed ||
                                       trackingState.isCancelled ||
-                                      (trackingState == _TrackingState.packing &&
+                                      (trackingState ==
+                                              _TrackingState.packing &&
                                           isQuickOrder &&
                                           quickOrderHelperText.isNotEmpty)
                                   ? 10

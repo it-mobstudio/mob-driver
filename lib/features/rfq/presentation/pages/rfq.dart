@@ -316,11 +316,16 @@ class _RfqHeader extends StatelessWidget {
               child: Row(
                 children: [
                   const SizedBox(width: 16),
-                  const Icon(
-                    Icons.search,
-                    size: 22,
-                    color: Color(0xFF0A243F),
+                  SvgPicture.asset(
+                    'assets/images/Searchicon.svg',
+                    width: 16,
+                    height: 16,
                   ),
+                  // const Icon(
+                  //   Icons.search,
+                  //   size: 22,
+                  //   color: Color(0xFF0A243F),
+                  // ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: TextField(
