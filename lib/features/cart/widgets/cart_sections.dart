@@ -56,16 +56,21 @@ class CartTopBar extends StatelessWidget {
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => GoRouter.of(context).push('/search'),
-            child: const SizedBox(
+            child: SizedBox(
               width: 40,
               height: 60,
               child: Align(
                 alignment: Alignment.center,
-                child: Icon(
-                  Icons.search,
-                  color: Color(0xFF0A243F),
-                  size: 22,
+                child: SvgPicture.asset(
+                  'assets/images/Searchicon.svg',
+                  width: 16,
+                  height: 16,
                 ),
+                //  Icon(
+                //   Icons.search,
+                //   color: Color(0xFF0A243F),
+                //   size: 22,
+                // ),
               ),
             ),
           ),
@@ -624,6 +629,10 @@ class SellerSection extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: DottedDivider(),
+                  ),
                   const SizedBox(height: 10),
                 ],
                 for (var i = 0; i < sellerItems.length; i++) ...[
@@ -904,8 +913,9 @@ class OrderDetailsCard extends StatelessWidget {
           Text(
             key,
             style: GoogleFonts.inter(
-              fontSize: 13,
+              fontSize: isTotal ? 14 : 13,
               fontWeight: isTotal ? FontWeight.w700 : FontWeight.w400,
+              height: isTotal ? 1.43 : null,
               color:
                   isTotal ? const Color(0xFF0A243F) : const Color(0xFF67696D),
               decoration: keyDecorated ? TextDecoration.underline : null,
@@ -1371,6 +1381,45 @@ class EmptyCartBody extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class DottedDivider extends StatelessWidget {
+  final Color color;
+  final double dashWidth;
+  final double dashHeight;
+  final double spacing;
+
+  const DottedDivider({
+    super.key,
+    this.color = const Color(0xFFE5E8EE),
+    this.dashWidth = 6,
+    this.dashHeight = 1,
+    this.spacing = 4,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final dashCount =
+            (constraints.maxWidth / (dashWidth + spacing)).floor();
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(
+            dashCount,
+            (_) => SizedBox(
+              width: dashWidth,
+              height: dashHeight,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: color),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

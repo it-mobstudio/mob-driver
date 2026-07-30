@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -141,26 +139,37 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
               _handleBack();
             },
             child: AnnotatedRegion<SystemUiOverlayStyle>(
-              value: const SystemUiOverlayStyle(
-                statusBarColor: Colors.white,
-                statusBarIconBrightness: Brightness.dark,
-                statusBarBrightness: Brightness.light,
-              ),
+              value: _screen == _MagicQuoteScreen.upload
+                  ? const SystemUiOverlayStyle(
+                      statusBarColor: Colors.transparent,
+                      statusBarIconBrightness: Brightness.light,
+                      statusBarBrightness: Brightness.dark,
+                    )
+                  : const SystemUiOverlayStyle(
+                      statusBarColor: Colors.white,
+                      statusBarIconBrightness: Brightness.dark,
+                      statusBarBrightness: Brightness.light,
+                    ),
               child: Scaffold(
                 backgroundColor: Colors.white,
-                body: SafeArea(
-                  child: Column(
-                    children: [
-                      _header(),
-                      Expanded(
-                        child: ColoredBox(
-                          color: _bg,
-                          child: _body(submitting),
+                body: _screen == _MagicQuoteScreen.upload
+                    ? ColoredBox(
+                        color: _bg,
+                        child: _body(submitting),
+                      )
+                    : SafeArea(
+                        child: Column(
+                          children: [
+                            _header(),
+                            Expanded(
+                              child: ColoredBox(
+                                color: _bg,
+                                child: _body(submitting),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
                 bottomNavigationBar: _bottomBar(submitting),
               ),
             ),
@@ -230,6 +239,8 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
           noteFocusNode: _noteFocusNode,
           pincodeServiceable: _pincodeServiceable,
           itemListError: _itemListError,
+          onBack: _handleBack,
+          onOpenWhatsApp: _openWhatsApp,
           onTapDropzone: _showUploadOptionsSheet,
           onRemoveFile: (file) => setState(() => _files.remove(file)),
           onPreviewFile: _previewPickedFile,
@@ -286,7 +297,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
   Widget? _bottomBar(bool submitting) {
     final action = switch (_screen) {
       _MagicQuoteScreen.upload => _BottomAction(
-          label: 'Get Magic AI Quote',
+          label: 'Get Magic AI quote',
           icon: Icons.auto_awesome,
           onPressed:
               submitting || _pincodeServiceable == false ? null : _submit,
@@ -309,12 +320,22 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: _border)),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x26000000),
+            blurRadius: 24,
+            offset: Offset(0, -4),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 52,
+          height: 48,
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: action.onPressed,
@@ -340,6 +361,7 @@ class _MagicAiQuotePageState extends State<MagicAiQuotePage> {
               backgroundColor: _blue,
               foregroundColor: Colors.white,
               disabledBackgroundColor: _blue.withValues(alpha: 0.6),
+              side: BorderSide.none,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

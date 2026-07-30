@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 import 'package:m_o_b_demand_side/features/product/data/models/product_models.dart';
@@ -572,11 +573,16 @@ class _SearchPageState extends State<SearchPage> {
                 ),
               ),
             ),
-            const Icon(
-              Icons.search,
-              size: 16,
-              color: Color(0xFF767C8F),
+             SvgPicture.asset(
+              'assets/images/Searchicon.svg',
+              width: 16,
+              height: 16, 
             ),
+            // const Icon(
+            //   Icons.search,
+            //   size: 16,
+            //   color: Color(0xFF767C8F),
+            // ),
           ],
         ),
       ),
@@ -640,11 +646,16 @@ class _SearchPageState extends State<SearchPage> {
                 ),
               ),
             ),
-            const Icon(
-              Icons.search,
-              size: 16,
-              color: Color(0xFF767C8F),
+             SvgPicture.asset(
+              'assets/images/Searchicon.svg',
+              width: 16,
+              height: 16,
             ),
+            // const Icon(
+            //   Icons.search,
+            //   size: 16,
+            //   color: Color(0xFF767C8F),
+            // ),
           ],
         ),
       ),

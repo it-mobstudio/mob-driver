@@ -66,10 +66,10 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
 
   double _listBottomPadding() {
     final mediaQuery = MediaQuery.of(context);
-    final bottomInset = mediaQuery.viewPadding.bottom >
-            mediaQuery.padding.bottom
-        ? mediaQuery.viewPadding.bottom
-        : mediaQuery.padding.bottom;
+    final bottomInset =
+        mediaQuery.viewPadding.bottom > mediaQuery.padding.bottom
+            ? mediaQuery.viewPadding.bottom
+            : mediaQuery.padding.bottom;
     return bottomInset + 24.0;
   }
 
@@ -421,7 +421,7 @@ class _VariantListRow extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -530,28 +530,36 @@ class _VariantListRow extends StatelessWidget {
             // left for the number itself, so quantities >= 10 got clipped
             // to nothing by the Text's overflow: ellipsis.
             width: 104,
-            child: ProductCartActionButton(
-              key: ValueKey<String>(
-                [
-                  product.id,
-                  product.mobSku,
-                  product.slug,
-                  product.title,
-                  product.addToCartProductId,
-                ]
-                    .map((value) => value.trim())
-                    .where((value) => value.isNotEmpty)
-                    .join('|'),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: !product.shouldShowNotify && quantity <= 0 ? 6 : 0,
+                ),
+                child: ProductCartActionButton(
+                  key: ValueKey<String>(
+                    [
+                      product.id,
+                      product.mobSku,
+                      product.slug,
+                      product.title,
+                      product.addToCartProductId,
+                    ]
+                        .map((value) => value.trim())
+                        .where((value) => value.isNotEmpty)
+                        .join('|'),
+                  ),
+                  product: product,
+                  style: ProductCartActionButtonStyle.rail,
+                  showCounter: !product.shouldShowNotify && quantity > 0,
+                  quantity: quantity > 0 ? quantity : 1,
+                  isFetchingCart: isUpdating,
+                  onAdd: (quantity) => onChanged(quantity),
+                  onAddForQuote: (quantity) => onChanged(quantity),
+                  onQuantityChanged: onChanged,
+                  onNotify: onNotify,
+                ),
               ),
-              product: product,
-              style: ProductCartActionButtonStyle.rail,
-              showCounter: !product.shouldShowNotify && quantity > 0,
-              quantity: quantity > 0 ? quantity : 1,
-              isFetchingCart: isUpdating,
-              onAdd: (quantity) => onChanged(quantity),
-              onAddForQuote: (quantity) => onChanged(quantity),
-              onQuantityChanged: onChanged,
-              onNotify: onNotify,
             ),
           ),
         ],

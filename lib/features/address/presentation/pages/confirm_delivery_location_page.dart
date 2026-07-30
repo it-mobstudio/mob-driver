@@ -237,7 +237,13 @@ class _ConfirmDeliveryLocationPageState
           alignment: Alignment.centerLeft,
           child: Row(
             children: [
-              const Icon(Icons.search, color: _navy, size: 22),
+               SvgPicture.asset(
+              'assets/images/Searchicon.svg',
+              width: 16,
+              height: 16,
+              color: _navy, 
+            ),
+            //  const Icon(Icons.search, color: _navy, size: 22),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
