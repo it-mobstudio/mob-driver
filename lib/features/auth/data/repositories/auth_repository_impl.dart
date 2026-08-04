@@ -68,9 +68,11 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      final userDetailsRaw = payload['data'] is Map
-          ? Map<String, dynamic>.from(payload['data'] as Map)
-          : <String, dynamic>{};
+      final userDetailsRaw = payload['driver'] is Map
+          ? Map<String, dynamic>.from(payload['driver'] as Map)
+          : payload['data'] is Map
+              ? Map<String, dynamic>.from(payload['data'] as Map)
+              : <String, dynamic>{};
       final userDetails = userDetailsRaw.isNotEmpty
           ? userDetailsRaw
           : <String, dynamic>{'phone': emailOrPhone};
@@ -78,7 +80,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final result = AuthVerifyResult(
         accessToken: accessToken,
         refreshToken: refreshToken,
-        isNewAccount: payload['newAccount'] == true,
+        isNewAccount: false,
         userDetails: userDetails,
       );
 

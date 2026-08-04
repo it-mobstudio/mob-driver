@@ -19,7 +19,6 @@ import 'core/config/app_config.dart';
 import 'core/di/injection.dart';
 import 'features/address/data/local/selected_address_store.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
-import 'features/cart/presentation/bloc/cart_bloc.dart';
 import 'features/home/presentation/bloc/home_bloc.dart';
 import 'features/auth/presentation/pages/splash_screen.dart';
 import 'core/app_runtime/nav/nav.dart';
@@ -247,9 +246,9 @@ class MyAppState extends State<MyApp> {
     final theme = AppTheme.of(context);
     return MultiBlocProvider(
       providers: [
-        BlocProvider<CartBloc>(
-          create: (_) => sl<CartBloc>()..add(CartLoadRequested()),
-        ),
+        // Kept temporarily during the customer-to-driver migration so an
+        // already-mounted customer screen from hot reload cannot crash. New
+        // sessions and all routes below open the driver experience only.
         BlocProvider<HomeBloc>(
           create: (_) => sl<HomeBloc>()..add(HomeLoadRequested()),
         ),
@@ -259,7 +258,7 @@ class MyAppState extends State<MyApp> {
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
-        title: 'MOB',
+        title: 'MOB Driver',
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
@@ -356,12 +355,18 @@ class _MobPageTransitionsBuilder extends PageTransitionsBuilder {
       curve: Curves.easeOutCubic,
       reverseCurve: Curves.easeOutCubic,
     );
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(1, 0),
-        end: Offset.zero,
-      ).animate(curvedAnimation),
-      child: child,
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: animation,
+        curve: const Interval(0, .8, curve: Curves.easeOut),
+      ),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(.08, 0),
+          end: Offset.zero,
+        ).animate(curvedAnimation),
+        child: child,
+      ),
     );
   }
 }

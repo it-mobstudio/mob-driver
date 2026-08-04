@@ -8,6 +8,10 @@ final ValueNotifier<bool> navBarVisible = ValueNotifier(true);
 /// tab can return its preserved scroll view to the top.
 VoidCallback? scrollHomeToTop;
 
+/// Registered by the driver dashboard so returning to/reselecting Today can
+/// fetch current assignments and tracking state instead of showing stale data.
+VoidCallback? refreshDriverDashboard;
+
 /// Bottom nav bar's own content height, excluding the device safe-area
 /// inset (add `MediaQuery.paddingOf(context).bottom` separately). Shared
 /// so anything positioning itself relative to the nav bar — e.g. the

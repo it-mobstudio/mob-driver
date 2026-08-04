@@ -172,7 +172,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
             AnalyticsService.instance
                 .logLogin(method: 'otp')
                 .catchError((_) {});
-            context.go(HomepageWidget.routePath);
+            context.go(DriverDashboardPage.routePath);
           }
         } else if (state is AuthError) {
           _clearOtp();

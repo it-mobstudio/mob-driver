@@ -26,7 +26,7 @@ class AuthSession extends ChangeNotifier {
   static const String _needsRegistrationKey = 'auth_needs_registration';
   static const String _authRefreshPath = String.fromEnvironment(
     'AUTH_REFRESH_PATH',
-    defaultValue: '/accounts/mob_user/auth/refresh/',
+    defaultValue: '',
   );
 
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
@@ -272,6 +272,7 @@ class AuthSession extends ChangeNotifier {
   }
 
   Future<String?> refreshAccessToken() async {
+    if (_authRefreshPath.isEmpty) return null;
     final refreshToken = _refreshToken;
     if (refreshToken == null || refreshToken.isEmpty) {
       return null;

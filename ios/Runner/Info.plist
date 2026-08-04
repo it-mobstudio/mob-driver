@@ -74,7 +74,7 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Your location will be used to show you nearby products and find your location.</string>
+	<string>Your location is used during driver duty for live vehicle tracking, trip distance, navigation safety, and delivery operations.</string>
 	<key>NSCameraUsageDescription</key>
     <string>Allow access to your camera so you can capture and upload images.</string>
 	<key>NSContactsUsageDescription</key>
@@ -82,7 +82,7 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
     <string>We need permission to save images to your photo library.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Your location will be used to show you nearby products and find your location.</string>
+	<string>Your location is used while you are on duty for live vehicle tracking, trip distance, and delivery operations.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs the microphone for speech recognition.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

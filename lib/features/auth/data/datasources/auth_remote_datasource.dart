@@ -40,8 +40,8 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
     required bool isPhone,
   }) async {
     final response = await _dio.post<dynamic>(
-      '/accounts/mob_user/auth/send_otp/',
-      data: {'email_or_phone': emailOrPhone, 'isPhone': isPhone},
+      '/driver/auth/send-otp/',
+      data: {'phone': emailOrPhone},
     );
     return _body(response.data);
   }
@@ -52,8 +52,8 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
     required String otp,
   }) async {
     final response = await _dio.post<dynamic>(
-      '/accounts/mob_user/auth/check_otp/',
-      data: {'email_or_phone': emailOrPhone, 'otp': otp},
+      '/driver/auth/verify-otp/',
+      data: {'phone': emailOrPhone, 'otp': otp},
     );
     return _body(response.data);
   }
@@ -100,11 +100,8 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
     required String emailOrPhone,
     required String fcmToken,
   }) async {
-    final response = await _dio.post<dynamic>(
-      '/accounts/mob_user/auth/update_user/',
-      data: {'email_or_phone': emailOrPhone, 'fcm_token': fcmToken},
-    );
-    return _body(response.data);
+    // Driver backend does not expose an FCM-token endpoint yet.
+    return {'status': true};
   }
 
   Map<String, dynamic> _body(dynamic raw) {

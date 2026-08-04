@@ -93,7 +93,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                   children: [
                     LoginTopBanner(
                       height: headerHeight,
-                      onSkip: () => context.go(HomepageWidget.routePath),
+                      onSkip: () => context.go(DriverDashboardPage.routePath),
                     ),
                     Expanded(
                       child: SingleChildScrollView(

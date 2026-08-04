@@ -31,7 +31,7 @@ class CartTopBar extends StatelessWidget {
               if (context.canPop()) {
                 context.pop();
               } else {
-                context.go(HomepageWidget.routePath);
+                context.go(DriverDashboardPage.routePath);
               }
             },
             child: const SizedBox(

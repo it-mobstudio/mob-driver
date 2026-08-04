@@ -34,6 +34,16 @@ class PushNotificationService {
     importance: Importance.high,
   );
 
+  static const _tripChannel = AndroidNotificationChannel(
+    'mob_driver_active_trip',
+    'Active delivery tracking',
+    description: 'Persistent status for the driver’s active delivery.',
+    importance: Importance.low,
+    playSound: false,
+    enableVibration: false,
+  );
+  static const _ongoingTripNotificationId = 2048;
+
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
@@ -63,16 +73,19 @@ class PushNotificationService {
     if (initialMessage != null) {
       _handleMessageOpen(initialMessage.data);
     }
+  }
 
-    // Fire-and-forget: the OS permission prompt can sit unanswered
-    // indefinitely and must never block app startup.
-    unawaited(
-      FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      ),
+  /// Requests notification permission only after an in-app explanation.
+  /// Driver startup deliberately does not trigger an OS permission prompt.
+  Future<bool> requestNotificationPermission() async {
+    if (kIsWeb) return true;
+    final settings = await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
     );
+    return settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional;
   }
 
   Future<void> _setupLocalNotifications() async {
@@ -97,6 +110,59 @@ class PushNotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_androidChannel);
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_tripChannel);
+  }
+
+  /// Shows an Android ongoing trip card similar to delivery-partner apps.
+  /// Calling this again updates the same notification without making sound.
+  Future<void> showOngoingTrip({
+    required String tripId,
+    required String destination,
+    required String eta,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      if (!_initialized) await initialize();
+      await _localNotifications.show(
+        _ongoingTripNotificationId,
+        eta == 'Tracking paused' ? 'Trip paused' : 'On the way · $eta',
+        '$tripId  •  Delivery to $destination',
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _tripChannel.id,
+            _tripChannel.name,
+            channelDescription: _tripChannel.description,
+            importance: Importance.low,
+            priority: Priority.low,
+            ongoing: true,
+            autoCancel: false,
+            onlyAlertOnce: true,
+            showWhen: true,
+            category: AndroidNotificationCategory.navigation,
+            visibility: NotificationVisibility.public,
+            subText: 'MOB Driver',
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: false,
+            presentSound: false,
+          ),
+        ),
+        payload: jsonEncode({'route': '/driver/trips', 'trip_id': tripId}),
+      );
+    } catch (error) {
+      // The plugin has no platform implementation in widget tests and on a
+      // few unsupported desktop targets. Trip UI must remain fully usable.
+      if (kDebugMode) debugPrint('[Push] Ongoing trip unavailable: $error');
+    }
+  }
+
+  Future<void> hideOngoingTrip() async {
+    if (kIsWeb || !_initialized) return;
+    await _localNotifications.cancel(_ongoingTripNotificationId);
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {

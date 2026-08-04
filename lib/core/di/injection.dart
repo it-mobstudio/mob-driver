@@ -12,6 +12,7 @@ import 'package:m_o_b_demand_side/features/auth/data/datasources/auth_remote_dat
 import 'package:m_o_b_demand_side/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:m_o_b_demand_side/features/driver/data/datasources/driver_remote_datasource.dart';
 
 // Cart
 import 'package:m_o_b_demand_side/features/cart/data/datasources/cart_remote_datasource.dart';
@@ -77,6 +78,9 @@ Future<void> setupDependencies() async {
   // ── 2. Datasources ───────────────────────────────────────────────────────
   sl.registerLazySingleton<AuthRemoteDatasource>(
     () => AuthRemoteDatasourceImpl(dio),
+  );
+  sl.registerLazySingleton<DriverRemoteDatasource>(
+    () => DriverRemoteDatasource(dio),
   );
   sl.registerLazySingleton<AddressRemoteDatasource>(
     () => AddressRemoteDatasourceImpl(dio),
