@@ -48,7 +48,7 @@ docker compose up -d valhalla                  # the real thing; only covers Ben
 # in the app: tap "Start duty" (allow location, pick a vehicle)   ← the driver must be on duty
 
 # terminal B — book an order next to that driver
-python manage.py book_test_trip                            # the FULL flow: COD + 3 items to verify + invoice,
+python manage.py book_test_trip                            # the FULL flow: COD + the shop's 4 sample products to verify + invoice,
                                                           # pickup at the driver, drop ~4 km away
 python manage.py book_test_trip --mode prepaid --distance-km 8
 python manage.py book_test_trip --items 0 --no-invoice     # a plain order; also --no-verify-items, --items 5
@@ -79,12 +79,12 @@ python manage.py migrate                         # once, after pulling this chan
 python manage.py approve_driver --phone +919555500001      # what the company's review does
 python manage.py approve_driver --phone +919555500001 --reject aadhar --note "Blurry"   # try "fix and re-upload"
 # pull to refresh in the app → the dashboard unlocks; tap Start duty, then:
-python manage.py book_test_trip --phone +919555500001      # 3 items, verification on, invoice — all the defaults
+python manage.py book_test_trip --phone +919555500001      # 4 real products, verification on, invoice — all the defaults
 ```
 
-That order has three items with pictures, asks the driver to verify each at the drop (tick
+That order has the shop's four sample products (Ultra tech Cement, Dr. Fixit Water proofing, Sika SBR, Atomberg fan — real pictures, random quantities), asks the driver to verify each at the drop (tick
 *Delivered*, or *Problem* with a reason; a photo is optional and taken with the camera), and
-carries a real sample invoice PDF with **Download / WhatsApp / Share** buttons. Payment and
+carries a real invoice PDF (the shop's own link) with **Download / WhatsApp / Share** buttons; `--invoice-url` swaps in another. Payment and
 completion are blocked until every item has an answer. Completing pays the driver
 `DRIVER_EARNING_PERCENT`% (80 by default) of the fare into the **Wallet** tab: balance,
 today / week / month / all time, a 7-day chart and the statement. The company records payouts
@@ -121,6 +121,21 @@ curl -X POST "http://127.0.0.1:8003/simulate/<qr id>?webhook=0"    # pays, but n
 With Razorpay the payment screen shows Razorpay's QR image, a countdown, "Waiting for the
 customer's payment", and moves on to the OTP by itself when the trip turns paid; an expired code
 offers "Get a new code". Full flow, webhook setup and edge cases: *Payments (Razorpay)* in the API reference.
+
+### The web build (Netlify, or any host)
+
+A Flutter **web** build is served from a different origin than the API, so the browser blocks its calls
+(`blocked by CORS policy ... No 'Access-Control-Allow-Origin'`) until the backend lists that origin — native
+Android/iOS builds never need this. In the backend's `.env`, then restart the server:
+
+```bash
+CORS_ALLOWED_ORIGINS=https://mob-driver.netlify.app     # exact origins, comma-separated; no path, no *
+ALLOWED_HOSTS=...,your-tunnel-or-api-host.example.com   # the host the app calls (a Cloudflare tunnel's hostname, say)
+```
+
+While `DEBUG` is on, `http://localhost:<any port>` is allowed automatically for `flutter run -d chrome`. Build the
+web app against the API with `--dart-define=API_BASE_URL=https://<host>/api/v1/`. (Item pictures and the invoice PDF
+are loaded from their own hosts, so those need to allow browser access too.)
 
 ### The API documentation
 

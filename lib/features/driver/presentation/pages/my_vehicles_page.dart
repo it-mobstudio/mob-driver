@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/photo_widgets.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
@@ -218,10 +217,16 @@ class _VehicleCard extends StatelessWidget {
                           ]),
                     )
                   : Stack(fit: StackFit.expand, children: [
-                      NetworkThumb(photos.first,
-                          size: double.infinity,
-                          radius: 0,
-                          fallbackIcon: Icons.two_wheeler_rounded),
+                      Image.network(
+                        photos.first,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const ColoredBox(
+                          color: Color(0xFFEAF2FF),
+                          child: Center(
+                              child: Icon(Icons.two_wheeler_rounded,
+                                  size: 38, color: DriverColors.blue)),
+                        ),
+                      ),
                       if (photos.length > 1)
                         Positioned(
                           right: 10,
