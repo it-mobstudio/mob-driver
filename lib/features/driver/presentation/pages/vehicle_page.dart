@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/photo_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
@@ -81,6 +83,34 @@ class DriverVehiclePage extends StatelessWidget {
                           color: DriverColors.blue,
                           icon: Icons.badge_outlined,
                         ),
+                      const SizedBox(height: 14),
+                      DriverCard(
+                        key: const Key('my_vehicles_entry'),
+                        onTap: () => context.push(DriverRoutes.myVehicles),
+                        child: const Row(children: [
+                          Icon(Icons.add_photo_alternate_outlined,
+                              color: DriverColors.blue, size: 26),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('My vehicles',
+                                      style: TextStyle(
+                                          color: DriverColors.ink,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800)),
+                                  SizedBox(height: 2),
+                                  Text('Add your own vehicles, with pictures',
+                                      style: TextStyle(
+                                          color: DriverColors.muted,
+                                          fontSize: 12.5)),
+                                ]),
+                          ),
+                          Icon(Icons.chevron_right_rounded,
+                              color: DriverColors.muted),
+                        ]),
+                      ),
                       const SizedBox(height: 18),
                       if (state.isOnline)
                         PrimaryButton(
@@ -116,15 +146,8 @@ class _VehicleCard extends StatelessWidget {
   Widget build(BuildContext context) => DriverCard(
         child: Column(children: [
           Row(children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                  color: const Color(0xFFEAF2FF),
-                  borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.two_wheeler_rounded,
-                  color: DriverColors.blue, size: 30),
-            ),
+            NetworkThumb(vehicle.photoUrl,
+                size: 56, radius: 16, fallbackIcon: Icons.two_wheeler_rounded),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

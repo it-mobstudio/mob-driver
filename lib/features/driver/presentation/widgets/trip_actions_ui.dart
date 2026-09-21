@@ -25,6 +25,10 @@ abstract final class DriverRoutes {
   static String otp(String id) => '/driver/trip/$id/otp';
   static const itemsPattern = '/driver/trip/:id/items';
   static String items(String id) => '/driver/trip/$id/items';
+  static const myVehicles = '/driver/vehicle/mine';
+  static const newVehicle = '/driver/vehicle/mine/new';
+  static const editVehiclePattern = '/driver/vehicle/mine/:id';
+  static String editVehicle(String id) => '/driver/vehicle/mine/$id';
 }
 
 /// Opens turn-by-turn navigation to a stop in the user's maps app. The plain

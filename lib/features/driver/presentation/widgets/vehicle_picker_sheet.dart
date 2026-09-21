@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/photo_widgets.dart';
 
 /// Bottom sheet listing the vehicles the driver can take (their licence
 /// category, not already on duty with someone else). Resolves to the chosen
@@ -158,6 +159,11 @@ class _VehiclePickerSheetState extends State<_VehiclePickerSheet> {
                                   : DriverColors.muted,
                             ),
                             const SizedBox(width: 12),
+                            NetworkThumb(vehicle.photoUrl,
+                                size: 44,
+                                radius: 11,
+                                fallbackIcon: Icons.two_wheeler_rounded),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,6 +187,11 @@ class _VehiclePickerSheetState extends State<_VehiclePickerSheet> {
                                     ),
                                   ]),
                             ),
+                            if (vehicle.isOwn) ...[
+                              const StatusPill('YOURS',
+                                  color: DriverColors.blue),
+                              const SizedBox(width: 6),
+                            ],
                             if (vehicle.isCurrent ||
                                 vehicle.id == widget.currentVehicleId)
                               const StatusPill('CURRENT',

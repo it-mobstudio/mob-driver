@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
@@ -152,6 +153,25 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: EditProfilePage.routeName,
         path: DriverRoutes.editProfile,
         builder: (_, __) => const EditProfilePage(),
+      ),
+      // `/driver/vehicle/mine/new` must precede `/driver/vehicle/mine/:id`.
+      GoRoute(
+        name: MyVehiclesPage.routeName,
+        path: DriverRoutes.myVehicles,
+        builder: (_, __) => const MyVehiclesPage(),
+      ),
+      GoRoute(
+        name: 'DriverNewVehicle',
+        path: DriverRoutes.newVehicle,
+        builder: (_, __) => const VehicleFormPage(),
+      ),
+      GoRoute(
+        name: VehicleFormPage.routeName,
+        path: DriverRoutes.editVehiclePattern,
+        builder: (_, state) => VehicleFormPage(
+          vehicleId: state.pathParameters['id']!,
+          initial: state.extra is MyVehicle ? state.extra as MyVehicle : null,
+        ),
       ),
       GoRoute(
         name: PayoutDetailsPage.routeName,

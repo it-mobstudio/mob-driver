@@ -11,3 +11,5 @@ export 'trips_page.dart' show DriverTripsPage;
 export 'vehicle_page.dart' show DriverVehiclePage;
 export 'verification_page.dart' show DriverVerificationPage;
 export 'wallet_page.dart' show DriverWalletPage;
+export 'my_vehicles_page.dart' show MyVehiclesPage;
+export 'vehicle_form_page.dart' show VehicleFormPage;

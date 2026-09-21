@@ -188,6 +188,56 @@ class DriverRemoteDatasource {
               .delete<dynamic>('/driver/trips/$tripId/items/$itemId/verify'))
           .data);
 
+  // -- the driver's own vehicles ------------------------------------------------
+
+  Future<Map<String, dynamic>> vehicleTypes() async =>
+      asMap((await _dio.get<dynamic>('/driver/vehicle-types')).data);
+
+  Future<Map<String, dynamic>> myVehicles() async =>
+      asMap((await _dio.get<dynamic>('/driver/my-vehicles')).data);
+
+  /// Registers a vehicle; the pictures go up as repeated `photos` parts.
+  Future<Map<String, dynamic>> addVehicle({
+    required String vehicleTypeId,
+    required String registrationNumber,
+    double? capacityKg,
+    List<CapturedPhoto> photos = const [],
+  }) async {
+    final form = FormData.fromMap({
+      'vehicle_type_id': vehicleTypeId,
+      'registration_number': registrationNumber,
+      if (capacityKg != null) 'capacity_kg': capacityKg.toString(),
+      if (photos.isNotEmpty)
+        'photos': [
+          for (final p in photos)
+            MultipartFile.fromBytes(p.bytes,
+                filename: p.filename,
+                contentType: DioMediaType.parse(p.mimeType)),
+        ],
+    });
+    return asMap(
+        (await _dio.post<dynamic>('/driver/my-vehicles', data: form)).data);
+  }
+
+  Future<Map<String, dynamic>> updateVehicle(
+          String id, Map<String, dynamic> body) async =>
+      asMap((await _dio.patch<dynamic>('/driver/my-vehicles/$id', data: body))
+          .data);
+
+  Future<Map<String, dynamic>> addVehiclePhoto(
+          String id, CapturedPhoto photo) =>
+      _multipart('/driver/my-vehicles/$id/photos', files: {'photo': photo});
+
+  Future<Map<String, dynamic>> removeVehiclePhoto(
+          String id, String photoId) async =>
+      asMap((await _dio
+              .delete<dynamic>('/driver/my-vehicles/$id/photos/$photoId'))
+          .data);
+
+  /// Retires the vehicle (`204`).
+  Future<void> removeVehicle(String id) =>
+      _dio.delete<dynamic>('/driver/my-vehicles/$id');
+
   /// A `multipart/form-data` POST. The pictures go up as bytes with a proper
   /// file name and type — the backend decides what it will accept from those.
   Future<Map<String, dynamic>> _multipart(

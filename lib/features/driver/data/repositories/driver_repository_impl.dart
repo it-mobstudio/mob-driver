@@ -10,6 +10,7 @@ import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
@@ -103,6 +104,68 @@ class DriverRepositoryImpl implements DriverRepository {
   @override
   Future<(DriverProfile?, AppFailure?)> submitPolice(CapturedPhoto document) =>
       _guard(() async => _adoptProfile(await _remote.submitPolice(document)));
+
+  // -- the driver's own vehicles ------------------------------------------------
+
+  @override
+  Future<(List<VehicleTypeOption>?, AppFailure?)> vehicleTypes() =>
+      _guard(() async => [
+            for (final t
+                in (await _remote.vehicleTypes())['vehicle_types'] as List? ??
+                    const [])
+              VehicleTypeOption.fromJson(asMap(t)),
+          ]);
+
+  @override
+  Future<(List<MyVehicle>?, AppFailure?)> myVehicles() => _guard(() async => [
+        for (final v
+            in (await _remote.myVehicles())['vehicles'] as List? ?? const [])
+          MyVehicle.fromJson(asMap(v)),
+      ]);
+
+  @override
+  Future<(MyVehicle?, AppFailure?)> addVehicle({
+    required String vehicleTypeId,
+    required String registrationNumber,
+    double? capacityKg,
+    List<CapturedPhoto> photos = const [],
+  }) =>
+      _guard(() async => MyVehicle.fromJson(await _remote.addVehicle(
+            vehicleTypeId: vehicleTypeId,
+            registrationNumber: registrationNumber,
+            capacityKg: capacityKg,
+            photos: photos,
+          )));
+
+  @override
+  Future<(MyVehicle?, AppFailure?)> updateVehicle(
+    String id, {
+    String? vehicleTypeId,
+    String? registrationNumber,
+    double? capacityKg,
+  }) =>
+      _guard(() async => MyVehicle.fromJson(await _remote.updateVehicle(id, {
+            if (vehicleTypeId != null) 'vehicle_type_id': vehicleTypeId,
+            if (registrationNumber != null)
+              'registration_number': registrationNumber,
+            if (capacityKg != null) 'capacity_kg': capacityKg.toString(),
+          })));
+
+  @override
+  Future<(MyVehicle?, AppFailure?)> addVehiclePhoto(
+          String id, CapturedPhoto photo) =>
+      _guard(() async =>
+          MyVehicle.fromJson(await _remote.addVehiclePhoto(id, photo)));
+
+  @override
+  Future<(MyVehicle?, AppFailure?)> removeVehiclePhoto(
+          String id, String photoId) =>
+      _guard(() async =>
+          MyVehicle.fromJson(await _remote.removeVehiclePhoto(id, photoId)));
+
+  @override
+  Future<AppFailure?> removeVehicle(String id) async =>
+      (await _guard(() => _remote.removeVehicle(id))).$2;
 
   @override
   Future<AppFailure?> deleteAccount() async {

@@ -9,6 +9,7 @@ import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
@@ -325,6 +326,41 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       _repo.walletEntries(page: page, kinds: kinds);
 
   // -- duty ----------------------------------------------------------------
+
+  // -- the driver's own vehicles ------------------------------------------------
+
+  Future<(List<VehicleTypeOption>?, AppFailure?)> loadVehicleTypes() =>
+      _repo.vehicleTypes();
+  Future<(List<MyVehicle>?, AppFailure?)> loadMyVehicles() =>
+      _repo.myVehicles();
+  Future<(MyVehicle?, AppFailure?)> addVehicle({
+    required String vehicleTypeId,
+    required String registrationNumber,
+    double? capacityKg,
+    List<CapturedPhoto> photos = const [],
+  }) =>
+      _repo.addVehicle(
+          vehicleTypeId: vehicleTypeId,
+          registrationNumber: registrationNumber,
+          capacityKg: capacityKg,
+          photos: photos);
+  Future<(MyVehicle?, AppFailure?)> updateVehicle(
+    String id, {
+    String? vehicleTypeId,
+    String? registrationNumber,
+    double? capacityKg,
+  }) =>
+      _repo.updateVehicle(id,
+          vehicleTypeId: vehicleTypeId,
+          registrationNumber: registrationNumber,
+          capacityKg: capacityKg);
+  Future<(MyVehicle?, AppFailure?)> addVehiclePhoto(
+          String id, CapturedPhoto photo) =>
+      _repo.addVehiclePhoto(id, photo);
+  Future<(MyVehicle?, AppFailure?)> removeVehiclePhoto(
+          String id, String photoId) =>
+      _repo.removeVehiclePhoto(id, photoId);
+  Future<AppFailure?> removeVehicle(String id) => _repo.removeVehicle(id);
 
   Future<(List<DriverVehicle>?, AppFailure?)> loadVehicles() =>
       _repo.availableVehicles();

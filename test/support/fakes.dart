@@ -11,6 +11,7 @@ import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
@@ -346,6 +347,102 @@ class FakeDriverRepository implements DriverRepository {
   @override
   Future<(List<DriverVehicle>?, AppFailure?)> availableVehicles() async =>
       (vehiclesValue, null);
+
+  // -- the driver's own vehicles ------------------------------------------------
+  List<VehicleTypeOption> vehicleTypesValue = const [
+    VehicleTypeOption(id: 'vt-bike', name: 'Bike', category: 'two_wheeler', defaultCapacityKg: 20),
+    VehicleTypeOption(id: 'vt-tempo', name: 'Tempo', category: 'three_wheeler', defaultCapacityKg: 500),
+  ];
+  final List<MyVehicle> myVehiclesValue = [];
+
+  /// What the next own-vehicle change answers with (null: it succeeds).
+  AppFailure? myVehicleFailure;
+
+  /// What was asked, in order: `add:KA05MN7788:2:vt-bike:35.0`, `photo:v1`, `unphoto:v1:p0`, ...
+  final List<String> vehicleCalls = [];
+  int _vehicleSeq = 0;
+
+  MyVehicle _rebuilt(MyVehicle v,
+          {String? plate, String? typeId, double? capacity, List<VehiclePhotoRef>? photos}) =>
+      MyVehicle(
+        id: v.id,
+        registrationNumber: plate ?? v.registrationNumber,
+        vehicleTypeId: typeId ?? v.vehicleTypeId,
+        vehicleTypeName: v.vehicleTypeName,
+        category: v.category,
+        capacityKg: capacity ?? v.capacityKg,
+        photoUrl: (photos ?? v.photos).isEmpty ? null : (photos ?? v.photos).first.url,
+        photos: photos ?? v.photos,
+        isCurrent: v.isCurrent,
+      );
+
+  @override
+  Future<(List<VehicleTypeOption>?, AppFailure?)> vehicleTypes() async => (vehicleTypesValue, null);
+
+  @override
+  Future<(List<MyVehicle>?, AppFailure?)> myVehicles() async => (List.of(myVehiclesValue), null);
+
+  @override
+  Future<(MyVehicle?, AppFailure?)> addVehicle({
+    required String vehicleTypeId,
+    required String registrationNumber,
+    double? capacityKg,
+    List<CapturedPhoto> photos = const [],
+  }) async {
+    vehicleCalls.add('add:$registrationNumber:${photos.length}:$vehicleTypeId:$capacityKg');
+    if (myVehicleFailure != null) return (null, myVehicleFailure);
+    final type = vehicleTypesValue.firstWhere((t) => t.id == vehicleTypeId);
+    final id = 'v${++_vehicleSeq}';
+    final vehicle = MyVehicle(
+      id: id,
+      registrationNumber: registrationNumber,
+      vehicleTypeId: type.id,
+      vehicleTypeName: type.name,
+      category: type.category,
+      capacityKg: capacityKg ?? type.defaultCapacityKg,
+      photoUrl: photos.isEmpty ? null : 'https://cdn.example.com/$id-0.jpg',
+      photos: [for (var i = 0; i < photos.length; i++) VehiclePhotoRef(id: '$id-p$i', url: 'https://cdn.example.com/$id-$i.jpg')],
+    );
+    myVehiclesValue.insert(0, vehicle);
+    return (vehicle, null);
+  }
+
+  @override
+  Future<(MyVehicle?, AppFailure?)> updateVehicle(String id,
+      {String? vehicleTypeId, String? registrationNumber, double? capacityKg}) async {
+    vehicleCalls.add('update:$id:$registrationNumber:$vehicleTypeId:$capacityKg');
+    if (myVehicleFailure != null) return (null, myVehicleFailure);
+    final i = myVehiclesValue.indexWhere((v) => v.id == id);
+    myVehiclesValue[i] = _rebuilt(myVehiclesValue[i], plate: registrationNumber, typeId: vehicleTypeId, capacity: capacityKg);
+    return (myVehiclesValue[i], null);
+  }
+
+  @override
+  Future<(MyVehicle?, AppFailure?)> addVehiclePhoto(String id, CapturedPhoto photo) async {
+    vehicleCalls.add('photo:$id');
+    if (myVehicleFailure != null) return (null, myVehicleFailure);
+    final i = myVehiclesValue.indexWhere((v) => v.id == id);
+    final photos = [...myVehiclesValue[i].photos, VehiclePhotoRef(id: '$id-new${myVehiclesValue[i].photos.length}', url: 'https://cdn.example.com/$id-new.jpg')];
+    myVehiclesValue[i] = _rebuilt(myVehiclesValue[i], photos: photos);
+    return (myVehiclesValue[i], null);
+  }
+
+  @override
+  Future<(MyVehicle?, AppFailure?)> removeVehiclePhoto(String id, String photoId) async {
+    vehicleCalls.add('unphoto:$id:$photoId');
+    if (myVehicleFailure != null) return (null, myVehicleFailure);
+    final i = myVehiclesValue.indexWhere((v) => v.id == id);
+    myVehiclesValue[i] = _rebuilt(myVehiclesValue[i], photos: [for (final p in myVehiclesValue[i].photos) if (p.id != photoId) p]);
+    return (myVehiclesValue[i], null);
+  }
+
+  @override
+  Future<AppFailure?> removeVehicle(String id) async {
+    vehicleCalls.add('remove:$id');
+    if (myVehicleFailure != null) return myVehicleFailure;
+    myVehiclesValue.removeWhere((v) => v.id == id);
+    return null;
+  }
 
   @override
   Future<(DriverStats?, AppFailure?)> stats() async => (statsValue, null);

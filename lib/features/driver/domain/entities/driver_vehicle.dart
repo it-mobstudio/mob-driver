@@ -10,6 +10,7 @@ class DriverVehicle extends Equatable {
     this.capacityKg,
     this.photoUrl,
     this.isCurrent = false,
+    this.isOwn = false,
   });
 
   /// Parses `DriverVehicleSummarySerializer` rows — from `driver/vehicles`
@@ -24,6 +25,7 @@ class DriverVehicle extends Equatable {
       capacityKg: readDouble(json['capacity_kg']),
       photoUrl: readString(json['photo_url']),
       isCurrent: readBool(json['is_current']),
+      isOwn: readBool(json['is_own']),
     );
   }
 
@@ -37,6 +39,9 @@ class DriverVehicle extends Equatable {
   final String? photoUrl;
   final bool isCurrent;
 
+  /// The driver registered this vehicle themselves (not the company's fleet).
+  final bool isOwn;
+
   String get categoryLabel => switch (category) {
         'two_wheeler' => '2 wheeler',
         'three_wheeler' => '3 wheeler',
@@ -46,5 +51,5 @@ class DriverVehicle extends Equatable {
 
   @override
   List<Object?> get props =>
-      [id, registrationNumber, vehicleTypeName, category, isCurrent];
+      [id, registrationNumber, vehicleTypeName, category, isCurrent, isOwn];
 }

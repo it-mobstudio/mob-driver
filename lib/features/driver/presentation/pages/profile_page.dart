@@ -3,17 +3,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:m_o_b_demand_side/core/utils/formatters.dart';
+import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/photo_widgets.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 /// Who the driver is, where their KYC stands, and sign-out.
 class DriverProfilePage extends StatelessWidget {
-  const DriverProfilePage({super.key});
+  const DriverProfilePage(
+      {super.key, this.capture = const DevicePhotoCapture()});
+
+  /// Where the profile picture comes from (camera or gallery).
+  final PhotoCapture capture;
 
   static const routeName = 'DriverProfile';
   static const routePath = DriverRoutes.profile;
@@ -133,8 +139,7 @@ class DriverProfilePage extends StatelessWidget {
                   children: [
                       DriverCard(
                         child: Row(children: [
-                          DriverAvatar(profile.fullName,
-                              size: 56, photoUrl: profile.photoUrl),
+                          _ProfilePhoto(profile: profile, capture: capture),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
@@ -168,6 +173,14 @@ class DriverProfilePage extends StatelessWidget {
                             subtitle:
                                 'Name, contact, address, emergency contact',
                             onTap: () => context.push(DriverRoutes.editProfile),
+                          ),
+                          const Divider(height: 1, indent: 60),
+                          _MenuRow(
+                            keyName: 'menu_my_vehicles',
+                            icon: Icons.two_wheeler_rounded,
+                            title: 'My vehicles',
+                            subtitle: 'Add your own vehicles, with pictures',
+                            onTap: () => context.push(DriverRoutes.myVehicles),
                           ),
                           const Divider(height: 1, indent: 60),
                           _MenuRow(
@@ -372,4 +385,74 @@ class _VersionLabel extends StatelessWidget {
           );
         },
       );
+}
+
+/// The driver's picture, with a camera badge: tap to take a new one or pick one
+/// from the gallery. The profile updates as soon as it's saved.
+class _ProfilePhoto extends StatefulWidget {
+  const _ProfilePhoto({required this.profile, required this.capture});
+
+  final DriverProfile profile;
+  final PhotoCapture capture;
+
+  @override
+  State<_ProfilePhoto> createState() => _ProfilePhotoState();
+}
+
+class _ProfilePhotoState extends State<_ProfilePhoto> {
+  bool _busy = false;
+
+  Future<void> _change() async {
+    final cubit = context.read<DriverSessionCubit>();
+    final photo = await chooseDocumentPhoto(context, widget.capture);
+    if (photo == null || !mounted) return;
+    setState(() => _busy = true);
+    final failure = await cubit.uploadPhoto(photo);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    TopSnackBar.show(context,
+        message: failure?.message ?? 'Profile photo updated.',
+        type:
+            failure == null ? TopSnackBarType.success : TopSnackBarType.error);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = widget.profile;
+    return GestureDetector(
+      key: const Key('profile_photo'),
+      onTap: _busy ? null : _change,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(clipBehavior: Clip.none, children: [
+        DriverAvatar(profile.fullName, size: 64, photoUrl: profile.photoUrl),
+        if (_busy)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .7),
+                  borderRadius: BorderRadius.circular(64 * .32)),
+              child: const Center(
+                  child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.4))),
+            ),
+          ),
+        Positioned(
+          right: -4,
+          bottom: -4,
+          child: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: DriverColors.blue,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: const Icon(Icons.photo_camera_rounded,
+                size: 13, color: Colors.white),
+          ),
+        ),
+      ]),
+    );
+  }
 }

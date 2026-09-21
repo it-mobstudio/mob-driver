@@ -3,6 +3,7 @@ import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
@@ -21,6 +22,27 @@ abstract interface class DriverRepository {
 
   Future<(DriverProfile?, AppFailure?)> profile();
   Future<(List<DriverVehicle>?, AppFailure?)> availableVehicles();
+
+  // -- the driver's own vehicles ------------------------------------------------
+  Future<(List<VehicleTypeOption>?, AppFailure?)> vehicleTypes();
+  Future<(List<MyVehicle>?, AppFailure?)> myVehicles();
+  Future<(MyVehicle?, AppFailure?)> addVehicle({
+    required String vehicleTypeId,
+    required String registrationNumber,
+    double? capacityKg,
+    List<CapturedPhoto> photos = const [],
+  });
+  Future<(MyVehicle?, AppFailure?)> updateVehicle(
+    String id, {
+    String? vehicleTypeId,
+    String? registrationNumber,
+    double? capacityKg,
+  });
+  Future<(MyVehicle?, AppFailure?)> addVehiclePhoto(
+      String id, CapturedPhoto photo);
+  Future<(MyVehicle?, AppFailure?)> removeVehiclePhoto(
+      String id, String photoId);
+  Future<AppFailure?> removeVehicle(String id);
   Future<(DriverStats?, AppFailure?)> stats();
 
   // -- onboarding: the driver's own details and documents. Each returns the
