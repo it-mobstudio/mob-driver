@@ -13,4 +13,4 @@ flutter build web --release --dart-define=API_BASE_URL="$API_BASE_URL"
 """
 
 [build.environment]
-API_BASE_URL = "https://residential-medicine-sheep-managed.trycloudflare.com/api/v1/"
+API_BASE_URL = "https://controller-privileges-from-circular.trycloudflare.com/api/v1/"
