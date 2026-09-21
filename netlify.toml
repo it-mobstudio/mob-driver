@@ -9,5 +9,8 @@ flutter --version
 flutter config --enable-web
 
 flutter pub get
-flutter build web --release
+flutter build web --release --dart-define=API_BASE_URL="$API_BASE_URL"
 """
+
+[build.environment]
+API_BASE_URL = "https://nurse-inns-herein-rrp.trycloudflare.com/api/v1/"
