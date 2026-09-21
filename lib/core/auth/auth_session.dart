@@ -26,7 +26,7 @@ class AuthSession extends ChangeNotifier {
   static const String _needsRegistrationKey = 'auth_needs_registration';
   static const String _authRefreshPath = String.fromEnvironment(
     'AUTH_REFRESH_PATH',
-    defaultValue: '',
+    defaultValue: 'driver/auth/refresh',
   );
 
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
@@ -271,6 +271,13 @@ class AuthSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Trades the refresh token for a new access token.
+  ///
+  /// Returns null only when there is definitively no way to continue: no
+  /// refresh token, or the server rejected it (revoked/expired/driver
+  /// disabled). A network failure or a 5xx is *not* that — it throws, so the
+  /// caller can keep the session and retry later instead of signing a driver
+  /// out in a dead spot on the road.
   Future<String?> refreshAccessToken() async {
     if (_authRefreshPath.isEmpty) return null;
     final refreshToken = _refreshToken;
@@ -278,14 +285,16 @@ class AuthSession extends ChangeNotifier {
       return null;
     }
     final uri = AppConfig.apiUri(_authRefreshPath);
-    final response = await http.post(
-      uri,
-      headers: jsonHeadersWithPlatform(),
-      body: jsonEncode({
-        'refresh_token': refreshToken,
-        'refreshToken': refreshToken,
-      }),
-    );
+    final response = await http
+        .post(
+          uri,
+          headers: jsonHeadersWithPlatform(),
+          body: jsonEncode({'refreshToken': refreshToken}),
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode >= 500) {
+      throw StateError('Token refresh unavailable (${response.statusCode}).');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       return null;
     }
@@ -294,17 +303,14 @@ class AuthSession extends ChangeNotifier {
     final body = decoded is Map
         ? Map<String, dynamic>.from(decoded)
         : <String, dynamic>{};
-    final data = body['data'] is Map
-        ? Map<String, dynamic>.from(body['data'] as Map)
-        : <String, dynamic>{};
 
     final newAccessToken = _readFirstString(
-      data.isNotEmpty ? data : body,
-      const ['access_token', 'accessToken', 'token', 'jwt'],
+      body,
+      const ['accessToken', 'access_token', 'access'],
     );
     final newRefreshToken = _readFirstString(
-      data.isNotEmpty ? data : body,
-      const ['refresh_token', 'refreshToken'],
+      body,
+      const ['refreshToken', 'refresh_token', 'refresh'],
     );
 
     if (newAccessToken == null || newAccessToken.isEmpty) {

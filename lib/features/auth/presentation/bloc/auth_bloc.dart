@@ -1,41 +1,22 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
-import 'package:m_o_b_demand_side/core/app_runtime/fcm_token_sync.dart';
-import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 
 // ── Events ───────────────────────────────────────────────────────────────────
 
 sealed class AuthEvent {}
 
+/// [phoneNumber] is the full international number, e.g. `+919000000000` —
+/// the backend matches drivers on it exactly.
 final class AuthOtpSendRequested extends AuthEvent {
-  AuthOtpSendRequested({required this.emailOrPhone, required this.isPhone});
-  final String emailOrPhone;
-  final bool isPhone;
+  AuthOtpSendRequested({required this.phoneNumber});
+  final String phoneNumber;
 }
 
 final class AuthOtpVerifyRequested extends AuthEvent {
-  AuthOtpVerifyRequested({required this.emailOrPhone, required this.otp});
-  final String emailOrPhone;
+  AuthOtpVerifyRequested({required this.phoneNumber, required this.otp});
+  final String phoneNumber;
   final String otp;
-}
-
-final class AuthRegisterRequested extends AuthEvent {
-  AuthRegisterRequested({
-    required this.name,
-    this.phone,
-    this.email,
-    this.gstin,
-    this.businessName,
-    this.referralCode,
-  });
-  final String name;
-  final String? phone;
-  final String? email;
-  final String? gstin;
-  final String? businessName;
-  final String? referralCode;
 }
 
 final class AuthSignOutRequested extends AuthEvent {}
@@ -49,17 +30,18 @@ final class AuthInitial extends AuthState {}
 final class AuthLoading extends AuthState {}
 
 final class AuthOtpSent extends AuthState {
-  AuthOtpSent(this.emailOrPhone);
-  final String emailOrPhone;
+  AuthOtpSent(this.phoneNumber, {this.debugOtp});
+  final String phoneNumber;
+
+  /// Present only against a non-production backend — see
+  /// [OtpRequestResult.debugOtp].
+  final String? debugOtp;
 }
 
 final class AuthVerified extends AuthState {
-  AuthVerified({required this.isNewAccount, required this.userDetails});
-  final bool isNewAccount;
+  AuthVerified({required this.userDetails});
   final Map<String, dynamic> userDetails;
 }
-
-final class AuthRegistered extends AuthState {}
 
 final class AuthSignedOut extends AuthState {}
 
@@ -74,7 +56,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc(this._repository) : super(AuthInitial()) {
     on<AuthOtpSendRequested>(_onSendOtp);
     on<AuthOtpVerifyRequested>(_onVerifyOtp);
-    on<AuthRegisterRequested>(_onRegister);
     on<AuthSignOutRequested>(_onSignOut);
   }
 
@@ -85,19 +66,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    final (success, failure) = await _repository.sendOtp(
-      emailOrPhone: event.emailOrPhone,
-      isPhone: event.isPhone,
-    );
-    if (failure != null) {
+    final (result, failure) =
+        await _repository.sendOtp(phoneNumber: event.phoneNumber);
+    if (result == null) {
       AppHaptics.error();
-      emit(AuthError(failure.message));
-    } else if (success) {
-      emit(AuthOtpSent(event.emailOrPhone));
-    } else {
-      AppHaptics.error();
-      emit(AuthError('Failed to send OTP. Please try again.'));
+      emit(AuthError(failure?.message ?? 'Failed to send OTP. Please try again.'));
+      return;
     }
+    emit(AuthOtpSent(event.phoneNumber, debugOtp: result.debugOtp));
   }
 
   Future<void> _onVerifyOtp(
@@ -106,67 +82,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     final (result, failure) = await _repository.verifyOtp(
-      emailOrPhone: event.emailOrPhone,
+      phoneNumber: event.phoneNumber,
       otp: event.otp,
     );
-    if (failure != null) {
+    if (result == null) {
       AppHaptics.error();
-      emit(AuthError(failure.message));
-    } else {
-      emit(AuthVerified(
-        isNewAccount: result!.isNewAccount,
-        userDetails: result.userDetails,
-      ));
+      emit(AuthError(failure?.message ?? 'OTP verification failed.'));
+      return;
     }
-  }
-
-  Future<void> _onRegister(
-    AuthRegisterRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(AuthLoading());
-    final fcmToken = await _currentFcmToken();
-    final (success, failure) = await _repository.registerUser(
-      name: event.name,
-      phone: event.phone,
-      email: event.email,
-      gstin: event.gstin,
-      businessName: event.businessName,
-      referralCode: event.referralCode,
-      fcmToken: fcmToken,
-    );
-    if (failure != null) {
-      AppHaptics.error();
-      emit(AuthError(failure.message));
-    } else if (success) {
-      emit(AuthRegistered());
-    } else {
-      AppHaptics.error();
-      emit(AuthError('Registration failed. Please try again.'));
-    }
+    emit(AuthVerified(userDetails: result.userDetails));
   }
 
   Future<void> _onSignOut(
     AuthSignOutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    // AuthSession.signOut() also clears SelectedAddressStore: the delivery
-    // address is scoped to the signed-in account, so a different account
-    // logging in next on this device must not inherit it.
-    await AuthSession.instance.signOut();
+    await _repository.signOut();
     emit(AuthSignedOut());
-  }
-
-  // Best-effort — registration must never fail or stall because the FCM
-  // token isn't available (web has no VAPID key configured, permission may
-  // not be resolved yet, etc.). Returning null here is exactly the "don't
-  // pass this param" case the datasource already handles.
-  Future<String?> _currentFcmToken() async {
-    if (kIsWeb) return null;
-    try {
-      return await resolveFcmToken();
-    } catch (_) {
-      return null;
-    }
   }
 }

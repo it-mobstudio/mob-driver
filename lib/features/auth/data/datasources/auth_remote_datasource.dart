@@ -1,32 +1,19 @@
 import 'package:dio/dio.dart';
+import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
 
 abstract interface class AuthRemoteDatasource {
-  Future<Map<String, dynamic>> sendOtp({
-    required String emailOrPhone,
-    required bool isPhone,
-  });
+  /// `POST driver/auth/otp/request` — texts a 6-digit OTP to a driver the
+  /// company has already registered. There is no self sign-up.
+  Future<Map<String, dynamic>> requestOtp({required String phoneNumber});
 
+  /// `POST driver/auth/otp/verify` — returns the access/refresh token pair.
   Future<Map<String, dynamic>> verifyOtp({
-    required String emailOrPhone,
+    required String phoneNumber,
     required String otp,
   });
 
-  Future<Map<String, dynamic>> registerUser({
-    required String name,
-    String? phone,
-    String? email,
-    String? gstin,
-    String? businessName,
-    String? referralCode,
-    String? fcmToken,
-  });
-
-  Future<Map<String, dynamic>> checkReferralCode({required String code});
-
-  Future<Map<String, dynamic>> updateFcmToken({
-    required String emailOrPhone,
-    required String fcmToken,
-  });
+  /// `POST driver/auth/logout` — revokes the refresh token.
+  Future<void> logout({required String refreshToken});
 }
 
 class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
@@ -35,77 +22,29 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
   final Dio _dio;
 
   @override
-  Future<Map<String, dynamic>> sendOtp({
-    required String emailOrPhone,
-    required bool isPhone,
-  }) async {
-    final response = await _dio.post<dynamic>(
-      '/driver/auth/send-otp/',
-      data: {'phone': emailOrPhone},
-    );
-    return _body(response.data);
-  }
+  Future<Map<String, dynamic>> requestOtp({required String phoneNumber}) async =>
+      asMap((await _dio.post<dynamic>(
+        '/driver/auth/otp/request',
+        data: {'phone_number': phoneNumber},
+      ))
+          .data);
 
   @override
   Future<Map<String, dynamic>> verifyOtp({
-    required String emailOrPhone,
+    required String phoneNumber,
     required String otp,
-  }) async {
-    final response = await _dio.post<dynamic>(
-      '/driver/auth/verify-otp/',
-      data: {'phone': emailOrPhone, 'otp': otp},
-    );
-    return _body(response.data);
-  }
+  }) async =>
+      asMap((await _dio.post<dynamic>(
+        '/driver/auth/otp/verify',
+        data: {'phone_number': phoneNumber, 'otp': otp},
+      ))
+          .data);
 
   @override
-  Future<Map<String, dynamic>> registerUser({
-    required String name,
-    String? phone,
-    String? email,
-    String? gstin,
-    String? businessName,
-    String? referralCode,
-    String? fcmToken,
-  }) async {
-    final formData = FormData.fromMap({
-      'full_name': name,
-      if (phone != null && phone.isNotEmpty) 'email_or_phone': phone,
-      if (email != null && email.isNotEmpty) 'email': email,
-      if (gstin != null && gstin.isNotEmpty) 'gstin': gstin,
-      if (businessName != null && businessName.isNotEmpty)
-        'business_name': businessName,
-      if (referralCode != null && referralCode.isNotEmpty)
-        'referral_code': referralCode,
-      if (fcmToken != null && fcmToken.isNotEmpty) 'fcm_token': fcmToken,
-    });
-    final response = await _dio.post<dynamic>(
-      '/accounts/mob_user/auth/update_user/',
-      data: formData,
+  Future<void> logout({required String refreshToken}) async {
+    await _dio.post<dynamic>(
+      '/driver/auth/logout',
+      data: {'refreshToken': refreshToken},
     );
-    return _body(response.data);
-  }
-
-  @override
-  Future<Map<String, dynamic>> checkReferralCode({required String code}) async {
-    final response = await _dio.get<dynamic>(
-      '/accounts/referral-code-checker/',
-      queryParameters: {'referral_code': code},
-    );
-    return _body(response.data);
-  }
-
-  @override
-  Future<Map<String, dynamic>> updateFcmToken({
-    required String emailOrPhone,
-    required String fcmToken,
-  }) async {
-    // Driver backend does not expose an FCM-token endpoint yet.
-    return {'status': true};
-  }
-
-  Map<String, dynamic> _body(dynamic raw) {
-    if (raw is Map) return Map<String, dynamic>.from(raw);
-    return {};
   }
 }

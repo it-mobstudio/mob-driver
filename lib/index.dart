@@ -3,10 +3,10 @@ export 'features/auth/presentation/pages/loginpage_widget.dart'
     show LoginpageWidget;
 export 'features/auth/presentation/pages/o_t_p_verification_widget.dart'
     show OTPVerificationWidget;
-export 'features/auth/presentation/pages/signup_widget.dart' show SignupWidget;
 export 'features/driver/presentation/pages/pages.dart'
     show
         DriverDashboardPage,
         DriverTripsPage,
         DriverVehiclePage,
-        DriverProfilePage;
+        DriverProfilePage,
+        TripPage;

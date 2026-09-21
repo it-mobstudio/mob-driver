@@ -122,13 +122,16 @@ class PushNotificationService {
     required String tripId,
     required String destination,
     required String eta,
+    String? title,
+    String route = '/driver/trips',
   }) async {
     if (kIsWeb) return;
     try {
       if (!_initialized) await initialize();
       await _localNotifications.show(
         _ongoingTripNotificationId,
-        eta == 'Tracking paused' ? 'Trip paused' : 'On the way · $eta',
+        title ??
+            (eta == 'Tracking paused' ? 'Trip paused' : 'On the way · $eta'),
         '$tripId  •  Delivery to $destination',
         NotificationDetails(
           android: AndroidNotificationDetails(
@@ -151,12 +154,49 @@ class PushNotificationService {
             presentSound: false,
           ),
         ),
-        payload: jsonEncode({'route': '/driver/trips', 'trip_id': tripId}),
+        payload: jsonEncode({'route': route, 'trip_id': tripId}),
       );
     } catch (error) {
       // The plugin has no platform implementation in widget tests and on a
       // few unsupported desktop targets. Trip UI must remain fully usable.
       if (kDebugMode) debugPrint('[Push] Ongoing trip unavailable: $error');
+    }
+  }
+
+  /// A one-off, sound-and-vibration alert — a new trip assigned, or one the
+  /// company cancelled. Tapping it opens [route].
+  Future<void> showAlert({
+    required int id,
+    required String title,
+    required String body,
+    String? route,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      if (!_initialized) await initialize();
+      await _localNotifications.show(
+        id,
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _androidChannel.id,
+            _androidChannel.name,
+            channelDescription: _androidChannel.description,
+            importance: Importance.max,
+            priority: Priority.max,
+            category: AndroidNotificationCategory.event,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: route == null ? null : jsonEncode({'route': route}),
+      );
+    } catch (error) {
+      if (kDebugMode) debugPrint('[Push] Alert unavailable: $error');
     }
   }
 

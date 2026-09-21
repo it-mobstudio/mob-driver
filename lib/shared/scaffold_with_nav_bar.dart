@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/pages/onboarding_page.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 
 class ScaffoldWithNavBar extends StatefulWidget {
@@ -50,24 +54,47 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar>
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        extendBody: true,
-        body: FadeTransition(
-            opacity: _fade,
-            child: SlideTransition(
-                position: _slide, child: widget.navigationShell)),
-        bottomNavigationBar: _DriverBottomBar(
-          currentIndex: widget.navigationShell.currentIndex,
-          onTap: (index) {
-            widget.navigationShell.goBranch(index,
-                initialLocation: index == widget.navigationShell.currentIndex);
-            if (index == 0) {
-              WidgetsBinding.instance
-                  .addPostFrameCallback((_) => refreshDriverDashboard?.call());
-            }
-          },
+  Widget build(BuildContext context) => Stack(children: [
+        Scaffold(
+          extendBody: true,
+          body: FadeTransition(
+              opacity: _fade,
+              child: SlideTransition(
+                  position: _slide, child: widget.navigationShell)),
+          bottomNavigationBar: _DriverBottomBar(
+            currentIndex: widget.navigationShell.currentIndex,
+            onTap: (index) {
+              if (index != widget.navigationShell.currentIndex) {
+                AppHaptics.tabSelection();
+              }
+              widget.navigationShell.goBranch(index,
+                  initialLocation:
+                      index == widget.navigationShell.currentIndex);
+              if (index == 0) {
+                WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => refreshDriverDashboard?.call());
+              }
+            },
+          ),
         ),
-      );
+        // A driver who signed themselves up has nothing to do in the app until
+        // they've given their details and documents, so set-up covers it — and
+        // lifts the moment the backend says that part is done. It sits here (not
+        // behind a route) so the session that loads the profile keeps running.
+        Positioned.fill(
+          child: BlocBuilder<DriverSessionCubit, DriverSessionState>(
+            buildWhen: (a, b) => a.needsOnboarding != b.needsOnboarding,
+            builder: (context, state) => AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: state.needsOnboarding
+                  ? const OnboardingPage(key: ValueKey('onboarding-layer'))
+                  : const SizedBox.shrink(key: ValueKey('no-onboarding')),
+            ),
+          ),
+        ),
+      ]);
 }
 
 class _DriverBottomBar extends StatelessWidget {
@@ -76,14 +103,18 @@ class _DriverBottomBar extends StatelessWidget {
   final ValueChanged<int> onTap;
 
   static const items = [
-    ('Today', 'assets/images/Homemenu.svg', 'assets/images/Homeselect.svg'),
-    ('Trips', 'assets/images/Orders.svg', 'assets/images/Ordersselect.svg'),
-    (
-      'Vehicle',
-      'assets/images/vehicletracking.svg',
-      'assets/images/vehicletracking.svg'
-    ),
-    ('Profile', 'assets/icons/profile.svg', 'assets/icons/profile.svg'),
+    _NavItem('Today',
+        svg: 'assets/images/Homemenu.svg',
+        svgSelected: 'assets/images/Homeselect.svg'),
+    _NavItem('Trips',
+        svg: 'assets/images/Orders.svg',
+        svgSelected: 'assets/images/Ordersselect.svg'),
+    _NavItem('Wallet',
+        icon: Icons.account_balance_wallet_outlined,
+        iconSelected: Icons.account_balance_wallet_rounded),
+    _NavItem('Vehicle',
+        svg: 'assets/images/vehicletracking.svg', tint: true),
+    _NavItem('Profile', svg: 'assets/icons/profile.svg', tint: true),
   ];
 
   @override
@@ -116,18 +147,9 @@ class _DriverBottomBar extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      SvgPicture.asset(selected ? item.$3 : item.$2,
-                          width: 20,
-                          height: 20,
-                          colorFilter: entry.key > 1
-                              ? ColorFilter.mode(
-                                  selected
-                                      ? const Color(0xFF2973F0)
-                                      : const Color(0xFF8D8F91),
-                                  BlendMode.srcIn)
-                              : null),
+                      item.build(selected),
                       const SizedBox(height: 4),
-                      Text(item.$1,
+                      Text(item.label,
                           style: TextStyle(
                               fontFamily: 'Inter',
                               color: selected
@@ -144,4 +166,42 @@ class _DriverBottomBar extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// One tab of the bottom bar: an SVG (the first two tabs ship their own
+/// coloured artwork) or a Material icon, tinted blue when selected.
+class _NavItem {
+  const _NavItem(
+    this.label, {
+    this.svg,
+    this.svgSelected,
+    this.icon,
+    this.iconSelected,
+    this.tint = false,
+  });
+
+  final String label;
+  final String? svg;
+  final String? svgSelected;
+  final IconData? icon;
+  final IconData? iconSelected;
+
+  /// Recolour the SVG with the selected / unselected colour (the first two
+  /// tabs' artwork already has both states drawn in).
+  final bool tint;
+
+  static const _selected = Color(0xFF2973F0);
+  static const _idle = Color(0xFF8D8F91);
+
+  Widget build(bool selected) {
+    final color = selected ? _selected : _idle;
+    if (icon != null) {
+      return Icon(selected ? (iconSelected ?? icon) : icon,
+          size: 22, color: color);
+    }
+    return SvgPicture.asset(selected ? (svgSelected ?? svg!) : svg!,
+        width: 20,
+        height: 20,
+        colorFilter: tint ? ColorFilter.mode(color, BlendMode.srcIn) : null);
+  }
 }

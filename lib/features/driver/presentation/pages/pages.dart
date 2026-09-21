@@ -1,7 +1,13 @@
-export 'driver_app.dart'
-    show
-        DriverDashboardPage,
-        DriverTripsPage,
-        DriverVehiclePage,
-        DriverProfilePage,
-        TripDetailPage;
+export 'dashboard_page.dart' show DriverDashboardPage;
+export 'delivery_otp_page.dart' show DeliveryOtpPage;
+export 'edit_profile_page.dart' show EditProfilePage;
+export 'item_verification_page.dart' show ItemVerificationPage;
+export 'onboarding_page.dart' show OnboardingPage;
+export 'payment_qr_page.dart' show PaymentQrPage;
+export 'payout_details_page.dart' show PayoutDetailsPage;
+export 'profile_page.dart' show DriverProfilePage;
+export 'trip_page.dart' show TripPage;
+export 'trips_page.dart' show DriverTripsPage;
+export 'vehicle_page.dart' show DriverVehiclePage;
+export 'verification_page.dart' show DriverVerificationPage;
+export 'wallet_page.dart' show DriverWalletPage;

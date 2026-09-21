@@ -12,6 +12,10 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '/index.dart';
 
+/// The backend matches a driver on their full stored number, so the 10 digits
+/// typed here are always sent as `+91XXXXXXXXXX`.
+String driverPhoneFromDigits(String digits) => '+91$digits';
+
 class LoginpageWidget extends StatefulWidget {
   const LoginpageWidget({super.key});
 
@@ -59,7 +63,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
     }
     context
         .read<AuthBloc>()
-        .add(AuthOtpSendRequested(emailOrPhone: mobile, isPhone: true));
+        .add(AuthOtpSendRequested(phoneNumber: driverPhoneFromDigits(mobile)));
   }
 
   @override
@@ -69,7 +73,10 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
         if (state is AuthOtpSent) {
           context.go(
             OTPVerificationWidget.routePath,
-            extra: {'phoneNumber': '+91 ${_mobileController.text.trim()}'},
+            extra: {
+              'phoneNumber': state.phoneNumber,
+              if (state.debugOtp != null) 'debugOtp': state.debugOtp,
+            },
           );
         } else if (state is AuthError) {
           _showDialog(context, 'Login Failed', state.message);
@@ -91,10 +98,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
 
                 return Column(
                   children: [
-                    LoginTopBanner(
-                      height: headerHeight,
-                      onSkip: () => context.go(DriverDashboardPage.routePath),
-                    ),
+                    LoginTopBanner(height: headerHeight),
                     Expanded(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -120,7 +124,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                                       vertical: 24,
                                     ),
                                     child: Text(
-                                      'Log in or sign up',
+                                      'Driver login',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.inter(
                                         color: AppColors.primaryText,
@@ -133,7 +137,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                                   AppTextField(
                                     controller: _mobileController,
                                     focusNode: _mobileFocusNode,
-                                    hintText: 'Enter mobile number',
+                                    hintText: 'Registered mobile number',
                                     keyboardType: TextInputType.phone,
                                     textInputAction: TextInputAction.done,
                                     inputFormatters: [

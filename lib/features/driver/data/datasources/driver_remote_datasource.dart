@@ -1,168 +1,214 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
+import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
 
+/// Thin wrapper over the driver endpoints of the delivery backend
+/// (`/api/v1/driver/...`). Returns raw JSON maps; the repository turns them
+/// into entities and errors into failures.
 class DriverRemoteDatasource {
   DriverRemoteDatasource(this._dio);
   final Dio _dio;
 
-  Future<Map<String, dynamic>> dashboard() async =>
-      _map((await _dio.get<dynamic>('/driver/dashboard/')).data);
+  // -- profile / duty ------------------------------------------------------
 
-  Future<Map<String, dynamic>> toggleTracking(bool enabled) async =>
-      _map((await _dio.post<dynamic>('/driver/tracking/toggle/',
-              data: {'enabled': enabled}))
+  Future<Map<String, dynamic>> me() async =>
+      asMap((await _dio.get<dynamic>('/driver/me')).data);
+
+  Future<Map<String, dynamic>> vehicles() async =>
+      asMap((await _dio.get<dynamic>('/driver/vehicles')).data);
+
+  Future<Map<String, dynamic>> stats({required int utcOffsetMinutes}) async =>
+      asMap((await _dio.get<dynamic>(
+        '/driver/stats',
+        queryParameters: {'utc_offset_minutes': utcOffsetMinutes},
+      ))
           .data);
 
-  Future<Map<String, dynamic>> submitLocation({
-    int? tripId,
-    required double latitude,
-    required double longitude,
-    double? accuracyM,
-    double? speedKph,
-    double? heading,
-    DateTime? recordedAt,
-    String? externalEventId,
+  /// `PATCH driver/me` — the driver's own details.
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> body) async =>
+      asMap((await _dio.patch<dynamic>('/driver/me', data: body)).data);
+
+  /// Closes the account (`204`).
+  Future<void> deleteAccount() => _dio.delete<dynamic>('/driver/me');
+
+  Future<Map<String, dynamic>> uploadPhoto(CapturedPhoto photo) =>
+      _multipart('/driver/me/photo', files: {'photo': photo});
+
+  Future<Map<String, dynamic>> submitAadhar({
+    required String number,
+    required CapturedPhoto front,
+    required CapturedPhoto back,
+  }) =>
+      _multipart(
+        '/driver/me/kyc/aadhar',
+        fields: {'number': number},
+        files: {'front': front, 'back': back},
+      );
+
+  Future<Map<String, dynamic>> submitLicence({
+    required String number,
+    required String expiryDate,
+    required CapturedPhoto front,
+    CapturedPhoto? back,
+  }) =>
+      _multipart(
+        '/driver/me/kyc/dl',
+        fields: {'number': number, 'expiry_date': expiryDate},
+        files: {'front': front, if (back != null) 'back': back},
+      );
+
+  Future<Map<String, dynamic>> submitPolice(CapturedPhoto document) =>
+      _multipart('/driver/me/kyc/police', files: {'document': document});
+
+  // -- wallet --------------------------------------------------------------
+
+  Future<Map<String, dynamic>> wallet({required int utcOffsetMinutes}) async =>
+      asMap((await _dio.get<dynamic>(
+        '/driver/wallet',
+        queryParameters: {'utc_offset_minutes': utcOffsetMinutes},
+      ))
+          .data);
+
+  Future<Map<String, dynamic>> walletEntries({
+    int page = 1,
+    List<String> kinds = const [],
   }) async =>
-      _map((await _dio.post<dynamic>('/driver/locations/', data: {
-        if (tripId != null) 'trip': tripId,
-        'latitude': latitude,
-        'longitude': longitude,
-        if (accuracyM != null) 'accuracy_m': accuracyM,
-        if (speedKph != null) 'speed_kph': speedKph,
-        if (heading != null) 'heading': heading,
-        if (recordedAt != null) 'recorded_at': recordedAt.toIso8601String(),
-        'source': 'phone',
-        if (externalEventId != null) 'external_event_id': externalEventId,
+      asMap((await _dio
+              .get<dynamic>('/driver/wallet/transactions', queryParameters: {
+        'page': page,
+        if (kinds.isNotEmpty) 'kind': kinds.join(','),
       }))
           .data);
 
-  Future<Map<String, dynamic>> tripOverview({String? status}) async =>
-      _map((await _dio.get<dynamic>('/driver/trip-overview/',
-              queryParameters: {if (status != null) 'status': status}))
-          .data);
-
-  Future<List<Map<String, dynamic>>> trips() async =>
-      _list((await _dio.get<dynamic>('/driver/trips/')).data);
-
-  Future<Map<String, dynamic>> tripDetail(int tripId) async =>
-      _map((await _dio.get<dynamic>('/driver/trip-overview/$tripId/')).data);
-
-  Future<String?> drivingRoutePolyline({
-    required double originLatitude,
-    required double originLongitude,
-    required double destinationLatitude,
-    required double destinationLongitude,
-    required String apiKey,
-  }) async {
-    final response = await Dio().post<dynamic>(
-      'https://routes.googleapis.com/directions/v2:computeRoutes',
-      options: Options(headers: {
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
-      }),
-      data: {
-        'origin': {
-          'location': {
-            'latLng': {
-              'latitude': originLatitude,
-              'longitude': originLongitude,
-            }
-          }
-        },
-        'destination': {
-          'location': {
-            'latLng': {
-              'latitude': destinationLatitude,
-              'longitude': destinationLongitude,
-            }
-          }
-        },
-        'travelMode': 'DRIVE',
-        'routingPreference': 'TRAFFIC_AWARE',
-        'polylineQuality': 'HIGH_QUALITY',
-      },
-    );
-    final data = _map(response.data);
-    final routes = data['routes'];
-    if (routes is! List || routes.isEmpty || routes.first is! Map) return null;
-    final route = Map<String, dynamic>.from(routes.first as Map);
-    final polyline = route['polyline'];
-    if (polyline is! Map) return null;
-    final encoded = polyline['encodedPolyline']?.toString().trim();
-    return encoded == null || encoded.isEmpty ? null : encoded;
-  }
-
-  Future<Map<String, dynamic>> vehicle() async =>
-      _map((await _dio.get<dynamic>('/driver/vehicle/')).data);
-
-  Future<Map<String, dynamic>> profile() async =>
-      _map((await _dio.get<dynamic>('/driver/profile/')).data);
-
-  Future<Map<String, dynamic>> uploadTripProof({
-    required int tripId,
-    required Uint8List imageBytes,
-    required String fileName,
-    required String imageType,
-    String? caption,
+  Future<Map<String, dynamic>> startDuty({
+    required String vehicleId,
     double? latitude,
     double? longitude,
   }) async =>
-      _map((await _dio.post<dynamic>('/driver/trips/$tripId/images/',
-              data: FormData.fromMap({
-                'image':
-                    MultipartFile.fromBytes(imageBytes, filename: fileName),
-                'image_type': imageType,
-                if (caption != null) 'caption': caption,
-                if (latitude != null) 'latitude': latitude,
-                if (longitude != null) 'longitude': longitude,
-              })))
-          .data);
-
-  Future<Map<String, dynamic>> startTrip(int tripId) =>
-      _postEmpty('/driver/trips/$tripId/start/');
-  Future<Map<String, dynamic>> endTrip(int tripId) =>
-      _postEmpty('/driver/trips/$tripId/end/');
-  Future<Map<String, dynamic>> endPause(int tripId) =>
-      _postEmpty('/driver/trips/$tripId/pause/end/');
-
-  Future<Map<String, dynamic>> startPause(int tripId,
-          {required String pauseType, String? note}) async =>
-      _map((await _dio
-              .post<dynamic>('/driver/trips/$tripId/pause/start/', data: {
-        'pause_type': pauseType,
-        if (note != null) 'note': note,
+      asMap((await _dio.post<dynamic>('/driver/duty/start', data: {
+        'vehicle_id': vehicleId,
+        if (latitude != null && longitude != null) ...{
+          'lat': latitude.toStringAsFixed(6),
+          'lng': longitude.toStringAsFixed(6),
+        },
       }))
           .data);
 
-  Future<Map<String, dynamic>> reportIssue({
-    required int tripId,
-    required String issueType,
-    required String description,
-    String? penaltyAmount,
-    String? imagePath,
+  Future<Map<String, dynamic>> endDuty() async =>
+      asMap((await _dio.post<dynamic>('/driver/duty/end')).data);
+
+  Future<void> sendLocation({
+    required double latitude,
+    required double longitude,
   }) async {
-    final values = <String, dynamic>{
-      'issue_type': issueType,
-      'description': description,
-      if (penaltyAmount != null) 'penalty_amount': penaltyAmount,
-      if (imagePath != null) 'image': await MultipartFile.fromFile(imagePath),
-    };
-    final data = imagePath == null ? values : FormData.fromMap(values);
-    return _map(
-        (await _dio.post<dynamic>('/driver/trips/$tripId/issues/', data: data))
-            .data);
+    // Sent as fixed-point strings: the backend field is a 6-decimal
+    // DecimalField and rejects longer floats ("no more than 6 decimal
+    // places").
+    await _dio.post<dynamic>('/driver/location', data: {
+      'lat': latitude.toStringAsFixed(6),
+      'lng': longitude.toStringAsFixed(6),
+    });
   }
 
-  Future<Map<String, dynamic>> tripMetrics(int tripId) async =>
-      _map((await _dio.get<dynamic>('/driver/trips/$tripId/metrics/')).data);
+  // -- trips ---------------------------------------------------------------
 
-  Future<Map<String, dynamic>> _postEmpty(String path) async =>
-      _map((await _dio.post<dynamic>(path, data: <String, dynamic>{})).data);
+  /// `{"trip": {...}}` or `{"trip": null}`.
+  Future<Map<String, dynamic>> activeTrip() async =>
+      asMap((await _dio.get<dynamic>('/driver/trips/active')).data);
 
-  Map<String, dynamic> _map(dynamic raw) =>
-      raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
-  List<Map<String, dynamic>> _list(dynamic raw) => raw is List
-      ? raw.whereType<Map>().map(Map<String, dynamic>.from).toList()
-      : <Map<String, dynamic>>[];
+  Future<Map<String, dynamic>> trips({
+    int page = 1,
+    List<String> statuses = const [],
+  }) async =>
+      asMap((await _dio.get<dynamic>('/driver/trips', queryParameters: {
+        'page': page,
+        if (statuses.isNotEmpty) 'status': statuses.join(','),
+      }))
+          .data);
+
+  Future<Map<String, dynamic>> trip(String id) async =>
+      asMap((await _dio.get<dynamic>('/driver/trips/$id')).data);
+
+  Future<Map<String, dynamic>> navigation(
+    String id, {
+    required double latitude,
+    required double longitude,
+  }) async =>
+      asMap((await _dio.get<dynamic>(
+        '/driver/trips/$id/navigation',
+        queryParameters: {
+          'lat': latitude.toStringAsFixed(6),
+          'lng': longitude.toStringAsFixed(6),
+        },
+      ))
+          .data);
+
+  Future<Map<String, dynamic>> arrive(String id) =>
+      _post('/driver/trips/$id/arrive');
+
+  Future<Map<String, dynamic>> start(String id) =>
+      _post('/driver/trips/$id/start');
+
+  Future<Map<String, dynamic>> paymentQr(String id) async =>
+      asMap((await _dio.get<dynamic>('/driver/trips/$id/payment/qr')).data);
+
+  Future<Map<String, dynamic>> collectPayment(String id) =>
+      _post('/driver/trips/$id/payment/collect');
+
+  Future<Map<String, dynamic>> resendDeliveryOtp(String id) =>
+      _post('/driver/trips/$id/delivery-otp/resend');
+
+  /// [otp] is required by the backend for COD trips and ignored for prepaid.
+  Future<Map<String, dynamic>> complete(String id, {String? otp}) =>
+      _post('/driver/trips/$id/complete', {if (otp != null) 'otp': otp});
+
+  Future<Map<String, dynamic>> cancel(String id, {required String reason}) =>
+      _post('/driver/trips/$id/cancel', {'reason': reason});
+
+  /// The driver's word on one item (`delivered` / `not_delivered`), with an
+  /// optional photo. Answers with the whole trip.
+  Future<Map<String, dynamic>> verifyItem(
+    String tripId,
+    String itemId, {
+    required String status,
+    String? note,
+    CapturedPhoto? photo,
+  }) =>
+      _multipart(
+        '/driver/trips/$tripId/items/$itemId/verify',
+        fields: {
+          'status': status,
+          if (note != null && note.isNotEmpty) 'note': note,
+        },
+        files: {if (photo != null) 'photo': photo},
+      );
+
+  Future<Map<String, dynamic>> resetItem(String tripId, String itemId) async =>
+      asMap((await _dio
+              .delete<dynamic>('/driver/trips/$tripId/items/$itemId/verify'))
+          .data);
+
+  /// A `multipart/form-data` POST. The pictures go up as bytes with a proper
+  /// file name and type — the backend decides what it will accept from those.
+  Future<Map<String, dynamic>> _multipart(
+    String path, {
+    Map<String, String> fields = const {},
+    Map<String, CapturedPhoto> files = const {},
+  }) async {
+    final form = FormData.fromMap({
+      ...fields,
+      for (final entry in files.entries)
+        entry.key: MultipartFile.fromBytes(
+          entry.value.bytes,
+          filename: entry.value.filename,
+          contentType: DioMediaType.parse(entry.value.mimeType),
+        ),
+    });
+    return asMap((await _dio.post<dynamic>(path, data: form)).data);
+  }
+
+  Future<Map<String, dynamic>> _post(String path,
+          [Map<String, dynamic>? body]) async =>
+      asMap((await _dio.post<dynamic>(path, data: body ?? <String, dynamic>{}))
+          .data);
 }

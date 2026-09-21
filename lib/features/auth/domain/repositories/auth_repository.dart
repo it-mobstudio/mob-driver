@@ -1,44 +1,46 @@
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 
+class OtpRequestResult {
+  const OtpRequestResult({required this.message, this.debugOtp});
+  final String message;
+
+  /// Only set when the backend runs with `DRIVER_OTP_DEBUG_RESPONSE` (a
+  /// non-production switch that echoes the OTP so login is testable without
+  /// an SMS gateway). Never present against a production backend.
+  final String? debugOtp;
+}
+
 class AuthVerifyResult {
   const AuthVerifyResult({
     required this.accessToken,
     required this.refreshToken,
-    required this.isNewAccount,
     required this.userDetails,
   });
 
   final String accessToken;
   final String? refreshToken;
-  final bool isNewAccount;
   final Map<String, dynamic> userDetails;
 }
 
 abstract interface class AuthRepository {
-  Future<(bool, AppFailure?)> sendOtp({
-    required String emailOrPhone,
-    required bool isPhone,
+  Future<(OtpRequestResult?, AppFailure?)> sendOtp({
+    required String phoneNumber,
   });
 
+  /// On success the session (tokens + driver) is already persisted.
   Future<(AuthVerifyResult?, AppFailure?)> verifyOtp({
-    required String emailOrPhone,
+    required String phoneNumber,
     required String otp,
   });
 
-  Future<(bool, AppFailure?)> registerUser({
-    required String name,
-    String? phone,
-    String? email,
-    String? gstin,
-    String? businessName,
-    String? referralCode,
-    String? fcmToken,
-  });
+  /// Revokes the refresh token server-side (best effort) and clears the
+  /// local session.
+  Future<void> signOut();
 
-  Future<(bool, String, AppFailure?)> checkReferralCode({
-    required String code,
-  });
-
+  /// Push-token registration. The backend has no device-token endpoint yet
+  /// (trip alerts reach the app by polling), so this succeeds without
+  /// sending anything — it exists so the FCM plumbing has somewhere to call
+  /// once one is added.
   Future<(bool, AppFailure?)> updateFcmToken({
     required String emailOrPhone,
     required String fcmToken,

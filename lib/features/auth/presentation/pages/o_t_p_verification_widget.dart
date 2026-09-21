@@ -1,18 +1,34 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
+import 'package:m_o_b_demand_side/core/utils/formatters.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_back_icon.dart';
-import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/shared/widgets/otp_input.dart';
+import 'package:m_o_b_demand_side/shared/widgets/test_mode_otp_hint.dart';
 import '/index.dart';
 
+/// The backend refuses a second OTP for the same number for 30 s
+/// (`OTP_THROTTLE_SECONDS`), so the resend button unlocks on the same clock.
+const int kOtpResendSeconds = 30;
+const int kOtpLength = 6;
+
 class OTPVerificationWidget extends StatefulWidget {
+  const OTPVerificationWidget({
+    super.key,
+    required this.phoneNumber,
+    this.debugOtp,
+  });
+
+  /// Full international number, e.g. `+919000000000`.
   final String phoneNumber;
-  const OTPVerificationWidget({super.key, required this.phoneNumber});
+
+  /// Set only when the backend echoes the OTP (non-production).
+  final String? debugOtp;
 
   static String routeName = 'OTPVerification';
   static String routePath = '/otp-verification';
@@ -22,133 +38,43 @@ class OTPVerificationWidget extends StatefulWidget {
 }
 
 class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
-  final List<TextEditingController> _otpControllers =
-      List.generate(4, (_) => TextEditingController());
-  final List<FocusNode> _otpFocusNodes = List.generate(4, (_) => FocusNode());
+  final _otpKey = GlobalKey<OtpInputState>();
 
-  int _resendSeconds = 40;
+  int _resendSeconds = kOtpResendSeconds;
   Timer? _timer;
-  bool _isApplyingOtp = false;
-  String? _lastSubmittedOtp;
-
-  String get _rawPhone =>
-      widget.phoneNumber.replaceAll('+91', '').replaceAll(' ', '').trim();
+  String? _debugOtp;
 
   @override
   void initState() {
     super.initState();
-    for (final focusNode in _otpFocusNodes) {
-      focusNode.addListener(() {
-        if (mounted) setState(() {});
-      });
-    }
+    _debugOtp = widget.debugOtp;
     _startResendTimer();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _otpFocusNodes.first.requestFocus();
-    });
   }
 
   @override
   void dispose() {
-    for (final c in _otpControllers) {
-      c.dispose();
-    }
-    for (final f in _otpFocusNodes) {
-      f.dispose();
-    }
     _timer?.cancel();
     super.dispose();
   }
 
-  void _onOtpDigitChanged(int index, String value) {
-    if (_isApplyingOtp) return;
-
-    final digits = value.replaceAll(RegExp(r'\D'), '');
-    if (digits.length > 1) {
-      _applyOtpDigits(index, digits);
-      _verifyIfComplete();
-      return;
-    }
-
-    if (digits != value) {
-      _setDigit(index, digits);
-      return;
-    }
-
-    if (digits.isNotEmpty && index < _otpFocusNodes.length - 1) {
-      _otpFocusNodes[index + 1].requestFocus();
-    } else if (digits.isEmpty && index > 0) {
-      _otpFocusNodes[index - 1].requestFocus();
-    }
-    _lastSubmittedOtp = null;
-    _verifyIfComplete();
-  }
-
-  void _applyOtpDigits(int startIndex, String digits) {
-    _isApplyingOtp = true;
-    final chars = digits.split('');
-    var charIndex = 0;
-    for (var i = startIndex; i < _otpControllers.length; i++) {
-      _setDigit(i, charIndex < chars.length ? chars[charIndex] : '');
-      charIndex++;
-    }
-    _isApplyingOtp = false;
-
-    final nextEmpty = _otpControllers.indexWhere((c) => c.text.isEmpty);
-    if (nextEmpty == -1) {
-      _otpFocusNodes.last.requestFocus();
-    } else {
-      _otpFocusNodes[nextEmpty].requestFocus();
-    }
-    _lastSubmittedOtp = null;
-  }
-
-  void _setDigit(int index, String value) {
-    final text = value.isEmpty ? '' : value.characters.first;
-    _otpControllers[index].value = TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-
-  void _verifyIfComplete() {
-    if (_otpControllers.every((c) => c.text.isNotEmpty)) {
-      final otp = _otpControllers.map((c) => c.text).join();
-      if (_lastSubmittedOtp == otp) return;
-      _lastSubmittedOtp = otp;
-      context.read<AuthBloc>().add(
-            AuthOtpVerifyRequested(emailOrPhone: _rawPhone, otp: otp),
-          );
-    }
-  }
-
-  void _resendOtp() {
-    _clearOtp();
-    _otpFocusNodes.first.requestFocus();
+  void _verify(String otp) {
     context.read<AuthBloc>().add(
-          AuthOtpSendRequested(emailOrPhone: _rawPhone, isPhone: true),
+          AuthOtpVerifyRequested(phoneNumber: widget.phoneNumber, otp: otp),
         );
   }
 
-  void _clearOtp() {
-    _isApplyingOtp = true;
-    for (final c in _otpControllers) {
-      c.clear();
-    }
-    _isApplyingOtp = false;
-    _lastSubmittedOtp = null;
+  void _resendOtp() {
+    _otpKey.currentState?.clear();
+    context
+        .read<AuthBloc>()
+        .add(AuthOtpSendRequested(phoneNumber: widget.phoneNumber));
   }
 
   void _startResendTimer() {
     _timer?.cancel();
-    setState(() => _resendSeconds = 40);
+    setState(() => _resendSeconds = kOtpResendSeconds);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_resendSeconds == 0) {
+      if (!mounted || _resendSeconds == 0) {
         timer.cancel();
         return;
       }
@@ -161,32 +87,20 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthOtpSent) {
+          setState(() => _debugOtp = state.debugOtp);
           _startResendTimer();
         } else if (state is AuthVerified) {
-          if (state.isNewAccount) {
-            context.go(
-              SignupWidget.routePath,
-              extra: {'phoneNumber': widget.phoneNumber},
-            );
-          } else {
-            AnalyticsService.instance
-                .logLogin(method: 'otp')
-                .catchError((_) {});
-            context.go(DriverDashboardPage.routePath);
-          }
+          AnalyticsService.instance.logLogin(method: 'otp').catchError((_) {});
+          context.go(DriverDashboardPage.routePath);
         } else if (state is AuthError) {
-          _clearOtp();
-          _otpFocusNodes.first.requestFocus();
-          _showDialog(context, 'OTP Failed', state.message);
+          _otpKey.currentState?.clear();
+          _showDialog(context, 'Could not continue', state.message);
         }
       },
       builder: (context, state) {
         final isLoading = state is AuthLoading;
         return GestureDetector(
-          onTap: () {
-            FocusScope.of(context).unfocus();
-            FocusManager.instance.primaryFocus?.unfocus();
-          },
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
           child: Scaffold(
             backgroundColor: Colors.white,
             body: SafeArea(
@@ -208,7 +122,6 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                     const SizedBox(height: 28),
                     Text(
                       'OTP verification',
-                      textAlign: TextAlign.left,
                       style: GoogleFonts.inter(
                         color: const Color(0xFF0A243F),
                         fontSize: 24,
@@ -218,62 +131,41 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                     ),
                     const SizedBox(height: 12),
                     Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'We have sent an OTP to ',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF0A243F),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              height: 21 / 14,
-                            ),
+                      TextSpan(children: [
+                        TextSpan(
+                          text: 'We have sent a $kOtpLength-digit OTP to ',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF0A243F),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            height: 21 / 14,
                           ),
-                          TextSpan(
-                            text: widget.phoneNumber,
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF0A243F),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              height: 21 / 14,
-                            ),
+                        ),
+                        TextSpan(
+                          text: formatPhone(widget.phoneNumber),
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF0A243F),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            height: 21 / 14,
                           ),
-                          TextSpan(
-                            text: ' ',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF0A243F),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              height: 21 / 14,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ]),
                     ),
                     const SizedBox(height: 32),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        const gap = 16.0;
-
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            for (int i = 0; i < 4; i++) ...[
-                              Expanded(
-                                child: _OtpDigitField(
-                                  controller: _otpControllers[i],
-                                  focusNode: _otpFocusNodes[i],
-                                  enabled: !isLoading,
-                                  onChanged: (val) =>
-                                      _onOtpDigitChanged(i, val),
-                                ),
-                              ),
-                              if (i < 3) const SizedBox(width: gap),
-                            ],
-                          ],
-                        );
-                      },
+                    OtpInput(
+                      key: _otpKey,
+                      length: kOtpLength,
+                      enabled: !isLoading,
+                      onCompleted: _verify,
                     ),
+                    if (_debugOtp != null) ...[
+                      const SizedBox(height: 16),
+                      TestModeOtpHint(
+                        otp: _debugOtp!,
+                        onFill: () => _otpKey.currentState?.setCode(_debugOtp!),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     if (isLoading)
                       const Center(child: CircularProgressIndicator())
@@ -330,72 +222,6 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
             child: const Text('Ok'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _OtpDigitField extends StatelessWidget {
-  const _OtpDigitField({
-    required this.controller,
-    required this.focusNode,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool enabled;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final isFocused = focusNode.hasFocus;
-
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isFocused ? const Color(0xFF0A243F) : const Color(0xFFDFE4EC),
-          width: isFocused ? 1.5 : 1.0,
-        ),
-      ),
-      child: Center(
-        child: TextField(
-          controller: controller,
-          focusNode: focusNode,
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(4),
-          ],
-          enabled: enabled,
-          showCursor: false,
-          onTap: () {
-            controller.selection = TextSelection(
-              baseOffset: 0,
-              extentOffset: controller.text.length,
-            );
-          },
-          style: GoogleFonts.inter(
-            color: const Color(0xFF0A243F),
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            height: 30 / 20,
-          ),
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-            isCollapsed: true,
-            contentPadding: EdgeInsets.zero,
-          ),
-          onChanged: onChanged,
-        ),
       ),
     );
   }

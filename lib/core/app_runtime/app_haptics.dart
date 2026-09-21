@@ -17,8 +17,10 @@ class AppHaptics {
     unawaited(HapticFeedback.selectionClick());
   }
 
+  /// A firm single tick. (`HapticFeedback.vibrate()` is a long buzz on both
+  /// platforms — fine for an alarm, wrong for "trip step done".)
   static void success() {
-    unawaited(HapticFeedback.vibrate());
+    unawaited(HapticFeedback.mediumImpact());
   }
 
   static void error() {

@@ -17,7 +17,7 @@ Future<bool> ensureLocationPermission(BuildContext context) async {
     TopSnackBar.show(
       context,
       message:
-          'Location permission was not allowed. Search your location or choose it from the map.',
+          'Location permission is needed to go on duty and receive trips.',
       type: TopSnackBarType.error,
     );
     return false;
@@ -29,8 +29,8 @@ Future<bool> ensureLocationPermission(BuildContext context) async {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Location permission needed'),
         content: const Text(
-          "You've turned off location access for MOB. Enable it in "
-          "Settings to use your current location.",
+          "You've turned off location access for MOB Driver. Enable it in "
+          "Settings so you can go on duty and receive trips.",
         ),
         actions: [
           TextButton(
@@ -60,7 +60,7 @@ Future<bool> ensureLocationPermission(BuildContext context) async {
     builder: (dialogContext) => AlertDialog(
       title: const Text('Turn on location services'),
       content: const Text(
-        'Location services are turned off on this device. Turn them on to use your current location.',
+        'Location services are turned off on this device. Turn them on to go on duty and receive trips.',
       ),
       actions: [
         TextButton(

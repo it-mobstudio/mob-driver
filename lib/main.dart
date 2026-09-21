@@ -8,22 +8,24 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'backend/analytics/analytics_service.dart';
 import 'backend/firebase/firebase_config.dart';
 import 'core/app_runtime/fcm_token_sync.dart';
 import 'core/app_runtime/app_update_prompt.dart';
 import 'core/app_runtime/push_notification_service.dart';
+import 'core/app_runtime/splash_cross_fade.dart';
 import 'core/auth/auth_session.dart';
 import 'core/config/app_config.dart';
 import 'core/di/injection.dart';
-import 'features/address/data/local/selected_address_store.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
-import 'features/home/presentation/bloc/home_bloc.dart';
+import 'features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'features/driver/presentation/widgets/map_pins.dart';
 import 'features/auth/presentation/pages/splash_screen.dart';
 import 'core/app_runtime/nav/nav.dart';
 import 'core/styles/app_theme.dart';
-import 'environment_values.dart';
 
 void main() {
   runZonedGuarded(() async {
@@ -92,8 +94,10 @@ class _AppBootstrapState extends State<AppBootstrap> {
   late final Future<void> _bootstrapFuture = _bootstrap();
 
   Future<void> _bootstrap() async {
-    final splashDelay = Future<void>.delayed(
-      Duration(milliseconds: kDebugMode ? 800 : 1200),
+    // A short, fixed floor so the splash doesn't flash by — not a delay to sit
+    // through. In debug builds there's no floor at all.
+    final splashFloor = Future<void>.delayed(
+      kDebugMode ? Duration.zero : const Duration(milliseconds: 450),
     );
 
     try {
@@ -107,12 +111,26 @@ class _AppBootstrapState extends State<AppBootstrap> {
     }
     GoRouter.optionURLReflectsImperativeAPIs = true;
 
-    final environmentValues = FFDevEnvironmentValues();
-    await environmentValues.initialize();
+    // Only what the first screen genuinely needs, all at once instead of one
+    // after another: Firebase (the router's analytics observer needs it), the
+    // stored session (decides login vs. dashboard), DI, and the saved theme.
+    await Future.wait<void>([
+      initFirebase(),
+      AuthSession.instance.initialize().catchError((_) {}),
+      setupDependencies().catchError((_) {}),
+      AppTheme.initialize().catchError((_) {}),
+    ]);
 
-    await initFirebase();
+    // Everything else waits until the app is on screen.
+    unawaited(_startBackgroundServices());
 
-    // Fire-and-forget — these don't need to block app startup
+    await splashFloor;
+  }
+
+  /// Non-essential startup work, run after the first frame is already up so it
+  /// can't hold the splash: analytics/crash reporting, push, the Android map
+  /// renderer, and pre-drawn map pins.
+  Future<void> _startBackgroundServices() async {
     AnalyticsService.instance.enableCollection().catchError((_) {});
     if (!kIsWeb) {
       final crashlytics = FirebaseCrashlytics.instance;
@@ -127,22 +145,22 @@ class _AppBootstrapState extends State<AppBootstrap> {
       };
     }
 
-    await Future.wait([
-      AuthSession.instance.initialize().catchError((_) {}),
-      setupDependencies().catchError((_) {}),
-      AppTheme.initialize().catchError((_) {}),
-      SelectedAddressStore.initialize().catchError((_) {}),
-    ]);
+    // Loading the "latest" Google Maps renderer up front makes the first map
+    // (the trip screen) appear noticeably sooner on Android.
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final maps = GoogleMapsFlutterPlatform.instance;
+      if (maps is GoogleMapsFlutterAndroid) {
+        try {
+          await maps.initializeWithRenderer(AndroidMapRenderer.latest);
+        } catch (_) {
+          // Already initialised, or unsupported — the map still works.
+        }
+      }
+    }
+    unawaited(MapPins.warmUp());
 
-    // Local setup (channel + listeners) is awaited since it's fast and
-    // synchronous; the permission prompt inside it is fire-and-forget since
-    // it can sit unanswered indefinitely.
     await PushNotificationService.instance.initialize().catchError((_) {});
-    // Fire-and-forget — syncs the device's FCM token for the restored
-    // session (if any) without blocking the splash screen.
     unawaited(FcmTokenSync.instance.start());
-
-    await splashDelay;
   }
 
   @override
@@ -150,14 +168,17 @@ class _AppBootstrapState extends State<AppBootstrap> {
     return FutureBuilder<void>(
       future: _bootstrapFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return MaterialApp(
+        final ready = snapshot.connectionState == ConnectionState.done;
+        // Cross-fade from the splash into the app rather than a hard cut.
+        return SplashCrossFade(
+          ready: ready,
+          splash: const MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: const SplashScreen(),
+            home: SplashScreen(),
             builder: _buildMobileViewport,
-          );
-        }
-        return const MyApp();
+          ),
+          app: const MyApp(),
+        );
       },
     );
   }
@@ -200,7 +221,9 @@ class MyAppState extends State<MyApp> {
     _isAuthenticated = AuthSession.instance.isAuthenticated;
     _router = createRouter(_appStateNotifier);
     AuthSession.instance.addListener(_handleAuthSessionChanged);
-    WidgetsBinding.instance.addPostFrameCallback(_runAppUpdateCheck);
+    if (AppConfig.appUpdateCheckEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback(_runAppUpdateCheck);
+    }
   }
 
   // The router's Navigator isn't guaranteed to be attached to
@@ -246,14 +269,13 @@ class MyAppState extends State<MyApp> {
     final theme = AppTheme.of(context);
     return MultiBlocProvider(
       providers: [
-        // Kept temporarily during the customer-to-driver migration so an
-        // already-mounted customer screen from hot reload cannot crash. New
-        // sessions and all routes below open the driver experience only.
-        BlocProvider<HomeBloc>(
-          create: (_) => sl<HomeBloc>()..add(HomeLoadRequested()),
-        ),
         BlocProvider<AuthBloc>(
           create: (_) => sl<AuthBloc>(),
+        ),
+        // Singleton (see injection.dart): value-provided so this widget never
+        // closes it — its GPS/polling session outlives any one screen.
+        BlocProvider<DriverSessionCubit>.value(
+          value: sl<DriverSessionCubit>(),
         ),
       ],
       child: MaterialApp.router(
@@ -324,6 +346,14 @@ class MyAppState extends State<MyApp> {
 
 Widget _buildMobileViewport(BuildContext context, Widget? child) {
   if (child == null) return const SizedBox.shrink();
+  // Honour the user's font-size setting, but not without limit: at the largest
+  // accessibility sizes these dense driver screens would overflow, and a driver
+  // glancing at a phone in a cradle needs a layout that holds together.
+  child = MediaQuery.withClampedTextScaling(
+    minScaleFactor: 0.9,
+    maxScaleFactor: 1.2,
+    child: child,
+  );
 
   final width = MediaQuery.sizeOf(context).width;
   final shouldConstrain = kIsWeb || width > 480;

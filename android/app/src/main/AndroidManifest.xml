@@ -4,6 +4,14 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Keeps location (and with it trip assignment) alive while the driver is
+         in their maps app. Android 14+ requires the location-typed variant
+         alongside the plain one; the service itself is declared, with
+         foregroundServiceType="location", by the geolocator plugin. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <!-- Android 13+: the "on duty" notification and new-trip alerts. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission
         android:name="android.permission.RECORD_AUDIO"
         tools:node="remove"/>
@@ -12,6 +20,16 @@
          report "no app found" for upi:// deep links (Rupifi mobCREDIT/UPI
          payment flow) even when GPay/PhonePe/Paytm are installed. -->
     <queries>
+        <!-- Driver app: call the customer / pickup contact, and hand off to a
+             maps app for turn-by-turn navigation. -->
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="upi" />

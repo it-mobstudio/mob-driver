@@ -5,9 +5,10 @@ import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/loginpage_widget.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/o_t_p_verification_widget.dart';
-import 'package:m_o_b_demand_side/features/auth/presentation/pages/signup_widget.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/pages/splash_screen.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/pages.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_events_listener.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/shared/scaffold_with_nav_bar.dart';
 
 export 'package:go_router/go_router.dart';
@@ -43,11 +44,12 @@ class _CombinedStateNotifier extends ChangeNotifier {
 GoRouter createRouter(AppStateNotifier appStateNotifier) {
   final notifier =
       _CombinedStateNotifier(appStateNotifier, AuthSession.instance);
+  // Drivers are registered by their company, so there is no sign-up step —
+  // just phone → OTP.
   final authPaths = {
     '/',
     LoginpageWidget.routePath,
     OTPVerificationWidget.routePath,
-    SignupWidget.routePath
   };
   return GoRouter(
     initialLocation: '/',
@@ -58,13 +60,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
     redirect: (context, state) {
       if (appStateNotifier.showSplashImage) return null;
       final isAuth = authPaths.contains(state.matchedLocation);
-      if (!AuthSession.instance.isAuthenticated)
+      if (!AuthSession.instance.isAuthenticated) {
         return isAuth ? null : LoginpageWidget.routePath;
-      if (AuthSession.instance.needsRegistration)
-        return state.matchedLocation == SignupWidget.routePath
-            ? null
-            : SignupWidget.routePath;
-      if (state.matchedLocation == SignupWidget.routePath) return null;
+      }
       return isAuth ? DriverDashboardPage.routePath : null;
     },
     errorBuilder: (_, __) => AuthSession.instance.isAuthenticated
@@ -89,24 +87,18 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
                 ? state.extra as Map<String, dynamic>
                 : <String, dynamic>{};
             return OTPVerificationWidget(
-                phoneNumber: extra['phoneNumber']?.toString() ?? '');
-          }),
-      GoRoute(
-          name: SignupWidget.routeName,
-          path: SignupWidget.routePath,
-          builder: (_, state) {
-            final extra = state.extra is Map<String, dynamic>
-                ? state.extra as Map<String, dynamic>
-                : <String, dynamic>{};
-            return SignupWidget(
-                phoneNumber: extra['phoneNumber']?.toString() ?? '');
+              phoneNumber: extra['phoneNumber']?.toString() ?? '',
+              debugOtp: extra['debugOtp']?.toString(),
+            );
           }),
       // Redirect stale bookmarks and navigation calls left in legacy modules.
       GoRoute(
           path: '/homepage',
           redirect: (_, __) => DriverDashboardPage.routePath),
       StatefulShellRoute.indexedStack(
-        builder: (_, __, shell) => ScaffoldWithNavBar(navigationShell: shell),
+        builder: (_, __, shell) => DriverEventsListener(
+          child: ScaffoldWithNavBar(navigationShell: shell),
+        ),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(
@@ -116,23 +108,75 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
-                name: 'DriverTrips',
+                name: DriverTripsPage.routeName,
                 path: DriverTripsPage.routePath,
                 builder: (_, __) => const DriverTripsPage())
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
-                name: 'DriverVehicle',
+                name: DriverWalletPage.routeName,
+                path: DriverWalletPage.routePath,
+                builder: (_, __) => const DriverWalletPage())
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                name: DriverVehiclePage.routeName,
                 path: DriverVehiclePage.routePath,
                 builder: (_, __) => const DriverVehiclePage())
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
-                name: 'DriverProfile',
+                name: DriverProfilePage.routeName,
                 path: DriverProfilePage.routePath,
                 builder: (_, __) => const DriverProfilePage())
           ]),
         ],
+      ),
+      GoRoute(
+        name: TripPage.routeName,
+        path: DriverRoutes.tripPattern,
+        builder: (_, state) => TripPage(tripId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        name: ItemVerificationPage.routeName,
+        path: DriverRoutes.itemsPattern,
+        builder: (_, state) =>
+            ItemVerificationPage(tripId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        name: DriverVerificationPage.routeName,
+        path: DriverRoutes.verification,
+        builder: (_, __) => const DriverVerificationPage(),
+      ),
+      GoRoute(
+        name: EditProfilePage.routeName,
+        path: DriverRoutes.editProfile,
+        builder: (_, __) => const EditProfilePage(),
+      ),
+      GoRoute(
+        name: PayoutDetailsPage.routeName,
+        path: DriverRoutes.payout,
+        builder: (_, __) => const PayoutDetailsPage(),
+      ),
+      GoRoute(
+        name: PaymentQrPage.routeName,
+        path: DriverRoutes.paymentPattern,
+        builder: (_, state) =>
+            PaymentQrPage(tripId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        name: DeliveryOtpPage.routeName,
+        path: DriverRoutes.otpPattern,
+        builder: (_, state) {
+          final extra = state.extra is Map
+              ? Map<String, dynamic>.from(state.extra as Map)
+              : <String, dynamic>{};
+          return DeliveryOtpPage(
+            tripId: state.pathParameters['id']!,
+            debugOtp: extra['debugOtp']?.toString(),
+            freshlySent: extra['freshlySent'] == true,
+          );
+        },
       ),
     ],
   );

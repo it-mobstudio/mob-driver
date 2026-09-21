@@ -13,6 +13,12 @@ import 'package:m_o_b_demand_side/features/auth/data/repositories/auth_repositor
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/features/driver/data/datasources/driver_remote_datasource.dart';
+import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
+import 'package:m_o_b_demand_side/features/driver/data/local/driver_snapshot_cache.dart';
+import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
+import 'package:m_o_b_demand_side/features/driver/data/repositories/driver_repository_impl.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/repositories/driver_repository.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 
 // Cart
 import 'package:m_o_b_demand_side/features/cart/data/datasources/cart_remote_datasource.dart';
@@ -117,6 +123,17 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(sl()),
   );
+  sl.registerLazySingleton<DriverRepository>(
+    () => DriverRepositoryImpl(
+      sl(),
+      cache: DriverSnapshotCache(
+        currentDriverId: () => AuthSession.instance.userDetails?['id']?.toString(),
+      ),
+    ),
+  );
+  sl.registerLazySingleton<DriverLocationService>(
+    () => const GeolocatorLocationService(),
+  );
   sl.registerLazySingleton<AddressRepository>(
     () => AddressRepositoryImpl(sl()),
   );
@@ -149,6 +166,12 @@ Future<void> setupDependencies() async {
   );
 
   // ── 4. BLoCs ─────────────────────────────────────────────────────────────
+
+  // The driver's on-duty session (GPS pings, trip polling) has to outlive any
+  // one screen, so it's a singleton provided at the app root.
+  sl.registerLazySingleton<DriverSessionCubit>(
+    () => DriverSessionCubit(repository: sl(), location: sl()),
+  );
 
   // Singletons — persist across navigation (cart badge, home data)
   sl.registerLazySingleton<CartBloc>(() => CartBloc(sl()));

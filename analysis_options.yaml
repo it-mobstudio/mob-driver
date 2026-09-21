@@ -5,6 +5,10 @@ analyzer:
     - lib/custom_code/**
     - lib/flutter_flow/custom_functions.dart
     - lib/flutter_flow/**
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
   language:
     strict-casts: true
     strict-inference: true
