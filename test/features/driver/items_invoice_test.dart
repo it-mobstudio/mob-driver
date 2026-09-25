@@ -34,15 +34,15 @@ Future<Trip> openTripPage(
   final trip = rig.repo.startItemTrip(items ?? twoItems(),
       invoiceUrl: invoice, invoiceNumber: number, cod: cod);
   await rig.cubit.load();
-  await tester.pumpWidget(rig.app(location == 'items'
-      ? DriverRoutes.items(trip.id)
-      : DriverRoutes.trip(trip.id)));
+  await tester.pumpWidget(rig.app(switch (location) {
+    'items' => DriverRoutes.items(trip.id),
+    'details' => DriverRoutes.orderDetails(trip.id, fromTrip: true),
+    _ => DriverRoutes.trip(trip.id),
+  }));
   await tester.pumpAndSettle();
   return trip;
 }
 
-String stage(WidgetTester tester) =>
-    tester.widget<Text>(find.byKey(const Key('trip_stage_title'))).data!;
 String textOf(WidgetTester tester, String key) =>
     tester.widget<Text>(find.byKey(Key(key))).data!;
 
@@ -65,64 +65,19 @@ bool tappable(WidgetTester tester, String key) {
 void main() {
   setUpAll(loadAppFonts);
 
-  group('the trip screen when the company sent items', () {
-    rigTest('the driver is asked to verify them before anything else',
+  group('Deliver order when the company sent items', () {
+    rigTest('opens the checklist first when the items must be verified',
         (tester, rig) async {
       await openTripPage(tester, rig);
-
-      expect(stage(tester), 'Check the items');
-      expect(find.text('0 of 2 checked with the customer'), findsOneWidget);
-      expect(find.byKey(const Key('verify_items')), findsOneWidget);
-      expect(find.text('Check items (0/2)'), findsOneWidget);
-      expect(find.text('Complete delivery'), findsNothing,
-          reason: 'not until every item is answered');
-    });
-
-    rigTest(
-        'an items card lists what is being delivered and how far along the driver is',
-        (tester, rig) async {
-      await openTripPage(tester, rig);
-
-      expect(find.byKey(const Key('items_card')), findsOneWidget);
-      expect(find.text('Cement bag 50 kg'), findsOneWidget);
-      expect(find.text('× 4 bags'), findsOneWidget);
-      expect(find.text('× 20 pcs'), findsOneWidget);
-      expect(find.text('0/2 CHECKED'), findsOneWidget);
-      expect(textOf(tester, 'items_card_action'), 'Check items');
-    });
-
-    rigTest('a long list is summarised, not dumped into the panel',
-        (tester, rig) async {
-      await openTripPage(tester, rig, items: [
-        for (var i = 0; i < 6; i++) itemJson(id: 'i$i', name: 'Item $i')
-      ]);
-      expect(find.text('Item 0'), findsOneWidget);
-      expect(find.text('Item 2'), findsOneWidget);
-      expect(find.text('Item 3'), findsNothing);
-      expect(find.text('+ 3 more'), findsOneWidget);
-    });
-
-    rigTest('the primary button and the card both open the checklist',
-        (tester, rig) async {
-      await openTripPage(tester, rig);
-      await tester.tap(find.byKey(const Key('verify_items')));
-      await tester.pumpAndSettle();
-      expect(find.text('Check items'), findsWidgets,
-          reason: 'the page title (and the trip card\'s way in)');
+      await swipe(tester, 'Deliver order');
       expect(textOf(tester, 'items_progress'), '0 of 2 checked');
-
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('items_card')));
-      await tester.pumpAndSettle();
-      expect(textOf(tester, 'items_progress'), '0 of 2 checked');
+      expect(rig.repo.calls.where((c) => c.startsWith('complete')), isEmpty);
     });
 
-    rigTest('once every item is answered the normal ending is available again',
+    rigTest('once every item is answered it carries on to the handover',
         (tester, rig) async {
       await openTripPage(tester, rig);
-      await tester.tap(find.byKey(const Key('verify_items')));
-      await tester.pumpAndSettle();
+      await swipe(tester, 'Deliver order');
 
       await tester.tap(find.byKey(const Key('item_delivered_a')));
       await tester.pumpAndSettle();
@@ -131,16 +86,21 @@ void main() {
       await tester.tap(find.byKey(const Key('items_done')));
       await tester.pumpAndSettle();
 
-      expect(stage(tester), 'Deliver to customer');
-      expect(find.text('Complete delivery'), findsOneWidget);
-      expect(find.byKey(const Key('verify_items')), findsNothing);
-      expect(textOf(tester, 'items_card_action'), 'Review items',
-          reason: 'answers given, but still open to review');
-      expect(find.text('ALL CHECKED'), findsOneWidget);
+      expect(find.text('Complete delivery?'), findsOneWidget,
+          reason: 'prepaid: straight to the handover confirmation');
+    });
+
+    rigTest('leaving the checklist half done stops there', (tester, rig) async {
+      await openTripPage(tester, rig);
+      await swipe(tester, 'Deliver order');
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Complete delivery?'), findsNothing);
+      expect(find.text('Deliver order'), findsOneWidget);
     });
 
     rigTest(
-        'an order that only lists items, without asking to verify, is just information',
+        'an order that only lists items, without asking to verify, goes straight to the handover',
         (tester, rig) async {
       tester.view.physicalSize = const Size(1080, 3000);
       rig.repo.profileValue = fakeProfile(online: true);
@@ -155,26 +115,14 @@ void main() {
       await tester.pumpWidget(rig.app(DriverRoutes.trip(trip.id)));
       await tester.pumpAndSettle();
 
-      expect(stage(tester), 'Deliver to customer');
-      expect(find.byKey(const Key('verify_items')), findsNothing);
-      expect(find.text('Complete delivery'), findsOneWidget);
-      expect(find.text('2 items'), findsOneWidget);
+      await swipe(tester, 'Deliver order');
+      expect(find.text('Complete delivery?'), findsOneWidget);
     });
 
-    rigTest('an order with no items shows no items card at all',
-        (tester, rig) async {
-      tester.view.physicalSize = const Size(1080, 3000);
-      rig.repo.profileValue = fakeProfile(online: true);
-      final trip = fakeTrip(
-          status: 'in_progress', paymentMode: 'prepaid', paymentStatus: 'paid');
-      rig.repo.activeTripValue = trip;
-      rig.repo.tripsById[trip.id] = trip;
-      await rig.cubit.load();
-      await tester.pumpWidget(rig.app(DriverRoutes.trip(trip.id)));
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('items_card')), findsNothing);
-      expect(find.byKey(const Key('invoice_card')), findsNothing);
+    rigTest('View details lists the items', (tester, rig) async {
+      await openTripPage(tester, rig, location: 'details');
+      expect(find.text('2 items in shipment'), findsOneWidget);
+      expect(find.text('Cement bag 50 kg'), findsOneWidget);
     });
   });
 
@@ -531,30 +479,12 @@ void main() {
       expect(find.text('Continue to payment'), findsOneWidget,
           reason: 'cash on delivery, not yet paid');
     });
-
-    rigTest('the trip panel says in words where each item stands',
-        (tester, rig) async {
-      await openTripPage(tester, rig, items: [
-        itemJson(id: 'a', name: 'Cement bag 50 kg', status: 'delivered'),
-        itemJson(
-            id: 'b',
-            name: 'TMT bar 12 mm',
-            status: 'not_delivered',
-            note: 'Damaged'),
-        itemJson(id: 'c', name: 'Wall putty 20 kg'),
-      ]);
-      expect(find.text('Delivered'), findsOneWidget);
-      expect(find.text('Problem'), findsOneWidget);
-      expect(find.text('To check'), findsOneWidget);
-      expect(find.byType(ItemProgressBar), findsOneWidget);
-      expect(textOf(tester, 'items_card_action'), 'Check items');
-    });
   });
 
   group('the invoice', () {
     rigTest('is offered with its number, and only when the company sent one',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001');
+      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       expect(find.byKey(const Key('invoice_card')), findsOneWidget);
       expect(textOf(tester, 'invoice_title'), 'Invoice INV-1001');
       for (final action in ['download', 'whatsapp', 'share']) {
@@ -563,17 +493,17 @@ void main() {
     });
 
     rigTest('without a number it is simply "Invoice"', (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl);
+      await openTripPage(tester, rig, invoice: invoiceUrl, location: 'details');
       expect(textOf(tester, 'invoice_title'), 'Invoice');
     });
 
     rigTest('no invoice, no card', (tester, rig) async {
-      await openTripPage(tester, rig);
+      await openTripPage(tester, rig, location: 'details');
       expect(find.byKey(const Key('invoice_card')), findsNothing);
     });
 
     rigTest('Download opens the invoice link', (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001');
+      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       await tester.tap(find.byKey(const Key('invoice_download')));
       await tester.pumpAndSettle();
       expect(rig.invoice.downloads, [invoiceUrl]);
@@ -582,7 +512,7 @@ void main() {
     rigTest(
         'WhatsApp opens the customer\'s chat with a message carrying the link',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001');
+      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       await tester.tap(find.byKey(const Key('invoice_whatsapp')));
       await tester.pumpAndSettle();
 
@@ -595,7 +525,7 @@ void main() {
     rigTest(
         'Share hands over the file, named after the company\'s own file name',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001');
+      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       await tester.tap(find.byKey(const Key('invoice_share')));
       await tester.pumpAndSettle();
 
@@ -607,7 +537,7 @@ void main() {
 
     rigTest('a failure is explained and the buttons come back',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001');
+      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       rig.invoice.problem = 'WhatsApp isn’t available on this phone.';
 
       await tester.tap(find.byKey(const Key('invoice_whatsapp')));
@@ -622,7 +552,7 @@ void main() {
     rigTest(
         'while a file is being fetched, the buttons are locked and one shows progress',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001');
+      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       rig.invoice.gate = Completer<void>();
 
       await tester.tap(find.byKey(const Key('invoice_share')));
@@ -654,7 +584,8 @@ void main() {
       rig.repo.profileValue = fakeProfile();
       rig.repo.tripsById[done.id] = done;
       await rig.cubit.load();
-      await tester.pumpWidget(rig.app(DriverRoutes.trip(done.id)));
+      await tester.pumpWidget(
+          rig.app(DriverRoutes.orderDetails(done.id, fromTrip: true)));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('invoice_card')), findsOneWidget);
@@ -699,17 +630,15 @@ void main() {
       await tester.pumpWidget(rig.app(DriverRoutes.trip(trip.id)));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Complete delivery'));
-      await tester.pumpAndSettle();
+      await swipe(tester, 'Deliver order');
       await tester.tap(find.descendant(
           of: find.byType(AlertDialog), matching: find.text('Complete')));
       await tester.pumpAndSettle();
 
       expect(
-          find.descendant(
-              of: find.byKey(const Key('completed_earning')),
-              matching: find.text('You earned ₹89.30')),
-          findsOneWidget);
+          tester.widget<Text>(find.byKey(const Key('completed_earning'))).data,
+          '₹89.30');
+      expect(find.text('Added to your earnings'), findsOneWidget);
     });
   });
 }

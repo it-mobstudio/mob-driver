@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
+import 'package:m_o_b_demand_side/features/driver/data/media/geo_stamp.dart';
 import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
@@ -154,27 +156,52 @@ class PhotoTile extends StatelessWidget {
       ]);
 }
 
-/// Takes a picture with the camera, telling the driver why if it can't.
-/// Null when they back out or the camera is unavailable.
-Future<CapturedPhoto?> takePhotoWithFeedback(
+/// Takes a proof picture — camera only, never the gallery — and burns where
+/// and when it was taken into it, with [caption] saying what it shows (see
+/// [GeoStamp]). [locate] gives the driver's position; the fix is asked for
+/// while the camera is open so the stamp doesn't add a wait. Tells the driver
+/// why when it can't be done; null when they back out.
+Future<CapturedPhoto?> takeGeoPhoto(
   BuildContext context,
-  PhotoCapture capture,
-) async {
-  try {
-    return await capture.takePhoto();
-  } on PhotoCaptureException catch (e) {
+  PhotoCapture capture, {
+  required String caption,
+  required Future<GeoPoint?> Function() locate,
+}) async {
+  void fail(String message) {
     if (context.mounted) {
-      TopSnackBar.show(context,
-          message: e.message, type: TopSnackBarType.error);
+      TopSnackBar.show(context, message: message, type: TopSnackBarType.error);
     }
+  }
+
+  final fix = locate();
+  final CapturedPhoto? photo;
+  try {
+    photo = await capture.takePhoto();
+  } on PhotoCaptureException catch (e) {
+    fail(e.message);
     return null;
   }
+  if (photo == null) return null;
+  final position = await fix;
+  if (position == null) {
+    fail('Turn on location — proof photos are stamped with where they were taken.');
+    return null;
+  }
+  return capture.geoStamp(
+    photo,
+    GeoStamp(
+      latitude: position.latitude,
+      longitude: position.longitude,
+      takenAt: DateTime.now(),
+      caption: caption,
+    ),
+  );
 }
 
 /// "Take a photo" or "Choose from gallery" — for document scans, which a
-/// driver may well already have on the phone. Proof-of-delivery photos skip
-/// this and go straight to the camera ([takePhotoWithFeedback]): they should be
-/// pictures taken *at the drop*.
+/// driver may well already have on the phone. Proof photos skip this and go
+/// straight to the camera ([takeGeoPhoto]): they should be pictures taken
+/// *there*, stamped with where and when.
 Future<CapturedPhoto?> chooseDocumentPhoto(
   BuildContext context,
   PhotoCapture capture,

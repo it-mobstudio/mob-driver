@@ -15,7 +15,7 @@ import '/index.dart';
 /// The backend refuses a second OTP for the same number for 30 s
 /// (`OTP_THROTTLE_SECONDS`), so the resend button unlocks on the same clock.
 const int kOtpResendSeconds = 30;
-const int kOtpLength = 6;
+const int kOtpLength = 4;
 
 class OTPVerificationWidget extends StatefulWidget {
   const OTPVerificationWidget({

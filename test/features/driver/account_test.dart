@@ -301,16 +301,21 @@ void main() {
     Future<void> openDashboard(WidgetTester tester, TestRig rig, DriverProfile profile) => open(
           tester,
           rig,
-          DriverDashboardPage(checkLocationPermission: (_) async => true),
+          DriverDashboardPage(checkLocationPermission: (_) async => true, mapBuilder: stubHomeMap),
           profile: profile,
         );
 
     rigTest('under review: says so, wears the right badge, and opens the documents', (tester, rig) async {
       await openDashboard(tester, rig, DriverProfile.fromJson(profileJson(eligible: false, onboarding: 'under_review')));
 
-      expect(find.text('UNDER REVIEW'), findsOneWidget);
       expect(find.text('Your documents are being reviewed'), findsOneWidget);
       expect(textOf(tester, 'verification_action'), 'View documents');
+
+      await tester.tap(find.byKey(const Key('profile_button')));
+      await tester.pumpAndSettle();
+      expect(find.text('UNDER REVIEW'), findsOneWidget);
+      await tester.tapAt(const Offset(20, 20)); // dismiss the sheet
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('verification_card')));
       await tester.pumpAndSettle();
@@ -320,6 +325,9 @@ void main() {
     rigTest('an approved driver sees no verification card', (tester, rig) async {
       await openDashboard(tester, rig, fakeProfile());
       expect(find.byKey(const Key('verification_card')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('profile_button')));
+      await tester.pumpAndSettle();
       expect(find.text('VERIFIED DRIVER'), findsOneWidget);
     });
 
@@ -344,6 +352,9 @@ void main() {
     rigTest('today\'s earnings lead the numbers', (tester, rig) async {
       rig.repo.statsValue = const DriverStats(today: PeriodStats(tripsCompleted: 3, earnings: 240.5, totalFare: 300));
       await openDashboard(tester, rig, fakeProfile());
+      // Stats live in the sheet the "Today's earnings" banner opens.
+      await tester.tap(find.byKey(const Key('summary_banner')));
+      await tester.pumpAndSettle();
       expect(textOf(tester, 'stat_earnings'), '₹240.50');
       expect(find.text('You earned'), findsOneWidget);
     });

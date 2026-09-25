@@ -149,6 +149,13 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// screen listening to the cubit.
   final ValueNotifier<GeoPoint?> position = ValueNotifier<GeoPoint?>(null);
 
+  /// When the current duty session began, for the dashboard's "Working time"
+  /// clock. Kept out of [DriverSessionState] (like [position]) since nothing
+  /// but that one label needs it. A relaunch while already online has no way
+  /// to know the real start, so it's set to "now" the first time that's seen
+  /// — an undercount, not a guess dressed up as fact.
+  final ValueNotifier<DateTime?> dutyStartedAt = ValueNotifier<DateTime?>(null);
+
   set _fix(GeoPoint? value) {
     _lastPosition = value;
     position.value = value;
@@ -244,6 +251,11 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     } else {
       _stopBackgroundWork();
     }
+    if (profile.isOnline) {
+      dutyStartedAt.value ??= DateTime.now();
+    } else {
+      dutyStartedAt.value = null;
+    }
   }
 
   Future<void> _refreshStats() async {
@@ -256,6 +268,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   void reset() {
     _stopBackgroundWork();
     _fix = null;
+    dutyStartedAt.value = null;
     _epoch++;
     // Personal data must not outlive the session it belonged to.
     unawaited(_repo.clearCache());
@@ -394,6 +407,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       dutyBusy: false,
       locationUnavailable: false,
     ));
+    dutyStartedAt.value = DateTime.now();
     _startBackgroundWork();
     unawaited(_pollActiveTrip());
     return null;
@@ -416,6 +430,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       dutyBusy: false,
       locationUnavailable: false,
     ));
+    dutyStartedAt.value = null;
     if (state.activeTrip == null) _stopBackgroundWork();
     return null;
   }
@@ -447,6 +462,22 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   }) =>
       _tripAction(() => _repo.verifyItem(tripId, itemId,
           status: status, note: note, photo: photo));
+
+  /// Sends one proof photo from the pickup or the drop (of the order, or of
+  /// item [itemId]).
+  Future<(Trip?, AppFailure?)> addTripPhoto(
+    String tripId, {
+    required PhotoStage stage,
+    required CapturedPhoto photo,
+    String? itemId,
+  }) =>
+      _tripAction(() => _repo.addTripPhoto(tripId,
+          stage: stage, photo: photo, itemId: itemId));
+
+  /// Where the driver is right now, for stamping a photo: the latest fix
+  /// from the duty stream, else a fresh one. Null when none can be had.
+  Future<GeoPoint?> currentFix() async =>
+      _lastPosition ?? await _location.currentPosition();
 
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId) =>
       _tripAction(() => _repo.resetItem(tripId, itemId));
@@ -654,6 +685,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     _stopBackgroundWork();
     _events.close();
     position.dispose();
+    dutyStartedAt.dispose();
     return super.close();
   }
 }

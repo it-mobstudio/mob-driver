@@ -152,7 +152,7 @@ class _InvoiceCardState extends State<InvoiceCard> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
               textStyle:
-                  const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  const TextStyle(fontFamily: 'Inter', fontSize: 12.5, fontWeight: FontWeight.w700),
             ),
             child: busy
                 ? SizedBox(

@@ -14,7 +14,7 @@ import 'package:m_o_b_demand_side/shared/widgets/test_mode_otp_hint.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 /// Length of the delivery OTP the backend texts the customer.
-const int kDeliveryOtpLength = 6;
+const int kDeliveryOtpLength = 4;
 
 /// Matches the backend's resend throttle (`DELIVERY_OTP_RESEND_THROTTLE_SECONDS`).
 const int kDeliveryOtpResendSeconds = 30;

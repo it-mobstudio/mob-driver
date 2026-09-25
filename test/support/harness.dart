@@ -4,16 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/delivery_otp_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/edit_profile_page.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/pages/incoming_order_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/item_verification_page.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/pages/order_details_page.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/pages/order_photos_page.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/pages/delivery_complete_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/payment_qr_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/payout_details_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/trip_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/verification_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/wallet_page.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_home_map.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_map.dart';
 
@@ -39,6 +45,33 @@ Widget stubMap(BuildContext context, TripMapData data, double bottomPadding) =>
             key: const Key('map_last')),
     ]);
 
+/// Stand-in for the dashboard's full-screen Google map, for the same reason
+/// as [stubMap]. Exposes an SOS trigger so the dialog it opens is testable —
+/// bottom-right, like the real floating button, so it isn't hidden under the
+/// dashboard's own top overlay (banners painted later in the same Stack).
+Widget stubHomeMap(BuildContext context, DriverMapData data,
+        double bottomPadding, VoidCallback onSos) =>
+    Stack(children: [
+      Align(
+        alignment: Alignment.topLeft,
+        child: Text(
+          'driver=${data.driver != null} pickup=${data.pickup != null} '
+          'route=${data.route.length}',
+          key: const Key('map'),
+        ),
+      ),
+      Align(
+        alignment: Alignment.bottomRight,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: bottomPadding + 24, right: 16),
+          child: TextButton(
+              key: const Key('map_sos'),
+              onPressed: onSos,
+              child: const Text('SOS')),
+        ),
+      ),
+    ]);
+
 class TestRig {
   TestRig()
       : repo = FakeDriverRepository(),
@@ -58,6 +91,7 @@ class TestRig {
 
   /// The camera and invoice buttons the pages are given.
   final FakePhotoCapture capture = FakePhotoCapture();
+  final FakeOrderAlert alert = FakeOrderAlert();
   final FakeInvoiceActions invoice = FakeInvoiceActions();
 
   /// Sign-out is observable here (`authRepo.signOutCalls`).
@@ -113,6 +147,37 @@ class TestRig {
                     tripId: s.pathParameters['id']!,
                     mapBuilder: stubMap,
                     invoiceActions: invoice),
+              ),
+              GoRoute(
+                path: DriverRoutes.incomingOrderPattern,
+                builder: (_, s) =>
+                    IncomingOrderPage(
+                        tripId: s.pathParameters['id']!,
+                        mapBuilder: stubMap,
+                        alert: alert),
+              ),
+              GoRoute(
+                path: DriverRoutes.orderDetailsPattern,
+                builder: (_, s) => OrderDetailsPage(
+                    tripId: s.pathParameters['id']!,
+                    fromTrip: s.uri.queryParameters['from'] == 'trip',
+                    capture: capture,
+                    invoiceActions: invoice),
+              ),
+              GoRoute(
+                path: DriverRoutes.deliveredPattern,
+                builder: (_, s) => DeliveryCompletePage(
+                    tripId: s.pathParameters['id']!,
+                    trip: s.extra is Trip ? s.extra as Trip : null),
+              ),
+              GoRoute(
+                path: DriverRoutes.photosPattern,
+                builder: (_, s) => OrderPhotosPage(
+                    tripId: s.pathParameters['id']!,
+                    stage: s.pathParameters['stage'] == 'delivery'
+                        ? PhotoStage.delivery
+                        : PhotoStage.pickup,
+                    capture: capture),
               ),
               GoRoute(
                 path: DriverRoutes.itemsPattern,
@@ -172,3 +237,14 @@ void rigTest(
   });
 }
 
+
+
+/// Drags a [SwipeButton] (by its label) all the way across, as a driver
+/// would, and lets whatever it starts finish.
+Future<void> swipe(WidgetTester tester, String label) async {
+  final knob = find.byKey(ValueKey('swipe_knob_$label'));
+  await tester.ensureVisible(knob);
+  await tester.pumpAndSettle();
+  await tester.drag(knob, const Offset(800, 0));
+  await tester.pumpAndSettle();
+}

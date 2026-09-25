@@ -361,10 +361,10 @@ void main() {
     test('completing clears the active trip, refreshes stats, and passes the OTP through', () async {
       repo.actionResult = (fakeTrip(status: 'completed', paymentStatus: 'paid'), null);
 
-      final (trip, _) = await cubit.complete(id, otp: '123456');
+      final (trip, _) = await cubit.complete(id, otp: '1234');
 
       expect(trip?.status, TripStatus.completed);
-      expect(repo.calls, contains('complete[123456]:$id'));
+      expect(repo.calls, contains('complete[1234]:$id'));
       expect(cubit.state.activeTrip, isNull);
     });
 
@@ -378,7 +378,7 @@ void main() {
       await settle(60);
       // ...meanwhile the driver completes the trip.
       repo.actionResult = (fakeTrip(status: 'completed', paymentStatus: 'paid'), null);
-      await cubit.complete(id, otp: '123456');
+      await cubit.complete(id, otp: '1234');
       expect(cubit.state.activeTrip, isNull);
 
       // The stale "still in progress" answer now arrives.
@@ -415,7 +415,7 @@ void main() {
       final (sent, failure) = await cubit.collectPayment(id);
 
       expect(failure, isNull);
-      expect(sent?.debugOtp, '123456');
+      expect(sent?.debugOtp, '1234');
       expect(cubit.state.activeTrip?.needsDeliveryOtp, isTrue);
     });
 

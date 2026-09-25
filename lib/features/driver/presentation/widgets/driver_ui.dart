@@ -248,7 +248,7 @@ class PrimaryButton extends StatelessWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(13)),
               textStyle:
-                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 15),
             ),
             child: loading
                 ? const SizedBox(
@@ -297,7 +297,7 @@ class SecondaryButton extends StatelessWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(13)),
               textStyle:
-                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 14),
             ),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               if (icon != null) ...[

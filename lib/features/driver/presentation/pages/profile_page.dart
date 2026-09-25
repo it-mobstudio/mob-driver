@@ -129,6 +129,9 @@ class DriverProfilePage extends StatelessWidget {
             elevation: 0,
             foregroundColor: DriverColors.ink,
             automaticallyImplyLeading: false,
+            leading: BackButton(
+                key: const Key('profile_back'),
+                onPressed: () => context.go(DriverRoutes.dashboard)),
             title: const Text('Profile',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
           ),

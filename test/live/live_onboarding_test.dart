@@ -262,7 +262,7 @@ void main() {
     expect(started!.needsItemVerification, isTrue);
 
     expect((await repo.collectPayment(tripId)).$2?.code, 'ITEMS_NOT_VERIFIED', reason: 'no money is taken before the items are checked');
-    expect((await repo.complete(tripId, otp: '123456')).$2?.code, 'ITEMS_NOT_VERIFIED');
+    expect((await repo.complete(tripId, otp: '1234')).$2?.code, 'ITEMS_NOT_VERIFIED');
 
     final first = started.items.first;
     final second = started.items.last;

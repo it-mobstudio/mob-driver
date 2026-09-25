@@ -136,6 +136,9 @@ class _DriverWalletPageState extends State<DriverWalletPage> {
             elevation: 0,
             foregroundColor: DriverColors.ink,
             automaticallyImplyLeading: false,
+            leading: BackButton(
+                key: const Key('wallet_back'),
+                onPressed: () => context.go(DriverRoutes.dashboard)),
             title: const Text('Wallet',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
           ),

@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
 
 abstract interface class AuthRemoteDatasource {
-  /// `POST driver/auth/otp/request` — texts a 6-digit OTP to a driver the
+  /// `POST driver/auth/otp/request` — texts a 4-digit OTP to a driver the
   /// company has already registered. There is no self sign-up.
   Future<Map<String, dynamic>> requestOtp({required String phoneNumber});
 

@@ -5,6 +5,8 @@ import 'dart:typed_data';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
 import 'package:m_o_b_demand_side/features/driver/data/media/invoice_actions.dart';
+import 'package:m_o_b_demand_side/features/driver/data/media/geo_stamp.dart';
+import 'package:m_o_b_demand_side/features/driver/data/media/order_alert.dart';
 import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
 import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
@@ -32,6 +34,9 @@ Map<String, dynamic> tripJson({
   String? invoiceUrl,
   String? invoiceNumber,
   String? driverEarning,
+  String? bonusFare,
+  String pickupPhoto = 'none',
+  String deliveryPhoto = 'none',
 }) =>
     {
       'id': id,
@@ -68,6 +73,7 @@ Map<String, dynamic> tripJson({
       'time_fare': '15.80',
       'surge_multiplier': '1.00',
       'total_fare': '111.62',
+      'bonus_fare': bonusFare,
       'currency': 'INR',
       'payment_mode': paymentMode,
       'payment_status': paymentStatus,
@@ -75,6 +81,10 @@ Map<String, dynamic> tripJson({
       'invoice_url': invoiceUrl,
       'invoice_number': invoiceNumber ?? '',
       'verify_items': verifyItems,
+      'pickup_photo': pickupPhoto,
+      'pickup_photo_url': null,
+      'delivery_photo': deliveryPhoto,
+      'delivery_photo_url': null,
       'items': items,
       'driver_earning': driverEarning,
       'cancellation_reason': cancellationReason ?? '',
@@ -184,12 +194,14 @@ Trip fakeTrip({
   String paymentMode = 'cod',
   String paymentStatus = 'pending',
   String id = '604807b6-7053-4f5f-bf99-163eb9620dc3',
+  String? bonusFare,
 }) =>
     Trip.fromJson(tripJson(
       id: id,
       status: status,
       paymentMode: paymentMode,
       paymentStatus: paymentStatus,
+      bonusFare: bonusFare,
     ));
 
 DriverProfile fakeProfile({bool online = false, bool eligible = true}) =>
@@ -258,9 +270,9 @@ class FakeDriverRepository implements DriverRepository {
   int paymentQrCalls = 0;
 
   (DeliveryOtpSent?, AppFailure?) collectResult =
-      (const DeliveryOtpSent(message: 'sent', debugOtp: '123456'), null);
+      (const DeliveryOtpSent(message: 'sent', debugOtp: '1234'), null);
   (DeliveryOtpSent?, AppFailure?) resendResult =
-      (const DeliveryOtpSent(message: 'sent again', debugOtp: '654321'), null);
+      (const DeliveryOtpSent(message: 'sent again', debugOtp: '6543'), null);
   final List<({double lat, double lng})> pings = [];
 
   // -- onboarding ----------------------------------------------------------
@@ -558,6 +570,44 @@ class FakeDriverRepository implements DriverRepository {
     return (trip, null);
   }
 
+  /// Pickup photos sent, as `order` or the item id.
+  final List<String> pickupPhotos = [];
+
+  /// Delivery photos sent, as `order` or the item id.
+  final List<String> deliveryPhotos = [];
+  AppFailure? pickupPhotoFailure;
+
+  @override
+  Future<(Trip?, AppFailure?)> addTripPhoto(
+    String tripId, {
+    required PhotoStage stage,
+    required CapturedPhoto photo,
+    String? itemId,
+  }) async {
+    calls.add('${stage.wire}Photo:${itemId ?? 'order'}');
+    (stage == PhotoStage.pickup ? pickupPhotos : deliveryPhotos)
+        .add(itemId ?? 'order');
+    if (pickupPhotoFailure != null) return (null, pickupPhotoFailure);
+    final json = tripJsonById[tripId];
+    if (json == null) return (tripsById[tripId], null);
+    final field = '${stage.wire}_photo_url';
+    if (itemId == null) {
+      json[field] = 'https://cdn.example.com/${stage.wire}-order.jpg';
+    } else {
+      final item = (json['items'] as List)
+          .cast<Map<String, dynamic>>()
+          .firstWhere((i) => i['id'] == itemId);
+      item[field] = 'https://cdn.example.com/${stage.wire}-$itemId.jpg';
+    }
+    final trip = Trip.fromJson(json);
+    tripsById[tripId] = trip;
+    if (activeTripValue?.id == tripId) activeTripValue = trip;
+    return (trip, null);
+  }
+
+  /// Raw JSON of trips whose pickup photos a test wants tracked.
+  final Map<String, Map<String, dynamic>> tripJsonById = {};
+
   @override
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId) async {
     calls.add('resetItem:$itemId');
@@ -715,6 +765,15 @@ class FakePhotoCapture implements PhotoCapture {
     if (failure != null) throw failure!;
     return next;
   }
+
+  /// Every stamp put on a photo, in order.
+  final List<GeoStamp> stamps = [];
+
+  @override
+  Future<CapturedPhoto> geoStamp(CapturedPhoto photo, GeoStamp stamp) async {
+    stamps.add(stamp);
+    return photo;
+  }
 }
 
 /// Records what the driver did with the invoice; each action can be made to fail.
@@ -775,4 +834,20 @@ class FakeAuthRepository implements AuthRepository {
   Future<(bool, AppFailure?)> updateFcmToken(
           {required String emailOrPhone, required String fcmToken}) async =>
       (true, null);
+}
+
+
+/// Records the new-order alarm instead of ringing.
+class FakeOrderAlert implements OrderAlert {
+  int starts = 0;
+  int stops = 0;
+  bool get ringing => starts > stops;
+
+  @override
+  Future<void> start() async => starts++;
+
+  @override
+  Future<void> stop() async {
+    if (ringing) stops++;
+  }
 }

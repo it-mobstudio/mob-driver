@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
@@ -12,12 +13,10 @@ import 'package:m_o_b_demand_side/core/utils/polyline_codec.dart';
 import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
 import 'package:m_o_b_demand_side/features/driver/data/media/invoice_actions.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/item_widgets.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/invoice_card.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/photo_widgets.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/order_widgets.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/swipe_button.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_map.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
@@ -70,7 +69,6 @@ class _TripPageState extends State<TripPage> {
 
   Trip? _trip;
   String? _loadError;
-  NavRoute? _leg;
   List<LatLng> _legPoints = const [];
   TripStatus? _legFor;
   Timer? _legTimer;
@@ -133,12 +131,10 @@ class _TripPageState extends State<TripPage> {
     }
 
     if (!trip.status.isActive) {
-      _leg = null;
       _legPoints = const [];
       _legFor = null;
     } else if (_legFor != trip.status) {
       // The next stop changed (pickup → drop): the old leg is now wrong.
-      _leg = null;
       _legPoints = const [];
       _legFor = trip.status;
       unawaited(_refreshLeg());
@@ -151,7 +147,6 @@ class _TripPageState extends State<TripPage> {
     final (route, _) = await _cubit.navigation(trip.id);
     if (!mounted || route == null || _trip?.status != trip.status) return;
     setState(() {
-      _leg = route;
       _legPoints =
           route.points.map((p) => LatLng(p.latitude, p.longitude)).toList();
     });
@@ -207,7 +202,75 @@ class _TripPageState extends State<TripPage> {
 
   Future<void> _arrive() => _run(() => _cubit.arrive(widget.tripId));
 
-  Future<void> _startDelivery() => _run(() => _cubit.startTrip(widget.tripId));
+  Trip? get _latest {
+    final live = _cubit.state.activeTrip;
+    return live != null && live.id == widget.tripId ? live : _trip;
+  }
+
+  /// Opens the photo screen for [stage]; true once every photo is in.
+  Future<bool> _takePhotos(PhotoStage stage) async {
+    await context.push<bool>(DriverRoutes.photos(widget.tripId, stage));
+    return mounted && (_latest?.hasPhotos(stage) ?? false);
+  }
+
+  /// "Pickup order": the pickup photos the order asks for, then the start.
+  Future<void> _pickupOrder() async {
+    final trip = _latest;
+    if (trip == null) return;
+    if (!trip.hasPhotos(PhotoStage.pickup) &&
+        !await _takePhotos(PhotoStage.pickup)) {
+      return;
+    }
+    await _run(() => _cubit.startTrip(widget.tripId));
+  }
+
+  /// "Deliver order": walks the driver through whatever the drop still
+  /// needs, in order — the item check, the delivery photos, the payment, the
+  /// customer's OTP — or confirms a prepaid handover when nothing's left.
+  Future<void> _deliver() async {
+    var trip = _latest;
+    if (trip == null) return;
+    if (trip.needsItemVerification) {
+      await context.push(DriverRoutes.items(trip.id));
+      trip = _latest;
+      if (!mounted || trip == null || trip.needsItemVerification) return;
+    }
+    if (trip.needsDeliveryPhotos) {
+      if (!await _takePhotos(PhotoStage.delivery)) return;
+      trip = _latest!;
+    }
+    if (!mounted) return;
+    if (trip.needsPaymentCollection) {
+      await context.push(DriverRoutes.payment(trip.id));
+    } else if (trip.needsDeliveryOtp) {
+      await _openDeliveryOtp(trip);
+    } else {
+      await _completePrepaid();
+    }
+  }
+
+  /// A COD trip's OTP went out with the payment; a prepaid one is texted to
+  /// the customer now, as the driver reaches this step.
+  Future<void> _openDeliveryOtp(Trip trip) async {
+    if (trip.isCod) {
+      await context.push(DriverRoutes.otp(trip.id));
+      return;
+    }
+    final (sent, failure) = await _cubit.resendDeliveryOtp(trip.id);
+    if (!mounted) return;
+    // Sent moments ago (429) is fine — the customer already has a code.
+    if (sent == null && failure?.code != 'OTP_ALREADY_REQUESTED') {
+      AppHaptics.error();
+      TopSnackBar.show(context,
+          message: failure?.message ?? 'Couldn’t send the OTP.',
+          type: TopSnackBarType.error);
+      return;
+    }
+    await context.push(DriverRoutes.otp(trip.id), extra: {
+      'debugOtp': sent?.debugOtp,
+      'freshlySent': true,
+    });
+  }
 
   Future<void> _completePrepaid() async {
     final confirmed = await showDialog<bool>(
@@ -363,17 +426,13 @@ class _TripPageState extends State<TripPage> {
               child: _Panel(
                 key: _panelKey,
                 trip: trip,
-                leg: _leg,
                 busy: context
                     .select<DriverSessionCubit, bool>((c) => c.state.tripBusy),
+                onViewDetails: () => context.push(
+                    DriverRoutes.orderDetails(trip.id, fromTrip: true)),
                 onArrive: _arrive,
-                onStart: _startDelivery,
-                invoiceActions: widget.invoiceActions,
-                onVerifyItems: () => context.push(DriverRoutes.items(trip.id)),
-                onCollectPayment: () =>
-                    context.push(DriverRoutes.payment(trip.id)),
-                onEnterOtp: () => context.push(DriverRoutes.otp(trip.id)),
-                onCompletePrepaid: _completePrepaid,
+                onPickup: _pickupOrder,
+                onDeliver: _deliver,
                 onCancel: _cancel,
               ),
             ),
@@ -449,97 +508,38 @@ class _RoundBackButton extends StatelessWidget {
       );
 }
 
-class _Stage {
-  const _Stage(this.title, this.subtitle, this.color);
-  final String title;
-  final String subtitle;
-  final Color color;
-}
-
-_Stage _stageOf(Trip trip, NavRoute? leg) {
-  final away = leg == null
-      ? null
-      : '${formatDistance(leg.distanceMeters)} · ${formatDuration(leg.durationSeconds)} away';
-  switch (trip.status) {
-    case TripStatus.assigned:
-      return _Stage('Head to pickup', away ?? 'Go to the pickup point',
-          DriverColors.blue);
-    case TripStatus.arrivedAtPickup:
-      return const _Stage('At pickup',
-          'Collect the parcel, then start the delivery', DriverColors.orange);
-    case TripStatus.inProgress:
-      if (trip.needsItemVerification) {
-        return _Stage(
-            'Check the items',
-            '${trip.resolvedItemCount} of ${trip.items.length} checked with the customer',
-            DriverColors.blue);
-      }
-      if (trip.needsPaymentCollection) {
-        return _Stage('Deliver & collect payment',
-            away ?? 'Take the customer’s payment by QR', DriverColors.blue);
-      }
-      if (trip.needsDeliveryOtp) {
-        return const _Stage('Payment received',
-            'Enter the customer’s OTP to finish', DriverColors.green);
-      }
-      return _Stage('Deliver to customer', away ?? 'On the way to the drop',
-          DriverColors.blue);
-    case TripStatus.completed:
-      return _Stage('Delivery completed', formatDateTime(trip.completedAt),
-          DriverColors.green);
-    case TripStatus.cancelled:
-      final who = trip.cancelledByCompany
-          ? 'Cancelled by the company'
-          : trip.cancelledBy == 'driver'
-              ? 'You cancelled this trip'
-              : 'Cancelled';
-      return _Stage('Trip cancelled', who, DriverColors.red);
-    default:
-      return _Stage(trip.status.label, '', DriverColors.muted);
-  }
-}
-
 class _Panel extends StatelessWidget {
   const _Panel({
     super.key,
     required this.trip,
-    required this.leg,
     required this.busy,
-    required this.invoiceActions,
-    required this.onVerifyItems,
+    required this.onViewDetails,
     required this.onArrive,
-    required this.onStart,
-    required this.onCollectPayment,
-    required this.onEnterOtp,
-    required this.onCompletePrepaid,
+    required this.onPickup,
+    required this.onDeliver,
     required this.onCancel,
   });
 
   final Trip trip;
-  final NavRoute? leg;
   final bool busy;
-  final InvoiceActions invoiceActions;
-  final VoidCallback onVerifyItems;
-  final VoidCallback onArrive;
-  final VoidCallback onStart;
-  final VoidCallback onCollectPayment;
-  final VoidCallback onEnterOtp;
-  final VoidCallback onCompletePrepaid;
+  final VoidCallback onViewDetails;
+  final Future<void> Function() onArrive;
+  final Future<void> Function() onPickup;
+  final Future<void> Function() onDeliver;
   final VoidCallback onCancel;
 
-  bool get _headingToPickup =>
+  bool get _atPickup =>
       trip.status == TripStatus.assigned ||
       trip.status == TripStatus.arrivedAtPickup;
 
   @override
   Widget build(BuildContext context) {
-    final stage = _stageOf(trip, leg);
-    final target = _headingToPickup ? trip.pickup : trip.drop;
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final done = trip.status == TripStatus.completed;
 
     return Container(
       constraints:
-          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .66),
+          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .7),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
@@ -562,114 +562,60 @@ class _Panel extends StatelessWidget {
                   color: DriverColors.line,
                   borderRadius: BorderRadius.circular(4)),
             ),
-            const SizedBox(height: 14),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(stage.title,
-                          key: const Key('trip_stage_title'),
-                          style: TextStyle(
-                              color: stage.color,
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800)),
-                      if (stage.subtitle.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(stage.subtitle,
-                            style: const TextStyle(
-                                color: DriverColors.muted, fontSize: 12.5)),
-                      ],
-                    ]),
+            const SizedBox(height: 18),
+            TripTimeline(stops: [
+              TimelineStop(
+                tag: 'Pickup',
+                tagIcon: SvgPicture.asset('assets/images/pickup_dot.svg',
+                    width: 7, height: 7),
+                name: _name(trip.pickup, 'Pickup'),
+                address: trip.pickup.address,
+                progress: _atPickup && trip.status.isActive
+                    ? StopProgress.active
+                    : StopProgress.done,
+                onViewDetails: onViewDetails,
+                onMap: trip.pickup.hasCoordinates
+                    ? () => openNavigationTo(trip.pickup)
+                    : null,
               ),
-              const SizedBox(width: 10),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(formatMoney(trip.totalFare, currency: trip.currency),
-                    key: const Key('trip_fare'),
-                    style: const TextStyle(
-                        color: DriverColors.ink,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800)),
-                Text(
-                    '${formatDistance(trip.distanceMeters)} · ${formatDuration(trip.durationSeconds)}',
-                    style: const TextStyle(
-                        color: DriverColors.muted, fontSize: 11.5)),
-              ]),
+              TimelineStop(
+                tag: 'Drop',
+                tagIcon: const Icon(Icons.home_rounded),
+                name: _name(trip.drop, 'Drop'),
+                address: trip.drop.address,
+                progress: done
+                    ? StopProgress.done
+                    : trip.status == TripStatus.inProgress
+                        ? StopProgress.active
+                        : StopProgress.upcoming,
+                onViewDetails: onViewDetails,
+                onMap: trip.drop.hasCoordinates
+                    ? () => openNavigationTo(trip.drop)
+                    : null,
+              ),
             ]),
-            const SizedBox(height: 14),
-            _StopTile(
-              label: 'PICKUP',
-              stop: trip.pickup,
-              color: DriverColors.green,
-              emphasised: trip.status.isActive && _headingToPickup,
-            ),
-            Container(
-              margin: const EdgeInsets.only(left: 6),
-              height: 12,
-              alignment: Alignment.centerLeft,
-              child: Container(width: 2, color: DriverColors.line),
-            ),
-            _StopTile(
-              label: 'DROP',
-              stop: trip.drop,
-              color: DriverColors.red,
-              emphasised: trip.status.isActive && !_headingToPickup,
-            ),
-            const SizedBox(height: 12),
-            _PaymentStrip(trip: trip),
-            if (trip.hasItems) ...[
-              const SizedBox(height: 10),
-              _ItemsCard(trip: trip, onOpen: onVerifyItems),
-            ],
-            if (trip.hasInvoice) ...[
-              const SizedBox(height: 10),
-              InvoiceCard(trip: trip, actions: invoiceActions),
-            ],
-            const SizedBox(height: 14),
+            const SizedBox(height: 20),
             if (trip.status.isActive) ...[
-              // The main button changes with the stage; cross-fade rather than
-              // swap so the panel doesn't flicker as the trip moves along.
+              // The swipe changes with the stage; cross-fade rather than swap
+              // so the panel doesn't flicker as the trip moves along.
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
                 child: KeyedSubtree(
-                  key: ValueKey(
-                      '${trip.status.wire}|${trip.needsItemVerification}|${trip.needsPaymentCollection}|${trip.needsDeliveryOtp}'),
+                  key: ValueKey(trip.status.wire),
                   child: _primaryAction(),
                 ),
               ),
-              const SizedBox(height: 10),
-              Row(children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: _headingToPickup
-                        ? 'Navigate to pickup'
-                        : 'Navigate to drop',
-                    icon: Icons.navigation_rounded,
-                    color: DriverColors.blue,
-                    onPressed: () => openNavigationTo(target),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: SecondaryButton(
-                    label: _headingToPickup ? 'Call pickup' : 'Call customer',
-                    icon: Icons.call_rounded,
-                    onPressed: target.contactPhone == null
-                        ? null
-                        : () => callPhone(target.contactPhone),
-                  ),
-                ),
-              ]),
               if (trip.canCancel)
-                TextButton(
-                  key: const Key('trip_cancel'),
-                  onPressed: busy ? null : onCancel,
-                  child: const Text('Cancel trip',
-                      style: TextStyle(
-                          color: DriverColors.red,
-                          fontWeight: FontWeight.w700)),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: TextButton(
+                    key: const Key('trip_cancel'),
+                    onPressed: busy ? null : onCancel,
+                    child: const Text('Cancel trip',
+                        style: TextStyle(
+                            color: DriverColors.muted,
+                            fontWeight: FontWeight.w600)),
+                  ),
                 ),
             ] else
               _FinishedSummary(trip: trip),
@@ -679,278 +625,30 @@ class _Panel extends StatelessWidget {
     );
   }
 
-  Widget _primaryAction() {
-    switch (trip.status) {
-      case TripStatus.assigned:
-        return PrimaryButton(
-          label: 'I’ve reached the pickup',
-          icon: Icons.location_on_rounded,
-          loading: busy,
-          onPressed: onArrive,
-        );
-      case TripStatus.arrivedAtPickup:
-        return PrimaryButton(
-          label: 'Picked up — start delivery',
-          icon: Icons.play_arrow_rounded,
-          loading: busy,
-          onPressed: onStart,
-        );
-      case TripStatus.inProgress:
-        if (trip.needsItemVerification) {
-          return PrimaryButton(
-            key: const Key('verify_items'),
-            label:
-                'Check items (${trip.resolvedItemCount}/${trip.items.length})',
-            icon: Icons.fact_check_outlined,
-            onPressed: onVerifyItems,
-          );
-        }
-        if (trip.needsPaymentCollection) {
-          return PrimaryButton(
-            label:
-                'Collect ${formatMoney(trip.totalFare, currency: trip.currency)}',
-            icon: Icons.qr_code_2_rounded,
-            color: DriverColors.green,
-            onPressed: onCollectPayment,
-          );
-        }
-        if (trip.needsDeliveryOtp) {
-          return PrimaryButton(
-            label: 'Enter delivery OTP',
-            icon: Icons.pin_outlined,
-            color: DriverColors.green,
-            onPressed: onEnterOtp,
-          );
-        }
-        return PrimaryButton(
-          label: 'Complete delivery',
-          icon: Icons.check_circle_outline_rounded,
-          color: DriverColors.green,
-          loading: busy,
-          onPressed: onCompletePrepaid,
-        );
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-}
+  static String _name(TripStop stop, String fallback) =>
+      (stop.contactName ?? '').isNotEmpty ? stop.contactName! : fallback;
 
-class _StopTile extends StatelessWidget {
-  const _StopTile({
-    required this.label,
-    required this.stop,
-    required this.color,
-    required this.emphasised,
-  });
-
-  final String label;
-  final TripStop stop;
-  final Color color;
-  final bool emphasised;
-
-  @override
-  Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 3),
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(
-              color: emphasised ? color : Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: color, width: 3),
-            ),
+  Widget _primaryAction() => switch (trip.status) {
+        TripStatus.assigned => SwipeButton(
+            key: const Key('trip_swipe'),
+            label: 'Reached pickup',
+            loading: busy,
+            onConfirmed: onArrive,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label,
-                  style: TextStyle(
-                      color: color,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: .8)),
-              const SizedBox(height: 1),
-              Text(stop.address,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      color: DriverColors.ink,
-                      fontSize: 14,
-                      fontWeight:
-                          emphasised ? FontWeight.w800 : FontWeight.w600)),
-              if ((stop.contactName ?? '').isNotEmpty ||
-                  (stop.contactPhone ?? '').isNotEmpty)
-                Text(
-                  [
-                    if ((stop.contactName ?? '').isNotEmpty) stop.contactName!,
-                    if ((stop.contactPhone ?? '').isNotEmpty)
-                      formatPhone(stop.contactPhone),
-                  ].join(' · '),
-                  style:
-                      const TextStyle(color: DriverColors.muted, fontSize: 12),
-                ),
-            ]),
+        TripStatus.arrivedAtPickup => SwipeButton(
+            key: const Key('trip_swipe'),
+            label: 'Pickup order',
+            loading: busy,
+            onConfirmed: onPickup,
           ),
-        ],
-      );
-}
-
-/// The order's items at a glance, opening the full checklist. When the company
-/// asked for verification it shows how far along the driver is — a segment per
-/// item — and each item says in words where it stands.
-class _ItemsCard extends StatelessWidget {
-  const _ItemsCard({required this.trip, required this.onOpen});
-  final Trip trip;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = trip.items;
-    final shown = items.take(3).toList();
-    final hidden = items.length - shown.length;
-    final verifying = trip.verifyItems;
-    final allDone = verifying && trip.pendingItemCount == 0;
-
-    final (pill, color) = !verifying
-        ? (
-            '${items.length} item${items.length == 1 ? '' : 's'}',
-            DriverColors.muted
-          )
-        : allDone
-            ? ('ALL CHECKED', DriverColors.green)
-            : (
-                '${trip.resolvedItemCount}/${items.length} CHECKED',
-                trip.status == TripStatus.inProgress
-                    ? DriverColors.orange
-                    : DriverColors.muted
-              );
-    final live = verifying && trip.status == TripStatus.inProgress;
-    // Still answers to give: open it to work through them. All given but the
-    // trip isn't over: it's there to review (or undo a mis-tap). Otherwise it's
-    // a record.
-    final actionLabel = !live
-        ? 'View all items'
-        : allDone
-            ? 'Review items'
-            : 'Check items';
-
-    return DriverCard(
-      key: const Key('items_card'),
-      onTap: onOpen,
-      padding: const EdgeInsets.all(14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Icon(Icons.inventory_2_outlined,
-              size: 19, color: DriverColors.ink),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text('Items',
-                style: TextStyle(
-                    color: DriverColors.ink,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800)),
+        TripStatus.inProgress => SwipeButton(
+            key: const Key('trip_swipe'),
+            label: 'Deliver order',
+            loading: busy,
+            onConfirmed: onDeliver,
           ),
-          StatusPill(pill, color: color),
-        ]),
-        if (verifying) ...[
-          const SizedBox(height: 10),
-          ItemProgressBar(items: items, height: 6),
-        ],
-        const SizedBox(height: 12),
-        for (final item in shown)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(children: [
-              NetworkThumb(item.imageUrl, size: 40, radius: 10),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(item.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: DriverColors.ink,
-                        fontSize: 14,
-                        height: 1.25,
-                        fontWeight: FontWeight.w700)),
-              ),
-              const SizedBox(width: 8),
-              QuantityChip(item.quantityLabel, compact: true),
-              if (verifying) ...[
-                const SizedBox(width: 6),
-                ItemStatusChip(item.status),
-              ],
-            ]),
-          ),
-        if (hidden > 0)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Text('+ $hidden more',
-                style: const TextStyle(
-                    color: DriverColors.muted,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600)),
-          ),
-        // A real button-shaped target, not a bare link: this is the way in.
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: (live && !allDone ? DriverColors.blue : DriverColors.muted)
-                .withValues(alpha: .09),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(actionLabel,
-                key: const Key('items_card_action'),
-                style: TextStyle(
-                    color: live && !allDone
-                        ? DriverColors.blue
-                        : DriverColors.muted,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800)),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded,
-                size: 20,
-                color:
-                    live && !allDone ? DriverColors.blue : DriverColors.muted),
-          ]),
-        ),
-      ]),
-    );
-  }
-}
-
-class _PaymentStrip extends StatelessWidget {
-  const _PaymentStrip({required this.trip});
-  final Trip trip;
-
-  @override
-  Widget build(BuildContext context) {
-    final amount = formatMoney(trip.totalFare, currency: trip.currency);
-    final (text, color, icon) = !trip.isCod
-        ? (
-            'Prepaid — nothing to collect',
-            DriverColors.green,
-            Icons.verified_outlined
-          )
-        : trip.isPaid
-            ? (
-                'Cash on delivery · $amount received',
-                DriverColors.green,
-                Icons.check_circle_outline_rounded
-              )
-            : (
-                trip.status.isFinished
-                    ? 'Cash on delivery · not collected'
-                    : 'Cash on delivery · collect $amount from the customer',
-                DriverColors.orange,
-                Icons.payments_outlined
-              );
-    return InfoBanner(text: text, color: color, icon: icon);
-  }
+        _ => const SizedBox.shrink(),
+      };
 }
 
 class _FinishedSummary extends StatelessWidget {
@@ -974,7 +672,7 @@ class _FinishedSummary extends StatelessWidget {
         if (trip.status == TripStatus.cancelled &&
             (trip.cancellationReason ?? '').isNotEmpty)
           InfoRow('Reason', trip.cancellationReason!),
-        if (trip.referenceId != null) InfoRow('Reference', trip.referenceId!),
+        InfoRow('Order', trip.displayReference),
       ]);
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:m_o_b_demand_side/features/driver/data/media/geo_stamp.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
 
 /// The camera couldn't be used (permission off, no camera, ...). [message] is
@@ -21,6 +22,10 @@ abstract interface class PhotoCapture {
 
   /// Opens the gallery. Null when the driver backs out.
   Future<CapturedPhoto?> pickFromGallery();
+
+  /// Burns [stamp] (location, time, what it shows) into [photo] — for proof
+  /// photos. Adds the street address when it can be looked up quickly.
+  Future<CapturedPhoto> geoStamp(CapturedPhoto photo, GeoStamp stamp);
 }
 
 class DevicePhotoCapture implements PhotoCapture {
@@ -33,6 +38,18 @@ class DevicePhotoCapture implements PhotoCapture {
 
   @override
   Future<CapturedPhoto?> pickFromGallery() => _pick(ImageSource.gallery);
+
+  @override
+  Future<CapturedPhoto> geoStamp(CapturedPhoto photo, GeoStamp stamp) async {
+    final address = await lookUpAddress(stamp.latitude, stamp.longitude);
+    try {
+      return await renderGeoStamp(photo, stamp.withAddress(address));
+    } catch (_) {
+      // A photo that can't be decoded here is still a photo; the server
+      // checks it's an image.
+      return photo;
+    }
+  }
 
   Future<CapturedPhoto?> _pick(ImageSource source) async {
     try {

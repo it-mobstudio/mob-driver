@@ -21,12 +21,24 @@ Widget dashboardApp(TestRig rig, {bool permissionGranted = true}) => BlocProvide
       value: rig.cubit,
       child: MaterialApp.router(
         theme: testTheme,
+        // The looping radar would keep pumpAndSettle busy forever; it holds
+        // still under "reduce motion", as on a device with that setting.
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!),
         routerConfig: GoRouter(routes: [
           GoRoute(
             path: '/',
-            builder: (_, __) => DriverDashboardPage(checkLocationPermission: (_) async => permissionGranted),
+            builder: (_, __) => DriverDashboardPage(
+              checkLocationPermission: (_) async => permissionGranted,
+              mapBuilder: stubHomeMap,
+            ),
           ),
           GoRoute(path: DriverRoutes.tripPattern, builder: (_, s) => Scaffold(body: Text('TRIP ${s.pathParameters['id']}'))),
+          GoRoute(path: DriverRoutes.trips, builder: (_, __) => const Scaffold(body: Text('TRIPS'))),
+          GoRoute(path: DriverRoutes.wallet, builder: (_, __) => const Scaffold(body: Text('WALLET'))),
+          GoRoute(path: DriverRoutes.vehicle, builder: (_, __) => const Scaffold(body: Text('VEHICLE'))),
+          GoRoute(path: DriverRoutes.profile, builder: (_, __) => const Scaffold(body: Text('PROFILE'))),
         ]),
       ),
     );
@@ -48,7 +60,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(SkeletonBlock), findsWidgets, reason: 'structure on screen from the first frame');
-      expect(find.byKey(const Key('driver_name')), findsNothing);
+      expect(find.byKey(const Key('duty_status')), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing, reason: 'no bare spinner');
 
       rig.repo.profileGate!.complete();
@@ -56,7 +68,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SkeletonBlock), findsNothing);
-      expect(tester.widget<Text>(find.byKey(const Key('driver_name'))).data, 'Seed Driver 1');
+      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'Off Duty');
     });
 
     rigTest('a relaunch paints the cached dashboard at once; only the trip card waits for the server', (tester, rig) async {
@@ -68,7 +80,7 @@ void main() {
       await tester.pump();
 
       // Already showing the driver — no waiting for the network...
-      expect(tester.widget<Text>(find.byKey(const Key('driver_name'))).data, 'Seed Driver 1');
+      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'Off Duty');
       // ...but "no active trip" isn't asserted until it's actually known.
       expect(find.byKey(const Key('no_trip_title')), findsNothing);
       expect(find.byType(SkeletonBlock), findsOneWidget);
@@ -78,7 +90,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SkeletonBlock), findsNothing);
-      expect(tester.widget<Text>(find.byKey(const Key('no_trip_title'))).data, 'No active trip');
+      expect(tester.widget<Text>(find.byKey(const Key('no_trip_title'))).data, 'You’re off duty');
     });
 
     rigTest('a trip assigned meanwhile replaces the trip placeholder with the trip', (tester, rig) async {
@@ -119,12 +131,16 @@ void main() {
       await tester.pumpWidget(dashboardApp(rig));
       await settle(tester);
 
+      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'Off Duty');
+      expect(find.text('Start duty'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('no_trip_title'))).data, 'You’re off duty');
+
+      // Name, badge and vehicle live behind the profile button.
+      await tester.tap(find.byKey(const Key('profile_button')));
+      await tester.pumpAndSettle();
       expect(tester.widget<Text>(find.byKey(const Key('driver_name'))).data, 'Seed Driver 1');
       expect(find.text('VERIFIED DRIVER'), findsOneWidget);
-      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'You are offline');
       expect(tester.widget<Text>(find.byKey(const Key('header_vehicle'))).data, 'No vehicle');
-      expect(find.text('Start duty'), findsOneWidget);
-      expect(tester.widget<Text>(find.byKey(const Key('no_trip_title'))).data, 'No active trip');
     });
 
     rigTest('shows today\'s stats, led by what the driver earned', (tester, rig) async {
@@ -136,6 +152,9 @@ void main() {
       await rig.cubit.load();
       await tester.pumpWidget(dashboardApp(rig));
       await settle(tester);
+      // Stats live in the sheet the "Today's earnings" banner opens.
+      await tester.tap(find.byKey(const Key('summary_banner')));
+      await tester.pumpAndSettle();
 
       expect(tester.widget<Text>(find.byKey(const Key('stat_earnings'))).data, '₹1,000.40');
       expect(tester.widget<Text>(find.byKey(const Key('stat_trips'))).data, '4');
@@ -155,7 +174,7 @@ void main() {
       rig.repo.profileFailure = null;
       await tester.tap(find.text('Retry'));
       await settle(tester);
-      expect(find.byKey(const Key('driver_name')), findsOneWidget);
+      expect(find.byKey(const Key('duty_status')), findsOneWidget);
     });
   });
 
@@ -178,9 +197,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(rig.repo.calls, contains('startDuty:v-1:12.9716,77.5946'));
-      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'You are online');
+      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'On Duty');
+      expect(find.text('Finding orders near you'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('profile_button')));
+      await tester.pumpAndSettle();
       expect(tester.widget<Text>(find.byKey(const Key('header_vehicle'))).data, 'KA01SEED0000');
-      expect(tester.widget<Text>(find.byKey(const Key('no_trip_title'))).data, 'Waiting for a trip');
     });
 
     rigTest('declining the explanation changes nothing', (tester, rig) async {
@@ -262,7 +284,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('This vehicle is being used by another driver.'), findsOneWidget);
-      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'You are offline');
+      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'Off Duty');
       await tester.pump(const Duration(seconds: 4));
     });
 
@@ -276,11 +298,17 @@ void main() {
       await tester.pumpWidget(dashboardApp(rig));
       await settle(tester);
 
-      expect(find.text('ACTION NEEDED'), findsOneWidget);
       expect(find.byKey(const Key('verification_card')), findsOneWidget);
       expect(find.text('Some documents need fixing'), findsOneWidget);
       expect(find.textContaining('Certificate expired'), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('verification_action'))).data, 'Fix documents');
+
+      await tester.tap(find.byKey(const Key('profile_button')));
+      await tester.pumpAndSettle();
+      expect(find.text('ACTION NEEDED'), findsOneWidget);
+      // Dismiss the sheet (tap the barrier) — back to the dashboard.
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Start duty'));
       await tester.pumpAndSettle();
@@ -295,13 +323,13 @@ void main() {
       await rig.cubit.load();
       await tester.pumpWidget(dashboardApp(rig));
       await settle(tester);
-      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'You are online');
+      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'On Duty');
 
       await tester.tap(find.byKey(const Key('duty_switch')));
       await settle(tester);
 
       expect(rig.repo.calls, contains('endDuty'));
-      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'You are offline');
+      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'Off Duty');
     });
 
     rigTest('an active trip is shown and opens its screen', (tester, rig) async {
@@ -334,7 +362,7 @@ void main() {
 
       expect(find.text('Finish or cancel your active trip before going offline.'), findsOneWidget);
       expect(rig.repo.calls, isNot(contains('endDuty')));
-      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'You are online');
+      expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'On Duty');
       await tester.pump(const Duration(seconds: 4));
     });
 
@@ -360,13 +388,19 @@ void main() {
         value: rig.cubit,
         child: MaterialApp.router(
           theme: testTheme,
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!),
           routerConfig: GoRouter(routes: [
             GoRoute(
               path: '/',
-              builder: (_, __) => DriverDashboardPage(checkLocationPermission: (_) async {
-                asked++;
-                return true;
-              }),
+              builder: (_, __) => DriverDashboardPage(
+                checkLocationPermission: (_) async {
+                  asked++;
+                  return true;
+                },
+                mapBuilder: stubHomeMap,
+              ),
             ),
           ]),
         ),
@@ -379,6 +413,57 @@ void main() {
       await tester.pump();
 
       expect(asked, 1);
+    });
+  });
+
+  group('profile menu', () {
+    rigTest('the profile button opens a menu to trips, wallet, vehicle and profile', (tester, rig) async {
+      await rig.cubit.load();
+      await tester.pumpWidget(dashboardApp(rig));
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('profile_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('menu_trips')), findsOneWidget);
+      expect(find.byKey(const Key('menu_wallet')), findsOneWidget);
+      expect(find.byKey(const Key('menu_vehicle')), findsOneWidget);
+      expect(find.byKey(const Key('menu_profile')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('menu_trips')));
+      await tester.pumpAndSettle();
+      expect(find.text('TRIPS'), findsOneWidget);
+    });
+  });
+
+  group('SOS', () {
+    rigTest('with an emergency contact saved, offers to call it', (tester, rig) async {
+      await rig.cubit.load();
+      await tester.pumpWidget(dashboardApp(rig));
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('map_sos')));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Seed Emergency Contact'), findsOneWidget);
+      expect(find.byKey(const Key('sos_call')), findsOneWidget);
+    });
+
+    rigTest('with no emergency contact, offers to add one instead of a dead end', (tester, rig) async {
+      rig.repo.profileValue = DriverProfile.fromJson({
+        ...profileJson(),
+        'emergency_contact_name': '',
+        'emergency_contact_phone': '',
+      });
+      await rig.cubit.load();
+      await tester.pumpWidget(dashboardApp(rig));
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('map_sos')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sos_call')), findsNothing);
+      expect(find.byKey(const Key('sos_add_contact')), findsOneWidget);
     });
   });
 }

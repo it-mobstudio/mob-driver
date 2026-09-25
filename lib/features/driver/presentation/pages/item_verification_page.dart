@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/utils/formatters.dart';
+import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
 import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
@@ -117,7 +118,8 @@ class _ItemVerificationPageState extends State<ItemVerificationPage> {
   /// A picture for an item that's already been answered: re-sends the same
   /// answer with the photo attached (the backend keeps the note as it was).
   Future<void> _addPhoto(Trip trip, TripItem item) async {
-    final photo = await takePhotoWithFeedback(context, widget.capture);
+    final photo = await takeGeoPhoto(context, widget.capture,
+        caption: trip.photoCaption('Delivery', item), locate: _cubit.currentFix);
     if (photo == null || !mounted) return;
     await _answer(trip, item,
         status: item.status, note: item.driverNote, photo: photo);
@@ -129,7 +131,11 @@ class _ItemVerificationPageState extends State<ItemVerificationPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _ProblemSheet(item: item, capture: widget.capture),
+      builder: (_) => _ProblemSheet(
+          item: item,
+          capture: widget.capture,
+          caption: trip.photoCaption('Delivery problem', item),
+          locate: _cubit.currentFix),
     );
     if (result == null || !mounted) return;
     await _answer(trip, item,
@@ -671,7 +677,7 @@ class _ActionButton extends StatelessWidget {
                   disabledForegroundColor: Colors.white,
                   elevation: 0,
                   shape: shape,
-                  textStyle: const TextStyle(
+                  textStyle: const TextStyle(fontFamily: 'Inter', 
                       fontWeight: FontWeight.w800, fontSize: 14),
                 ),
                 child: content,
@@ -682,7 +688,7 @@ class _ActionButton extends StatelessWidget {
                   foregroundColor: color,
                   side: BorderSide(color: color.withValues(alpha: .3)),
                   shape: shape,
-                  textStyle: const TextStyle(
+                  textStyle: const TextStyle(fontFamily: 'Inter', 
                       fontWeight: FontWeight.w700, fontSize: 13.5),
                 ),
                 child: content,
@@ -701,9 +707,16 @@ class _Problem {
 }
 
 class _ProblemSheet extends StatefulWidget {
-  const _ProblemSheet({required this.item, required this.capture});
+  const _ProblemSheet({
+    required this.item,
+    required this.capture,
+    required this.caption,
+    required this.locate,
+  });
   final TripItem item;
   final PhotoCapture capture;
+  final String caption;
+  final Future<GeoPoint?> Function() locate;
 
   @override
   State<_ProblemSheet> createState() => _ProblemSheetState();
@@ -767,7 +780,8 @@ class _ProblemSheetState extends State<_ProblemSheet> {
             height: 96,
             photo: _photo,
             onTap: () async {
-              final p = await takePhotoWithFeedback(context, widget.capture);
+              final p = await takeGeoPhoto(context, widget.capture,
+                  caption: widget.caption, locate: widget.locate);
               if (p != null) setState(() => _photo = p);
             },
           ),

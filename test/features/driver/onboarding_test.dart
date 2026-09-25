@@ -493,19 +493,14 @@ void main() {
       expect(find.text('PAGE today'), findsOneWidget);
     });
 
-    rigTest('an approved driver never sees set-up, and the bar has the Wallet tab', (tester, rig) async {
+    rigTest('an approved driver never sees set-up, just the branch underneath', (tester, rig) async {
       rig.repo.profileValue = fakeProfile();
       await rig.cubit.load();
       await tester.pumpWidget(shell(rig));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('onboarding')), findsNothing);
-      for (final label in ['Today', 'Trips', 'Wallet', 'Vehicle', 'Profile']) {
-        expect(find.text(label), findsOneWidget, reason: '$label tab');
-      }
-      await tester.tap(find.text('Wallet'));
-      await tester.pumpAndSettle();
-      expect(find.text('PAGE wallet'), findsOneWidget);
+      expect(find.text('PAGE today'), findsOneWidget);
     });
 
     rigTest('nothing is forced on a driver whose profile has not loaded yet', (tester, rig) async {

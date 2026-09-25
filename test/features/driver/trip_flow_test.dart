@@ -7,6 +7,7 @@ import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.da
 import 'package:m_o_b_demand_side/core/utils/polyline_codec.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/payment_qr_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/swipe_button.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../support/fakes.dart';
@@ -28,8 +29,9 @@ Future<void> openTrip(WidgetTester tester, TestRig rig, Trip trip, {void Functio
 /// Text inside the open dialog (the screen behind it often repeats the same words).
 Finder inDialog(String text) => find.descendant(of: find.byType(AlertDialog), matching: find.text(text));
 
-String stage(WidgetTester tester) =>
-    tester.widget<Text>(find.byKey(const Key('trip_stage_title'))).data!;
+/// The trip panel's swipe label — what the driver does next.
+String action(WidgetTester tester) =>
+    tester.widget<SwipeButton>(find.byKey(const Key('trip_swipe'))).label;
 
 void main() {
   // Real Inter metrics, loaded outside fake-async time (it does real I/O).
@@ -55,7 +57,6 @@ void main() {
       });
 
       expect(find.textContaining('leg=3'), findsOneWidget);
-      expect(find.text('3.7 km · 9 min away'), findsOneWidget);
     });
 
     rigTest('no leg (routing unavailable) still leaves a usable trip screen', (tester, rig) async {
@@ -64,7 +65,7 @@ void main() {
       });
 
       expect(find.textContaining('leg=0'), findsOneWidget);
-      expect(stage(tester), 'Head to pickup');
+      expect(action(tester), 'Reached pickup');
     });
 
     rigTest('a trip with no polyline at all does not crash', (tester, rig) async {
@@ -87,26 +88,24 @@ void main() {
   });
 
   group('stage by stage', () {
-    rigTest('assigned → arrive → start, each adopting the server\'s trip', (tester, rig) async {
+    rigTest('reached pickup → pickup order → deliver, each adopting the server\'s trip', (tester, rig) async {
       await openTrip(tester, rig, fakeTrip());
 
-      expect(stage(tester), 'Head to pickup');
+      expect(action(tester), 'Reached pickup');
       expect(find.text('MG Road Metro, Bengaluru'), findsOneWidget);
-      expect(find.text('Cash on delivery · collect ₹111.62 from the customer'), findsOneWidget);
+      expect(find.byKey(const Key('timeline_map_0')), findsOneWidget, reason: 'the pickup is the active stop');
+      expect(find.byKey(const Key('timeline_map_1')), findsNothing);
 
       rig.repo.actionResult = (fakeTrip(status: 'arrived_at_pickup'), null);
-      await tester.tap(find.text('I’ve reached the pickup'));
-      await tester.pump();
-      await tester.pump();
-      expect(stage(tester), 'At pickup');
+      await swipe(tester, 'Reached pickup');
+      expect(action(tester), 'Pickup order');
       expect(rig.repo.calls, contains('arrive:$tripId'));
 
       rig.repo.actionResult = (fakeTrip(status: 'in_progress'), null);
-      await tester.tap(find.text('Picked up — start delivery'));
-      await tester.pump();
-      await tester.pump();
-      expect(stage(tester), 'Deliver & collect payment');
+      await swipe(tester, 'Pickup order');
+      expect(action(tester), 'Deliver order');
       expect(rig.repo.calls, contains('start:$tripId'));
+      expect(find.byKey(const Key('timeline_map_1')), findsOneWidget, reason: 'now the drop is');
     });
 
     rigTest('a backend rejection is shown and the stage does not change', (tester, rig) async {
@@ -116,45 +115,159 @@ void main() {
         const BusinessFailure('Trip must be arrived.', code: 'INVALID_TRIP_STATUS_TRANSITION')
       );
 
-      await tester.tap(find.text('I’ve reached the pickup'));
-      await tester.pump();
-      await tester.pump();
+      await swipe(tester, 'Reached pickup');
 
       expect(find.text('Trip must be arrived.'), findsOneWidget);
-      expect(stage(tester), 'Head to pickup');
+      expect(action(tester), 'Reached pickup');
       await tester.pump(const Duration(seconds: 4)); // let the snackbar dismiss
     });
 
-    rigTest('COD in progress offers payment collection, not completion', (tester, rig) async {
-      await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
-      expect(find.text('Collect ₹111.62'), findsOneWidget);
-      expect(find.text('Complete delivery'), findsNothing);
-      expect(find.byKey(const Key('trip_cancel')), findsNothing, reason: 'no cancelling once underway');
+    rigTest('a tap alone does nothing — it takes a swipe', (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip());
+      await tester.tap(find.byKey(const Key('trip_swipe')));
+      await tester.pumpAndSettle();
+      expect(rig.repo.calls, isNot(contains('arrive:$tripId')));
     });
 
-    rigTest('COD paid offers the delivery OTP', (tester, rig) async {
+    rigTest('View details opens the order details for reading', (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
+      await tester.tap(find.byKey(const Key('timeline_view_details_1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Order details'), findsOneWidget);
+      expect(find.byKey(const Key('order_details_pickup')), findsNothing);
+      expect(find.byKey(const Key('order_details_problem')), findsNothing, reason: 'too late to cancel');
+    });
+
+    rigTest('COD in progress: Deliver order goes to payment collection', (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
+      expect(find.byKey(const Key('trip_cancel')), findsNothing, reason: 'no cancelling once underway');
+      await swipe(tester, 'Deliver order');
+      expect(find.byType(PaymentQrPage), findsOneWidget);
+    });
+
+    rigTest('COD paid: Deliver order goes to the delivery OTP', (tester, rig) async {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress', paymentStatus: 'paid'));
-      expect(stage(tester), 'Payment received');
-      expect(find.text('Enter delivery OTP'), findsOneWidget);
+      await swipe(tester, 'Deliver order');
+      expect(find.text('Verify & complete delivery'), findsOneWidget);
     });
 
     rigTest('prepaid completes with a confirmation and no OTP', (tester, rig) async {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress', paymentMode: 'prepaid', paymentStatus: 'paid'),
       );
-      expect(find.text('Prepaid — nothing to collect'), findsOneWidget);
       rig.repo.actionResult = (fakeTrip(status: 'completed', paymentMode: 'prepaid', paymentStatus: 'paid'), null);
 
-      await tester.tap(find.text('Complete delivery'));
-      await tester.pumpAndSettle();
+      await swipe(tester, 'Deliver order');
       await tester.tap(find.text('Complete'));
       await tester.pumpAndSettle();
 
-      expect(inDialog('Delivery completed'), findsOneWidget);
+      expect(find.text('Delivery complete'), findsOneWidget);
+      expect(find.byKey(const Key('delivered_title')), findsOneWidget);
       expect(rig.repo.calls, contains('complete[null]:$tripId'));
 
-      await tester.tap(find.text('Back to home'));
+      await tester.tap(find.byKey(const Key('delivery_complete_done')));
       await tester.pumpAndSettle();
       expect(find.text('DASHBOARD'), findsOneWidget);
+    });
+  });
+
+  group('prepaid with a delivery OTP', () {
+    rigTest('Deliver order texts the customer the OTP, and the code completes it', (tester, rig) async {
+      final json = tripJson(status: 'in_progress', paymentMode: 'prepaid', paymentStatus: 'paid');
+      json['delivery_otp'] = true;
+      await openTrip(tester, rig, Trip.fromJson(json));
+      rig.repo.actionResult = (fakeTrip(status: 'completed', paymentMode: 'prepaid', paymentStatus: 'paid'), null);
+
+      await swipe(tester, 'Deliver order');
+      expect(rig.repo.calls, contains('resend:$tripId'));
+      expect(find.text('Verify & complete delivery'), findsOneWidget);
+      expect(find.text('Complete delivery?'), findsNothing, reason: 'the code replaces the confirmation');
+
+      await tester.enterText(find.byType(TextField), '1234');
+      await tester.pumpAndSettle();
+      expect(rig.repo.calls, contains('complete[1234]:$tripId'));
+      expect(find.text('Delivery complete'), findsOneWidget);
+    });
+  });
+
+  group('proof photos', () {
+    Future<void> openWithPhotos(WidgetTester tester, TestRig rig,
+        {required String status, String pickup = 'none', String delivery = 'none'}) async {
+      final json = tripJson(
+        status: status,
+        paymentMode: 'prepaid',
+        paymentStatus: 'paid',
+        pickupPhoto: pickup,
+        deliveryPhoto: delivery,
+        items: [
+          {'id': 'i-1', 'name': 'Shower', 'quantity': 2, 'status': 'pending'},
+          {'id': 'i-2', 'name': 'Tap', 'quantity': 1, 'status': 'pending'},
+        ],
+      );
+      rig.repo.tripJsonById[tripId] = json;
+      await openTrip(tester, rig, Trip.fromJson(json));
+    }
+
+    rigTest('Pickup order asks for the pickup photo first, then starts', (tester, rig) async {
+      await openWithPhotos(tester, rig, status: 'arrived_at_pickup', pickup: 'order');
+      rig.repo.actionResult = (fakeTrip(status: 'in_progress'), null);
+
+      await swipe(tester, 'Pickup order');
+      expect(find.text('Pickup photos'), findsOneWidget);
+      expect(rig.repo.calls, isNot(contains('start:$tripId')));
+
+      await tester.tap(find.byKey(const Key('order_photos_done')));
+      await tester.pumpAndSettle();
+      expect(find.text('Add a photo of the package first.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('pickup_photo_box')));
+      await tester.pumpAndSettle();
+      expect(rig.repo.pickupPhotos, ['order']);
+      expect(rig.capture.stamps.single.caption, '#E2E-1 · Pickup');
+
+      await tester.tap(find.byKey(const Key('order_photos_done')));
+      await tester.pumpAndSettle();
+      expect(rig.repo.calls, contains('start:$tripId'));
+      expect(action(tester), 'Deliver order');
+    });
+
+    rigTest('backing out of the photos does not start the delivery', (tester, rig) async {
+      await openWithPhotos(tester, rig, status: 'arrived_at_pickup', pickup: 'order');
+      await swipe(tester, 'Pickup order');
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(rig.repo.calls, isNot(contains('start:$tripId')));
+      expect(action(tester), 'Pickup order');
+    });
+
+    rigTest('Deliver order asks for a delivery photo of every item before finishing', (tester, rig) async {
+      await openWithPhotos(tester, rig, status: 'in_progress', delivery: 'per_item');
+      rig.repo.actionResult = (fakeTrip(status: 'completed', paymentMode: 'prepaid', paymentStatus: 'paid'), null);
+
+      await swipe(tester, 'Deliver order');
+      expect(find.text('Delivery photos'), findsOneWidget);
+
+      for (final id in ['i-1', 'i-2']) {
+        await tester.ensureVisible(find.byKey(Key('delivery_item_photo_$id')));
+        await tester.tap(find.byKey(Key('delivery_item_photo_$id')));
+        await tester.pumpAndSettle();
+      }
+      expect(rig.repo.deliveryPhotos, ['i-1', 'i-2']);
+      expect(rig.capture.stamps.last.caption, '#E2E-1 · Delivery · Tap');
+
+      await tester.tap(find.byKey(const Key('order_photos_done')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Complete'));
+      await tester.pumpAndSettle();
+      expect(rig.repo.calls, contains('complete[null]:$tripId'));
+    });
+
+    rigTest('the camera is the only source — never the gallery', (tester, rig) async {
+      await openWithPhotos(tester, rig, status: 'in_progress', delivery: 'order');
+      await swipe(tester, 'Deliver order');
+      await tester.tap(find.byKey(const Key('delivery_photo_box')));
+      await tester.pumpAndSettle();
+      expect(rig.capture.cameraCalls, 1);
+      expect(rig.capture.galleryCalls, 0);
     });
   });
 
@@ -227,9 +340,8 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(stage(tester), 'Delivery completed');
       expect(find.text('Base fare'), findsOneWidget);
-      expect(find.text('I’ve reached the pickup'), findsNothing);
+      expect(find.byKey(const Key('trip_swipe')), findsNothing);
       expect(find.byKey(const Key('trip_cancel')), findsNothing);
       expect(rig.repo.calls, contains('trip:${done.id}'));
     });
@@ -247,7 +359,7 @@ void main() {
   group('payment QR', () {
     rigTest('shows the amount and a scannable QR of the UPI payload', (tester, rig) async {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
-      await tester.tap(find.text('Collect ₹111.62'));
+      await swipe(tester, 'Deliver order');
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('qr_amount')), findsOneWidget);
@@ -262,7 +374,7 @@ void main() {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
       rig.repo.tripsById[tripId] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
 
-      await tester.tap(find.text('Collect ₹111.62'));
+      await swipe(tester, 'Deliver order');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Payment received'));
       await tester.pumpAndSettle();
@@ -283,7 +395,7 @@ void main() {
       rig.repo.tripsById[tripId] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
       rig.repo.collectResult = (null, const BusinessFailure('paid', code: 'ALREADY_PAID'));
 
-      await tester.tap(find.text('Collect ₹111.62'));
+      await swipe(tester, 'Deliver order');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Payment received'));
       await tester.pumpAndSettle();
@@ -306,7 +418,7 @@ void main() {
 
     Future<void> openPayment(WidgetTester tester, TestRig rig, PaymentQr qr) async {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress'), arrange: (rig) => rig.repo.paymentQrValue = qr);
-      await tester.tap(find.text('Collect ₹111.62'));
+      await swipe(tester, 'Deliver order');
       await tester.pumpAndSettle();
     }
 
@@ -405,7 +517,7 @@ void main() {
       });
       rig.repo.tripsById[tripId] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
 
-      await tester.tap(find.text('Collect ₹111.62'));
+      await swipe(tester, 'Deliver order');
       await tester.pumpAndSettle();
 
       expect(find.text('Enter delivery OTP'), findsOneWidget);
@@ -416,7 +528,7 @@ void main() {
         rig.repo.paymentQrFailure = const ServerFailure('Couldn\u2019t reach the payment provider.', statusCode: 503);
       });
 
-      await tester.tap(find.text('Collect ₹111.62'));
+      await swipe(tester, 'Deliver order');
       await tester.pumpAndSettle();
 
       expect(find.text('Couldn\u2019t reach the payment provider.'), findsOneWidget);
@@ -449,7 +561,7 @@ void main() {
       await rig.cubit.load();
       await tester.pumpWidget(rig.app('/driver/trip/$tripId'));
       await tester.pumpAndSettle(); // let the panel finish rising in
-      await tester.tap(find.text('Enter delivery OTP'));
+      await swipe(tester, 'Deliver order');
       await tester.pumpAndSettle();
     }
 
@@ -458,21 +570,21 @@ void main() {
       final text = tester.widget<Text>(find.byKey(const Key('otp_instructions'))).data!;
       expect(text, contains('Asha'));
       expect(text, contains('+91 98888 00002'));
-      expect(text, contains('6-digit'));
+      expect(text, contains('4-digit'));
     });
 
-    rigTest('entering the 6-digit code completes the delivery', (tester, rig) async {
+    rigTest('entering the 4-digit code completes the delivery', (tester, rig) async {
       await openOtp(tester, rig);
       rig.repo.actionResult = (fakeTrip(status: 'completed', paymentStatus: 'paid'), null);
 
-      await tester.enterText(find.byType(TextField), '123456');
+      await tester.enterText(find.byType(TextField), '1234');
       await tester.pumpAndSettle();
 
-      expect(rig.repo.calls, contains('complete[123456]:$tripId'));
-      expect(inDialog('Delivery completed'), findsOneWidget);
-      expect(inDialog('₹111.62 collected'), findsOneWidget);
+      expect(rig.repo.calls, contains('complete[1234]:$tripId'));
+      expect(find.text('Delivery complete'), findsOneWidget);
+      expect(find.text('Added to your earnings'), findsOneWidget);
 
-      await tester.tap(find.text('Back to home'));
+      await tester.tap(find.byKey(const Key('delivery_complete_done')));
       await tester.pumpAndSettle();
       expect(find.text('DASHBOARD'), findsOneWidget);
     });
@@ -484,7 +596,7 @@ void main() {
         const BusinessFailure('The delivery OTP is invalid or has expired.', code: 'INVALID_DELIVERY_OTP')
       );
 
-      await tester.enterText(find.byType(TextField), '000000');
+      await tester.enterText(find.byType(TextField), '0000');
       await tester.pumpAndSettle();
 
       expect(find.text('The delivery OTP is invalid or has expired.'), findsOneWidget);
@@ -494,12 +606,12 @@ void main() {
 
       // ...and the driver can try again with the right one.
       rig.repo.actionResult = (fakeTrip(status: 'completed', paymentStatus: 'paid'), null);
-      await tester.enterText(find.byType(TextField), '654321');
+      await tester.enterText(find.byType(TextField), '6543');
       await tester.pumpAndSettle();
-      expect(inDialog('Delivery completed'), findsOneWidget);
+      expect(find.text('Delivery complete'), findsOneWidget);
     });
 
-    rigTest('the verify button stays disabled until all 6 digits are in', (tester, rig) async {
+    rigTest('the verify button stays disabled until all 4 digits are in', (tester, rig) async {
       await openOtp(tester, rig);
       final button = find.widgetWithText(ElevatedButton, 'Verify & complete delivery');
       await tester.enterText(find.byType(TextField), '123');
@@ -509,9 +621,9 @@ void main() {
 
     rigTest('non-digits are ignored', (tester, rig) async {
       await openOtp(tester, rig);
-      await tester.enterText(find.byType(TextField), '12ab34');
+      await tester.enterText(find.byType(TextField), '1a2b3');
       await tester.pump();
-      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '1234');
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '123');
     });
 
     rigTest('resend is available when reopened, and puts itself on a 30 s cool-down', (tester, rig) async {
@@ -547,7 +659,7 @@ void main() {
     rigTest('test-mode hint appears only when the backend echoed the OTP', (tester, rig) async {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
       rig.repo.tripsById[tripId] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
-      await tester.tap(find.text('Collect ₹111.62'));
+      await swipe(tester, 'Deliver order');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Payment received'));
       await tester.pumpAndSettle();
@@ -555,14 +667,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Test mode'), findsOneWidget);
-      expect(find.textContaining('123456', findRichText: true), findsOneWidget);
+      expect(find.textContaining('1234', findRichText: true), findsOneWidget);
 
       // Filling the last digit submits (that's what the field is for), so the
       // proof it was filled with the echoed OTP is the call it triggered.
       rig.repo.actionResult = (null, const BusinessFailure('nope', code: 'INVALID_DELIVERY_OTP'));
       await tester.tap(find.text('Fill'));
       await tester.pumpAndSettle();
-      expect(rig.repo.calls, contains('complete[123456]:$tripId'));
+      expect(rig.repo.calls, contains('complete[1234]:$tripId'));
       await tester.pump(const Duration(seconds: 4));
     });
   });

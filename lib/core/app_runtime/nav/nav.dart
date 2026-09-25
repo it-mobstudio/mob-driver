@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/backend/analytics/analytics_service.dart';
 import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
@@ -137,6 +138,35 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
         name: TripPage.routeName,
         path: DriverRoutes.tripPattern,
         builder: (_, state) => TripPage(tripId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        name: IncomingOrderPage.routeName,
+        path: DriverRoutes.incomingOrderPattern,
+        builder: (_, state) =>
+            IncomingOrderPage(tripId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        name: OrderDetailsPage.routeName,
+        path: DriverRoutes.orderDetailsPattern,
+        builder: (_, state) => OrderDetailsPage(
+            tripId: state.pathParameters['id']!,
+            fromTrip: state.uri.queryParameters['from'] == 'trip'),
+      ),
+      GoRoute(
+        name: DeliveryCompletePage.routeName,
+        path: DriverRoutes.deliveredPattern,
+        builder: (_, state) => DeliveryCompletePage(
+            tripId: state.pathParameters['id']!,
+            trip: state.extra is Trip ? state.extra as Trip : null),
+      ),
+      GoRoute(
+        name: OrderPhotosPage.routeName,
+        path: DriverRoutes.photosPattern,
+        builder: (_, state) => OrderPhotosPage(
+            tripId: state.pathParameters['id']!,
+            stage: state.pathParameters['stage'] == 'delivery'
+                ? PhotoStage.delivery
+                : PhotoStage.pickup),
       ),
       GoRoute(
         name: ItemVerificationPage.routeName,

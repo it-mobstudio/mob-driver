@@ -132,7 +132,7 @@ class _ErrorEnvelope {
 /// `{"success": false, "error": {"code", "message", "details"?}}`.
 /// For field-validation errors `message` is a generic "Request could not be
 /// processed." and the useful text lives in `details`
-/// (`{"otp": ["OTP must be exactly 6 digits."]}`), so prefer that.
+/// (`{"otp": ["OTP must be exactly 4 digits."]}`), so prefer that.
 _ErrorEnvelope? _parseErrorEnvelope(Map<dynamic, dynamic> body) {
   final error = body['error'];
   if (error is! Map) return null;

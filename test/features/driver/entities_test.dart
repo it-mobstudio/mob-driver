@@ -208,7 +208,7 @@ void main() {
   });
 
   test('DeliveryOtpSent exposes the debug OTP only when the backend sent one', () {
-    expect(DeliveryOtpSent.fromJson({'message': 'ok', 'otp': '123456'}).debugOtp, '123456');
+    expect(DeliveryOtpSent.fromJson({'message': 'ok', 'otp': '1234'}).debugOtp, '1234');
     expect(DeliveryOtpSent.fromJson({'message': 'ok'}).debugOtp, isNull);
   });
 }

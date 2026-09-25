@@ -224,10 +224,10 @@ void main() {
     test('collect payment → POST .../payment/collect, surfacing the test-mode OTP if echoed', () async {
       http.on('POST', '/driver/trips/$id/payment/collect', {
         'message': 'Payment collected. An OTP was sent to +919888800002 to finalize the trip.',
-        'otp': '387406',
+        'otp': '3874',
       });
       final (sent, _) = await repo.collectPayment(id);
-      expect(sent?.debugOtp, '387406');
+      expect(sent?.debugOtp, '3874');
       expect(sent?.message, contains('+919888800002'));
     });
 
@@ -240,8 +240,8 @@ void main() {
     test('complete → POST .../complete {otp}; prepaid sends no otp key', () async {
       http.on('POST', '/driver/trips/$id/complete', tripJson(status: 'completed', paymentStatus: 'paid'));
 
-      await repo.complete(id, otp: '123456');
-      expect(http.lastRequest('POST', '/driver/trips/$id/complete').data, {'otp': '123456'});
+      await repo.complete(id, otp: '1234');
+      expect(http.lastRequest('POST', '/driver/trips/$id/complete').data, {'otp': '1234'});
 
       await repo.complete(id);
       expect(http.lastRequest('POST', '/driver/trips/$id/complete').data, isEmpty);
@@ -451,6 +451,24 @@ void main() {
       expect(files, isEmpty);
     });
 
+    test('addTripPhoto → multipart POST .../pickup-photo or .../delivery-photo, item_id only per item', () async {
+      http.on('POST', '/driver/trips/$id/pickup-photo',
+          {...tripJson(pickupPhoto: 'order'), 'pickup_photo_url': 'https://cdn.example.com/p.jpg'});
+      final (trip, failure) = await repo.addTripPhoto(id, stage: PhotoStage.pickup, photo: photo('p.jpg'));
+      expect(failure, isNull);
+      expect(trip?.hasPhotos(PhotoStage.pickup), isTrue);
+      var (fields, files) = form(http.lastRequest('POST', '/driver/trips/$id/pickup-photo'));
+      expect(fields, isEmpty);
+      expect(files.keys, ['photo']);
+
+      http.on('POST', '/driver/trips/$id/delivery-photo',
+          tripJson(status: 'in_progress', deliveryPhoto: 'per_item', items: [itemJson()]));
+      await repo.addTripPhoto(id, stage: PhotoStage.delivery, photo: photo('d.jpg'), itemId: itemId);
+      (fields, files) = form(http.lastRequest('POST', '/driver/trips/$id/delivery-photo'));
+      expect(fields, {'item_id': itemId});
+      expect(files.keys, ['photo']);
+    });
+
     test('resetItem → DELETE .../items/{id}/verify', () async {
       http.on('DELETE', '/driver/trips/$id/items/$itemId/verify', tripJson(status: 'in_progress', verifyItems: true, items: [itemJson()]));
       final (trip, failure) = await repo.resetItem(id, itemId);
@@ -487,7 +505,7 @@ void main() {
         'success': false,
         'error': {'code': 'INVALID_DELIVERY_OTP', 'message': 'The delivery OTP is invalid or has expired.'},
       }, status: 400);
-      final (trip, failure) = await repo.complete(id, otp: '000000');
+      final (trip, failure) = await repo.complete(id, otp: '0000');
       expect(trip, isNull);
       expect(failure?.code, 'INVALID_DELIVERY_OTP');
       expect(failure?.message, 'The delivery OTP is invalid or has expired.');

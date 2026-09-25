@@ -14,6 +14,11 @@ String formatMoney(double? amount, {String currency = 'INR'}) {
   return '$currency ${amount.toStringAsFixed(2)}';
 }
 
+/// Like [formatMoney], but a whole amount drops its paise: `₹420`, `₹111.62`.
+/// For the big headline figures, where `.00` is noise.
+String formatMoneyShort(double? amount, {String currency = 'INR'}) =>
+    formatMoney(amount, currency: currency).replaceFirst(RegExp(r'\.00$'), '');
+
 /// `850 m` under a kilometre, `6.6 km` above.
 String formatDistance(int? meters) {
   if (meters == null) return '—';

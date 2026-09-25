@@ -73,20 +73,20 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Your location is used during driver duty for live vehicle tracking, trip distance, navigation safety, and delivery operations.</string>
 	<key>NSCameraUsageDescription</key>
-    <string>Allow access to your camera so you can capture and upload images.</string>
+	<string>Allow access to your camera so you can capture and upload images.</string>
 	<key>NSContactsUsageDescription</key>
-    <string>Allow access to contacts so you can choose a receiver phone number.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-    <string>We need permission to save images to your photo library.</string>
+	<string>Allow access to contacts so you can choose a receiver phone number.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Your location is used while you are on duty for live vehicle tracking, trip distance, and delivery operations.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used during driver duty for live vehicle tracking, trip distance, navigation safety, and delivery operations.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs the microphone for speech recognition.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need permission to save images to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-    <string>We need access to your photo library so you can select and upload images.</string>
+	<string>We need access to your photo library so you can select and upload images.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

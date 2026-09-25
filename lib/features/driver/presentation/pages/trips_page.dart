@@ -107,6 +107,9 @@ class _DriverTripsPageState extends State<DriverTripsPage> {
           elevation: 0,
           foregroundColor: DriverColors.ink,
           automaticallyImplyLeading: false,
+          leading: BackButton(
+              key: const Key('trips_back'),
+              onPressed: () => context.go(DriverRoutes.dashboard)),
           title: const Text('My trips',
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
         ),

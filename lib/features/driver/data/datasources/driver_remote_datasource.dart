@@ -183,6 +183,21 @@ class DriverRemoteDatasource {
         files: {if (photo != null) 'photo': photo},
       );
 
+  /// A camera photo taken at the pickup or the drop ([stage] is `pickup` or
+  /// `delivery`) — of the whole order, or of one item ([itemId]) when the
+  /// order wants one per item. Answers with the whole trip.
+  Future<Map<String, dynamic>> addTripPhoto(
+    String tripId, {
+    required String stage,
+    required CapturedPhoto photo,
+    String? itemId,
+  }) =>
+      _multipart(
+        '/driver/trips/$tripId/$stage-photo',
+        fields: {if (itemId != null) 'item_id': itemId},
+        files: {'photo': photo},
+      );
+
   Future<Map<String, dynamic>> resetItem(String tripId, String itemId) async =>
       asMap((await _dio
               .delete<dynamic>('/driver/trips/$tripId/items/$itemId/verify'))

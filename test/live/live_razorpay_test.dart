@@ -148,7 +148,7 @@ void main() {
     expect(notYet?.code, 'PAYMENT_NOT_RECEIVED');
     expect(notYet?.message, isNotEmpty);
     // …and the trip can't be finished without the payment.
-    expect((await repo.complete(trip.id, otp: '123456')).$2?.code, 'PAYMENT_NOT_COLLECTED');
+    expect((await repo.complete(trip.id, otp: '1234')).$2?.code, 'PAYMENT_NOT_COLLECTED');
     expect((await repo.trip(trip.id)).$1?.isPaid, isFalse);
 
     // A payment far short of the fare doesn't count either.

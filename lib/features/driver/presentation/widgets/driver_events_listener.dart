@@ -64,8 +64,9 @@ class _DriverEventsListenerState extends State<DriverEventsListener> {
           route: DriverRoutes.trip(trip.id),
         ));
         _showOngoing(trip);
-        // Take the driver straight to it.
-        context.push(DriverRoutes.trip(trip.id));
+        // The offer screen (accept/reject, with a countdown) decides where
+        // the driver goes next — not straight to the trip.
+        context.push(DriverRoutes.incomingOrder(trip.id));
       case TripEndedExternally(:final trip):
         unawaited(PushNotificationService.instance.hideOngoingTrip());
         unawaited(PushNotificationService.instance.showAlert(

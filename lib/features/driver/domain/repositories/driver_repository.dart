@@ -113,6 +113,15 @@ abstract interface class DriverRepository {
     CapturedPhoto? photo,
   });
 
+  /// A camera photo at the pickup or the drop (of the order, or of item
+  /// [itemId]); returns the whole trip.
+  Future<(Trip?, AppFailure?)> addTripPhoto(
+    String tripId, {
+    required PhotoStage stage,
+    required CapturedPhoto photo,
+    String? itemId,
+  });
+
   /// Takes an item back to pending.
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId);
 }

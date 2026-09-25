@@ -124,7 +124,7 @@ void main() {
     expect(qr!.payload, startsWith('upi://pay?'));
     expect(qr.amount, closeTo(started.totalFare!, 0.01));
 
-    final (early, earlyFailure) = await repo.complete(booked.id, otp: '123456');
+    final (early, earlyFailure) = await repo.complete(booked.id, otp: '1234');
     expect(early, isNull);
     expect(earlyFailure?.code, 'PAYMENT_NOT_COLLECTED');
 
@@ -135,7 +135,7 @@ void main() {
 
     expect((await repo.resendDeliveryOtp(booked.id)).$2?.code, 'OTP_ALREADY_REQUESTED', reason: 'resend is throttled right after a send');
 
-    final wrong = await repo.complete(booked.id, otp: otp == '000000' ? '111111' : '000000');
+    final wrong = await repo.complete(booked.id, otp: otp == '0000' ? '1111' : '0000');
     expect(wrong.$1, isNull);
     expect(wrong.$2?.code, 'INVALID_DELIVERY_OTP');
     expect(wrong.$2, isA<BusinessFailure>());

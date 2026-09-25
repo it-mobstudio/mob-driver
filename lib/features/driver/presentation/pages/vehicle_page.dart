@@ -57,6 +57,9 @@ class DriverVehiclePage extends StatelessWidget {
             elevation: 0,
             foregroundColor: DriverColors.ink,
             automaticallyImplyLeading: false,
+            leading: BackButton(
+                key: const Key('vehicle_back'),
+                onPressed: () => context.go(DriverRoutes.dashboard)),
             title: const Text('My vehicle',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
           ),
