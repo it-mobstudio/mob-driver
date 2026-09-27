@@ -55,7 +55,7 @@ class AddressPickerBody extends StatelessWidget {
   final VoidCallback? onCurrentLocation;
   final VoidCallback? onMapsLink;
 
-  static const _navy = Color(0xFF0A243F);
+  static const _navy = Color(0xFF001533);
 
   @override
   Widget build(BuildContext context) {
@@ -276,7 +276,7 @@ class AddressPickerBody extends StatelessWidget {
             children: [
               const Icon(
                 Icons.add,
-                color: Color(0xFF2973F0),
+                color: Color(0xFF0454A3),
                 size: 16,
               ),
               const SizedBox(width: 12),
@@ -286,7 +286,7 @@ class AddressPickerBody extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    color: const Color(0xFF2973F0),
+                    color: const Color(0xFF0454A3),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     height: 20 / 14,
@@ -346,7 +346,7 @@ class AddressSuggestionTile extends StatelessWidget {
   final VoidCallback? onTap;
   final IconData icon;
 
-  static const _navy = Color(0xFF0A243F);
+  static const _navy = Color(0xFF001533);
   static const _muted = Color(0xFF767C8F);
 
   @override
@@ -437,7 +437,7 @@ class AddressPickerCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onContactSupport;
 
-  static const _navy = Color(0xFF0A243F);
+  static const _navy = Color(0xFF001533);
   static const _muted = Color(0xFF596378);
   static const _border = Color(0xFFDFE4EC);
 
@@ -671,7 +671,7 @@ class _AddressPill extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: GoogleFonts.inter(
-          color: const Color(0xFF0A243F),
+          color: const Color(0xFF001533),
           fontSize: 11,
           fontWeight: FontWeight.w500,
           height: 16 / 11,

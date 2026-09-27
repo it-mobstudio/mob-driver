@@ -134,7 +134,7 @@ class _VehiclePickerSheetState extends State<_VehiclePickerSheet> {
                     final vehicle = vehicles[i];
                     final selected = vehicle.id == _selectedId;
                     return Material(
-                      color: selected ? const Color(0xFFEAF2FF) : Colors.white,
+                      color: selected ? const Color(0xFFE8F1FB) : Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                         side: BorderSide(

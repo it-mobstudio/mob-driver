@@ -99,7 +99,8 @@ abstract interface class DriverRepository {
   Future<(Trip?, AppFailure?)> arrive(String id);
   Future<(Trip?, AppFailure?)> start(String id);
   Future<(PaymentQr?, AppFailure?)> paymentQr(String id);
-  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id);
+  /// [method] `qr` (checked with the provider) or `cash` (paid to the driver).
+  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id, {String method = 'qr'});
   Future<(DeliveryOtpSent?, AppFailure?)> resendDeliveryOtp(String id);
   Future<(Trip?, AppFailure?)> complete(String id, {String? otp});
   Future<(Trip?, AppFailure?)> cancel(String id, {required String reason});

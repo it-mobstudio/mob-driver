@@ -129,7 +129,7 @@ class _TopSnackBarOverlayState extends State<_TopSnackBarOverlay>
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.inter(
-                                color: const Color(0xFF0A243F),
+                                color: const Color(0xFF001533),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 height: 16 / 12,

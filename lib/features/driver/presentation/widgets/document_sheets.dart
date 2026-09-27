@@ -135,6 +135,21 @@ mixin _SheetState<T extends StatefulWidget> on State<T> {
   bool busy = false;
   String? error;
 
+  /// Set when the driver taps submit with something missing: from then on
+  /// every missing field is outlined in red with what to do, and each message
+  /// clears as soon as it's fixed.
+  bool tried = false;
+
+  /// [message] once the driver has tried to submit, else nothing.
+  String? shown(String? message) => tried ? message : null;
+
+  /// Submit if nothing is missing; otherwise light up what is.
+  void submitOrShow(bool ready, VoidCallback submit) {
+    if (ready) return submit();
+    AppHaptics.error();
+    setState(() => tried = true);
+  }
+
   PhotoCapture get capture;
 
   Future<CapturedPhoto?> pick() => chooseDocumentPhoto(context, capture);
@@ -203,7 +218,16 @@ class _AadharSheetState extends State<_AadharSheet> with _SheetState {
   }
 
   String get _digits => _number.text.replaceAll(' ', '');
-  bool get _ready => _digits.length == 12 && _front != null && _back != null;
+  bool get _ready => _numberError == null && _front != null && _back != null;
+
+  String? get _numberError {
+    if (_digits.isEmpty) return 'Enter your 12-digit Aadhaar number.';
+    if (_digits.length != 12) return 'Aadhaar number must be 12 digits — you’ve entered ${_digits.length}.';
+    if (_digits.startsWith('0') || _digits.startsWith('1')) {
+      return 'That doesn’t look like an Aadhaar number — they never start with 0 or 1.';
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) => DriverSheet(
@@ -217,6 +241,7 @@ class _AadharSheetState extends State<_AadharSheet> with _SheetState {
             controller: _number,
             label: 'Aadhaar number',
             hint: '1234 5678 9012',
+            errorText: shown(_numberError),
             keyboardType: TextInputType.number,
             inputFormatters: const [GroupedDigitsFormatter()],
             textInputAction: TextInputAction.done,
@@ -230,6 +255,7 @@ class _AadharSheetState extends State<_AadharSheet> with _SheetState {
                 key: const Key('aadhar_front'),
                 label: 'Front',
                 photo: _front,
+                errorText: shown('Add the front side'),
                 enabled: !busy,
                 onTap: () async {
                   final p = await pick();
@@ -243,6 +269,7 @@ class _AadharSheetState extends State<_AadharSheet> with _SheetState {
                 key: const Key('aadhar_back'),
                 label: 'Back',
                 photo: _back,
+                errorText: shown('Add the back side'),
                 enabled: !busy,
                 onTap: () async {
                   final p = await pick();
@@ -257,13 +284,13 @@ class _AadharSheetState extends State<_AadharSheet> with _SheetState {
             key: const Key('aadhar_submit'),
             label: 'Submit Aadhaar',
             loading: busy,
-            onPressed: _ready
-                ? () => run((cubit) => cubit.submitAadhar(
+            onPressed: () => submitOrShow(
+                _ready,
+                () => run((cubit) => cubit.submitAadhar(
                       number: _digits,
                       front: _front!,
                       back: _back!,
-                    ))
-                : null,
+                    ))),
           ),
         ]),
       );
@@ -295,8 +322,14 @@ class _LicenceSheetState extends State<_LicenceSheet> with _SheetState {
     super.dispose();
   }
 
-  bool get _ready =>
-      _number.text.trim().length >= 8 && _expiry != null && _front != null;
+  bool get _ready => _numberError == null && _expiry != null && _front != null;
+
+  String? get _numberError {
+    final n = _number.text.trim();
+    if (n.isEmpty) return 'Enter your licence number exactly as printed on the card.';
+    if (n.replaceAll(RegExp(r'[\s-]'), '').length < 8) return 'That licence number looks too short — check the card.';
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -312,6 +345,7 @@ class _LicenceSheetState extends State<_LicenceSheet> with _SheetState {
           controller: _number,
           label: 'Licence number',
           hint: 'KA01 20110012345',
+          errorText: shown(_numberError),
           textCapitalization: TextCapitalization.characters,
           maxLength: 25,
           enabled: !busy,
@@ -327,6 +361,7 @@ class _LicenceSheetState extends State<_LicenceSheet> with _SheetState {
           lastDate: DateTime(today.year + 30, today.month, today.day),
           initialDate: DateTime(today.year + 1, today.month, today.day),
           helper: 'An expired licence can’t be used.',
+          errorText: shown(_expiry == null ? 'Pick the date your licence is valid until.' : null),
           onChanged: (d) => setState(() => _expiry = d),
         ),
         const SizedBox(height: 14),
@@ -336,6 +371,7 @@ class _LicenceSheetState extends State<_LicenceSheet> with _SheetState {
               key: const Key('dl_front'),
               label: 'Front',
               photo: _front,
+              errorText: shown('Add the front of the licence'),
               enabled: !busy,
               onTap: () async {
                 final p = await pick();
@@ -364,14 +400,14 @@ class _LicenceSheetState extends State<_LicenceSheet> with _SheetState {
           key: const Key('dl_submit'),
           label: 'Submit licence',
           loading: busy,
-          onPressed: _ready
-              ? () => run((cubit) => cubit.submitLicence(
+          onPressed: () => submitOrShow(
+              _ready,
+              () => run((cubit) => cubit.submitLicence(
                     number: _number.text.trim(),
                     expiry: _expiry!,
                     front: _front!,
                     back: _back,
-                  ))
-              : null,
+                  ))),
         ),
       ]),
     );
@@ -407,6 +443,7 @@ class _PoliceSheetState extends State<_PoliceSheet> with _SheetState {
             label: 'Certificate',
             height: 150,
             photo: _document,
+            errorText: shown('Add a photo of the certificate'),
             enabled: !busy,
             onTap: () async {
               final p = await pick();
@@ -419,9 +456,8 @@ class _PoliceSheetState extends State<_PoliceSheet> with _SheetState {
             key: const Key('police_submit'),
             label: 'Submit certificate',
             loading: busy,
-            onPressed: _document == null
-                ? null
-                : () => run((cubit) => cubit.submitPolice(_document!)),
+            onPressed: () => submitOrShow(
+                _document != null, () => run((cubit) => cubit.submitPolice(_document!))),
           ),
         ]),
       );

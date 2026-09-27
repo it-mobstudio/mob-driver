@@ -517,9 +517,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// delivery OTP), then refreshes the trip so the UI moves on to the OTP
   /// step. If the backend says it was already paid, the trip is refreshed
   /// anyway — the local copy was simply stale.
-  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String tripId) async {
+  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String tripId, {String method = 'qr'}) async {
     _epoch++;
-    final (sent, failure) = await _repo.collectPayment(tripId);
+    final (sent, failure) = await _repo.collectPayment(tripId, method: method);
     if (sent != null || failure?.code == 'ALREADY_PAID') {
       await _refreshTrip(tripId);
     }

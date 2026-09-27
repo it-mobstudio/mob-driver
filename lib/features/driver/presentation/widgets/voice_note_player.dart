@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:m_o_b_demand_side/core/config/app_config.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
 
 /// The dispatcher's spoken note (≤ 30 s): a play/pause button with a
@@ -70,15 +71,24 @@ class _VoiceNotePlayerState extends State<VoiceNotePlayer> {
               player.seek(Duration.zero);
             }
           }));
-        await player.setUrl(widget.url);
+        await player.setUrl(AppConfig.ourMediaUrl(widget.url));
       }
       if (mounted) setState(() => _loading = false);
       unawaited(player.play());
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Voice note ${widget.url} failed: $e');
+      // Throw the half-built player away, so the next tap really tries again
+      // (a kept one would skip loading and fail the same way forever).
+      for (final sub in _subs) {
+        unawaited(sub.cancel());
+      }
+      _subs.clear();
+      unawaited(_player?.dispose());
+      _player = null;
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Couldn’t play the voice note.';
+          _error = 'Couldn’t play the voice note — tap to retry.';
         });
       }
     }
@@ -98,9 +108,9 @@ class _VoiceNotePlayerState extends State<VoiceNotePlayer> {
       key: const Key('voice_note'),
       padding: EdgeInsets.all(widget.compact ? 8 : 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F6FF),
+        color: const Color(0xFFF2F7FD),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD6E4FF)),
+        border: Border.all(color: const Color(0xFFC9DCF3)),
       ),
       child: Row(children: [
         Material(
@@ -154,7 +164,7 @@ class _VoiceNotePlayerState extends State<VoiceNotePlayer> {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 4,
-                backgroundColor: const Color(0xFFD6E4FF),
+                backgroundColor: const Color(0xFFC9DCF3),
                 valueColor: const AlwaysStoppedAnimation(DriverColors.blue),
               ),
             ),

@@ -316,7 +316,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF0360E5)),
+            border: Border.all(color: const Color(0xFF0454A3)),
           ),
           child: _isSubmitting
               ? const Center(
@@ -334,7 +334,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                         child: Text(
                           'ADD',
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF0360E5),
+                            color: const Color(0xFF0454A3),
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             height: 16 / 12,
@@ -393,13 +393,13 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0A243F),
+                        color: const Color(0xFF001533),
                       ),
                     )
                   : const Icon(
                       Icons.add,
                       size: 20,
-                      color: Color(0xFF0A243F),
+                      color: Color(0xFF001533),
                     ),
         ),
       );
@@ -419,7 +419,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                 _handleAdd();
               },
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0360E5),
+          backgroundColor: const Color(0xFF0454A3),
           foregroundColor: Colors.white,
           minimumSize: Size(double.infinity, _height),
           shape:
@@ -483,7 +483,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0A243F),
+                    color: const Color(0xFF001533),
                   ),
                 ),
         ),
@@ -497,7 +497,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
         style: OutlinedButton.styleFrom(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          side: const BorderSide(color: Color(0xFF0360E5)),
+          side: const BorderSide(color: Color(0xFF0454A3)),
           padding: const EdgeInsets.symmetric(horizontal: 20),
         ),
         child: _isSubmitting
@@ -512,7 +512,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                   fontWeight: FontWeight.w700,
                   fontSize: widget.showAddText ? 14 : 12,
                   height: widget.showAddText ? 20 / 14 : 16 / 12,
-                  color: const Color(0xFF0360E5),
+                  color: const Color(0xFF0454A3),
                 ),
               ),
       ),
@@ -531,7 +531,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF0360E5)),
+            border: Border.all(color: const Color(0xFF0454A3)),
           ),
           child: _isSubmitting
               ? const SizedBox(
@@ -542,7 +542,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
               : Text(
                   'NOTIFY',
                   style: GoogleFonts.inter(
-                    color: const Color(0xFF0360E5),
+                    color: const Color(0xFF0454A3),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     height: 16 / 12,
@@ -565,7 +565,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
               : const Icon(
                   Icons.notifications_outlined,
                   size: 18,
-                  color: Color(0xFF0A243F),
+                  color: Color(0xFF001533),
                 ),
         ),
       );
@@ -578,7 +578,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
         style: OutlinedButton.styleFrom(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          side: const BorderSide(color: Color(0xFF0A243F)),
+          side: const BorderSide(color: Color(0xFF001533)),
           padding: const EdgeInsets.symmetric(horizontal: 14),
         ),
         child: _isSubmitting
@@ -593,7 +593,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                   height: 16 / 12,
-                  color: const Color(0xFF0A243F),
+                  color: const Color(0xFF001533),
                 ),
               ),
       ),
@@ -622,7 +622,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
           _QuantityIconButton(
             leading: true,
             backgroundColor: Colors.transparent,
-            foregroundColor: const Color(0xFF0A243F),
+            foregroundColor: const Color(0xFF001533),
             disabledColor: Colors.grey,
             width: 40,
             height: _height,
@@ -642,7 +642,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
           _QuantityIconButton(
             leading: false,
             backgroundColor: Colors.transparent,
-            foregroundColor: const Color(0xFF0A243F),
+            foregroundColor: const Color(0xFF001533),
             disabledColor: Colors.grey,
             width: 40,
             height: _height,
@@ -670,7 +670,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
       width: double.infinity,
       height: _height,
       decoration: BoxDecoration(
-        color: const Color(0xFF0360E5),
+        color: const Color(0xFF0454A3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -761,7 +761,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
             height: _cartActionHeight,
             iconSize: 14,
             backgroundColor: Colors.transparent,
-            foregroundColor: const Color(0xFF0A243F),
+            foregroundColor: const Color(0xFF001533),
             disabledColor: Colors.grey,
           ),
           SizedBox(
@@ -776,7 +776,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0A243F),
+                  color: const Color(0xFF001533),
                 ),
               ),
             ),
@@ -793,7 +793,7 @@ class _ProductCartActionButtonState extends State<ProductCartActionButton> {
             height: _cartActionHeight,
             iconSize: 14,
             backgroundColor: Colors.transparent,
-            foregroundColor: const Color(0xFF0A243F),
+            foregroundColor: const Color(0xFF001533),
             disabledColor: Colors.grey,
           ),
         ],

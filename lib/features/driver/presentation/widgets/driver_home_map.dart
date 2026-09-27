@@ -1,9 +1,12 @@
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/map_style.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_glide.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/svg_marker.dart';
 
 /// Everything the home map draws, already in map coordinates.
@@ -58,7 +61,7 @@ class DriverMap extends StatefulWidget {
   State<DriverMap> createState() => _DriverMapState();
 }
 
-class _DriverMapState extends State<DriverMap> {
+class _DriverMapState extends State<DriverMap> with SingleTickerProviderStateMixin {
   static const _fallbackCenter = LatLng(12.9716, 77.5946); // Bengaluru
   static const _vehicleAsset = 'assets/icons/driver_marker.svg';
 
@@ -75,10 +78,35 @@ class _DriverMapState extends State<DriverMap> {
   BitmapDescriptor? _vehicleIcon;
   BitmapDescriptor? _dotIcon;
 
+  /// Drives the vehicle between fixes and turns it the way it's heading.
+  late final DriverGlide _glide = DriverGlide(
+    vsync: this,
+    onTick: () {
+      if (mounted) setState(() {});
+    },
+  );
+
+  /// The web map can't rotate a marker, so there the picture itself turns.
+  late final WebVehicleIcons _webIcons = WebVehicleIcons(
+    _vehicleAsset,
+    width: 46,
+    onReady: () {
+      if (mounted) setState(() {});
+    },
+  );
+
   @override
   void initState() {
     super.initState();
     unawaited(_loadIcons());
+    final start = widget.data.driver;
+    if (start != null) _glide.moveTo(start, animate: false);
+  }
+
+  @override
+  void dispose() {
+    _glide.dispose();
+    super.dispose();
   }
 
   Future<void> _loadIcons() async {
@@ -104,7 +132,7 @@ class _DriverMapState extends State<DriverMap> {
         canvas.drawCircle(const Offset(size / 2, size / 2), size / 2,
             Paint()..color = Colors.white);
         canvas.drawCircle(const Offset(size / 2, size / 2), size / 2 - 3.4,
-            Paint()..color = const Color(0xFF2973F0));
+            Paint()..color = const Color(0xFF0454A3));
         final image = await recorder
             .endRecording()
             .toImage(size.toInt(), size.toInt());
@@ -118,15 +146,24 @@ class _DriverMapState extends State<DriverMap> {
   void didUpdateWidget(covariant DriverMap oldWidget) {
     super.didUpdateWidget(oldWidget);
     final point = widget.data.driver;
-    if (point != null && _following && point != oldWidget.data.driver) {
-      unawaited(_moveTo(point));
+    if (point != null && point != oldWidget.data.driver) {
+      _glide.moveTo(point, animate: !MediaQuery.disableAnimationsOf(context));
+      if (_following) unawaited(_moveTo(point));
     }
   }
+
+  /// The camera's zoom as last seen (for [DriverGlide.aimAbove] on the web).
+  double _zoom = 15.5;
 
   Future<void> _moveTo(LatLng target, {double? zoom}) async {
     final controller = _controller;
     if (controller == null) return;
     _programmaticMove = true;
+    if (kIsWeb) {
+      // The web map ignores `padding`: aim below the driver so they land in
+      // the middle of the part of the map the bottom panel leaves visible.
+      target = DriverGlide.aimAbove(target, widget.bottomPadding / 2, zoom ?? _zoom);
+    }
     await controller.animateCamera(
       zoom == null
           ? CameraUpdate.newLatLng(target)
@@ -141,7 +178,7 @@ class _DriverMapState extends State<DriverMap> {
   }
 
   Set<Marker> _markers() {
-    final point = widget.data.driver;
+    final point = _glide.position ?? widget.data.driver;
     if (point == null) return const {};
     return {
       Marker(
@@ -156,7 +193,11 @@ class _DriverMapState extends State<DriverMap> {
       Marker(
         markerId: const MarkerId('driver_vehicle'),
         position: point,
-        icon: _vehicleIcon ??
+        // Flat + rotated: the vehicle lies on the road and faces where it's
+        // going, turning with the map if the driver rotates it.
+        rotation: kIsWeb ? 0 : _glide.bearing,
+        icon: (kIsWeb ? _webIcons.forBearing(_glide.bearing) : null) ??
+            _vehicleIcon ??
             BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
         anchor: const Offset(.5, .5),
         zIndexInt: 2,
@@ -189,7 +230,7 @@ class _DriverMapState extends State<DriverMap> {
       Polyline(
         polylineId: const PolylineId('route'),
         points: route,
-        color: const Color(0xFF2973F0),
+        color: const Color(0xFF0454A3),
         width: 5,
         jointType: JointType.round,
         startCap: Cap.roundCap,
@@ -203,6 +244,7 @@ class _DriverMapState extends State<DriverMap> {
     final start = widget.data.driver ?? _fallbackCenter;
     return Stack(children: [
       GoogleMap(
+        style: kMobMapStyle,
         initialCameraPosition: CameraPosition(target: start, zoom: 15.5),
         markers: _markers(),
         polylines: _polylines(),
@@ -215,10 +257,15 @@ class _DriverMapState extends State<DriverMap> {
           if (_programmaticMove) return;
           if (_following) setState(() => _following = false);
         },
+        onCameraMove: (position) => _zoom = position.zoom,
         onCameraIdle: () => _programmaticMove = false,
         onMapCreated: (controller) {
           _controller = controller;
           if (mounted) setState(() => _created = true);
+          // Opened centred on the driver — which on the web (no `padding`)
+          // is behind the bottom panel. Aim above it straight away.
+          final driver = widget.data.driver;
+          if (kIsWeb && driver != null) unawaited(_moveTo(driver));
         },
       ),
       // Fades away once the map exists, so there's no white flash while

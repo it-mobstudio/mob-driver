@@ -5,6 +5,7 @@ import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
 import 'package:m_o_b_demand_side/core/utils/polyline_codec.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/pages/delivery_otp_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/payment_qr_page.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/swipe_button.dart';
@@ -142,12 +143,14 @@ void main() {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
       expect(find.byKey(const Key('trip_cancel')), findsNothing, reason: 'no cancelling once underway');
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
       expect(find.byType(PaymentQrPage), findsOneWidget);
     });
 
     rigTest('COD paid: Deliver order goes to the delivery OTP', (tester, rig) async {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress', paymentStatus: 'paid'));
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
       expect(find.text('Verify & complete delivery'), findsOneWidget);
     });
 
@@ -157,6 +160,8 @@ void main() {
       rig.repo.actionResult = (fakeTrip(status: 'completed', paymentMode: 'prepaid', paymentStatus: 'paid'), null);
 
       await swipe(tester, 'Deliver order');
+
+      await payByQrIfAsked(tester);
       await tester.tap(find.text('Complete'));
       await tester.pumpAndSettle();
 
@@ -178,6 +183,8 @@ void main() {
       rig.repo.actionResult = (fakeTrip(status: 'completed', paymentMode: 'prepaid', paymentStatus: 'paid'), null);
 
       await swipe(tester, 'Deliver order');
+
+      await payByQrIfAsked(tester);
       expect(rig.repo.calls, contains('resend:$tripId'));
       expect(find.text('Verify & complete delivery'), findsOneWidget);
       expect(find.text('Complete delivery?'), findsNothing, reason: 'the code replaces the confirmation');
@@ -244,6 +251,8 @@ void main() {
       rig.repo.actionResult = (fakeTrip(status: 'completed', paymentMode: 'prepaid', paymentStatus: 'paid'), null);
 
       await swipe(tester, 'Deliver order');
+
+      await payByQrIfAsked(tester);
       expect(find.text('Delivery photos'), findsOneWidget);
 
       for (final id in ['i-1', 'i-2']) {
@@ -264,6 +273,7 @@ void main() {
     rigTest('the camera is the only source — never the gallery', (tester, rig) async {
       await openWithPhotos(tester, rig, status: 'in_progress', delivery: 'order');
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
       await tester.tap(find.byKey(const Key('delivery_photo_box')));
       await tester.pumpAndSettle();
       expect(rig.capture.cameraCalls, 1);
@@ -356,10 +366,48 @@ void main() {
     });
   });
 
+  group('how the customer paid', () {
+    rigTest('Deliver order on an unpaid COD trip asks: cash or QR, with the amount', (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
+      await swipe(tester, 'Deliver order');
+      expect(find.text('How did the customer pay?'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('pay_amount'))).data, '₹111.62');
+      expect(find.byKey(const Key('pay_cash')), findsOneWidget);
+      expect(find.byKey(const Key('pay_qr')), findsOneWidget);
+    });
+
+    rigTest('cash is confirmed, recorded as cash and goes straight to the OTP', (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
+      rig.repo.tripsById[tripId] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
+      await swipe(tester, 'Deliver order');
+      await tester.tap(find.byKey(const Key('pay_cash')));
+      await tester.pumpAndSettle();
+      expect(find.text('Collected ₹111.62?'), findsOneWidget);
+      expect(rig.repo.calls.where((c) => c.startsWith('collect:')), isEmpty, reason: 'nothing until confirmed');
+
+      await tester.tap(find.byKey(const Key('pay_cash_confirm')));
+      await tester.pumpAndSettle();
+      expect(rig.repo.calls, contains('collect:$tripId:cash'));
+      expect(find.byKey(const Key('payment_qr')), findsNothing, reason: 'no QR for cash');
+      expect(find.byType(DeliveryOtpPage), findsOneWidget);
+    });
+
+    rigTest('changing their mind at the confirm step records nothing', (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
+      await swipe(tester, 'Deliver order');
+      await tester.tap(find.byKey(const Key('pay_cash')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Not yet'));
+      await tester.pumpAndSettle();
+      expect(rig.repo.calls.where((c) => c.startsWith('collect:')), isEmpty);
+    });
+  });
+
   group('payment QR', () {
     rigTest('shows the amount and a scannable QR of the UPI payload', (tester, rig) async {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('qr_amount')), findsOneWidget);
@@ -375,6 +423,8 @@ void main() {
       rig.repo.tripsById[tripId] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
 
       await swipe(tester, 'Deliver order');
+
+      await payByQrIfAsked(tester);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Payment received'));
       await tester.pumpAndSettle();
@@ -396,6 +446,8 @@ void main() {
       rig.repo.collectResult = (null, const BusinessFailure('paid', code: 'ALREADY_PAID'));
 
       await swipe(tester, 'Deliver order');
+
+      await payByQrIfAsked(tester);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Payment received'));
       await tester.pumpAndSettle();
@@ -419,6 +471,7 @@ void main() {
     Future<void> openPayment(WidgetTester tester, TestRig rig, PaymentQr qr) async {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress'), arrange: (rig) => rig.repo.paymentQrValue = qr);
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
       await tester.pumpAndSettle();
     }
 
@@ -518,6 +571,8 @@ void main() {
       rig.repo.tripsById[tripId] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
 
       await swipe(tester, 'Deliver order');
+
+      await payByQrIfAsked(tester);
       await tester.pumpAndSettle();
 
       expect(find.text('Enter delivery OTP'), findsOneWidget);
@@ -529,6 +584,8 @@ void main() {
       });
 
       await swipe(tester, 'Deliver order');
+
+      await payByQrIfAsked(tester);
       await tester.pumpAndSettle();
 
       expect(find.text('Couldn\u2019t reach the payment provider.'), findsOneWidget);
@@ -562,6 +619,7 @@ void main() {
       await tester.pumpWidget(rig.app('/driver/trip/$tripId'));
       await tester.pumpAndSettle(); // let the panel finish rising in
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
       await tester.pumpAndSettle();
     }
 
@@ -660,6 +718,7 @@ void main() {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
       rig.repo.tripsById[tripId] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Payment received'));
       await tester.pumpAndSettle();

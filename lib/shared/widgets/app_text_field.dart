@@ -316,9 +316,9 @@ abstract final class AppTextFieldColors {
   static const Color surface = Colors.white;
   static const Color disabledSurface = Color(0xFFF5F7FA);
 
-  static const Color primaryText = Color(0xFF0A243F);
+  static const Color primaryText = Color(0xFF001533);
   static const Color inputBorder = Color(0xFFDFE4EC);
-  static const Color focusBorder = Color(0xFF0A243F);
+  static const Color focusBorder = Color(0xFF001533);
 
   static const Color inputLabel = Color(0xFF767C8F);
   static const Color inputHint = Color(0xFF767C8F);

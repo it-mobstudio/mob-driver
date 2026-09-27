@@ -46,7 +46,7 @@ class SimilarProductsSection extends StatelessWidget {
             child: Text(
               title,
               style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
+                color: const Color(0xFF001533),
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 height: 24 / 17,

@@ -15,7 +15,7 @@ class FrostedNavBar extends StatelessWidget {
   const FrostedNavBar({
     super.key,
     this.onBack,
-    this.iconColor = const Color(0xFF0A243F),
+    this.iconColor = const Color(0xFF001533),
     this.frosted = false,
   });
 

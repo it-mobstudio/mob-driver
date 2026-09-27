@@ -4,4 +4,9 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Profile builds are for testing on a phone against a dev server, often
+         over plain http (a LAN IP). The native audio player (voice notes)
+         obeys Android's cleartext ban, unlike Flutter's own image loading;
+         release builds keep the ban. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

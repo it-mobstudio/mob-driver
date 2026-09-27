@@ -40,7 +40,7 @@ class TabHeader extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFF0A243F),
+                  Color(0xFF001533),
                   Color(0xFF778CC6),
                 ],
               ),
@@ -111,7 +111,7 @@ class TabHeader extends StatelessWidget {
   Widget _topSearchBar(BuildContext context) {
     final isLightHeader = headerBackgroundColor != null;
     final backIconColor =
-        isLightHeader ? const Color(0xFF0A243F) : Colors.white;
+        isLightHeader ? const Color(0xFF001533) : Colors.white;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(

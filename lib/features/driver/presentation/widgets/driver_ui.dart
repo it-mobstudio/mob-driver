@@ -1,16 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:m_o_b_demand_side/shared/widgets/skeleton_shimmer.dart';
 
-/// The driver app's palette (carried over from the original driver screens).
+/// The driver app's palette — MOB's brand: navy #001533 and blue #0454A3,
+/// with the logo's green dots as the accent. Green otherwise means done /
+/// pickup, red drop / problem, orange attention.
 abstract final class DriverColors {
-  static const ink = Color(0xFF102A43);
-  static const blue = Color(0xFF176BFF);
-  static const green = Color(0xFF16A36A);
-  static const muted = Color(0xFF66788A);
-  static const surface = Color(0xFFF4F7FB);
-  static const orange = Color(0xFFD88212);
-  static const red = Color(0xFFD94D3D);
-  static const line = Color(0xFFE7ECF1);
+  static const ink = Color(0xFF0B1B33);
+  static const navy = Color(0xFF001533);
+  static const blue = Color(0xFF0454A3);
+  static const blueBright = Color(0xFF2F7FD6);
+  static const blueSoft = Color(0xFFE8F1FB);
+  static const mint = Color(0xFF00DE9D);
+  static const green = Color(0xFF12A15E);
+  static const muted = Color(0xFF6A778A);
+  static const surface = Color(0xFFF4F6FB);
+  static const orange = Color(0xFFD9820F);
+  static const red = Color(0xFFE0444F);
+  static const line = Color(0xFFE6EAF0);
+
+  /// The navy → blue sweep behind headers and hero cards.
+  static const brandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [navy, Color(0xFF02336E), blue],
+    stops: [0, .55, 1],
+  );
 }
 
 class DriverCard extends StatelessWidget {
@@ -27,10 +41,11 @@ class DriverCard extends StatelessWidget {
 
   static final _decoration = BoxDecoration(
     color: Colors.white,
-    borderRadius: BorderRadius.circular(18),
-    border: Border.all(color: DriverColors.line),
+    borderRadius: BorderRadius.circular(20),
+    border: Border.all(color: const Color(0xFFEDF0F5)),
     boxShadow: const [
-      BoxShadow(color: Color(0x080F2942), blurRadius: 18, offset: Offset(0, 5)),
+      BoxShadow(color: Color(0x0A001533), blurRadius: 22, offset: Offset(0, 8)),
+      BoxShadow(color: Color(0x05001533), blurRadius: 3, offset: Offset(0, 1)),
     ],
   );
 
@@ -47,7 +62,7 @@ class DriverCard extends StatelessWidget {
         decoration: _decoration,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           child: Padding(padding: padding, child: child),
         ),
       ),
@@ -232,42 +247,64 @@ class PrimaryButton extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => PressScale(
-        enabled: onPressed != null && !loading,
-        child: SizedBox(
-          height: 50,
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: loading ? null : onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: color,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: color.withValues(alpha: .55),
-              disabledForegroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(13)),
-              textStyle:
-                  const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 15),
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null && !loading;
+    // The brand button gets a soft blue-to-navy sheen and a glow; any other
+    // colour (green "Done", red "End duty"…) stays flat in that colour.
+    final brand = color == DriverColors.blue;
+    return PressScale(
+      enabled: enabled,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 180),
+        opacity: onPressed == null && !loading ? .5 : 1,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            gradient: brand
+                ? const LinearGradient(colors: [DriverColors.blueBright, DriverColors.blue, Color(0xFF033E7C)],
+                    begin: Alignment.topLeft, end: Alignment.bottomRight)
+                : null,
+            color: brand ? null : color,
+            boxShadow: [
+              if (enabled)
+                BoxShadow(color: color.withValues(alpha: .28), blurRadius: 16, offset: const Offset(0, 6)),
+            ],
+          ),
+          child: SizedBox(
+            height: 52,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: loading ? null : onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.transparent,
+                disabledForegroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                textStyle: const TextStyle(
+                    fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 15.5, letterSpacing: .1),
+              ),
+              child: loading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2.2, valueColor: AlwaysStoppedAnimation(Colors.white)))
+                  : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: 19),
+                        const SizedBox(width: 8),
+                      ],
+                      Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+                    ]),
             ),
-            child: loading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white)))
-                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    if (icon != null) ...[
-                      Icon(icon, size: 19),
-                      const SizedBox(width: 8),
-                    ],
-                    Flexible(
-                        child: Text(label, overflow: TextOverflow.ellipsis)),
-                  ]),
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class SecondaryButton extends StatelessWidget {
@@ -343,6 +380,7 @@ class InfoBanner extends StatelessWidget {
     this.icon = Icons.info_outline_rounded,
     this.color = DriverColors.orange,
     this.action,
+    this.solid = false,
   });
 
   final String text;
@@ -350,12 +388,15 @@ class InfoBanner extends StatelessWidget {
   final Color color;
   final Widget? action;
 
+  /// Paint the tint over white, for banners that sit on a dark header.
+  final bool solid;
+
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: .1),
-          borderRadius: BorderRadius.circular(12),
+          color: solid ? Color.alphaBlend(color.withValues(alpha: .1), Colors.white) : color.withValues(alpha: .1),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(icon, color: color, size: 19),
@@ -391,7 +432,7 @@ class DriverAvatar extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration:
-          BoxDecoration(color: const Color(0xFFEAF2FF), borderRadius: radius),
+          BoxDecoration(color: DriverColors.blueSoft, borderRadius: radius),
       child: Text(trimmed.isEmpty ? 'D' : trimmed.substring(0, 1).toUpperCase(),
           style: TextStyle(
               color: DriverColors.blue,

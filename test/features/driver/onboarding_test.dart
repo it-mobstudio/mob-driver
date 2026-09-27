@@ -83,10 +83,56 @@ void main() {
       expect(find.byKey(const Key('onboarding_add_vehicle')), findsOneWidget);
     });
 
+    rigTest('going back to documents never strands the driver there once the server moves on', (tester, rig) async {
+      await openOnboarding(tester, rig, newDriver(status: 'vehicle_required', kyc: kycJson()));
+      await tester.tap(find.text('Back to documents'));
+      await tester.pumpAndSettle();
+      expect(find.text('Upload your documents'), findsOneWidget);
+      expect(find.text('Continue to your vehicle'), findsOneWidget, reason: 'the way forward is offered');
+
+      // Their vehicle (with its photo) lands meanwhile: straight to review.
+      rig.repo.profileChangeResult = newDriver(status: 'under_review', kyc: kycJson());
+      await rig.cubit.submitPolice(CapturedPhoto(bytes: kTinyPng));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('onboarding_review')), findsOneWidget);
+      expect(find.byKey(const Key('onboarding_resume')), findsNothing);
+    });
+
+    rigTest('"Continue to your vehicle" returns from a revisited step', (tester, rig) async {
+      await openOnboarding(tester, rig, newDriver(status: 'vehicle_required', kyc: kycJson()));
+      await tester.tap(find.text('Back to documents'));
+      await tester.pumpAndSettle();
+      await tapKey(tester, 'onboarding_resume');
+      expect(find.text('Add your vehicle'), findsOneWidget);
+    });
+
     rigTest('a rejected document sends the driver back to fix it', (tester, rig) async {
       await openOnboarding(tester, rig, newDriver(status: 'action_required', kyc: kycJson()));
       expect(textOf(tester, 'onboarding_step'), 'Step 2 of 3 · Documents');
       expect(find.byKey(const Key('onboarding_fix_banner')), findsOneWidget);
+    });
+  });
+
+  group('review', () {
+    rigTest('once submitted, the driver sees the review screen and can still edit, then come back', (tester, rig) async {
+      await openOnboarding(tester, rig, newDriver(status: 'under_review', kyc: kycJson()));
+      expect(find.text('Thanks! We’re reviewing your request'), findsOneWidget);
+      expect(find.text('Need to change something?'), findsOneWidget);
+
+      await tapKey(tester, 'onboarding_review_edit_documents');
+      expect(find.text('Upload your documents'), findsOneWidget);
+      expect(find.text('Done — back to review'), findsOneWidget);
+      await tapKey(tester, 'onboarding_resume');
+      expect(find.byKey(const Key('onboarding_review')), findsOneWidget);
+
+      await tapKey(tester, 'onboarding_review_edit_vehicle');
+      expect(find.text('Add your vehicle'), findsOneWidget);
+      await tapKey(tester, 'onboarding_resume');
+
+      await tapKey(tester, 'onboarding_review_edit_details');
+      expect(find.text('Tell us about yourself'), findsOneWidget);
+      await tapKey(tester, 'onboarding_resume');
+      expect(find.byKey(const Key('onboarding_review')), findsOneWidget);
     });
   });
 
@@ -232,22 +278,48 @@ void main() {
       expect(tester.widget<TextField>(find.descendant(of: find.byKey(const Key('field_full_name')), matching: find.byType(TextField))).controller!.text, 'Ravi Kumar');
     });
 
-    rigTest('Aadhaar: the button waits for a full number and both sides', (tester, rig) async {
+    rigTest('Aadhaar: submitting early outlines what is missing in red, and each message clears once fixed', (tester, rig) async {
       await openOnboarding(tester, rig, newDriver(status: 'documents_required'));
       await tapKey(tester, 'doc_aadhar');
       expect(find.text('Aadhaar card'), findsWidgets);
-      expect(enabled(tester, 'aadhar_submit'), isFalse);
+      // Nothing is shown as wrong before the driver has tried.
+      expect(find.text('Enter your 12-digit Aadhaar number.'), findsNothing);
+
+      // Photos in, number forgotten — the case that used to fail silently.
+      await takeDocumentPhoto(tester, 'aadhar_front');
+      await takeDocumentPhoto(tester, 'aadhar_back');
+      await tapKey(tester, 'aadhar_submit');
+      expect(find.text('Enter your 12-digit Aadhaar number.'), findsOneWidget);
+      expect(rig.repo.aadharSubmissions, isEmpty, reason: 'nothing is sent');
+      expect(find.byKey(const Key('aadhar_submit')), findsOneWidget, reason: 'the sheet stays open');
+
+      await tester.enterText(find.byKey(const Key('field_aadhar_number')), '23456');
+      await tester.pump();
+      expect(find.text('Aadhaar number must be 12 digits — you’ve entered 5.'), findsOneWidget, reason: 'updates as they type');
+
+      await tester.enterText(find.byKey(const Key('field_aadhar_number')), '012345678901');
+      await tester.pump();
+      expect(find.textContaining('never start with 0 or 1'), findsOneWidget);
 
       await tester.enterText(find.byKey(const Key('field_aadhar_number')), '234567890123');
       await tester.pump();
-      expect(enabled(tester, 'aadhar_submit'), isFalse, reason: 'no photos yet');
+      expect(find.textContaining('Aadhaar number'), findsWidgets);
+      expect(find.textContaining('12 digits'), findsNothing, reason: 'fixed, so the message is gone');
+      expect(rig.capture.cameraCalls, 2);
+    });
+
+    rigTest('Aadhaar: missing photos are outlined too', (tester, rig) async {
+      await openOnboarding(tester, rig, newDriver(status: 'documents_required'));
+      await tapKey(tester, 'doc_aadhar');
+      await tester.enterText(find.byKey(const Key('field_aadhar_number')), '234567890123');
+      await tapKey(tester, 'aadhar_submit');
+      expect(find.text('Add the front side'), findsOneWidget);
+      expect(find.text('Add the back side'), findsOneWidget);
 
       await takeDocumentPhoto(tester, 'aadhar_front');
-      expect(enabled(tester, 'aadhar_submit'), isFalse, reason: 'still no back');
-
-      await takeDocumentPhoto(tester, 'aadhar_back');
-      expect(enabled(tester, 'aadhar_submit'), isTrue);
-      expect(rig.capture.cameraCalls, 2);
+      expect(find.text('Add the front side'), findsNothing);
+      expect(find.text('Add the back side'), findsOneWidget);
+      expect(rig.repo.aadharSubmissions, isEmpty);
     });
 
     rigTest('Aadhaar: the number is grouped as typed and submitted as digits only', (tester, rig) async {
@@ -302,7 +374,7 @@ void main() {
       await takeDocumentPhoto(tester, 'aadhar_front');
 
       expect(find.textContaining('Camera or photo access is off'), findsOneWidget);
-      expect(enabled(tester, 'aadhar_submit'), isFalse);
+      expect(find.textContaining('Tap to change'), findsNothing, reason: 'no picture was taken');
       await tester.pump(const Duration(seconds: 4));
     });
 
@@ -334,16 +406,22 @@ void main() {
       await openOnboarding(tester, rig, newDriver(status: 'documents_required'));
       await tapKey(tester, 'doc_licence');
       rig.repo.profileChangeResult = newDriver(status: 'documents_required', kyc: kycJson(aadharSubmitted: false));
-      expect(enabled(tester, 'dl_submit'), isFalse);
+      await tapKey(tester, 'dl_submit');
+      expect(find.text('Enter your licence number exactly as printed on the card.'), findsOneWidget);
+      expect(find.text('Pick the date your licence is valid until.'), findsOneWidget);
+      expect(find.text('Add the front of the licence'), findsOneWidget);
+      expect(rig.repo.licenceSubmissions, isEmpty);
 
       await tester.enterText(find.byKey(const Key('field_dl_number')), 'ka01 20110012345');
       await takeDocumentPhoto(tester, 'dl_front');
-      expect(enabled(tester, 'dl_submit'), isFalse, reason: 'no expiry yet');
+      await tapKey(tester, 'dl_submit');
+      expect(find.text('Pick the date your licence is valid until.'), findsOneWidget, reason: 'no expiry yet');
+      expect(rig.repo.licenceSubmissions, isEmpty);
 
       await tapKey(tester, 'field_dl_expiry');
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
-      expect(enabled(tester, 'dl_submit'), isTrue);
+      expect(find.text('Pick the date your licence is valid until.'), findsNothing);
 
       await tapKey(tester, 'dl_submit');
 
@@ -373,7 +451,9 @@ void main() {
     rigTest('Police certificate: one picture', (tester, rig) async {
       await openOnboarding(tester, rig, newDriver(status: 'documents_required'));
       await tapKey(tester, 'doc_police');
-      expect(enabled(tester, 'police_submit'), isFalse);
+      await tapKey(tester, 'police_submit');
+      expect(find.text('Add a photo of the certificate'), findsOneWidget);
+      expect(rig.repo.policeSubmissions, isEmpty);
 
       await takeDocumentPhoto(tester, 'police_document');
       await tapKey(tester, 'police_submit');

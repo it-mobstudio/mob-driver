@@ -172,7 +172,7 @@ class _PromiseBullet extends StatelessWidget {
           CircleAvatar(
             radius: 22,
             backgroundColor: const Color(0xFFF2F6F9),
-            child: Icon(icon, color: const Color(0xFF0A243F)),
+            child: Icon(icon, color: const Color(0xFF001533)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -183,7 +183,7 @@ class _PromiseBullet extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0A243F),
+                      color: const Color(0xFF001533),
                     )),
                 const SizedBox(height: 4),
                 Text(

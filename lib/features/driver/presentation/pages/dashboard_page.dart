@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
@@ -10,6 +11,7 @@ import 'package:m_o_b_demand_side/core/utils/polyline_codec.dart';
 import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_home_map.dart';
@@ -18,6 +20,7 @@ import 'package:m_o_b_demand_side/features/driver/presentation/widgets/duty_flow
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/duty_top_bar.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/finder_video.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/vehicle_art.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 import 'package:m_o_b_demand_side/shared/widgets/skeleton_shimmer.dart';
 
@@ -196,14 +199,20 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
       // The pill, any warning banners, and the working-time bar sit on a
       // solid white panel — the map only starts below it, never bleeding
       // through behind them (a transparent overlay here was the bug).
-      Material(
-        color: Colors.white,
+      DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: DriverColors.brandGradient,
+          boxShadow: [BoxShadow(color: Color(0x33001533), blurRadius: 16, offset: Offset(0, 4))],
+        ),
         child: SafeArea(
           bottom: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               DutyStatusRow(
+                onDark: true,
+                leading: SvgPicture.asset('assets/images/mob_logo.svg', height: 22, semanticsLabel: 'MOB'),
+                avatar: DriverAvatar(profile.fullName, size: 44, photoUrl: profile.photoUrl),
                 online: state.isOnline,
                 busy: state.dutyBusy,
                 onToggle: (goOnline) => goOnline
@@ -224,6 +233,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                     const SizedBox(height: 10),
                     InfoBanner(
                       key: const Key('licence_banner'),
+                      solid: true,
                       text: days == 0
                           ? 'Your driving licence expires today. Renew it to keep taking trips.'
                           : 'Your driving licence expires in $days day${days == 1 ? '' : 's'}. Renew it to keep taking trips.',
@@ -238,6 +248,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                     const SizedBox(height: 10),
                     InfoBanner(
                       key: const Key('location_banner'),
+                      solid: true,
                       text:
                           'We can’t see your location, so you won’t be assigned trips. Turn on GPS and allow location access.',
                       icon: Icons.location_off_rounded,
@@ -253,17 +264,17 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
               ),
               const SizedBox(height: 12),
               WorkingTimeBanner(
+                onDark: true,
                 online: state.isOnline,
                 dutyStartedAt: _cubit.dutyStartedAt,
                 todayEarnings: state.stats.today.earnings,
                 onTap: () => _openStats(state.stats),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
             ]),
           ),
         ),
       ),
-      const Divider(height: 1, thickness: 1, color: DriverColors.line),
       Expanded(
         child: Stack(children: [
           Positioned.fill(
@@ -450,7 +461,9 @@ class _BottomPanel extends StatelessWidget {
     } else if (!state.isOnline) {
       key = 'offline';
       content = _OfflinePanel(
-          busy: state.dutyBusy, checkLocationPermission: checkLocationPermission);
+          busy: state.dutyBusy,
+          vehicle: state.profile?.currentVehicle,
+          checkLocationPermission: checkLocationPermission);
     } else {
       key = 'looking';
       content = const _LookingForOrdersPanel();
@@ -464,10 +477,9 @@ class _BottomPanel extends StatelessWidget {
           20, 18, 20, 18 + MediaQuery.paddingOf(context).bottom),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
-          BoxShadow(
-              color: Color(0x28000000), blurRadius: 24, offset: Offset(0, -4)),
+          BoxShadow(color: Color(0x26001533), blurRadius: 30, offset: Offset(0, -6)),
         ],
       ),
       child: SingleChildScrollView(
@@ -488,33 +500,47 @@ class _BottomPanel extends StatelessWidget {
 }
 
 class _OfflinePanel extends StatelessWidget {
-  const _OfflinePanel({required this.busy, this.checkLocationPermission});
+  const _OfflinePanel({required this.busy, this.vehicle, this.checkLocationPermission});
   final bool busy;
+  final DriverVehicle? vehicle;
   final LocationPermissionCheck? checkLocationPermission;
 
   @override
   Widget build(BuildContext context) =>
       Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: const BoxDecoration(
-              color: DriverColors.surface, shape: BoxShape.circle),
-          child: const Icon(Icons.power_settings_new_rounded,
-              color: DriverColors.muted, size: 26),
-        ),
-        const SizedBox(height: 12),
-        const Text('You’re off duty',
-            key: Key('no_trip_title'),
-            style: TextStyle(
-                color: DriverColors.ink,
-                fontSize: 18,
-                letterSpacing: -.2,
-                fontWeight: FontWeight.w700)),
-        const SizedBox(height: 4),
-        const Text('Go on duty to start receiving orders near you.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: DriverColors.muted, fontSize: 13)),
+        const _Grabber(),
+        Row(children: [
+          // The driver's own kind of vehicle, parked — it rolls in once.
+          Container(
+            width: 92,
+            height: 76,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFF3F7FD), DriverColors.blueSoft],
+              ),
+            ),
+            alignment: Alignment.center,
+            child: _RollIn(
+              child: VehicleArt(
+                  name: vehicle?.vehicleTypeName, category: vehicle?.category, width: 66),
+            ),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('You’re off duty',
+                  key: Key('no_trip_title'),
+                  style: TextStyle(
+                      color: DriverColors.ink, fontSize: 19, letterSpacing: -.3, fontWeight: FontWeight.w800)),
+              SizedBox(height: 4),
+              Text('Go on duty to start receiving orders near you.',
+                  style: TextStyle(color: DriverColors.muted, fontSize: 13, height: 1.35)),
+            ]),
+          ),
+        ]),
         const SizedBox(height: 18),
         PrimaryButton(
           label: 'Start duty',
@@ -524,6 +550,37 @@ class _OfflinePanel extends StatelessWidget {
               startDutyFlow(context, checkPermission: checkLocationPermission),
         ),
       ]);
+}
+
+/// The little handle at the top of the bottom panel.
+class _Grabber extends StatelessWidget {
+  const _Grabber();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 38,
+        height: 4,
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(color: DriverColors.line, borderRadius: BorderRadius.circular(4)),
+      );
+}
+
+/// Drives its child in from the right with a small overshoot — once.
+class _RollIn extends StatelessWidget {
+  const _RollIn({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 1, end: 0),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOutBack,
+      builder: (_, t, c) => Transform.translate(offset: Offset(60 * t, 0), child: c),
+      child: child,
+    );
+  }
 }
 
 /// Online with nothing assigned: the radar, and a status line that keeps
@@ -541,6 +598,7 @@ class _LookingForOrdersPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       const Column(mainAxisSize: MainAxisSize.min, children: [
+        _Grabber(),
         FinderAnimation(size: 128),
         SizedBox(height: 6),
         SizedBox(
@@ -562,41 +620,65 @@ class _ActiveTripPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEAF2FF),
-            borderRadius: BorderRadius.circular(14),
+        const _Grabber(),
+        Row(children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+                color: DriverColors.blueSoft, borderRadius: BorderRadius.circular(18)),
+            alignment: Alignment.center,
+            child: _RollIn(child: VehicleArt(name: trip.vehicleTypeName, width: 42)),
           ),
-          child: Row(children: [
-            const Icon(Icons.circle, size: 9, color: DriverColors.blue),
-            const SizedBox(width: 8),
-            const Text('ACTIVE TRIP',
-                style: TextStyle(
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
                     color: DriverColors.blue,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: .7)),
-            const Spacer(),
-            StatusPill(trip.status.label.toUpperCase(), color: DriverColors.blue),
-          ]),
-        ),
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: DriverColors.blue.withValues(alpha: .5), blurRadius: 6, spreadRadius: 1)],
+                  ),
+                ),
+                const SizedBox(width: 7),
+                const Text('ACTIVE TRIP',
+                    style: TextStyle(
+                        color: DriverColors.blue, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: .8)),
+              ]),
+              const SizedBox(height: 3),
+              Text(trip.status.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: DriverColors.ink, fontSize: 18, letterSpacing: -.3, fontWeight: FontWeight.w800)),
+            ]),
+          ),
+          StatusPill(trip.isCod ? 'COD' : 'PREPAID',
+              color: trip.isCod ? DriverColors.orange : DriverColors.green),
+        ]),
         const SizedBox(height: 14),
-        _Route(pickup: trip.pickup.address, drop: trip.drop.address),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: DriverColors.surface,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: _Route(pickup: trip.pickup.address, drop: trip.drop.address),
+        ),
         const SizedBox(height: 14),
         Row(children: [
           Text(formatMoney(trip.totalFare, currency: trip.currency),
               style: const TextStyle(
-                  color: DriverColors.ink,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800)),
-          const SizedBox(width: 8),
-          StatusPill(trip.isCod ? 'COD' : 'PREPAID',
-              color: trip.isCod ? DriverColors.orange : DriverColors.green),
+                  color: DriverColors.ink, fontSize: 22, letterSpacing: -.5, fontWeight: FontWeight.w800)),
           const Spacer(),
+          const Icon(Icons.route_rounded, size: 16, color: DriverColors.muted),
+          const SizedBox(width: 4),
           Text(
               '${formatDistance(trip.distanceMeters)} · ${formatDuration(trip.durationSeconds)}',
-              style: const TextStyle(color: DriverColors.muted, fontSize: 12)),
+              style: const TextStyle(color: DriverColors.muted, fontSize: 12.5, fontWeight: FontWeight.w600)),
         ]),
         const SizedBox(height: 14),
         PrimaryButton(
@@ -614,27 +696,32 @@ class _Route extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(children: [
-        _point(DriverColors.green, 'Pickup', pickup),
-        Container(
-          margin: const EdgeInsets.only(left: 5),
-          height: 16,
-          alignment: Alignment.centerLeft,
-          child: Container(width: 2, color: DriverColors.line),
+        _point(DriverColors.green, Icons.north_rounded, 'PICKUP', pickup),
+        Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Column(children: [
+              for (var i = 0; i < 3; i++)
+                Container(
+                    width: 2,
+                    height: 3,
+                    margin: const EdgeInsets.symmetric(vertical: 1.5),
+                    color: const Color(0xFFC5CED8)),
+            ]),
+          ),
         ),
-        _point(DriverColors.red, 'Drop', drop),
+        _point(DriverColors.red, Icons.south_rounded, 'DROP', drop),
       ]);
 
-  Widget _point(Color color, String label, String address) => Row(
+  Widget _point(Color color, IconData icon, String label, String address) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            margin: const EdgeInsets.only(top: 4),
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: color, width: 3)),
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Icon(icon, size: 13, color: Colors.white),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -642,17 +729,13 @@ class _Route extends StatelessWidget {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label,
                   style: TextStyle(
-                      color: color,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: .8)),
+                      color: color, fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: .8)),
+              const SizedBox(height: 1),
               Text(address,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: DriverColors.ink,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600)),
+                      color: DriverColors.ink, fontSize: 14, height: 1.3, fontWeight: FontWeight.w600)),
             ]),
           ),
         ],
@@ -816,7 +899,7 @@ class _MenuTile extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                  color: const Color(0xFFEAF2FF),
+                  color: const Color(0xFFE8F1FB),
                   borderRadius: BorderRadius.circular(12)),
               child: Icon(icon, color: DriverColors.blue, size: 19),
             ),

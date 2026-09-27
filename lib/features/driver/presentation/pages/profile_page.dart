@@ -275,7 +275,7 @@ class _MenuRow extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                  color: const Color(0xFFEAF2FF),
+                  color: const Color(0xFFE8F1FB),
                   borderRadius: BorderRadius.circular(11)),
               child: Icon(icon, color: DriverColors.blue, size: 19),
             ),

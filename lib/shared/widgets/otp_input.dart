@@ -29,7 +29,7 @@ class OtpInput extends StatefulWidget {
 }
 
 class OtpInputState extends State<OtpInput> {
-  static const _ink = Color(0xFF0A243F);
+  static const _ink = Color(0xFF001533);
   static const _idleBorder = Color(0xFFDFE4EC);
 
   final _controller = TextEditingController();

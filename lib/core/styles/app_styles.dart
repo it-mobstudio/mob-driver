@@ -3,8 +3,8 @@ import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
 
 abstract final class AppColors {
   static const Color surface = Colors.white;
-  static const Color primary = Color(0xFF0360E5);
-  static const Color primaryText = Color(0xFF0A243F);
+  static const Color primary = Color(0xFF0454A3);
+  static const Color primaryText = Color(0xFF001533);
   static const Color inputBorder = Color(0xFFDFE4EC);
   static const Color inputHint = Color(0xFFAFB4C0);
   static const Color inputLabel = Color(0xFF767C8F);
