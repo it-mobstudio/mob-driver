@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter_svg/flutter_svg.dart';
@@ -12,6 +13,33 @@ abstract final class SvgMarkers {
 
   static Future<BitmapDescriptor> get(String assetPath, {double width = 40}) =>
       _cache.putIfAbsent('$assetPath@$width', () => _build(assetPath, width));
+
+  /// The same picture turned [degrees] clockwise, on a square canvas big
+  /// enough for any angle (centre-anchored). For the web, whose map ignores
+  /// `Marker.rotation`; phones rotate the plain icon natively.
+  static Future<BitmapDescriptor> rotated(String assetPath, {double width = 40, required int degrees}) =>
+      _cache.putIfAbsent('$assetPath@$width@$degrees', () => _buildRotated(assetPath, width, degrees));
+
+  static Future<BitmapDescriptor> _buildRotated(String assetPath, double width, int degrees) async {
+    final pictureInfo = await vg.loadPicture(SvgAssetLoader(assetPath), null);
+    final scale = width / pictureInfo.size.width;
+    final w = width, h = pictureInfo.size.height * scale;
+    final side = math.sqrt(w * w + h * h).ceilToDouble();
+
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    canvas.translate(side / 2, side / 2);
+    canvas.rotate(degrees * math.pi / 180);
+    canvas.translate(-w / 2, -h / 2);
+    canvas.scale(scale);
+    canvas.drawPicture(pictureInfo.picture);
+    pictureInfo.picture.dispose();
+
+    final image = await recorder.endRecording().toImage(side.round(), side.round());
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (bytes == null) return BitmapDescriptor.defaultMarker;
+    return BitmapDescriptor.bytes(bytes.buffer.asUint8List(), imagePixelRatio: 2.5);
+  }
 
   static Future<BitmapDescriptor> _build(String assetPath, double width) async {
     final pictureInfo = await vg.loadPicture(SvgAssetLoader(assetPath), null);

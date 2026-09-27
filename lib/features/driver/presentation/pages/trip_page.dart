@@ -264,12 +264,58 @@ class _TripPageState extends State<TripPage> {
     }
     if (!mounted) return;
     if (trip.needsPaymentCollection) {
-      await context.push(DriverRoutes.payment(trip.id));
+      await _collectPayment(trip);
     } else if (trip.needsDeliveryOtp) {
       await _openDeliveryOtp(trip);
     } else {
       await _completePrepaid();
     }
+  }
+
+  /// Cash on delivery: ask how the customer paid. Cash (or any way the
+  /// company can't see) is taken on the driver's word — the fare is debited
+  /// from their wallet for the company to collect — and goes straight to the
+  /// customer's OTP. Otherwise the scan-to-pay code is shown.
+  Future<void> _collectPayment(Trip trip) async {
+    final amount = formatMoney(trip.totalFare, currency: trip.currency);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PaymentChoiceSheet(amount: amount),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'qr') {
+      await context.push(DriverRoutes.payment(trip.id));
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Collected $amount?'),
+        content: const Text(
+            'Confirm only once you have the money in hand. It’s added to what you owe the company '
+            '(taken from your wallet), and the customer gets their delivery OTP.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Not yet')),
+          TextButton(
+              key: const Key('pay_cash_confirm'),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Yes, collected')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final (sent, failure) = await _cubit.collectPayment(trip.id, method: 'cash');
+    if (!mounted) return;
+    if (sent != null || failure?.code == 'ALREADY_PAID') {
+      AppHaptics.success();
+      await context.push(DriverRoutes.otp(trip.id),
+          extra: {'debugOtp': sent?.debugOtp, 'freshlySent': sent != null});
+      return;
+    }
+    AppHaptics.error();
+    TopSnackBar.show(context,
+        message: failure?.message ?? 'Couldn’t record the payment. Try again.', type: TopSnackBarType.error);
   }
 
   /// A COD trip's OTP went out with the payment; a prepaid one is texted to
@@ -842,6 +888,108 @@ class _CancelSheetState extends State<_CancelSheet> {
                         : () => Navigator.pop(context, _reason),
                   ),
                 ]),
+          ),
+        ),
+      );
+}
+
+
+/// "How did the customer pay?" — cash straight to the driver, or the QR code.
+class _PaymentChoiceSheet extends StatelessWidget {
+  const _PaymentChoiceSheet({required this.amount});
+  final String amount;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.paddingOf(context).bottom),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(
+            child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(color: DriverColors.line, borderRadius: BorderRadius.circular(4))),
+          ),
+          const SizedBox(height: 18),
+          const Text('Collect payment',
+              style: TextStyle(color: DriverColors.muted, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text(amount,
+              key: const Key('pay_amount'),
+              style: const TextStyle(color: DriverColors.ink, fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.6)),
+          const SizedBox(height: 4),
+          const Text('How did the customer pay?',
+              style: TextStyle(color: DriverColors.ink, fontSize: 15, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 16),
+          _PaymentOption(
+            key: const Key('pay_cash'),
+            icon: Icons.payments_outlined,
+            color: DriverColors.green,
+            title: 'Cash / paid another way',
+            subtitle: 'They paid you directly. You’ll give it to the company — it’s taken from your wallet.',
+            onTap: () => Navigator.pop(context, 'cash'),
+          ),
+          const SizedBox(height: 10),
+          _PaymentOption(
+            key: const Key('pay_qr'),
+            icon: Icons.qr_code_2_rounded,
+            color: DriverColors.blue,
+            title: 'Show QR code',
+            subtitle: 'The customer scans and pays by UPI — confirmed automatically.',
+            onTap: () => Navigator.pop(context, 'qr'),
+          ),
+        ]),
+      );
+}
+
+class _PaymentOption extends StatelessWidget {
+  const _PaymentOption({
+    super.key,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => PressScale(
+        child: Material(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18), side: const BorderSide(color: DriverColors.line)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(14)),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(title, style: const TextStyle(color: DriverColors.ink, fontSize: 15.5, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(subtitle, style: const TextStyle(color: DriverColors.muted, fontSize: 12.5, height: 1.35)),
+                  ]),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: DriverColors.muted),
+              ]),
+            ),
           ),
         ),
       );

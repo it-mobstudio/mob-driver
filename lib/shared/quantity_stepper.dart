@@ -232,7 +232,7 @@ class _StepIconButton extends StatelessWidget {
         child: Icon(
           icon,
           size: 16,
-          color: isDisabled ? Colors.grey.shade400 : const Color(0xFF0A243F),
+          color: isDisabled ? Colors.grey.shade400 : const Color(0xFF001533),
         ),
       ),
     );

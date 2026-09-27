@@ -72,6 +72,20 @@ class AppConfig {
     return query.map((key, value) => MapEntry(key, value.toString()));
   }
 
+  /// A file our own server hosts (`…/media/…`), re-pointed at the server the
+  /// app is talking to *now*. Media links are absolute and get cached with
+  /// the trip, so one saved while on the emulator (10.0.2.2), a LAN IP or an
+  /// old tunnel would otherwise point at a host this phone can't reach.
+  /// Links elsewhere (cloud storage, other sites) are left alone.
+  static String ourMediaUrl(String url) {
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null) return url;
+    if (!uri.hasScheme) return resolveMediaUrl(url);
+    if (!uri.path.startsWith('/media/')) return url;
+    final api = Uri.parse(apiBaseUrl);
+    return uri.replace(scheme: api.scheme, host: api.host, port: api.hasPort ? api.port : null).toString();
+  }
+
   static String resolveMediaUrl(String? raw) {
     final trimmed = raw?.trim() ?? '';
     if (trimmed.isEmpty || trimmed == 'null') return '';

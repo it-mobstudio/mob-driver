@@ -248,7 +248,7 @@ class _SearchPageState extends State<SearchPage> {
                   height: 48,
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: AppBackIcon(color: Color(0xFF0A243F)),
+                    child: AppBackIcon(color: Color(0xFF001533)),
                   ),
                 ),
               ),
@@ -289,7 +289,7 @@ class _SearchPageState extends State<SearchPage> {
                           onChanged: _onSearchChanged,
                           onSubmitted: _submitSearch,
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF0A243F),
+                            color: const Color(0xFF001533),
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             height: 20 / 14,
@@ -349,7 +349,7 @@ class _SearchPageState extends State<SearchPage> {
                     child: Text(
                       'Clear',
                       style: GoogleFonts.inter(
-                        color: const Color(0xFF0360E5),
+                        color: const Color(0xFF0454A3),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         height: 18 / 12,
@@ -400,7 +400,7 @@ class _SearchPageState extends State<SearchPage> {
     return Text(
       text,
       style: GoogleFonts.inter(
-        color: const Color(0xFF0A243F),
+        color: const Color(0xFF001533),
         fontSize: 15,
         fontWeight: FontWeight.w700,
         height: 22 / 15,
@@ -431,7 +431,7 @@ class _SearchPageState extends State<SearchPage> {
             Text(
               term,
               style: GoogleFonts.inter(
-                color: const Color(0xFF0A243F),
+                color: const Color(0xFF001533),
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 height: 18 / 12,
@@ -480,7 +480,7 @@ class _SearchPageState extends State<SearchPage> {
   //             overflow: TextOverflow.ellipsis,
   //             textAlign: TextAlign.center,
   //             style: GoogleFonts.inter(
-  //               color: const Color(0xFF0A243F),
+  //               color: const Color(0xFF001533),
   //               fontSize: 12,
   //               fontWeight: FontWeight.w500,
   //               height: 18 / 12,
@@ -542,7 +542,7 @@ class _SearchPageState extends State<SearchPage> {
       child: Text(
         label,
         style: GoogleFonts.inter(
-          color: const Color(0xFF0A243F),
+          color: const Color(0xFF001533),
           fontSize: 12,
           fontWeight: FontWeight.w600,
           height: 18 / 12,
@@ -566,7 +566,7 @@ class _SearchPageState extends State<SearchPage> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
-                  color: const Color(0xFF0A243F),
+                  color: const Color(0xFF001533),
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
                   height: 20 / 14,
@@ -639,7 +639,7 @@ class _SearchPageState extends State<SearchPage> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
-                  color: const Color(0xFF0A243F),
+                  color: const Color(0xFF001533),
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
                   height: 20 / 14,

@@ -313,7 +313,7 @@ class _VariantSelectionSheetState extends State<VariantSelectionSheet> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
-                          color: const Color(0xFF0A243F),
+                          color: const Color(0xFF001533),
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           height: 22 / 16,
@@ -473,7 +473,7 @@ class _VariantListRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF0A243F),
+                      color: const Color(0xFF001533),
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                       height: 18 / 13,
@@ -485,7 +485,7 @@ class _VariantListRow extends StatelessWidget {
                       Text(
                         '₹ ${price.round()}',
                         style: GoogleFonts.inter(
-                          color: const Color(0xFF0A243F),
+                          color: const Color(0xFF001533),
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),

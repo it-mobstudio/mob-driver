@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_form.dart';
@@ -173,27 +174,47 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
     TopSnackBar.show(context, message: message, type: TopSnackBarType.error);
   }
 
-  /// What's wrong with the form, in words, or null.
-  String? _problem() {
-    if (_typeId == null) return 'Choose the type of vehicle.';
+  /// Set once the driver taps save with something missing: every problem is
+  /// then shown on its own field (red outline + words) until it's fixed.
+  bool _submitted = false;
+  String? _shown(String? message) => _submitted ? message : null;
+
+  /// While signing up, the company reviews the vehicle from its pictures —
+  /// the backend won't move a driver on to review without one.
+  bool get _photoRequired {
+    final status = _cubit.state.profile?.onboardingStatus;
+    return !_editing && status != null && status != OnboardingStatus.approved;
+  }
+
+  String? get _typeError => _typeId == null ? 'Choose the type of vehicle.' : null;
+
+  String? get _plateError {
     final plate = _plateController.text.trim().toUpperCase();
     if (plate.isEmpty) return 'Enter the registration number.';
     if (!_plate.hasMatch(plate)) {
       return 'The registration number can only have letters, numbers and hyphens.';
     }
-    final capacity = _capacityController.text.trim();
-    if (capacity.isNotEmpty) {
-      final value = double.tryParse(capacity);
-      if (value == null || value <= 0) {
-        return 'Enter the capacity as a number above 0, or leave it empty.';
-      }
-    }
+    if (plate.replaceAll('-', '').length < 6) return 'That registration number looks too short — check the number plate.';
     return null;
   }
+
+  String? get _capacityError {
+    final capacity = _capacityController.text.trim();
+    if (capacity.isEmpty) return null;
+    final value = double.tryParse(capacity);
+    return value == null || value <= 0 ? 'Enter the capacity as a number above 0, or leave it empty.' : null;
+  }
+
+  String? get _photoError =>
+      _photoRequired && _photoCount == 0 ? 'Add at least one picture of your vehicle — we need it to approve you.' : null;
+
+  /// What's wrong with the form, in words, or null.
+  String? _problem() => _typeError ?? _plateError ?? _capacityError ?? _photoError;
 
   Future<void> _save() async {
     final problem = _problem();
     if (problem != null) {
+      setState(() => _submitted = true);
       _fail(problem);
       return;
     }
@@ -248,6 +269,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                 children: [
                   const _Label('TYPE OF VEHICLE'),
                   _typeChooser(),
+                  _FieldError(_shown(_typeError)),
                   const SizedBox(height: 22),
                   DriverTextField(
                     key: const Key('vehicle_plate'),
@@ -260,6 +282,8 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                           RegExp(r'[A-Za-z0-9-]')),
                       LengthLimitingTextInputFormatter(20),
                     ],
+                    errorText: _shown(_plateError),
+                    onChanged: (_) => _submitted ? setState(() {}) : null,
                     enabled: !_saving,
                   ),
                   const SizedBox(height: 14),
@@ -276,6 +300,8 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                     ],
                     textInputAction: TextInputAction.done,
+                    errorText: _shown(_capacityError),
+                    onChanged: (_) => _submitted ? setState(() {}) : null,
                     enabled: !_saving,
                   ),
                   const SizedBox(height: 22),
@@ -288,6 +314,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                           height: 1.4)),
                   const SizedBox(height: 12),
                   _photoGrid(),
+                  _FieldError(_shown(_photoError)),
                   if (_error != null) ...[
                     const SizedBox(height: 16),
                     InfoBanner(
@@ -360,6 +387,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
             key: Key('vehicle_type_${type.id}'),
             type: type,
             selected: _typeId == type.id,
+            error: _shown(_typeError) != null,
             onTap: _saving ? null : () => setState(() => _typeId = type.id),
           ),
       ],
@@ -389,6 +417,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
       if (_photoCount < kMaxVehiclePhotos)
         _AddPhotoSquare(
           key: const Key('vehicle_photo_add'),
+          error: _shown(_photoError) != null,
           busy: _photoBusy,
           onTap: _saving || _photoBusy ? null : _addPhoto,
         ),
@@ -484,20 +513,46 @@ class _PhotoSquare extends StatelessWidget {
       );
 }
 
+/// A red line of words under a field group (the type grid, the pictures).
+class _FieldError extends StatelessWidget {
+  const _FieldError(this.message);
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) => AnimatedSize(
+        duration: const Duration(milliseconds: 180),
+        alignment: Alignment.topLeft,
+        child: message == null
+            ? const SizedBox(width: double.infinity)
+            : Padding(
+                padding: const EdgeInsets.only(top: 8, left: 4),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Icon(Icons.error_outline_rounded, color: DriverColors.red, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(message!,
+                        style: const TextStyle(color: DriverColors.red, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                  ),
+                ]),
+              ),
+      );
+}
+
 class _AddPhotoSquare extends StatelessWidget {
-  const _AddPhotoSquare({super.key, required this.busy, required this.onTap});
+  const _AddPhotoSquare({super.key, required this.busy, required this.onTap, this.error = false});
   final bool busy;
   final VoidCallback? onTap;
+  final bool error;
 
   @override
   Widget build(BuildContext context) => SizedBox(
         width: _tile,
         height: _tile,
         child: Material(
-          color: const Color(0xFFF7F9FC),
+          color: error ? const Color(0xFFFFF5F5) : const Color(0xFFF7F9FC),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: DriverColors.line, width: 1.2),
+            side: BorderSide(color: error ? DriverColors.red : DriverColors.line, width: error ? 1.6 : 1.2),
           ),
           child: InkWell(
             customBorder:
@@ -509,11 +564,11 @@ class _AddPhotoSquare extends StatelessWidget {
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.4))
-                  : const Column(mainAxisSize: MainAxisSize.min, children: [
+                  : Column(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.add_a_photo_outlined,
-                          color: DriverColors.blue, size: 26),
-                      SizedBox(height: 6),
-                      Text('Add photo',
+                          color: error ? DriverColors.red : DriverColors.blue, size: 26),
+                      const SizedBox(height: 6),
+                      const Text('Add photo',
                           style: TextStyle(
                               color: DriverColors.ink,
                               fontSize: 12,
@@ -527,11 +582,14 @@ class _AddPhotoSquare extends StatelessWidget {
 
 
 class _TypeCard extends StatelessWidget {
-  const _TypeCard({super.key, required this.type, required this.selected, this.onTap});
+  const _TypeCard({super.key, required this.type, required this.selected, this.onTap, this.error = false});
 
   final VehicleTypeOption type;
   final bool selected;
   final VoidCallback? onTap;
+
+  /// Nothing chosen yet and the driver tried to save: outline every card red.
+  final bool error;
 
   @override
   Widget build(BuildContext context) => PressScale(
@@ -539,11 +597,11 @@ class _TypeCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFF0F6FF) : Colors.white,
+            color: selected ? const Color(0xFFF2F7FD) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-                color: selected ? DriverColors.blue : DriverColors.line,
-                width: selected ? 2 : 1),
+                color: selected ? DriverColors.blue : error ? DriverColors.red : DriverColors.line,
+                width: selected ? 2 : error ? 1.5 : 1),
           ),
           child: Material(
             color: Colors.transparent,

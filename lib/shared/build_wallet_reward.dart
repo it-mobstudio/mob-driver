@@ -33,7 +33,7 @@ class WalletRewardBanner extends StatelessWidget {
               TextSpan(
                 text: '\u20B9$amount',
                 style: GoogleFonts.inter(
-                  color: const Color(0xFF0A243F),
+                  color: const Color(0xFF001533),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   height: 14 / 12,
@@ -42,7 +42,7 @@ class WalletRewardBanner extends StatelessWidget {
                   TextSpan(
                     text: ' will be added to mobwallet ',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF0A243F),
+                      color: const Color(0xFF001533),
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
                       height: 14 / 12,

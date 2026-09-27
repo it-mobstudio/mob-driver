@@ -168,7 +168,7 @@ class _DeliveryOtpPageState extends State<DeliveryOtpPage> {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                          color: const Color(0xFFEAF2FF),
+                          color: const Color(0xFFE8F1FB),
                           borderRadius: BorderRadius.circular(16)),
                       child: const Icon(Icons.verified_user_outlined,
                           color: DriverColors.blue, size: 27),

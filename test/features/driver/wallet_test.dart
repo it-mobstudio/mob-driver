@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
@@ -170,8 +171,8 @@ void main() {
       ]);
 
       Color colour(String id) => tester.widget<Text>(find.byKey(Key('wallet_amount_$id'))).style!.color!;
-      expect(colour('a'), const Color(0xFF16A36A));
-      expect(colour('b'), const Color(0xFFD94D3D));
+      expect(colour('a'), DriverColors.green);
+      expect(colour('b'), DriverColors.red);
     });
 
     rigTest('the filter chips ask the backend for just those kinds', (tester, rig) async {

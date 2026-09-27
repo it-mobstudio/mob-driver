@@ -199,7 +199,7 @@ class _DriverWalletPageState extends State<DriverWalletPage> {
                       label: Text(filter.label),
                       selected: filter == _filter,
                       onSelected: (_) => _select(filter),
-                      selectedColor: const Color(0xFFEAF2FF),
+                      selectedColor: const Color(0xFFE8F1FB),
                       labelStyle: TextStyle(
                           color: filter == _filter
                               ? DriverColors.blue
@@ -327,13 +327,10 @@ class _BalanceCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: DriverColors.ink,
-          borderRadius: BorderRadius.circular(22),
+          gradient: DriverColors.brandGradient,
+          borderRadius: BorderRadius.circular(24),
           boxShadow: const [
-            BoxShadow(
-                color: Color(0x33102A43),
-                blurRadius: 22,
-                offset: Offset(0, 10)),
+            BoxShadow(color: Color(0x40001533), blurRadius: 26, offset: Offset(0, 12)),
           ],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -525,7 +522,7 @@ class _Bar extends StatelessWidget {
         ? DriverColors.line
         : isToday
             ? DriverColors.blue
-            : const Color(0xFFBFD4FF);
+            : const Color(0xFFB5CFEE);
     return Column(mainAxisAlignment: MainAxisAlignment.end, children: [
       SizedBox(
         height: 16,

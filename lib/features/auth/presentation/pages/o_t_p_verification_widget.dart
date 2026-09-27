@@ -123,7 +123,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                     Text(
                       'OTP verification',
                       style: GoogleFonts.inter(
-                        color: const Color(0xFF0A243F),
+                        color: const Color(0xFF001533),
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
                         height: 32 / 24,
@@ -135,7 +135,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                         TextSpan(
                           text: 'We have sent a $kOtpLength-digit OTP to ',
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF0A243F),
+                            color: const Color(0xFF001533),
                             fontSize: 14,
                             fontWeight: FontWeight.w400,
                             height: 21 / 14,
@@ -144,7 +144,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                         TextSpan(
                           text: formatPhone(widget.phoneNumber),
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF0A243F),
+                            color: const Color(0xFF001533),
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                             height: 21 / 14,
@@ -183,7 +183,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                       TextButton(
                         onPressed: _resendOtp,
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF0360E5),
+                          foregroundColor: const Color(0xFF0454A3),
                           padding: EdgeInsets.zero,
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -191,7 +191,7 @@ class _OTPVerificationWidgetState extends State<OTPVerificationWidget> {
                         child: Text(
                           'Resend OTP',
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF0360E5),
+                            color: const Color(0xFF0454A3),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             height: 21 / 14,

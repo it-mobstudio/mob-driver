@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/driver/data/datasources/driver_remote_datasource.dart';
@@ -439,6 +440,46 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Enter the registration number.'), findsWidgets);
       expect(rig.repo.vehicleCalls, isEmpty);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+    });
+
+    rigTest('each problem is outlined on its own field', (tester, rig) async {
+      await openForm(tester, rig);
+      await tester.tap(find.byKey(const Key('vehicle_type_vt-bike')));
+      await tester.enterText(find.byKey(const Key('vehicle_plate')), 'KA1');
+      await tester.enterText(find.byKey(const Key('vehicle_capacity')), '0');
+      await tester.tap(find.byKey(const Key('vehicle_save')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.textContaining('looks too short'), findsWidgets);
+      expect(find.text('Enter the capacity as a number above 0, or leave it empty.'), findsWidgets);
+      expect(rig.repo.vehicleCalls, isEmpty);
+
+      await tester.enterText(find.byKey(const Key('vehicle_capacity')), '');
+      await tester.pump();
+      expect(find.byWidgetPredicate((w) => w is TextField && w.decoration?.errorText == 'Enter the capacity as a number above 0, or leave it empty.'),
+          findsNothing, reason: 'clears as it is fixed');
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+    });
+
+    rigTest('while signing up, a vehicle needs at least one picture', (tester, rig) async {
+      rig.repo.profileValue = DriverProfile.fromJson(profileJson(eligible: false, onboarding: 'vehicle_required'));
+      await rig.cubit.load();
+      await openForm(tester, rig);
+      await tester.tap(find.byKey(const Key('vehicle_type_vt-bike')));
+      await tester.enterText(find.byKey(const Key('vehicle_plate')), 'KA05MN7788');
+      await tester.tap(find.byKey(const Key('vehicle_save')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.textContaining('Add at least one picture'), findsWidgets);
+      expect(rig.repo.vehicleCalls, isEmpty);
+
+      await pickPhoto(tester);
+      await tester.tap(find.byKey(const Key('vehicle_save')));
+      await tester.pumpAndSettle();
+      expect(rig.repo.vehicleCalls.single, startsWith('add:KA05MN7788:1:'));
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
     });

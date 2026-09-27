@@ -222,7 +222,7 @@ class _ItemCardState extends State<ItemCard> {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
-                  color: const Color(0xFF0A243F),
+                  color: const Color(0xFF001533),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   height: 16 / 12,
@@ -246,7 +246,7 @@ class _ItemCardState extends State<ItemCard> {
                 child: Text(
                   '${discount.round()}% OFF',
                   style: GoogleFonts.inter(
-                    color: const Color(0xFF0A243F),
+                    color: const Color(0xFF001533),
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     height: 14 / 10,
@@ -263,7 +263,7 @@ class _ItemCardState extends State<ItemCard> {
                   Text(
                     '\u20B9${price.round()}',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF0A243F),
+                      color: const Color(0xFF001533),
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       height: 24 / 16,

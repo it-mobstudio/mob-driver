@@ -189,11 +189,18 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
                         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                         // Read-only: this isn't the place to go off duty or open
                         // the menu, only to answer.
-                        child: DutyStatusRow(online: state.isOnline),
+                        child: DutyStatusRow(
+                          online: state.isOnline,
+                          onDark: true,
+                          avatar: state.profile == null
+                              ? null
+                              : DriverAvatar(state.profile!.fullName, size: 44, photoUrl: state.profile!.photoUrl),
+                        ),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: WorkingTimeBanner(
+                          onDark: true,
                           online: state.isOnline,
                           dutyStartedAt: _cubit.dutyStartedAt,
                           todayEarnings: state.stats.today.earnings,

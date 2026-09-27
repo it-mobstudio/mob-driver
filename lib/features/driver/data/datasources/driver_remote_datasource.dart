@@ -152,8 +152,11 @@ class DriverRemoteDatasource {
   Future<Map<String, dynamic>> paymentQr(String id) async =>
       asMap((await _dio.get<dynamic>('/driver/trips/$id/payment/qr')).data);
 
-  Future<Map<String, dynamic>> collectPayment(String id) =>
-      _post('/driver/trips/$id/payment/collect');
+  /// [method]: `qr` (the customer scanned the code — the server checks with
+  /// the payment provider) or `cash` (they paid the driver directly; the fare
+  /// is debited from the driver's wallet).
+  Future<Map<String, dynamic>> collectPayment(String id, {String method = 'qr'}) =>
+      _post('/driver/trips/$id/payment/collect', {'method': method});
 
   Future<Map<String, dynamic>> resendDeliveryOtp(String id) =>
       _post('/driver/trips/$id/delivery-otp/resend');

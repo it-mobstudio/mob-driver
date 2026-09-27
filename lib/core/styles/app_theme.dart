@@ -99,7 +99,7 @@ abstract class AppTheme {
 }
 
 class LightModeTheme extends AppTheme {
-  late Color primary = const Color(0xFF2973F0);
+  late Color primary = const Color(0xFF0454A3);
   late Color secondary = const Color(0xFF39D2C0);
   late Color tertiary = const Color(0xFFEE8B60);
   late Color alternate = const Color(0xFFE0E3E7);
@@ -121,7 +121,7 @@ class LightModeTheme extends AppTheme {
   late Color customColor3 = const Color(0xFF007AFF);
   late Color customColor4 = const Color(0xFFFFFFFF);
   late Color customColor5 = const Color(0xFF1B1F26);
-  late Color textPrimary = const Color(0xFF0A243F);
+  late Color textPrimary = const Color(0xFF001533);
   late Color graysWhite = const Color(0xFFFFFFFF);
   late Color border = const Color(0xFFD0D4DC);
   late Color textDarkGrey = const Color(0xFF767C8F);
@@ -281,7 +281,7 @@ class DarkModeTheme extends AppTheme {
   late Color customColor3 = const Color(0xFF007AFF);
   late Color customColor4 = const Color(0xFFFFFFFF);
   late Color customColor5 = const Color(0xFF1B1F26);
-  late Color textPrimary = const Color(0xFF0A243F);
+  late Color textPrimary = const Color(0xFF001533);
   late Color graysWhite = const Color(0xFFFFFFFF);
   late Color border = const Color(0xFFD0D4DC);
   late Color textDarkGrey = const Color(0xFF767C8F);

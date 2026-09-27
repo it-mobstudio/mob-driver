@@ -70,6 +70,7 @@ void main() {
         (tester, rig) async {
       await openTripPage(tester, rig);
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
       expect(textOf(tester, 'items_progress'), '0 of 2 checked');
       expect(rig.repo.calls.where((c) => c.startsWith('complete')), isEmpty);
     });
@@ -78,6 +79,7 @@ void main() {
         (tester, rig) async {
       await openTripPage(tester, rig);
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
 
       await tester.tap(find.byKey(const Key('item_delivered_a')));
       await tester.pumpAndSettle();
@@ -93,6 +95,7 @@ void main() {
     rigTest('leaving the checklist half done stops there', (tester, rig) async {
       await openTripPage(tester, rig);
       await swipe(tester, 'Deliver order');
+      await payByQrIfAsked(tester);
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.text('Complete delivery?'), findsNothing);
@@ -116,6 +119,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await swipe(tester, 'Deliver order');
+
+      await payByQrIfAsked(tester);
       expect(find.text('Complete delivery?'), findsOneWidget);
     });
 
@@ -631,6 +636,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await swipe(tester, 'Deliver order');
+
+      await payByQrIfAsked(tester);
       await tester.tap(find.descendant(
           of: find.byType(AlertDialog), matching: find.text('Complete')));
       await tester.pumpAndSettle();

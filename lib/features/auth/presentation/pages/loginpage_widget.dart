@@ -223,21 +223,21 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
 
   Widget _legalText() {
     const regularStyle = TextStyle(
-      color: Color(0xFF0A243F),
+      color: Color(0xFF001533),
       fontSize: 11,
       fontFamily: 'Inter',
       fontWeight: FontWeight.w400,
       height: 16 / 11,
     );
     const mediumStyle = TextStyle(
-      color: Color(0xFF0A243F),
+      color: Color(0xFF001533),
       fontSize: 11,
       fontFamily: 'Inter',
       fontWeight: FontWeight.w500,
       height: 16 / 11,
     );
     const linkStyle = TextStyle(
-      color: Color(0xFF0A243F),
+      color: Color(0xFF001533),
       fontSize: 11,
       fontFamily: 'Inter',
       fontWeight: FontWeight.w600,
@@ -295,7 +295,7 @@ class _PhonePrefix extends StatelessWidget {
         child: Text(
           '+91',
           style: GoogleFonts.inter(
-            color: const Color(0xFF0A243F),
+            color: const Color(0xFF001533),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),

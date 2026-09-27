@@ -202,7 +202,7 @@ class _VehicleCard extends StatelessWidget {
               child: photos.isEmpty
                   ? Container(
                       key: Key('vehicle_no_photos_${vehicle.id}'),
-                      color: const Color(0xFFEAF2FF),
+                      color: const Color(0xFFE8F1FB),
                       child: const Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -221,7 +221,7 @@ class _VehicleCard extends StatelessWidget {
                         photos.first,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const ColoredBox(
-                          color: Color(0xFFEAF2FF),
+                          color: Color(0xFFE8F1FB),
                           child: Center(
                               child: Icon(Icons.two_wheeler_rounded,
                                   size: 38, color: DriverColors.blue)),

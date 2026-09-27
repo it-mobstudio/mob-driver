@@ -126,7 +126,7 @@ class _DriverTripsPageState extends State<DriverTripsPage> {
                     label: Text(filter.label),
                     selected: filter == _filter,
                     onSelected: (_) => _select(filter),
-                    selectedColor: const Color(0xFFEAF2FF),
+                    selectedColor: const Color(0xFFE8F1FB),
                     labelStyle: TextStyle(
                         color: filter == _filter
                             ? DriverColors.blue

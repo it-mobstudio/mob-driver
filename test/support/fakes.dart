@@ -782,8 +782,8 @@ class FakeDriverRepository implements DriverRepository {
   }
 
   @override
-  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id) async {
-    calls.add('collect:$id');
+  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id, {String method = 'qr'}) async {
+    calls.add(method == 'qr' ? 'collect:$id' : 'collect:$id:$method');
     return collectResult;
   }
 

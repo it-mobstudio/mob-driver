@@ -152,7 +152,7 @@ class _ViewCartBarContent extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0360E5).withValues(alpha: 0.24),
+                color: const Color(0xFF0454A3).withValues(alpha: 0.24),
                 blurRadius: 18,
                 offset: const Offset(0, 6),
               ),
@@ -176,7 +176,7 @@ class _ViewCartBarContent extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      const Color(0xFF0360E5).withValues(alpha: 0.92),
+                      const Color(0xFF0454A3).withValues(alpha: 0.92),
                       const Color(0xFF034FC0).withValues(alpha: 0.86),
                     ],
                   ),

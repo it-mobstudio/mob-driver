@@ -5,7 +5,7 @@ class AppBackIcon extends StatelessWidget {
   const AppBackIcon({
     super.key,
     this.size = 16,
-    this.color = const Color(0xFF0A243F),
+    this.color = const Color(0xFF001533),
   });
 
   final double size;

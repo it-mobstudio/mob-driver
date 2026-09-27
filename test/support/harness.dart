@@ -248,3 +248,12 @@ Future<void> swipe(WidgetTester tester, String label) async {
   await tester.drag(knob, const Offset(800, 0));
   await tester.pumpAndSettle();
 }
+
+/// At a COD drop the app first asks how the customer paid. Tests about the
+/// QR screen pick "Show QR code"; when no payment is due this does nothing.
+Future<void> payByQrIfAsked(WidgetTester tester) async {
+  final qr = find.byKey(const Key('pay_qr'));
+  if (qr.evaluate().isEmpty) return;
+  await tester.tap(qr);
+  await tester.pumpAndSettle();
+}

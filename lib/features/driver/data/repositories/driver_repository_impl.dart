@@ -293,8 +293,8 @@ class DriverRepositoryImpl implements DriverRepository {
       _guard(() async => PaymentQr.fromJson(await _remote.paymentQr(id)));
 
   @override
-  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id) => _guard(
-      () async => DeliveryOtpSent.fromJson(await _remote.collectPayment(id)));
+  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id, {String method = 'qr'}) => _guard(
+      () async => DeliveryOtpSent.fromJson(await _remote.collectPayment(id, method: method)));
 
   @override
   Future<(DeliveryOtpSent?, AppFailure?)> resendDeliveryOtp(String id) =>

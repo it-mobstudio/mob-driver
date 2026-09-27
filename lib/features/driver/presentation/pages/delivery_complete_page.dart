@@ -116,13 +116,7 @@ class _DeliveredBanner extends StatelessWidget {
     return Container(
       height: 132,
       clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0B2545), Color(0xFF13315C)],
-        ),
-      ),
+      decoration: const BoxDecoration(gradient: DriverColors.brandGradient),
       child: Stack(children: [
         Positioned(
           right: 8,

@@ -34,8 +34,21 @@ class OnboardingPage extends StatefulWidget {
 }
 
 class _OnboardingPageState extends State<OnboardingPage> {
-  /// Set only while the driver has gone back to a step themselves.
+  /// Set only while the driver has gone back to a step themselves — and
+  /// dropped as soon as the server moves them on (e.g. the missing licence
+  /// arrives), so they're never left stuck on a step they've finished.
   int? _override;
+  OnboardingStatus? _overrideFrom;
+
+  void _goTo(int step, DriverProfile profile) => setState(() {
+        _override = step;
+        _overrideFrom = profile.onboardingStatus;
+      });
+
+  void _resume() => setState(() {
+        _override = null;
+        _overrideFrom = null;
+      });
 
   static const _steps = 3;
 
@@ -78,7 +91,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
         builder: (context, state) {
           final profile = state.profile;
           if (profile == null) return const SizedBox.shrink();
-          final step = _override ?? _stepFor(profile);
+          if (_override != null && profile.onboardingStatus != _overrideFrom) {
+            _override = null;
+            _overrideFrom = null;
+          }
+          final natural = _stepFor(profile);
+          final step = _override ?? natural;
+          // Gone back to a finished step: offer the way forward again.
+          final revisiting = _override != null && natural > step;
 
           return Scaffold(
             key: const Key('onboarding'),
@@ -101,20 +121,46 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       child: switch (step) {
                         0 => _DetailsStep(
                             profile: profile,
-                            onSaved: () => setState(() => _override = null),
+                            onSaved: _resume,
                           ),
                         1 => _DocumentsStep(
                             profile: profile,
                             capture: widget.capture,
-                            onEditDetails: () => setState(() => _override = 0),
+                            onEditDetails: () => _goTo(0, profile),
                           ),
                         2 => _VehicleStep(
-                            onBack: () => setState(() => _override = 1),
+                            onBack: () => _goTo(1, profile),
                           ),
-                        _ => _ReviewStep(profile: profile),
+                        _ => _ReviewStep(
+                            profile: profile,
+                            onEdit: (step) => _goTo(step, profile),
+                          ),
                       },
                     ),
                   ),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  child: revisiting
+                      ? Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                          decoration: const BoxDecoration(color: Colors.white, boxShadow: [
+                            BoxShadow(color: Color(0x14001533), blurRadius: 14, offset: Offset(0, -3)),
+                          ]),
+                          child: PrimaryButton(
+                            key: const Key('onboarding_resume'),
+                            label: natural >= 3
+                                ? 'Done — back to review'
+                                : natural == 2
+                                    ? 'Continue to your vehicle'
+                                    : 'Continue to documents',
+                            icon: Icons.arrow_forward_rounded,
+                            onPressed: _resume,
+                          ),
+                        )
+                      : const SizedBox(width: double.infinity),
                 ),
               ]),
             ),
@@ -291,8 +337,11 @@ class _VehicleStepState extends State<_VehicleStep> {
     if (mounted) setState(() => _vehicles = vehicles ?? const []);
   }
 
-  Future<void> _add() async {
-    await context.push(DriverRoutes.newVehicle);
+  Future<void> _add() => _openForm(DriverRoutes.newVehicle);
+  Future<void> _edit(String id) => _openForm(DriverRoutes.editVehicle(id));
+
+  Future<void> _openForm(String route) async {
+    await context.push(route);
     if (!mounted) return;
     setState(() => _busy = true);
     await _load();
@@ -321,6 +370,7 @@ class _VehicleStepState extends State<_VehicleStep> {
             DriverCard(
               key: Key('onboarding_vehicle_${v.id}'),
               padding: const EdgeInsets.all(12),
+              onTap: () => _edit(v.id),
               child: Row(children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
@@ -340,9 +390,11 @@ class _VehicleStepState extends State<_VehicleStep> {
                   ]),
                 ),
                 if (v.photos.isEmpty)
-                  const StatusPill('Add a photo', color: DriverColors.orange)
+                  const StatusPill('Add a photo', color: DriverColors.orange, icon: Icons.add_a_photo_outlined)
                 else
                   const Icon(Icons.check_circle_rounded, color: DriverColors.green),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded, color: DriverColors.muted),
               ]),
             ),
             const SizedBox(height: 10),
@@ -373,8 +425,11 @@ class _VehicleStepState extends State<_VehicleStep> {
 /// was submitted, and keeps checking — the screen lifts itself the moment
 /// they're approved.
 class _ReviewStep extends StatefulWidget {
-  const _ReviewStep({required this.profile});
+  const _ReviewStep({required this.profile, required this.onEdit});
   final DriverProfile profile;
+
+  /// Opens a finished step again (0 details, 1 documents, 2 vehicle).
+  final ValueChanged<int> onEdit;
 
   @override
   State<_ReviewStep> createState() => _ReviewStepState();
@@ -480,6 +535,41 @@ class _ReviewStepState extends State<_ReviewStep> with WidgetsBindingObserver {
           ]),
         ),
         const SizedBox(height: 18),
+        const Text('Need to change something?',
+            style: TextStyle(color: DriverColors.ink, fontSize: 15, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        const Text('You can still edit what you sent while we review it.',
+            style: TextStyle(color: DriverColors.muted, fontSize: 12.5)),
+        const SizedBox(height: 10),
+        DriverCard(
+          padding: EdgeInsets.zero,
+          child: Column(children: [
+            _EditRow(
+              key: const Key('onboarding_review_edit_details'),
+              icon: Icons.person_outline_rounded,
+              title: 'Edit my details',
+              subtitle: 'Name, date of birth, address, emergency contact',
+              onTap: () => widget.onEdit(0),
+            ),
+            const Divider(height: 1, indent: 60),
+            _EditRow(
+              key: const Key('onboarding_review_edit_documents'),
+              icon: Icons.badge_outlined,
+              title: 'Update documents',
+              subtitle: 'Aadhaar, driving licence, police certificate',
+              onTap: () => widget.onEdit(1),
+            ),
+            const Divider(height: 1, indent: 60),
+            _EditRow(
+              key: const Key('onboarding_review_edit_vehicle'),
+              icon: Icons.local_shipping_outlined,
+              title: 'Manage my vehicle',
+              subtitle: 'Type, number plate and pictures',
+              onTap: () => widget.onEdit(2),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 18),
         PrimaryButton(
           key: const Key('onboarding_check_status'),
           label: 'Check status',
@@ -490,4 +580,38 @@ class _ReviewStepState extends State<_ReviewStep> with WidgetsBindingObserver {
       ],
     );
   }
+}
+
+
+class _EditRow extends StatelessWidget {
+  const _EditRow({super.key, required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+          child: Row(children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(color: DriverColors.blueSoft, borderRadius: BorderRadius.circular(11)),
+              child: Icon(icon, color: DriverColors.blue, size: 19),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: const TextStyle(color: DriverColors.ink, fontWeight: FontWeight.w700, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(color: DriverColors.muted, fontSize: 12)),
+              ]),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: DriverColors.muted),
+          ]),
+        ),
+      );
 }

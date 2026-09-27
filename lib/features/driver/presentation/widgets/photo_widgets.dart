@@ -68,6 +68,7 @@ class PhotoTile extends StatelessWidget {
     this.optional = false,
     this.height = 112,
     this.enabled = true,
+    this.errorText,
   });
 
   final String label;
@@ -78,37 +79,64 @@ class PhotoTile extends StatelessWidget {
   final double height;
   final bool enabled;
 
+  /// Shown under an empty tile (with a red outline) once the driver has tried
+  /// to submit without this picture.
+  final String? errorText;
+
+  bool get _showError => errorText != null && !_filled;
+
   bool get _filled =>
       photo != null || (networkUrl != null && networkUrl!.isNotEmpty);
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: enabled ? onTap : null,
-          child: Ink(
-            height: height,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FC),
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: _filled ? DriverColors.green : DriverColors.line,
-                width: _filled ? 1.6 : 1.2,
+              onTap: enabled ? onTap : null,
+              child: Ink(
+                height: height,
+                decoration: BoxDecoration(
+                  color: _showError ? const Color(0xFFFFF5F5) : const Color(0xFFF7F9FC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: _filled
+                        ? DriverColors.green
+                        : _showError
+                            ? DriverColors.red
+                            : DriverColors.line,
+                    width: _filled || _showError ? 1.6 : 1.2,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(13),
+                  child: _filled ? _filledView() : _emptyView(),
+                ),
               ),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(13),
-              child: _filled ? _filledView() : _emptyView(),
-            ),
           ),
-        ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            alignment: Alignment.topLeft,
+            child: _showError
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4),
+                    child: Text(errorText!,
+                        style: const TextStyle(color: DriverColors.red, fontSize: 12, fontWeight: FontWeight.w600)),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
       );
 
   Widget _emptyView() => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.add_a_photo_outlined,
-              color: DriverColors.blue, size: 26),
+          Icon(Icons.add_a_photo_outlined,
+              color: _showError ? DriverColors.red : DriverColors.blue, size: 26),
           const SizedBox(height: 6),
           Text(label,
               textAlign: TextAlign.center,

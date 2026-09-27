@@ -1,10 +1,14 @@
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/map_style.dart';
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_glide.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/map_pins.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/svg_marker.dart';
 
 /// An extra pickup / drop between the trip's main pickup and final drop.
 class MapStop {
@@ -82,7 +86,15 @@ class TripMap extends StatefulWidget {
   State<TripMap> createState() => _TripMapState();
 }
 
-class _TripMapState extends State<TripMap> {
+class _TripMapState extends State<TripMap> with SingleTickerProviderStateMixin {
+  /// The driver's vehicle drives between fixes and faces where it's heading.
+  late final DriverGlide _glide = DriverGlide(
+    vsync: this,
+    onTick: () {
+      if (mounted) setState(() {});
+    },
+  );
+
   static const _fallbackCenter = LatLng(12.9716, 77.5946); // Bengaluru
 
   GoogleMapController? _controller;
@@ -96,17 +108,33 @@ class _TripMapState extends State<TripMap> {
   /// position tick, which would fight the driver panning the map.
   String _framedFor = '';
 
+  late final WebVehicleIcons _webIcons = WebVehicleIcons(
+    'assets/icons/driver_marker.svg',
+    width: 46,
+    onReady: () {
+      if (mounted) setState(() {});
+    },
+  );
+
   @override
   void initState() {
     super.initState();
     _loadPins();
+    final start = widget.data.driver;
+    if (start != null) _glide.moveTo(start, animate: false);
+  }
+
+  @override
+  void dispose() {
+    _glide.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPins() async {
     final icons = await Future.wait([
       MapPins.pickup,
       MapPins.drop,
-      MapPins.driver,
+      SvgMarkers.get('assets/icons/driver_marker.svg', width: 46),
     ]);
     if (!mounted) return;
     setState(() {
@@ -119,6 +147,10 @@ class _TripMapState extends State<TripMap> {
   @override
   void didUpdateWidget(covariant TripMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final point = widget.data.driver;
+    if (point != null && point != oldWidget.data.driver) {
+      _glide.moveTo(point, animate: !MediaQuery.disableAnimationsOf(context));
+    }
     if (_shapeKey(widget.data) != _framedFor) unawaited(_frame());
   }
 
@@ -145,6 +177,14 @@ class _TripMapState extends State<TripMap> {
         if (p.latitude > north) north = p.latitude;
         if (p.longitude < west) west = p.longitude;
         if (p.longitude > east) east = p.longitude;
+      }
+      if (kIsWeb && widget.bottomPadding > 0) {
+        // The web map ignores `padding`, so the bottom panel would cover the
+        // lower part of the route: stretch the frame downwards by the share
+        // of the map the panel hides, so the whole route sits above it.
+        final height = context.size?.height ?? 0;
+        final hidden = height > 0 ? (widget.bottomPadding / height).clamp(0.0, .8) : 0.0;
+        if (hidden > 0) south -= (north - south) * hidden / (1 - hidden);
       }
       await controller.animateCamera(CameraUpdate.newLatLngBounds(
         LatLngBounds(
@@ -192,10 +232,13 @@ class _TripMapState extends State<TripMap> {
       if (d.driver != null)
         Marker(
           markerId: const MarkerId('driver'),
-          position: d.driver!,
-          icon: _driverIcon ??
+          position: _glide.position ?? d.driver!,
+          icon: (kIsWeb ? _webIcons.forBearing(_glide.bearing) : null) ??
+              _driverIcon ??
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-          anchor: const Offset(.5, 1),
+          anchor: const Offset(.5, .5),
+          flat: true,
+          rotation: kIsWeb ? 0 : _glide.bearing,
           zIndexInt: 3,
           infoWindow: const InfoWindow(title: 'You'),
         ),
@@ -245,6 +288,7 @@ class _TripMapState extends State<TripMap> {
     final start = widget.data.pickup ?? widget.data.driver ?? _fallbackCenter;
     return Stack(children: [
       GoogleMap(
+        style: kMobMapStyle,
         initialCameraPosition: CameraPosition(target: start, zoom: 13.5),
         markers: _markers(),
         polylines: _polylines(),

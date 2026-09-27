@@ -1,29 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
-/// The picture for a kind of vehicle — bike, auto, mini truck or truck —
-/// chosen from its name first ("Tata Ace", "14 ft truck") and its category
-/// second. The same four drawings are used by the console and the customer
-/// booking page, so everyone sees the same vehicle for the same type.
+/// The picture for a kind of vehicle, chosen from its name first ("Tata Ace",
+/// "Truck 14 ft") and its category second — the same rules and the same 3D
+/// pictures (Microsoft Fluent Emoji, MIT) as the customer booking web app
+/// (`booking.services.vehicle_art`), so everyone sees the same vehicle.
 String vehicleArtAsset({String? category, String? name}) {
   final n = (name ?? '').toLowerCase();
-  if (RegExp(r'truck|lorry|eicher|407|tonne|ton\b|ft\b|container').hasMatch(n) && !n.contains('mini')) {
-    return 'assets/images/vehicles/truck.svg';
+  String art;
+  if (RegExp(r'lorry|trailer|container|\b(14|17|19|20|22|24|32)\s*ft').hasMatch(n)) {
+    art = 'lorry';
+  } else if (RegExp(r'mini|\bace\b|tempo|bolero|dost|\bvan\b|chhota').hasMatch(n)) {
+    art = 'pickup';
+  } else if (RegExp(r'truck|tonne|\bton\b|eicher|407|canter|\bft\b').hasMatch(n)) {
+    art = 'truck';
+  } else if (RegExp(r'pickup|pick-up|4 ?wheel').hasMatch(n)) {
+    art = 'pickup';
+  } else if (RegExp(r'auto|rickshaw|3 ?wheel|loader|e-?rick').hasMatch(n)) {
+    art = 'auto';
+  } else if (RegExp(r'bike|scoot|2 ?wheel|motor|activa').hasMatch(n)) {
+    art = 'scooter';
+  } else {
+    art = switch (category) {
+      'two_wheeler' => 'scooter',
+      'three_wheeler' => 'auto',
+      _ => 'pickup',
+    };
   }
-  if (RegExp(r'mini|ace|tempo|pickup|pick-up|van|dost|4 ?wheel').hasMatch(n)) {
-    return 'assets/images/vehicles/mini_truck.svg';
-  }
-  if (RegExp(r'auto|rickshaw|3 ?wheel|e-?loader|loader').hasMatch(n)) {
-    return 'assets/images/vehicles/auto.svg';
-  }
-  if (RegExp(r'bike|scooter|scooty|2 ?wheel|motor').hasMatch(n)) {
-    return 'assets/images/vehicles/bike.svg';
-  }
-  return switch (category) {
-    'two_wheeler' => 'assets/images/vehicles/bike.svg',
-    'three_wheeler' => 'assets/images/vehicles/auto.svg',
-    _ => 'assets/images/vehicles/mini_truck.svg',
-  };
+  return 'assets/images/vehicles/$art.png';
 }
 
 class VehicleArt extends StatelessWidget {
@@ -34,10 +37,11 @@ class VehicleArt extends StatelessWidget {
   final double width;
 
   @override
-  Widget build(BuildContext context) => SvgPicture.asset(
+  Widget build(BuildContext context) => Image.asset(
         vehicleArtAsset(category: category, name: name),
         width: width,
-        height: width * 100 / 160,
+        height: width * .8,
         fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
       );
 }
