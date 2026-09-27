@@ -7,6 +7,8 @@ class AppConfig {
   // Use --dart-define=API_BASE_URL=https://host/api/v1/ to override per
   // environment (a real device needs the dev machine's LAN address, e.g.
   // http://192.168.1.20:8000/api/v1/).
+  static const String _devMachineLanHost = '192.168.1.36';
+
   static const String _apiBaseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
   );
@@ -19,10 +21,17 @@ class AppConfig {
       return configured.endsWith('/') ? configured : '$configured/';
     }
     // Local Django dev server. Inside an Android emulator 127.0.0.1 is the
-    // emulator itself; the host machine is reachable at 10.0.2.2.
-    final host = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-        ? '10.0.2.2'
-        : '127.0.0.1';
+    // emulator itself; the host machine is reachable at 10.0.2.2. On iOS a
+    // real iPhone needs the dev machine's LAN address (the simulator can use
+    // it too). Run the backend with `runserver 0.0.0.0:8000`.
+    final String host;
+    if (kIsWeb) {
+      host = '127.0.0.1';
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
+      host = '10.0.2.2';
+    } else {
+      host = _devMachineLanHost;
+    }
     return 'http://$host:8000/api/v1/';
   }
 

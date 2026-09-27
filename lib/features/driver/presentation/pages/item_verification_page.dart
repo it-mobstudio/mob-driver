@@ -32,16 +32,22 @@ const kNotDeliveredReasons = [
 ///
 /// For a finished trip (or one that never asked for verification) the same page
 /// is a read-only record.
+///
+/// With [stopId] it's the checklist of one in-between drop — just the items
+/// handed over there. Without it, a live trip with in-between stops shows the
+/// final drop's items (the others were checked at their own stops).
 class ItemVerificationPage extends StatefulWidget {
   const ItemVerificationPage({
     super.key,
     required this.tripId,
+    this.stopId,
     this.capture = const DevicePhotoCapture(),
   });
 
   static const routeName = 'DriverTripItems';
 
   final String tripId;
+  final String? stopId;
   final PhotoCapture capture;
 
   @override
@@ -79,6 +85,19 @@ class _ItemVerificationPageState extends State<ItemVerificationPage> {
 
   Trip? _trip(DriverSessionState state) =>
       state.activeTrip?.id == widget.tripId ? state.activeTrip : _fetched;
+
+  TripWaypoint? _stop(Trip trip) =>
+      trip.stops.where((s) => s.id == widget.stopId).firstOrNull;
+
+  /// The items this checklist is about (see the class comment).
+  List<TripItem> _items(Trip trip) {
+    final stop = _stop(trip);
+    if (stop != null) return trip.itemsAt(PhotoStage.delivery, stop: stop);
+    if (trip.status.isActive && trip.hasInBetweenStops) {
+      return trip.itemsAt(PhotoStage.delivery);
+    }
+    return trip.items;
+  }
 
   Future<void> _answer(
     Trip trip,
@@ -181,12 +200,13 @@ class _ItemVerificationPageState extends State<ItemVerificationPage> {
   Widget _content(Trip trip, bool tripBusy) {
     final verifying = trip.verifyItems;
     final live = trip.status == TripStatus.inProgress && verifying;
+    final items = _items(trip);
     final pending = [
-      for (final i in trip.items)
+      for (final i in items)
         if (i.isPending) i
     ];
     final answered = [
-      for (final i in trip.items)
+      for (final i in items)
         if (!i.isPending) i
     ];
 
@@ -223,13 +243,13 @@ class _ItemVerificationPageState extends State<ItemVerificationPage> {
               key: const Key('section_done')),
         for (final item in answered) entry(item),
       ] else ...[
-        _SectionLabel('ITEMS', trip.items.length),
-        for (final item in trip.items) entry(item),
+        _SectionLabel('ITEMS', items.length),
+        for (final item in items) entry(item),
       ],
     ];
 
     return Column(children: [
-      if (verifying) _Progress(trip: trip),
+      if (verifying) _Progress(items: items),
       Expanded(
         child: ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
@@ -243,7 +263,7 @@ class _ItemVerificationPageState extends State<ItemVerificationPage> {
           itemBuilder: (_, i) => entries[i],
         ),
       ),
-      if (live) _Footer(trip: trip),
+      if (live) _Footer(trip: trip, items: items, forStop: _stop(trip) != null),
     ]);
   }
 }
@@ -280,13 +300,13 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _Progress extends StatelessWidget {
-  const _Progress({required this.trip});
-  final Trip trip;
+  const _Progress({required this.items});
+  final List<TripItem> items;
 
   @override
   Widget build(BuildContext context) {
-    final total = trip.items.length;
-    final done = trip.resolvedItemCount;
+    final total = items.length;
+    final done = items.where((i) => !i.isPending).length;
     final finished = total > 0 && done == total;
     return Container(
       color: Colors.white,
@@ -305,9 +325,9 @@ class _Progress extends StatelessWidget {
                 color: DriverColors.green, size: 26),
         ]),
         const SizedBox(height: 10),
-        ItemProgressBar(items: trip.items),
+        ItemProgressBar(items: items),
         const SizedBox(height: 10),
-        Text(itemTally(trip.items),
+        Text(itemTally(items),
             key: const Key('items_tally'),
             style: const TextStyle(
                 color: DriverColors.muted,
@@ -326,12 +346,16 @@ class _Progress extends StatelessWidget {
 }
 
 class _Footer extends StatelessWidget {
-  const _Footer({required this.trip});
+  const _Footer({required this.trip, required this.items, this.forStop = false});
   final Trip trip;
+  final List<TripItem> items;
+
+  /// The checklist of an in-between drop: the stop page carries on from here.
+  final bool forStop;
 
   @override
   Widget build(BuildContext context) {
-    final left = trip.pendingItemCount;
+    final left = items.where((i) => i.isPending).length;
     return Container(
       padding: EdgeInsets.fromLTRB(
           18, 12, 18, 12 + MediaQuery.paddingOf(context).bottom),
@@ -343,7 +367,7 @@ class _Footer extends StatelessWidget {
         key: const Key('items_done'),
         label: left > 0
             ? '$left item${left == 1 ? '' : 's'} left to check'
-            : trip.isCod && !trip.isPaid
+            : trip.isCod && !trip.isPaid && !forStop
                 ? 'Continue to payment'
                 : 'Continue',
         icon: left == 0 ? Icons.arrow_forward_rounded : null,

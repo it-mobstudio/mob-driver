@@ -124,4 +124,15 @@ abstract interface class DriverRepository {
 
   /// Takes an item back to pending.
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId);
+
+  /// Reached / photographed / finished an in-between stop; each returns the
+  /// whole trip.
+  Future<(Trip?, AppFailure?)> arriveAtStop(String tripId, String stopId);
+  Future<(Trip?, AppFailure?)> addStopPhoto(
+    String tripId,
+    String stopId, {
+    required CapturedPhoto photo,
+    String? itemId,
+  });
+  Future<(Trip?, AppFailure?)> finishStop(String tripId, String stopId);
 }

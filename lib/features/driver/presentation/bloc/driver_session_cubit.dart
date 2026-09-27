@@ -482,6 +482,23 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId) =>
       _tripAction(() => _repo.resetItem(tripId, itemId));
 
+  Future<(Trip?, AppFailure?)> arriveAtStop(String tripId, String stopId) =>
+      _tripAction(() => _repo.arriveAtStop(tripId, stopId));
+
+  /// A proof photo at an in-between stop (of the order there, or of item
+  /// [itemId]).
+  Future<(Trip?, AppFailure?)> addStopPhoto(
+    String tripId,
+    String stopId, {
+    required CapturedPhoto photo,
+    String? itemId,
+  }) =>
+      _tripAction(() =>
+          _repo.addStopPhoto(tripId, stopId, photo: photo, itemId: itemId));
+
+  Future<(Trip?, AppFailure?)> finishStop(String tripId, String stopId) =>
+      _tripAction(() => _repo.finishStop(tripId, stopId));
+
   Future<(Trip?, AppFailure?)> _tripAction(
     Future<(Trip?, AppFailure?)> Function() call,
   ) async {

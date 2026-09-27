@@ -10,6 +10,7 @@ export 'delivery_complete_page.dart' show DeliveryCompletePage;
 export 'payment_qr_page.dart' show PaymentQrPage;
 export 'payout_details_page.dart' show PayoutDetailsPage;
 export 'profile_page.dart' show DriverProfilePage;
+export 'stop_page.dart' show StopPage;
 export 'trip_page.dart' show TripPage;
 export 'trips_page.dart' show DriverTripsPage;
 export 'vehicle_page.dart' show DriverVehiclePage;
