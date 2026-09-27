@@ -8,6 +8,7 @@ import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dar
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_form.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/vehicle_art.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/photo_widgets.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
@@ -344,28 +345,25 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
           'Your company hasn’t set up any vehicle types yet. Ask them to add one.',
           style: TextStyle(color: DriverColors.muted, fontSize: 13));
     }
-    return Wrap(spacing: 8, runSpacing: 8, children: [
-      for (final type in types)
-        ChoiceChip(
-          key: Key('vehicle_type_${type.id}'),
-          label: Text([
-            type.name,
-            if (type.categoryLabel.isNotEmpty) type.categoryLabel,
-          ].join(' · ')),
-          selected: _typeId == type.id,
-          onSelected: _saving ? null : (_) => setState(() => _typeId = type.id),
-          selectedColor: const Color(0xFFDCEBFF),
-          labelStyle: TextStyle(
-              color: _typeId == type.id ? DriverColors.blue : DriverColors.ink,
-              fontWeight: FontWeight.w700,
-              fontSize: 13.5),
-          side: BorderSide(
-              color:
-                  _typeId == type.id ? DriverColors.blue : DriverColors.line),
-          backgroundColor: Colors.white,
-          showCheckmark: false,
-        ),
-    ]);
+    // A picture per type — "what does your vehicle look like?" is quicker to
+    // answer from a drawing than from a name.
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.25,
+      children: [
+        for (final type in types)
+          _TypeCard(
+            key: Key('vehicle_type_${type.id}'),
+            type: type,
+            selected: _typeId == type.id,
+            onTap: _saving ? null : () => setState(() => _typeId = type.id),
+          ),
+      ],
+    );
   }
 
   Widget _photoGrid() {
@@ -521,6 +519,79 @@ class _AddPhotoSquare extends StatelessWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w700)),
                     ]),
+            ),
+          ),
+        ),
+      );
+}
+
+
+class _TypeCard extends StatelessWidget {
+  const _TypeCard({super.key, required this.type, required this.selected, this.onTap});
+
+  final VehicleTypeOption type;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => PressScale(
+        enabled: onTap != null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFF0F6FF) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color: selected ? DriverColors.blue : DriverColors.line,
+                width: selected ? 2 : 1),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onTap,
+              child: Stack(children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: (type.iconUrl ?? '').isNotEmpty
+                                ? Image.network(type.iconUrl!,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => VehicleArt(
+                                        category: type.category, name: type.name, width: 96))
+                                : VehicleArt(category: type.category, name: type.name, width: 96),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(type.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: selected ? DriverColors.blue : DriverColors.ink,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14)),
+                        Text(
+                            [
+                              if (type.categoryLabel.isNotEmpty) type.categoryLabel,
+                              if (type.defaultCapacityKg != null)
+                                '${type.defaultCapacityKg!.round()} kg',
+                            ].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: DriverColors.muted, fontSize: 12)),
+                      ]),
+                ),
+                if (selected)
+                  const Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Icon(Icons.check_circle_rounded, color: DriverColors.blue, size: 20),
+                  ),
+              ]),
             ),
           ),
         ),

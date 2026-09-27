@@ -454,7 +454,7 @@ void main() {
 
     CapturedPhoto photo() => CapturedPhoto(bytes: Uint8List(2), filename: 'a.jpg');
 
-    test('a new driver needs onboarding; one who is waiting on the company does not', () async {
+    test('sign-up stays up until the company approves the driver', () async {
       repo.profileValue = signedUp();
       await cubit.load();
       expect(cubit.state.needsOnboarding, isTrue);
@@ -465,7 +465,8 @@ void main() {
 
       repo.profileChangeResult = signedUp(status: 'under_review');
       await cubit.submitAadhar(number: '234567890123', front: photo(), back: photo());
-      expect(cubit.state.needsOnboarding, isFalse, reason: 'their turn is over — now it is the company\'s');
+      expect(cubit.state.needsOnboarding, isTrue, reason: 'waiting for review — no rides before approval');
+      expect(cubit.state.profile!.onboardingStatus.waitingForReview, isTrue);
     });
 
     test('nothing is forced on the driver before their profile is known', () {

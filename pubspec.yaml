@@ -113,6 +113,7 @@ flutter:
   assets:
     - assets/fonts/
     - assets/images/
+    - assets/images/vehicles/
     - assets/images/mobStar/
     - assets/images/toasticons/
     - assets/images/Brands/    

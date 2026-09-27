@@ -13,6 +13,7 @@ import 'package:m_o_b_demand_side/features/driver/presentation/widgets/order_wid
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/invoice_card.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/swipe_button.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_photos.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/voice_note_player.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/trip_page.dart'
     show kCancelReasons;
@@ -164,6 +165,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
             if (trip.hasNotes) ...[
               const SizedBox(height: 16),
               OrderNoteCard(note: trip.notes!),
+            ],
+            if (trip.hasVoiceNote) ...[
+              const SizedBox(height: 12),
+              VoiceNotePlayer(url: trip.voiceNoteUrl!, seconds: trip.voiceNoteSeconds),
             ],
             if (trip.wantsPickupPhotos) ...[
               const SizedBox(height: 22),

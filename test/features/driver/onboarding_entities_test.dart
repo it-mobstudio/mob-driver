@@ -58,9 +58,10 @@ void main() {
       expect(p.onboardingStatus.needsSetup, isTrue);
     });
 
-    test('only the first two statuses force the sign-up flow', () {
+    test('every status but approved keeps the driver in sign-up (no rides before approval)', () {
       final forced = OnboardingStatus.values.where((s) => s.needsSetup).toList();
-      expect(forced, [OnboardingStatus.profileIncomplete, OnboardingStatus.documentsRequired]);
+      expect(forced, OnboardingStatus.values.where((s) => s != OnboardingStatus.approved).toList());
+      expect(OnboardingStatus.tryParse('vehicle_required'), OnboardingStatus.vehicleRequired);
     });
 
     test('what was submitted comes through, with the Aadhaar masked to its last four', () {

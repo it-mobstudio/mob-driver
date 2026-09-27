@@ -364,8 +364,9 @@ void main() {
       await openForm(tester, rig);
       expect(find.text('Add a vehicle'), findsOneWidget,
           reason: 'the form\'s title');
-      expect(find.text('Bike · 2 wheeler'), findsOneWidget);
-      expect(find.text('Tempo · 3 wheeler'), findsOneWidget);
+      // Each type is a picture card: its name, then category and capacity.
+      expect(find.descendant(of: find.byKey(const Key('vehicle_type_vt-bike')), matching: find.text('Bike')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const Key('vehicle_type_vt-tempo')), matching: find.text('Tempo')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('vehicle_type_vt-bike')));
       await tester.pump();

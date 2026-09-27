@@ -17,6 +17,7 @@ import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_sessi
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/order_widgets.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/swipe_button.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/voice_note_player.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_map.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
@@ -563,6 +564,10 @@ class _Panel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4)),
             ),
             const SizedBox(height: 18),
+            if (trip.hasVoiceNote && trip.status.isActive) ...[
+              VoiceNotePlayer(url: trip.voiceNoteUrl!, seconds: trip.voiceNoteSeconds, compact: true),
+              const SizedBox(height: 16),
+            ],
             TripTimeline(stops: [
               TimelineStop(
                 tag: 'Pickup',

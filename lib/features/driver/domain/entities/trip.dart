@@ -42,10 +42,17 @@ enum PaymentMode {
 enum PickupPhotoMode {
   none('none'),
   order('order'),
-  perItem('per_item');
+  perItem('per_item'),
+  both('both');
 
   const PickupPhotoMode(this.wire);
   final String wire;
+
+  /// A photo of the whole order is part of it.
+  bool get wantsOrderPhoto => this == order || this == both;
+
+  /// A photo of every item is part of it.
+  bool get wantsItemPhotos => this == perItem || this == both;
 
   static PickupPhotoMode parse(String? value) => PickupPhotoMode.values
       .firstWhere((mode) => mode.wire == value, orElse: () => PickupPhotoMode.none);
@@ -212,6 +219,8 @@ class Trip extends Equatable {
     this.referenceId,
     this.orderNumber,
     this.notes,
+    this.voiceNoteUrl,
+    this.voiceNoteSeconds,
     this.vehicleTypeName,
     this.vehicleRegistration,
     this.distanceMeters,
@@ -257,6 +266,8 @@ class Trip extends Equatable {
       referenceId: readString(json['reference_id']),
       orderNumber: readString(json['order_number']),
       notes: readString(json['notes']),
+      voiceNoteUrl: readString(json['voice_note_url']),
+      voiceNoteSeconds: readInt(json['voice_note_seconds']),
       vehicleTypeName: readString(vehicleType['name']),
       vehicleRegistration: readString(vehicle['registration_number']),
       pickup: TripStop.fromJson(json, prefix: 'pickup'),
@@ -305,6 +316,12 @@ class Trip extends Equatable {
 
   /// The company's note for the driver about the whole order.
   final String? notes;
+
+  /// A short (≤ 30 s) spoken note from the dispatcher.
+  final String? voiceNoteUrl;
+  final int? voiceNoteSeconds;
+
+  bool get hasVoiceNote => (voiceNoteUrl ?? '').isNotEmpty;
   final String? vehicleTypeName;
   final String? vehicleRegistration;
   final TripStop pickup;
@@ -409,18 +426,20 @@ class Trip extends Equatable {
   /// The company asked for photos at this stop.
   bool wantsPhotos(PhotoStage stage) => switch (photoMode(stage)) {
         PickupPhotoMode.none => false,
-        PickupPhotoMode.order => true,
+        PickupPhotoMode.order || PickupPhotoMode.both => true,
         PickupPhotoMode.perItem => items.isNotEmpty,
       };
 
+  bool orderPhotoMissing(PhotoStage stage) =>
+      photoMode(stage).wantsOrderPhoto && (orderPhotoUrl(stage) ?? '').isEmpty;
+
+  int missingItemPhotos(PhotoStage stage) => photoMode(stage).wantsItemPhotos
+      ? items.where((i) => (i.photoUrl(stage) ?? '').isEmpty).length
+      : 0;
+
   /// Photos still owed at this stop (0 when none were asked for).
-  int missingPhotos(PhotoStage stage) => switch (photoMode(stage)) {
-        PickupPhotoMode.none => 0,
-        PickupPhotoMode.order =>
-          (orderPhotoUrl(stage) ?? '').isEmpty ? 1 : 0,
-        PickupPhotoMode.perItem =>
-          items.where((i) => (i.photoUrl(stage) ?? '').isEmpty).length,
-      };
+  int missingPhotos(PhotoStage stage) =>
+      (orderPhotoMissing(stage) ? 1 : 0) + missingItemPhotos(stage);
 
   /// Every photo asked for at this stop is on the server — until then the
   /// backend won't start (pickup) or finish (delivery) the trip.
@@ -451,6 +470,7 @@ class Trip extends Equatable {
         invoiceUrl,
         invoiceNumber,
         notes,
+        voiceNoteUrl,
         verifyItems,
         pickupPhoto,
         pickupPhotoUrl,

@@ -75,12 +75,27 @@ String textOf(WidgetTester tester, String key) => tester.widget<Text>(find.byKey
 void main() {
   setUpAll(loadAppFonts);
 
+  group('step 3: your vehicle', () {
+    rigTest('after documents the driver adds their vehicle, then waits for review', (tester, rig) async {
+      await openOnboarding(tester, rig, newDriver(status: 'vehicle_required', kyc: kycJson()));
+      expect(textOf(tester, 'onboarding_step'), 'Step 3 of 3 · Your vehicle');
+      expect(find.text('Add your vehicle'), findsOneWidget);
+      expect(find.byKey(const Key('onboarding_add_vehicle')), findsOneWidget);
+    });
+
+    rigTest('a rejected document sends the driver back to fix it', (tester, rig) async {
+      await openOnboarding(tester, rig, newDriver(status: 'action_required', kyc: kycJson()));
+      expect(textOf(tester, 'onboarding_step'), 'Step 2 of 3 · Documents');
+      expect(find.byKey(const Key('onboarding_fix_banner')), findsOneWidget);
+    });
+  });
+
   group('step 1: about you', () {
     rigTest('a brand-new driver starts with the details form, not the app', (tester, rig) async {
       await openOnboarding(tester, rig, newDriver());
 
       expect(find.text('Tell us about yourself'), findsOneWidget);
-      expect(textOf(tester, 'onboarding_step'), 'Step 1 of 2');
+      expect(textOf(tester, 'onboarding_step'), 'Step 1 of 3 · About you');
       expect(find.byKey(const Key('field_full_name')), findsOneWidget);
       expect(find.byKey(const Key('field_emergency_phone')), findsOneWidget);
     });
@@ -158,7 +173,7 @@ void main() {
       expect(age, greaterThanOrEqualTo(18));
 
       expect(find.text('Upload your documents'), findsOneWidget);
-      expect(textOf(tester, 'onboarding_step'), 'Step 2 of 2');
+      expect(textOf(tester, 'onboarding_step'), 'Step 2 of 3 · Documents');
     });
 
     rigTest('the backend\'s reason for refusing is shown and the form stays put', (tester, rig) async {
@@ -478,7 +493,7 @@ void main() {
       expect(find.text('Tell us about yourself'), findsOneWidget);
     });
 
-    rigTest('the moment the company holds the ball, set-up gives way to the app', (tester, rig) async {
+    rigTest('once everything is in, the driver waits on a review screen — and gets in when approved', (tester, rig) async {
       rig.repo.profileValue = newDriver(status: 'documents_required');
       await rig.cubit.load();
       await tester.pumpWidget(shell(rig));
@@ -489,6 +504,13 @@ void main() {
       await rig.cubit.submitPolice(CapturedPhoto(bytes: kTinyPng));
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const Key('onboarding_review')), findsOneWidget);
+      expect(find.text('Thanks! We’re reviewing your request'), findsOneWidget);
+      expect(find.byKey(const Key('onboarding')), findsOneWidget, reason: 'the app stays covered: no rides before approval');
+
+      rig.repo.profileValue = fakeProfile();
+      await rig.cubit.load(silent: true);
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('onboarding')), findsNothing);
       expect(find.text('PAGE today'), findsOneWidget);
     });

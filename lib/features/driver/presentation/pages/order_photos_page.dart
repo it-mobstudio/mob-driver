@@ -108,7 +108,7 @@ class _OrderPhotosPageState extends State<OrderPhotosPage>
                       photoSection(trip, widget.stage, enabled: true),
                     ]),
               ),
-              if (trip.photoMode(widget.stage) == PickupPhotoMode.perItem) ...[
+              if (trip.photoMode(widget.stage).wantsItemPhotos) ...[
                 const OrderSectionGap(),
                 ColoredBox(
                   color: Colors.white,

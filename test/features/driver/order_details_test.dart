@@ -191,6 +191,29 @@ void main() {
     expect(find.byKey(const Key('order_note')), findsNothing);
   });
 
+  rigTest('"both": the whole-order photo and one of every item, all needed', (tester, rig) async {
+    await openTracked(tester, rig, withItemsJson(pickupPhoto: 'both'));
+    expect(find.text('Order & item photos'), findsOneWidget);
+    expect(find.byKey(const Key('pickup_photo_box')), findsOneWidget);
+    expect(find.byKey(const Key('pickup_item_photo_i-1')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('pickup_photo_box')));
+    await tester.pumpAndSettle();
+    await swipe(tester, 'Pickup order');
+    expect(find.text('Take a photo of every item first (2 left).'), findsOneWidget);
+    expect(rig.repo.pickupPhotos, ['order']);
+  });
+
+  rigTest('a voice note from the dispatcher shows a play button', (tester, rig) async {
+    final json = withItemsJson()
+      ..['voice_note_url'] = 'https://cdn.example.com/note.wav'
+      ..['voice_note_seconds'] = 18;
+    await openTracked(tester, rig, json);
+    expect(find.byKey(const Key('voice_note')), findsOneWidget);
+    expect(find.text('Voice note from dispatcher'), findsOneWidget);
+    expect(find.text('0:18'), findsOneWidget);
+  });
+
   rigTest('a problem at pickup cancels the trip and returns to the dashboard', (tester, rig) async {
     rig.repo.actionResult = (Trip.fromJson(tripJson(status: 'cancelled')), null);
     await openDetails(tester, rig, withItems());

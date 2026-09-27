@@ -67,14 +67,22 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
   /// The label plus either the big order-photo box or the per-item progress
   /// (the item slots themselves go in the item list — see [itemPhotoSlot]).
   Widget photoSection(Trip trip, PhotoStage stage, {required bool enabled}) {
-    final perItem = trip.photoMode(stage) == PickupPhotoMode.perItem;
+    final mode = trip.photoMode(stage);
     final total = trip.items.length;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      OrderFieldLabel(perItem ? 'Item photos' : 'Upload photo', required: true),
+      OrderFieldLabel(
+          mode == PickupPhotoMode.both
+              ? 'Order & item photos'
+              : mode.wantsItemPhotos
+                  ? 'Item photos'
+                  : 'Upload photo',
+          required: true),
       const SizedBox(height: 10),
-      if (perItem)
-        PhotoProgress(done: total - trip.missingPhotos(stage), total: total)
-      else
+      if (mode.wantsItemPhotos && total > 0) ...[
+        PhotoProgress(done: total - trip.missingItemPhotos(stage), total: total),
+        if (mode.wantsOrderPhoto) const SizedBox(height: 14),
+      ],
+      if (mode.wantsOrderPhoto)
         CameraPhotoBox(
           key: Key('${stage.wire}_photo_box'),
           photo: localPhoto(stage),
@@ -92,7 +100,7 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
   /// The camera slot under one item, for orders wanting a photo per item.
   Widget? itemPhotoSlot(Trip trip, PhotoStage stage, TripItem item,
           {required bool enabled}) =>
-      trip.photoMode(stage) != PickupPhotoMode.perItem
+      !trip.photoMode(stage).wantsItemPhotos
           ? null
           : ItemPhotoSlot(
               key: Key('${stage.wire}_item_photo_${item.id}'),
@@ -106,12 +114,13 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
   /// Why the driver can't move on yet, or null when every photo is in.
   String? missingPhotosMessage(Trip trip, PhotoStage stage) {
     if (photoUploading) return 'Wait a moment — the photo is still uploading.';
-    final missing = trip.missingPhotos(stage);
-    if (missing == 0) return null;
-    return trip.photoMode(stage) == PickupPhotoMode.perItem
-        ? 'Take a photo of every item first ($missing left).'
-        : stage == PhotoStage.pickup
-            ? 'Add a photo of the package first.'
-            : 'Add a photo of the delivered package first.';
+    if (trip.orderPhotoMissing(stage)) {
+      return stage == PhotoStage.pickup
+          ? 'Add a photo of the package first.'
+          : 'Add a photo of the delivered package first.';
+    }
+    final items = trip.missingItemPhotos(stage);
+    if (items > 0) return 'Take a photo of every item first ($items left).';
+    return null;
   }
 }

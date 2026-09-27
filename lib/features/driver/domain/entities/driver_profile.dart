@@ -20,6 +20,7 @@ enum KycStatus {
 enum OnboardingStatus {
   profileIncomplete('profile_incomplete'),
   documentsRequired('documents_required'),
+  vehicleRequired('vehicle_required'),
   underReview('under_review'),
   actionRequired('action_required'),
   approved('approved');
@@ -34,10 +35,14 @@ enum OnboardingStatus {
     return null;
   }
 
-  /// The sign-up flow is forced on the driver only while it's *their* turn.
-  /// After that they're waiting on (or fixing something for) the company and
-  /// can use the app.
-  bool get needsSetup => this == profileIncomplete || this == documentsRequired;
+  /// Sign-up covers the app until the company approves the driver: while it's
+  /// their turn it asks for details, documents and their vehicle; after that
+  /// it tells them their request is being reviewed (or what to fix). Nobody
+  /// takes rides before approval.
+  bool get needsSetup => this != approved;
+
+  /// It's the company's turn — nothing for the driver to do but wait.
+  bool get waitingForReview => this == underReview;
 }
 
 /// One verifiable document (Aadhaar, licence, police certificate): the
