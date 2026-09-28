@@ -34,7 +34,11 @@ abstract final class DriverRoutes {
   static const otpPattern = '/driver/trip/:id/otp';
   static String otp(String id) => '/driver/trip/$id/otp';
   static const itemsPattern = '/driver/trip/:id/items';
-  static String items(String id) => '/driver/trip/$id/items';
+  static String items(String id, {String? stopId}) =>
+      '/driver/trip/$id/items${stopId == null ? '' : '?stop=$stopId'}';
+  static const stopPattern = '/driver/trip/:id/stops/:stop';
+  static String stop(String id, String stopId) =>
+      '/driver/trip/$id/stops/$stopId';
   static const myVehicles = '/driver/vehicle/mine';
   static const newVehicle = '/driver/vehicle/mine/new';
   static const editVehiclePattern = '/driver/vehicle/mine/:id';

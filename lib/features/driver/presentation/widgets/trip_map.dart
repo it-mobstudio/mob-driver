@@ -10,12 +10,28 @@ import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_gl
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/map_pins.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/svg_marker.dart';
 
+/// An extra pickup / drop between the trip's main pickup and final drop.
+class MapStop {
+  const MapStop({
+    required this.id,
+    required this.at,
+    required this.isPickup,
+    required this.label,
+  });
+
+  final String id;
+  final LatLng at;
+  final bool isPickup;
+  final String label;
+}
+
 /// Everything the trip map draws, already in map coordinates.
 class TripMapData {
   const TripMapData({
     required this.status,
     this.pickup,
     this.drop,
+    this.stops = const [],
     this.driver,
     this.route = const [],
     this.leg = const [],
@@ -24,6 +40,9 @@ class TripMapData {
   final TripStatus status;
   final LatLng? pickup;
   final LatLng? drop;
+
+  /// The stops in between, in visiting order.
+  final List<MapStop> stops;
   final LatLng? driver;
 
   /// The trip's own pickup → drop polyline (decoded from the backend).
@@ -37,6 +56,7 @@ class TripMapData {
         ...leg,
         if (pickup != null) pickup!,
         if (drop != null) drop!,
+        for (final stop in stops) stop.at,
         if (driver != null) driver!,
       ];
 }
@@ -135,7 +155,7 @@ class _TripMapState extends State<TripMap> with SingleTickerProviderStateMixin {
   }
 
   String _shapeKey(TripMapData d) =>
-      '${d.status.wire}|${d.route.length}|${d.leg.length}|${d.pickup}|${d.drop}';
+      '${d.status.wire}|${d.route.length}|${d.leg.length}|${d.pickup}|${d.drop}|${d.stops.length}';
 
   Future<void> _frame() async {
     final controller = _controller;
@@ -197,6 +217,17 @@ class _TripMapState extends State<TripMap> with SingleTickerProviderStateMixin {
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           anchor: const Offset(.5, 1),
           infoWindow: const InfoWindow(title: 'Drop'),
+        ),
+      for (final stop in d.stops)
+        Marker(
+          markerId: MarkerId('stop_${stop.id}'),
+          position: stop.at,
+          icon: (stop.isPickup ? _pickupIcon : _dropIcon) ??
+              BitmapDescriptor.defaultMarkerWithHue(stop.isPickup
+                  ? BitmapDescriptor.hueGreen
+                  : BitmapDescriptor.hueRed),
+          anchor: const Offset(.5, 1),
+          infoWindow: InfoWindow(title: stop.label),
         ),
       if (d.driver != null)
         Marker(

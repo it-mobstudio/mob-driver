@@ -65,7 +65,9 @@ class AppConfig {
     if (!uri.hasScheme) return resolveMediaUrl(url);
     if (!uri.path.startsWith('/media/')) return url;
     final api = Uri.parse(apiBaseUrl);
-    return uri.replace(scheme: api.scheme, host: api.host, port: api.hasPort ? api.port : null).toString();
+    return uri
+        .replace(scheme: api.scheme, host: api.host, port: api.port)
+        .toString();
   }
 
   static String resolveMediaUrl(String? raw) {

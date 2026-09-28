@@ -171,8 +171,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) {
       GoRoute(
         name: ItemVerificationPage.routeName,
         path: DriverRoutes.itemsPattern,
-        builder: (_, state) =>
-            ItemVerificationPage(tripId: state.pathParameters['id']!),
+        builder: (_, state) => ItemVerificationPage(
+            tripId: state.pathParameters['id']!,
+            stopId: state.uri.queryParameters['stop']),
+      ),
+      GoRoute(
+        name: StopPage.routeName,
+        path: DriverRoutes.stopPattern,
+        builder: (_, state) => StopPage(
+            tripId: state.pathParameters['id']!,
+            stopId: state.pathParameters['stop']!),
       ),
       GoRoute(
         name: DriverVerificationPage.routeName,

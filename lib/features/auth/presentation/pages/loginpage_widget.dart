@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/shared/login_top_banner.dart';
 import 'package:m_o_b_demand_side/core/styles/app_fonts.dart';
-import 'package:m_o_b_demand_side/core/styles/app_styles.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:m_o_b_demand_side/shared/widgets/app_text_field.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
@@ -93,7 +93,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
             backgroundColor: Colors.white,
             body: LayoutBuilder(
               builder: (context, constraints) {
-                final headerHeight = constraints.maxHeight * .5;
+                final headerHeight = constraints.maxHeight * .42;
                 final bodyHeight = constraints.maxHeight - headerHeight;
 
                 return Column(
@@ -101,7 +101,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                     LoginTopBanner(height: headerHeight),
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: ConstrainedBox(
                           // Forces the column to be at least as tall as the
                           // space below the banner, so the legal text is
@@ -123,21 +123,45 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 24,
                                     ),
-                                    child: Text(
-                                      'Driver login',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.inter(
-                                        color: AppColors.primaryText,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 16,
-                                        height: 24 / 16,
-                                      ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Driver login',
+                                          style: GoogleFonts.inter(
+                                            color: DriverColors.ink,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 27,
+                                            letterSpacing: -.8,
+                                            height: 1.2,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        const Text(
+                                          'Enter your mobile number to sign in.',
+                                          style: TextStyle(
+                                              color: DriverColors.muted,
+                                              fontSize: 14,
+                                              height: 1.5),
+                                        ),
+                                      ],
                                     ),
                                   ),
+                                  const Text('Mobile number',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: DriverColors.navy)),
+                                  const SizedBox(height: 8),
                                   AppTextField(
                                     controller: _mobileController,
                                     focusNode: _mobileFocusNode,
-                                    hintText: 'Registered mobile number',
+                                    hintText: '10-digit mobile number',
+                                    autofillHints: const [
+                                      AutofillHints.telephoneNumberNational
+                                    ],
+                                    enabled: !isLoading,
                                     keyboardType: TextInputType.phone,
                                     textInputAction: TextInputAction.done,
                                     inputFormatters: [
@@ -145,21 +169,23 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                                       LengthLimitingTextInputFormatter(10),
                                     ],
                                     prefixIcon: const _PhonePrefix(),
-                                    onFieldSubmitted: (_) => _submit(context),
+                                    onFieldSubmitted: (_) {
+                                      if (!isLoading) _submit(context);
+                                    },
                                   ),
                                   const SizedBox(height: 16),
                                   SizedBox(
                                     width: double.infinity,
-                                    height: 48,
+                                    height: 54,
                                     child: ElevatedButton(
                                       onPressed: isLoading
                                           ? null
                                           : () => _submit(context),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
+                                        backgroundColor: DriverColors.blue,
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
-                                              BorderRadius.circular(12),
+                                              BorderRadius.circular(16),
                                         ),
                                         elevation: 0,
                                       ),
@@ -186,9 +212,22 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                                             ),
                                     ),
                                   ),
+                                  const SizedBox(height: 14),
+                                  const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.lock_outline_rounded,
+                                          size: 14, color: DriverColors.muted),
+                                      SizedBox(width: 6),
+                                      Text('We’ll send you an OTP to sign in',
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: DriverColors.muted)),
+                                    ],
+                                  ),
                                 ],
                               ),
-                              _legalText(),
+                              SafeArea(top: false, child: _legalText()),
                             ],
                           ),
                         ),
@@ -223,21 +262,21 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
 
   Widget _legalText() {
     const regularStyle = TextStyle(
-      color: Color(0xFF001533),
+      color: DriverColors.navy,
       fontSize: 11,
       fontFamily: 'Inter',
       fontWeight: FontWeight.w400,
       height: 16 / 11,
     );
     const mediumStyle = TextStyle(
-      color: Color(0xFF001533),
+      color: DriverColors.navy,
       fontSize: 11,
       fontFamily: 'Inter',
       fontWeight: FontWeight.w500,
       height: 16 / 11,
     );
     const linkStyle = TextStyle(
-      color: Color(0xFF001533),
+      color: DriverColors.navy,
       fontSize: 11,
       fontFamily: 'Inter',
       fontWeight: FontWeight.w600,
@@ -292,13 +331,22 @@ class _PhonePrefix extends StatelessWidget {
       padding: const EdgeInsets.only(left: 16, right: 10),
       child: Center(
         widthFactor: 1,
-        child: Text(
-          '+91',
-          style: GoogleFonts.inter(
-            color: const Color(0xFF001533),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+                label: 'India',
+                child: const ExcludeSemantics(
+                    child: Text('🇮🇳', style: TextStyle(fontSize: 23)))),
+            const SizedBox(width: 8),
+            Text('+91',
+                style: GoogleFonts.inter(
+                    color: DriverColors.navy,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(width: 12),
+            Container(width: 1, height: 22, color: DriverColors.line),
+          ],
         ),
       ),
     );

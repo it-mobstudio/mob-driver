@@ -146,7 +146,7 @@ class PushNotificationService {
             showWhen: true,
             category: AndroidNotificationCategory.navigation,
             visibility: NotificationVisibility.public,
-            subText: 'MOB Driver',
+            subText: 'MOB Go',
           ),
           iOS: const DarwinNotificationDetails(
             presentAlert: true,

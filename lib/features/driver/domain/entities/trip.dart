@@ -105,6 +105,8 @@ class TripItem extends Equatable {
     this.pickupPhotoUrl,
     this.deliveryPhotoUrl,
     this.driverNote,
+    this.pickupStopId,
+    this.dropStopId,
   });
 
   factory TripItem.fromJson(Map<String, dynamic> json) => TripItem(
@@ -122,6 +124,8 @@ class TripItem extends Equatable {
         pickupPhotoUrl: readString(json['pickup_photo_url']),
         deliveryPhotoUrl: readString(json['delivery_photo_url']),
         driverNote: readString(json['driver_note']),
+        pickupStopId: readString(json['pickup_stop']),
+        dropStopId: readString(json['drop_stop']),
       );
 
   final String id;
@@ -142,6 +146,14 @@ class TripItem extends Equatable {
   /// Taken at the drop, on orders that want one delivery photo per item.
   final String? deliveryPhotoUrl;
   final String? driverNote;
+
+  /// The in-between stop ([TripWaypoint.id]) where this item is collected /
+  /// handed over; null for the main pickup / the final drop.
+  final String? pickupStopId;
+  final String? dropStopId;
+
+  String? stopId(PhotoStage stage) =>
+      stage == PhotoStage.pickup ? pickupStopId : dropStopId;
 
   String? photoUrl(PhotoStage stage) =>
       stage == PhotoStage.pickup ? pickupPhotoUrl : deliveryPhotoUrl;
@@ -168,7 +180,99 @@ class TripItem extends Equatable {
         pickupPhotoUrl,
         deliveryPhotoUrl,
         driverNote,
+        pickupStopId,
+        dropStopId,
       ];
+}
+
+enum WaypointStatus {
+  pending('pending'),
+  arrived('arrived'),
+  done('done');
+
+  const WaypointStatus(this.wire);
+  final String wire;
+
+  static WaypointStatus parse(String? value) => WaypointStatus.values
+      .firstWhere((s) => s.wire == value, orElse: () => WaypointStatus.pending);
+}
+
+/// One stop of the trip in visiting order (backend `stops[]`): the first is
+/// the main pickup, the last the final drop, and any in between are extra
+/// pickups / drops the driver works through while the delivery is in
+/// progress.
+class TripWaypoint extends Equatable {
+  const TripWaypoint({
+    required this.id,
+    required this.position,
+    required this.isPickup,
+    required this.address,
+    this.latitude,
+    this.longitude,
+    this.contactName,
+    this.contactPhone,
+    this.notes,
+    this.reference,
+    this.status = WaypointStatus.pending,
+    this.photoUrl,
+  });
+
+  factory TripWaypoint.fromJson(Map<String, dynamic> json) => TripWaypoint(
+        id: readString(json['id']) ?? '',
+        position: readInt(json['position']) ?? 0,
+        isPickup: readString(json['kind']) == 'pickup',
+        address: readString(json['address']) ?? '',
+        latitude: readDouble(json['lat']),
+        longitude: readDouble(json['lng']),
+        contactName: readString(json['contact_name']),
+        contactPhone: readString(json['contact_phone']),
+        notes: readString(json['notes']),
+        reference: readString(json['reference']),
+        status: WaypointStatus.parse(readString(json['status'])),
+        photoUrl: readString(json['photo_url']),
+      );
+
+  final String id;
+  final int position;
+  final bool isPickup;
+  final String address;
+  final double? latitude;
+  final double? longitude;
+  final String? contactName;
+  final String? contactPhone;
+  final String? notes;
+
+  /// A drop's own number when the trip has several (`OD…_01`).
+  final String? reference;
+  final WaypointStatus status;
+
+  /// The photo of what was collected / handed over here (orders wanting one
+  /// photo of the order at each stop).
+  final String? photoUrl;
+
+  bool get isDone => status == WaypointStatus.done;
+  bool get isArrived => status == WaypointStatus.arrived;
+
+  /// Which of the trip's photo rules apply here.
+  PhotoStage get stage => isPickup ? PhotoStage.pickup : PhotoStage.delivery;
+
+  /// `Stop 2`, counting the main pickup as stop 1.
+  String get label => 'Stop ${position + 1}';
+
+  String get kindLabel => isPickup ? 'Pickup' : 'Drop';
+
+  /// The same place as a [TripStop], for the navigation / call helpers.
+  TripStop get asStop => TripStop(
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        contactName: contactName,
+        contactPhone: contactPhone,
+      );
+
+  @override
+  List<Object?> get props =>
+      [id, position, isPickup, address, status, photoUrl, contactName];
 }
 
 /// One end of a trip — the pickup or the drop.
@@ -244,6 +348,7 @@ class Trip extends Equatable {
     this.deliveryPhotoUrl,
     this.deliveryOtp = false,
     this.items = const [],
+    this.stops = const [],
     this.driverEarning,
     this.cancellationReason,
     this.cancelledBy,
@@ -295,6 +400,7 @@ class Trip extends Equatable {
       deliveryPhotoUrl: readString(json['delivery_photo_url']),
       deliveryOtp: readBool(json['delivery_otp']),
       items: asMapList(json['items']).map(TripItem.fromJson).toList(),
+      stops: asMapList(json['stops']).map(TripWaypoint.fromJson).toList(),
       driverEarning: readDouble(json['driver_earning']),
       cancellationReason: readString(json['cancellation_reason']),
       cancelledBy: readString(json['cancelled_by']),
@@ -368,6 +474,29 @@ class Trip extends Equatable {
   final bool deliveryOtp;
   final List<TripItem> items;
 
+  /// Every stop in visiting order (empty on trip-history rows).
+  final List<TripWaypoint> stops;
+
+  /// The extra pickups / drops between the main pickup and the final drop.
+  List<TripWaypoint> get inBetweenStops =>
+      stops.length > 2 ? stops.sublist(1, stops.length - 1) : const [];
+
+  bool get hasInBetweenStops => inBetweenStops.isNotEmpty;
+
+  /// The in-between stop the driver is on or heading to, while the delivery
+  /// is in progress; null once they're all done (the final drop is next).
+  TripWaypoint? get nextStop => status != TripStatus.inProgress
+      ? null
+      : inBetweenStops.where((s) => !s.isDone).firstOrNull;
+
+  /// The items handled at [stop] — collected at a pickup, handed over at a
+  /// drop — or, with no stop, at the main pickup ([stage] pickup) / the final
+  /// drop ([stage] delivery).
+  List<TripItem> itemsAt(PhotoStage stage, {TripWaypoint? stop}) => [
+        for (final item in items)
+          if (item.stopId(stop?.stage ?? stage) == stop?.id) item
+      ];
+
   /// What this trip paid the driver (set once it's completed).
   final double? driverEarning;
   final String? cancellationReason;
@@ -404,7 +533,14 @@ class Trip extends Equatable {
   /// The company asked for verification and the driver still owes answers —
   /// until that's done the backend won't take payment or complete the trip.
   bool get needsItemVerification =>
-      status == TripStatus.inProgress && verifyItems && pendingItemCount > 0;
+      status == TripStatus.inProgress &&
+      verifyItems &&
+      itemsAt(PhotoStage.delivery).any((i) => i.isPending);
+
+  /// Items handed over at [stop] that still need the driver's answer.
+  int pendingItemsAt(TripWaypoint stop) => verifyItems && !stop.isPickup
+      ? itemsAt(stop.stage, stop: stop).where((i) => i.isPending).length
+      : 0;
 
   /// `#MOB9867855HJ` — the company's order number, else a short trip id.
   String get displayReference {
@@ -420,30 +556,44 @@ class Trip extends Equatable {
   PickupPhotoMode photoMode(PhotoStage stage) =>
       stage == PhotoStage.pickup ? pickupPhoto : deliveryPhoto;
 
-  String? orderPhotoUrl(PhotoStage stage) =>
-      stage == PhotoStage.pickup ? pickupPhotoUrl : deliveryPhotoUrl;
+  // The photo helpers below are about the main pickup / final drop, or — with
+  // [stop] — one in-between stop, under the same rules for its kind.
+
+  String? orderPhotoUrl(PhotoStage stage, {TripWaypoint? stop}) => stop != null
+      ? stop.photoUrl
+      : stage == PhotoStage.pickup
+          ? pickupPhotoUrl
+          : deliveryPhotoUrl;
 
   /// The company asked for photos at this stop.
-  bool wantsPhotos(PhotoStage stage) => switch (photoMode(stage)) {
+  bool wantsPhotos(PhotoStage stage, {TripWaypoint? stop}) =>
+      switch (photoMode(stage)) {
         PickupPhotoMode.none => false,
         PickupPhotoMode.order || PickupPhotoMode.both => true,
-        PickupPhotoMode.perItem => items.isNotEmpty,
+        PickupPhotoMode.perItem => itemsAt(stage, stop: stop).isNotEmpty,
       };
 
-  bool orderPhotoMissing(PhotoStage stage) =>
-      photoMode(stage).wantsOrderPhoto && (orderPhotoUrl(stage) ?? '').isEmpty;
+  bool orderPhotoMissing(PhotoStage stage, {TripWaypoint? stop}) =>
+      photoMode(stage).wantsOrderPhoto &&
+      (orderPhotoUrl(stage, stop: stop) ?? '').isEmpty;
 
-  int missingItemPhotos(PhotoStage stage) => photoMode(stage).wantsItemPhotos
-      ? items.where((i) => (i.photoUrl(stage) ?? '').isEmpty).length
-      : 0;
+  int missingItemPhotos(PhotoStage stage, {TripWaypoint? stop}) =>
+      photoMode(stage).wantsItemPhotos
+          ? itemsAt(stage, stop: stop)
+              .where((i) => (i.photoUrl(stage) ?? '').isEmpty)
+              .length
+          : 0;
 
   /// Photos still owed at this stop (0 when none were asked for).
-  int missingPhotos(PhotoStage stage) =>
-      (orderPhotoMissing(stage) ? 1 : 0) + missingItemPhotos(stage);
+  int missingPhotos(PhotoStage stage, {TripWaypoint? stop}) =>
+      (orderPhotoMissing(stage, stop: stop) ? 1 : 0) +
+      missingItemPhotos(stage, stop: stop);
 
   /// Every photo asked for at this stop is on the server — until then the
-  /// backend won't start (pickup) or finish (delivery) the trip.
-  bool hasPhotos(PhotoStage stage) => missingPhotos(stage) == 0;
+  /// backend won't start (pickup) or finish (delivery) the trip, or finish
+  /// the in-between [stop].
+  bool hasPhotos(PhotoStage stage, {TripWaypoint? stop}) =>
+      missingPhotos(stage, stop: stop) == 0;
 
   bool get wantsPickupPhotos => wantsPhotos(PhotoStage.pickup);
   bool get hasPickupPhotos => hasPhotos(PhotoStage.pickup);
@@ -478,6 +628,7 @@ class Trip extends Equatable {
         deliveryPhotoUrl,
         deliveryOtp,
         items,
+        stops,
         driverEarning,
         arrivedAtPickupAt,
         startedAt,

@@ -113,7 +113,7 @@ class _OrderPhotosPageState extends State<OrderPhotosPage>
                 ColoredBox(
                   color: Colors.white,
                   child: ShipmentItemList(
-                    items: trip.items,
+                    items: trip.itemsAt(widget.stage),
                     photoSlotFor: (item) => itemPhotoSlot(
                         trip, widget.stage, item,
                         enabled: true),

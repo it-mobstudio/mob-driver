@@ -198,7 +198,7 @@ void main() {
 
       expect(rig.repo.calls, contains('startDuty:v-1:12.9716,77.5946'));
       expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'On Duty');
-      expect(find.text('Finding orders near you'), findsOneWidget);
+      expect(find.text('🔎 Finding orders near you'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('profile_button')));
       await tester.pumpAndSettle();

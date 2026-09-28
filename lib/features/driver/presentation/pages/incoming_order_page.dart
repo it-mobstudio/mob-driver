@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
@@ -143,7 +144,7 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
     return PopScope(
       // Answer the offer first — no dismissing it with the back gesture.
       canPop: false,
-      // Light status-bar icons over the dark, dimmed map.
+      // Light status-bar icons over the same solid header as the dashboard.
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: Scaffold(
@@ -179,19 +180,20 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
                   child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation(Colors.white)))
             else ...[
-              SafeArea(
-                bottom: false,
+              DutyHeaderSurface(
                 child: BlocBuilder<DriverSessionCubit, DriverSessionState>(
                   builder: (context, state) => Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                         // Read-only: this isn't the place to go off duty or open
                         // the menu, only to answer.
                         child: DutyStatusRow(
                           online: state.isOnline,
                           onDark: true,
+                          leading: SvgPicture.asset('assets/images/mob_logo.svg', height: 22, semanticsLabel: 'MOB'),
                           avatar: state.profile == null
                               ? null
                               : DriverAvatar(state.profile!.fullName, size: 44, photoUrl: state.profile!.photoUrl),
@@ -206,6 +208,7 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
                           todayEarnings: state.stats.today.earnings,
                         ),
                       ),
+                      const SizedBox(height: 14),
                     ],
                   ),
                 ),

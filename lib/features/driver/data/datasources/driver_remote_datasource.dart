@@ -201,6 +201,28 @@ class DriverRemoteDatasource {
         files: {'photo': photo},
       );
 
+  /// The driver has reached an in-between stop. Answers with the whole trip.
+  Future<Map<String, dynamic>> arriveAtStop(String tripId, String stopId) =>
+      _post('/driver/trips/$tripId/stops/$stopId/arrive');
+
+  /// A camera photo at an in-between stop — of what's collected / handed over
+  /// there, or of one item ([itemId]). Answers with the whole trip.
+  Future<Map<String, dynamic>> addStopPhoto(
+    String tripId,
+    String stopId, {
+    required CapturedPhoto photo,
+    String? itemId,
+  }) =>
+      _multipart(
+        '/driver/trips/$tripId/stops/$stopId/photo',
+        fields: {if (itemId != null) 'item_id': itemId},
+        files: {'photo': photo},
+      );
+
+  /// Everything at an in-between stop is done. Answers with the whole trip.
+  Future<Map<String, dynamic>> finishStop(String tripId, String stopId) =>
+      _post('/driver/trips/$tripId/stops/$stopId/done');
+
   Future<Map<String, dynamic>> resetItem(String tripId, String itemId) async =>
       asMap((await _dio
               .delete<dynamic>('/driver/trips/$tripId/items/$itemId/verify'))

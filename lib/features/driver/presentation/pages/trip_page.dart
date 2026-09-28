@@ -71,7 +71,10 @@ class _TripPageState extends State<TripPage> {
   Trip? _trip;
   String? _loadError;
   List<LatLng> _legPoints = const [];
-  TripStatus? _legFor;
+
+  /// Which leg [_legPoints] is: the trip's stage plus the in-between stop
+  /// it leads to, if any.
+  String? _legFor;
   Timer? _legTimer;
   StreamSubscription<DriverEvent>? _events;
 
@@ -134,19 +137,25 @@ class _TripPageState extends State<TripPage> {
     if (!trip.status.isActive) {
       _legPoints = const [];
       _legFor = null;
-    } else if (_legFor != trip.status) {
-      // The next stop changed (pickup → drop): the old leg is now wrong.
+    } else if (_legFor != _legKey(trip)) {
+      // The next stop changed (pickup → a stop in between → drop): the old
+      // leg is now wrong.
       _legPoints = const [];
-      _legFor = trip.status;
+      _legFor = _legKey(trip);
       unawaited(_refreshLeg());
     }
   }
+
+  static String _legKey(Trip trip) =>
+      '${trip.status.wire}|${trip.nextStop?.id ?? ''}';
 
   Future<void> _refreshLeg() async {
     final trip = _trip;
     if (trip == null || !trip.status.isActive) return;
     final (route, _) = await _cubit.navigation(trip.id);
-    if (!mounted || route == null || _trip?.status != trip.status) return;
+    final now = _trip;
+    if (!mounted || route == null || now == null) return;
+    if (_legKey(now) != _legKey(trip)) return;
     setState(() {
       _legPoints =
           route.points.map((p) => LatLng(p.latitude, p.longitude)).toList();
@@ -202,6 +211,19 @@ class _TripPageState extends State<TripPage> {
   }
 
   Future<void> _arrive() => _run(() => _cubit.arrive(widget.tripId));
+
+  Future<void> _arriveAtStop(TripWaypoint stop) =>
+      _run(() => _cubit.arriveAtStop(widget.tripId, stop.id));
+
+  /// The stop's own screen: its photos, items and checks, then "done".
+  Future<void> _workStop(TripWaypoint stop) async {
+    final done =
+        await context.push<bool>(DriverRoutes.stop(widget.tripId, stop.id));
+    if (done == true && mounted) {
+      TopSnackBar.show(context,
+          message: '${stop.label} done', type: TopSnackBarType.success);
+    }
+  }
 
   Trip? get _latest {
     final live = _cubit.state.activeTrip;
@@ -373,6 +395,16 @@ class _TripPageState extends State<TripPage> {
 
   TripMapData _mapData(Trip trip, GeoPoint? me) => TripMapData(
         status: trip.status,
+        stops: [
+          for (final stop in trip.inBetweenStops)
+            if (stop.latitude != null && stop.longitude != null)
+              MapStop(
+                id: stop.id,
+                at: LatLng(stop.latitude!, stop.longitude!),
+                isPickup: stop.isPickup,
+                label: '${stop.label} · ${stop.kindLabel}',
+              ),
+        ],
         pickup: trip.pickup.hasCoordinates
             ? LatLng(trip.pickup.latitude!, trip.pickup.longitude!)
             : null,
@@ -480,6 +512,8 @@ class _TripPageState extends State<TripPage> {
                 onArrive: _arrive,
                 onPickup: _pickupOrder,
                 onDeliver: _deliver,
+                onArriveAtStop: _arriveAtStop,
+                onWorkStop: _workStop,
                 onCancel: _cancel,
               ),
             ),
@@ -564,6 +598,8 @@ class _Panel extends StatelessWidget {
     required this.onArrive,
     required this.onPickup,
     required this.onDeliver,
+    required this.onArriveAtStop,
+    required this.onWorkStop,
     required this.onCancel,
   });
 
@@ -573,6 +609,8 @@ class _Panel extends StatelessWidget {
   final Future<void> Function() onArrive;
   final Future<void> Function() onPickup;
   final Future<void> Function() onDeliver;
+  final Future<void> Function(TripWaypoint stop) onArriveAtStop;
+  final Future<void> Function(TripWaypoint stop) onWorkStop;
   final VoidCallback onCancel;
 
   bool get _atPickup =>
@@ -629,6 +667,25 @@ class _Panel extends StatelessWidget {
                     ? () => openNavigationTo(trip.pickup)
                     : null,
               ),
+              for (final stop in trip.inBetweenStops)
+                TimelineStop(
+                  tag: '${stop.label} · ${stop.kindLabel}',
+                  tagIcon: stop.isPickup
+                      ? SvgPicture.asset('assets/images/pickup_dot.svg',
+                          width: 7, height: 7)
+                      : const Icon(Icons.home_rounded),
+                  name: _name(stop.asStop, stop.kindLabel),
+                  address: stop.address,
+                  progress: stop.isDone || done
+                      ? StopProgress.done
+                      : trip.nextStop?.id == stop.id
+                          ? StopProgress.active
+                          : StopProgress.upcoming,
+                  onViewDetails: onViewDetails,
+                  onMap: stop.latitude != null
+                      ? () => openNavigationTo(stop.asStop)
+                      : null,
+                ),
               TimelineStop(
                 tag: 'Drop',
                 tagIcon: const Icon(Icons.home_rounded),
@@ -636,7 +693,8 @@ class _Panel extends StatelessWidget {
                 address: trip.drop.address,
                 progress: done
                     ? StopProgress.done
-                    : trip.status == TripStatus.inProgress
+                    : trip.status == TripStatus.inProgress &&
+                            trip.nextStop == null
                         ? StopProgress.active
                         : StopProgress.upcoming,
                 onViewDetails: onViewDetails,
@@ -652,7 +710,8 @@ class _Panel extends StatelessWidget {
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
                 child: KeyedSubtree(
-                  key: ValueKey(trip.status.wire),
+                  key: ValueKey(
+                      '${trip.status.wire}|${trip.nextStop?.id}|${trip.nextStop?.status.wire}'),
                   child: _primaryAction(),
                 ),
               ),
@@ -692,12 +751,28 @@ class _Panel extends StatelessWidget {
             loading: busy,
             onConfirmed: onPickup,
           ),
-        TripStatus.inProgress => SwipeButton(
-            key: const Key('trip_swipe'),
-            label: 'Deliver order',
-            loading: busy,
-            onConfirmed: onDeliver,
-          ),
+        TripStatus.inProgress => switch (trip.nextStop) {
+            // An in-between stop comes first: reach it, then work it.
+            final stop? when stop.status == WaypointStatus.pending =>
+              SwipeButton(
+                key: const Key('trip_swipe'),
+                label: 'Reached ${stop.label.toLowerCase()}',
+                loading: busy,
+                onConfirmed: () => onArriveAtStop(stop),
+              ),
+            final stop? => SwipeButton(
+                key: const Key('trip_swipe'),
+                label: stop.isPickup ? 'Collect items' : 'Deliver items',
+                loading: busy,
+                onConfirmed: () => onWorkStop(stop),
+              ),
+            null => SwipeButton(
+                key: const Key('trip_swipe'),
+                label: 'Deliver order',
+                loading: busy,
+                onConfirmed: onDeliver,
+              ),
+          },
         _ => const SizedBox.shrink(),
       };
 }

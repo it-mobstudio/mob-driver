@@ -197,82 +197,75 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
 
     return Column(children: [
       // The pill, any warning banners, and the working-time bar sit on a
-      // solid white panel — the map only starts below it, never bleeding
+      // solid gradient panel — the map only starts below it, never bleeding
       // through behind them (a transparent overlay here was the bug).
-      DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: DriverColors.brandGradient,
-          boxShadow: [BoxShadow(color: Color(0x33001533), blurRadius: 16, offset: Offset(0, 4))],
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              DutyStatusRow(
-                onDark: true,
-                leading: SvgPicture.asset('assets/images/mob_logo.svg', height: 22, semanticsLabel: 'MOB'),
-                avatar: DriverAvatar(profile.fullName, size: 44, photoUrl: profile.photoUrl),
-                online: state.isOnline,
-                busy: state.dutyBusy,
-                onToggle: (goOnline) => goOnline
-                    ? startDutyFlow(context,
-                        checkPermission: widget.checkLocationPermission)
-                    : endDutyFlow(context),
-                onProfileTap: () => _openProfileMenu(profile),
-              ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topCenter,
-                child: Column(children: [
-                  if (!profile.isEligible) ...[
-                    const SizedBox(height: 10),
-                    _VerificationCard(profile: profile),
-                  ] else if (_licenceWarning(profile) case final days?) ...[
-                    const SizedBox(height: 10),
-                    InfoBanner(
-                      key: const Key('licence_banner'),
-                      solid: true,
-                      text: days == 0
-                          ? 'Your driving licence expires today. Renew it to keep taking trips.'
-                          : 'Your driving licence expires in $days day${days == 1 ? '' : 's'}. Renew it to keep taking trips.',
-                      icon: Icons.event_busy_rounded,
-                      action: TextButton(
-                        onPressed: () => context.push(DriverRoutes.verification),
-                        child: const Text('View'),
-                      ),
+      DutyHeaderSurface(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            DutyStatusRow(
+              onDark: true,
+              leading: SvgPicture.asset('assets/images/mob_logo.svg', height: 22, semanticsLabel: 'MOB'),
+              avatar: DriverAvatar(profile.fullName, size: 44, photoUrl: profile.photoUrl),
+              online: state.isOnline,
+              busy: state.dutyBusy,
+              onToggle: (goOnline) => goOnline
+                  ? startDutyFlow(context,
+                      checkPermission: widget.checkLocationPermission)
+                  : endDutyFlow(context),
+              onProfileTap: () => _openProfileMenu(profile),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: Column(children: [
+                if (!profile.isEligible) ...[
+                  const SizedBox(height: 10),
+                  _VerificationCard(profile: profile),
+                ] else if (_licenceWarning(profile) case final days?) ...[
+                  const SizedBox(height: 10),
+                  InfoBanner(
+                    key: const Key('licence_banner'),
+                    solid: true,
+                    text: days == 0
+                        ? 'Your driving licence expires today. Renew it to keep taking trips.'
+                        : 'Your driving licence expires in $days day${days == 1 ? '' : 's'}. Renew it to keep taking trips.',
+                    icon: Icons.event_busy_rounded,
+                    action: TextButton(
+                      onPressed: () => context.push(DriverRoutes.verification),
+                      child: const Text('View'),
                     ),
-                  ],
-                  if (state.isOnline && state.locationUnavailable) ...[
-                    const SizedBox(height: 10),
-                    InfoBanner(
-                      key: const Key('location_banner'),
-                      solid: true,
-                      text:
-                          'We can’t see your location, so you won’t be assigned trips. Turn on GPS and allow location access.',
-                      icon: Icons.location_off_rounded,
-                      action: TextButton(
-                        onPressed: () =>
-                            (widget.checkLocationPermission ??
-                                    ensureLocationPermission)(context),
-                        child: const Text('Fix'),
-                      ),
+                  ),
+                ],
+                if (state.isOnline && state.locationUnavailable) ...[
+                  const SizedBox(height: 10),
+                  InfoBanner(
+                    key: const Key('location_banner'),
+                    solid: true,
+                    text:
+                        'We can’t see your location, so you won’t be assigned trips. Turn on GPS and allow location access.',
+                    icon: Icons.location_off_rounded,
+                    action: TextButton(
+                      onPressed: () =>
+                          (widget.checkLocationPermission ??
+                                  ensureLocationPermission)(context),
+                      child: const Text('Fix'),
                     ),
-                  ],
-                ]),
-              ),
-              const SizedBox(height: 12),
-              WorkingTimeBanner(
-                onDark: true,
-                online: state.isOnline,
-                dutyStartedAt: _cubit.dutyStartedAt,
-                todayEarnings: state.stats.today.earnings,
-                onTap: () => _openStats(state.stats),
-              ),
-              const SizedBox(height: 14),
-            ]),
-          ),
+                  ),
+                ],
+              ]),
+            ),
+            const SizedBox(height: 12),
+            WorkingTimeBanner(
+              onDark: true,
+              online: state.isOnline,
+              dutyStartedAt: _cubit.dutyStartedAt,
+              todayEarnings: state.stats.today.earnings,
+              onTap: () => _openStats(state.stats),
+            ),
+            const SizedBox(height: 14),
+          ]),
         ),
       ),
       Expanded(
@@ -589,10 +582,10 @@ class _LookingForOrdersPanel extends StatelessWidget {
   const _LookingForOrdersPanel();
 
   static const _messages = [
-    'Finding orders near you',
-    'Looking for the best order around you',
-    'Trying hard to find you an order',
-    'Hang tight — orders can land any moment',
+    '🔎 Finding orders near you',
+    '📦 Looking for your next order',
+    '💪 Trying hard to find an order',
+    '✨ Hang tight, we’re on it!',
   ];
 
   @override

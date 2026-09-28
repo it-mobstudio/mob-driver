@@ -340,4 +340,25 @@ class DriverRepositoryImpl implements DriverRepository {
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId) =>
       _guard(
           () async => Trip.fromJson(await _remote.resetItem(tripId, itemId)));
+
+  @override
+  Future<(Trip?, AppFailure?)> arriveAtStop(String tripId, String stopId) =>
+      _guard(() async =>
+          Trip.fromJson(await _remote.arriveAtStop(tripId, stopId)));
+
+  @override
+  Future<(Trip?, AppFailure?)> addStopPhoto(
+    String tripId,
+    String stopId, {
+    required CapturedPhoto photo,
+    String? itemId,
+  }) =>
+      _guard(() async => Trip.fromJson(await _remote.addStopPhoto(
+          tripId, stopId,
+          photo: photo, itemId: itemId)));
+
+  @override
+  Future<(Trip?, AppFailure?)> finishStop(String tripId, String stopId) =>
+      _guard(
+          () async => Trip.fromJson(await _remote.finishStop(tripId, stopId)));
 }

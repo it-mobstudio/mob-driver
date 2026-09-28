@@ -623,6 +623,63 @@ class FakeDriverRepository implements DriverRepository {
     return (trip, null);
   }
 
+  /// Applies [change] to the tracked JSON of trip [tripId] (see
+  /// [tripJsonById]) and hands back the updated trip.
+  (Trip?, AppFailure?) _editTrip(
+      String tripId, void Function(Map<String, dynamic> json) change) {
+    final json = tripJsonById[tripId];
+    if (json == null) return (tripsById[tripId], null);
+    change(json);
+    final trip = Trip.fromJson(json);
+    tripsById[tripId] = trip;
+    if (activeTripValue?.id == tripId) activeTripValue = trip;
+    return (trip, null);
+  }
+
+  Map<String, dynamic> _stopJson(Map<String, dynamic> json, String stopId) =>
+      (json['stops'] as List)
+          .cast<Map<String, dynamic>>()
+          .firstWhere((s) => s['id'] == stopId);
+
+  AppFailure? finishStopFailure;
+
+  @override
+  Future<(Trip?, AppFailure?)> arriveAtStop(
+      String tripId, String stopId) async {
+    calls.add('arriveAtStop:$stopId');
+    return _editTrip(tripId, (json) => _stopJson(json, stopId)['status'] = 'arrived');
+  }
+
+  @override
+  Future<(Trip?, AppFailure?)> addStopPhoto(
+    String tripId,
+    String stopId, {
+    required CapturedPhoto photo,
+    String? itemId,
+  }) async {
+    calls.add('stopPhoto:$stopId:${itemId ?? 'order'}');
+    return _editTrip(tripId, (json) {
+      final stop = _stopJson(json, stopId);
+      if (itemId == null) {
+        stop['photo_url'] = 'https://cdn.example.com/stop-$stopId.jpg';
+        return;
+      }
+      final field =
+          stop['kind'] == 'pickup' ? 'pickup_photo_url' : 'delivery_photo_url';
+      (json['items'] as List)
+          .cast<Map<String, dynamic>>()
+          .firstWhere((i) => i['id'] == itemId)[field] =
+          'https://cdn.example.com/stop-$itemId.jpg';
+    });
+  }
+
+  @override
+  Future<(Trip?, AppFailure?)> finishStop(String tripId, String stopId) async {
+    calls.add('finishStop:$stopId');
+    if (finishStopFailure != null) return (null, finishStopFailure);
+    return _editTrip(tripId, (json) => _stopJson(json, stopId)['status'] = 'done');
+  }
+
   @override
   Future<(DriverProfile?, AppFailure?)> startDuty({
     required String vehicleId,
