@@ -5,6 +5,24 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:m_o_b_demand_side/core/utils/formatters.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
 
+/// Opaque header shared by the dashboard and incoming-order map.
+class DutyHeaderSurface extends StatelessWidget {
+  const DutyHeaderSurface({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: DriverColors.brandGradient,
+          boxShadow: [
+            BoxShadow(color: Color(0x33001533), blurRadius: 16, offset: Offset(0, 4)),
+          ],
+        ),
+        child: SafeArea(bottom: false, child: child),
+      );
+}
+
 /// The duty pill + profile button row — shared by the map home screen and
 /// the incoming-order screen, so the two always look the same. A null
 /// [onToggle]/[onProfileTap] makes that part decorative (shown, not

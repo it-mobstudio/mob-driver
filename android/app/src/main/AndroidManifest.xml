@@ -58,7 +58,7 @@
     </queries>
 
     <application
-        android:label="MOB"
+        android:label="MOB Go"
         tools:replace="android:label"
         android:icon="@mipmap/launcher_icon"
         android:requestLegacyExternalStorage="true"

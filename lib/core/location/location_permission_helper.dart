@@ -29,7 +29,7 @@ Future<bool> ensureLocationPermission(BuildContext context) async {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Location permission needed'),
         content: const Text(
-          "You've turned off location access for MOB Driver. Enable it in "
+          "You've turned off location access for MOB Go. Enable it in "
           "Settings so you can go on duty and receive trips.",
         ),
         actions: [
