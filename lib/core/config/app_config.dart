@@ -1,12 +1,8 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
-
 class AppConfig {
   const AppConfig._();
 
   // Use --dart-define=API_BASE_URL=https://host/api/v1/ to override per
-  // environment (a real device needs the dev machine's LAN address, e.g.
-  // http://192.168.1.20:8000/api/v1/).
+  // environment.
   static const String _apiBaseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
   );
@@ -18,12 +14,7 @@ class AppConfig {
     if (configured.isNotEmpty) {
       return configured.endsWith('/') ? configured : '$configured/';
     }
-    // Local Django dev server. Inside an Android emulator 127.0.0.1 is the
-    // emulator itself; the host machine is reachable at 10.0.2.2.
-    final host = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-        ? '10.0.2.2'
-        : '127.0.0.1';
-    return 'http://$host:8000/api/v1/';
+    return 'https://earring-barbed-willing.ngrok-free.dev/api/v1/';
   }
 
   /// The in-app "update available" prompt asks the backend for the published
