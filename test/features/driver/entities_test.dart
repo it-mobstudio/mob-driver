@@ -71,6 +71,33 @@ void main() {
     });
   });
 
+  group('order photos', () {
+    test('the backend\'s lists are read as they are, oldest first', () {
+      final trip = Trip.fromJson({
+        ...tripJson(pickupPhoto: 'order', deliveryPhoto: 'order'),
+        'pickup_photo_url': 'https://cdn.example.com/2.jpg',
+        'pickup_photos': [
+          {'id': 'a', 'url': 'https://cdn.example.com/1.jpg'},
+          {'id': 'b', 'url': 'https://cdn.example.com/2.jpg'},
+        ],
+        'delivery_photos': <Map<String, dynamic>>[],
+      });
+      expect(trip.pickupPhotos.map((p) => (p.id, p.canRemove)), [('a', true), ('b', true)]);
+      expect(trip.hasPhotos(PhotoStage.pickup), isTrue);
+      expect(trip.hasPhotos(PhotoStage.delivery), isFalse);
+    });
+
+    test('a backend that only sends the one photo URL still counts — it just can\'t be removed', () {
+      final trip = Trip.fromJson({
+        ...tripJson(pickupPhoto: 'order'),
+        'pickup_photo_url': 'https://cdn.example.com/only.jpg',
+      });
+      expect(trip.pickupPhotos.single.url, 'https://cdn.example.com/only.jpg');
+      expect(trip.pickupPhotos.single.canRemove, isFalse);
+      expect(trip.hasPhotos(PhotoStage.pickup), isTrue);
+    });
+  });
+
   group('Trip stage helpers', () {
     test('COD in progress: collect payment, then delivery OTP', () {
       final unpaid = fakeTrip(status: 'in_progress');

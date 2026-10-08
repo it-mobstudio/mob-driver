@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
 import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
@@ -443,7 +444,13 @@ class _ReviewStepState extends State<_ReviewStep> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _poll = Timer.periodic(const Duration(seconds: 30), (_) => _check(quiet: true));
+    // A decision on the documents is pushed (the session reloads the
+    // profile and this screen lifts itself); asking every 30s is only for
+    // when the push socket is down.
+    final cubit = context.read<DriverSessionCubit>();
+    _poll = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (cubit.realtimeStatus.value != RealtimeStatus.live) _check(quiet: true);
+    });
   }
 
   @override

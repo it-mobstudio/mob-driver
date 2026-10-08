@@ -27,7 +27,8 @@ class DriverEventsListener extends StatefulWidget {
   State<DriverEventsListener> createState() => _DriverEventsListenerState();
 }
 
-class _DriverEventsListenerState extends State<DriverEventsListener> {
+class _DriverEventsListenerState extends State<DriverEventsListener>
+    with WidgetsBindingObserver {
   late final DriverSessionCubit _cubit = context.read<DriverSessionCubit>();
   StreamSubscription<DriverEvent>? _events;
 
@@ -38,11 +39,20 @@ class _DriverEventsListenerState extends State<DriverEventsListener> {
   void initState() {
     super.initState();
     _events = _cubit.events.listen(_onEvent);
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_cubit.load());
+  }
+
+  /// Back from the background: the OS may have cut the push socket while the
+  /// app slept, so reconnect and catch up on anything missed meanwhile.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_cubit.pollNow());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _events?.cancel();
     // Leaving the signed-in area (sign-out) ends tracking and forgets the
     // driver, so the next person to sign in on this phone starts clean.

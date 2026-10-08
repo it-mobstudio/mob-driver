@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:m_o_b_demand_side/core/utils/formatters.dart';
@@ -183,58 +185,101 @@ class OrderHeader extends StatelessWidget {
 
 // -- photos ------------------------------------------------------------------
 
-/// The big dashed "Tap to add photo of the package" box. Shows [photo] (just
-/// taken, on this phone) over [photoUrl] (already on the server); a spinner
-/// while [uploading]. Camera only — the caller opens the camera on [onTap].
-class CameraPhotoBox extends StatelessWidget {
-  const CameraPhotoBox({
+/// One picture in [OrderPhotoGrid]: just taken on this phone ([bytes]) or
+/// already on the server ([url]). [id] is what removes it; [busy] while it's
+/// uploading or being removed.
+class OrderPhotoEntry {
+  const OrderPhotoEntry({this.id, this.bytes, this.url, this.busy = false});
+
+  final String? id;
+  final Uint8List? bytes;
+  final String? url;
+  final bool busy;
+}
+
+/// The photos of the whole order at one stop. Empty, it's the big dashed
+/// "Tap to add photo of the package" box; after that a grid of what was
+/// taken — each with a bin to take a wrong shot back — and a tile to add
+/// another. Camera only: the caller opens the camera on [onAdd].
+class OrderPhotoGrid extends StatelessWidget {
+  const OrderPhotoGrid({
     super.key,
-    required this.onTap,
-    this.photo,
-    this.photoUrl,
-    this.uploading = false,
+    required this.photos,
+    required this.onAdd,
+    this.onRemove,
+    this.addKey,
     this.enabled = true,
+    this.canAdd = true,
     this.hint = 'Tap to add photo of the package',
-    this.height = 132,
   });
 
-  final VoidCallback onTap;
-  final CapturedPhoto? photo;
-  final String? photoUrl;
-  final bool uploading;
-  final bool enabled;
-  final String hint;
-  final double height;
+  final List<OrderPhotoEntry> photos;
+  final VoidCallback onAdd;
 
-  bool get _filled => photo != null || (photoUrl ?? '').isNotEmpty;
+  /// Called with the photo's id. Null hides the bins.
+  final ValueChanged<String>? onRemove;
+
+  /// Goes on whatever opens the camera: the empty box, then the "Add" tile.
+  final Key? addKey;
+  final bool enabled;
+
+  /// False once the stop has as many photos as it can take.
+  final bool canAdd;
+  final String hint;
+
+  static const _columns = 3;
+  static const _gap = 10.0;
 
   @override
-  Widget build(BuildContext context) => Material(
+  Widget build(BuildContext context) {
+    if (photos.isEmpty) return _emptyBox();
+    final count = photos.length;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      LayoutBuilder(builder: (context, constraints) {
+        final side =
+            (constraints.maxWidth - _gap * (_columns - 1)) / _columns;
+        return Wrap(spacing: _gap, runSpacing: _gap, children: [
+          for (final photo in photos)
+            _PhotoTile(
+              photo: photo,
+              side: side,
+              onRemove: enabled && !photo.busy && (photo.id ?? '').isNotEmpty
+                  ? onRemove
+                  : null,
+            ),
+          if (enabled && canAdd) _AddTile(key: addKey, side: side, onTap: onAdd),
+        ]);
+      }),
+      const SizedBox(height: 10),
+      Row(children: [
+        const Icon(Icons.check_circle_rounded,
+            color: DriverColors.green, size: 15),
+        const SizedBox(width: 5),
+        Text('$count photo${count == 1 ? '' : 's'} added',
+            style: const TextStyle(
+                color: DriverColors.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600)),
+      ]),
+    ]);
+  }
+
+  Widget _emptyBox() => Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: enabled && !uploading ? onTap : null,
+          key: addKey,
+          onTap: enabled ? onAdd : null,
           borderRadius: BorderRadius.circular(14),
           child: DashedBorder(
             radius: 14,
             child: SizedBox(
-              height: height,
+              height: 132,
               width: double.infinity,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                     color: const Color(0xFFF7F9FC),
                     borderRadius: BorderRadius.circular(14)),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: _filled
-                      ? _Filled(
-                          key: const ValueKey('filled'),
-                          photo: photo,
-                          photoUrl: photoUrl,
-                          uploading: uploading,
-                          enabled: enabled,
-                        )
-                      : _Empty(key: const ValueKey('empty'), hint: hint),
-                ),
+                child: _Empty(hint: hint),
               ),
             ),
           ),
@@ -243,7 +288,7 @@ class CameraPhotoBox extends StatelessWidget {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty({super.key, required this.hint});
+  const _Empty({required this.hint});
   final String hint;
 
   @override
@@ -262,74 +307,109 @@ class _Empty extends StatelessWidget {
       );
 }
 
-class _Filled extends StatelessWidget {
-  const _Filled({
-    super.key,
-    required this.photo,
-    required this.photoUrl,
-    required this.uploading,
-    required this.enabled,
-  });
+class _PhotoTile extends StatelessWidget {
+  const _PhotoTile(
+      {required this.photo, required this.side, required this.onRemove});
 
-  final CapturedPhoto? photo;
-  final String? photoUrl;
-  final bool uploading;
-  final bool enabled;
+  final OrderPhotoEntry photo;
+  final double side;
+  final ValueChanged<String>? onRemove;
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(fit: StackFit.expand, children: [
-          if (photo != null)
-            Image.memory(photo!.bytes, fit: BoxFit.cover, gaplessPlayback: true)
-          else
-            Image.network(photoUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Center(
-                    child: Icon(Icons.image_not_supported_outlined,
-                        color: DriverColors.muted))),
-          if (uploading)
-            const ColoredBox(
-              color: Color(0x66000000),
-              child: Center(
-                child: SizedBox(
-                  width: 26,
-                  height: 26,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2.6,
-                      valueColor: AlwaysStoppedAnimation(Colors.white)),
+  Widget build(BuildContext context) => SizedBox(
+        width: side,
+        height: side,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(fit: StackFit.expand, children: [
+            if (photo.bytes != null)
+              Image.memory(photo.bytes!,
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  // A 1600 px photo decoded whole is ~10 MB; at tile size
+                  // it's a few hundred KB.
+                  cacheWidth: thumbPixels(context, side))
+            else
+              NetworkThumb(photo.url,
+                  size: side,
+                  radius: 12,
+                  fallbackIcon: Icons.image_not_supported_outlined),
+            if (photo.busy)
+              const ColoredBox(
+                color: Color(0x66000000),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        valueColor: AlwaysStoppedAnimation(Colors.white)),
+                  ),
                 ),
               ),
-            )
-          else
-            Positioned(
-              right: 8,
-              bottom: 8,
-              child: _PhotoBadge(label: enabled ? 'Tap to change' : 'Added'),
-            ),
-        ]),
+            if (onRemove != null)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Material(
+                  color: Colors.black.withValues(alpha: .62),
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    key: Key('photo_remove_${photo.id}'),
+                    onTap: () => onRemove!(photo.id!),
+                    child: const Padding(
+                      padding: EdgeInsets.all(7),
+                      child: Icon(Icons.delete_outline_rounded,
+                          color: Colors.white,
+                          size: 18,
+                          semanticLabel: 'Remove photo'),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
+        ),
       );
 }
 
-class _PhotoBadge extends StatelessWidget {
-  const _PhotoBadge({required this.label});
-  final String label;
+class _AddTile extends StatelessWidget {
+  const _AddTile({super.key, required this.side, required this.onTap});
+
+  final double side;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: .62),
-            borderRadius: BorderRadius.circular(20)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 13),
-          const SizedBox(width: 4),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700)),
-        ]),
+  Widget build(BuildContext context) => SizedBox(
+        width: side,
+        height: side,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: DashedBorder(
+              radius: 12,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                    color: const Color(0xFFF7F9FC),
+                    borderRadius: BorderRadius.circular(12)),
+                child: const Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.add_a_photo_rounded,
+                        size: 22, color: DriverColors.ink),
+                    SizedBox(height: 6),
+                    Text('Add photo',
+                        style: TextStyle(
+                            color: DriverColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700)),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        ),
       );
 }
 
@@ -362,7 +442,10 @@ class ItemPhotoSlot extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: Stack(fit: StackFit.expand, children: [
           if (photo != null)
-            Image.memory(photo!.bytes, fit: BoxFit.cover, gaplessPlayback: true)
+            Image.memory(photo!.bytes,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+                cacheWidth: thumbPixels(context, 36))
           else
             NetworkThumb(photoUrl, size: 36, radius: 8),
           if (uploading)
@@ -662,10 +745,15 @@ class TimelineStop {
     required this.name,
     required this.address,
     required this.progress,
+    this.index,
     this.onViewDetails,
     this.onMap,
   });
 
+  /// The stop's place on the whole trip (0 = the main pickup), for when a
+  /// [TripTimeline] shows only some of the stops. Defaults to its place in
+  /// the list it's given in.
+  final int? index;
   final String tag;
 
   /// Sits after the tag's label, ~13 px.
@@ -691,7 +779,7 @@ class TripTimeline extends StatelessWidget {
         for (var i = 0; i < stops.length; i++)
           _TimelineRow(
             stop: stops[i],
-            index: i,
+            index: stops[i].index ?? i,
             // The line to the next stop turns green once this one's done.
             lineBelow: i == stops.length - 1
                 ? null

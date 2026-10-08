@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -8,12 +9,16 @@ import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/order_widgets.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/photo_widgets.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-/// Who the driver is, where their KYC stands, and sign-out.
+/// The driver's home for everything that isn't today's map: who they are,
+/// their trips and wallet, their vehicles, documents and payout details,
+/// where their KYC stands, and sign-out. Opened by the dashboard's profile
+/// button.
 class DriverProfilePage extends StatelessWidget {
   const DriverProfilePage(
       {super.key, this.capture = const DevicePhotoCapture()});
@@ -122,130 +127,339 @@ class DriverProfilePage extends StatelessWidget {
       BlocBuilder<DriverSessionCubit, DriverSessionState>(
           builder: (context, state) {
         final profile = state.profile;
-        return Scaffold(
-          backgroundColor: DriverColors.surface,
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            foregroundColor: DriverColors.ink,
-            automaticallyImplyLeading: false,
-            leading: BackButton(
-                key: const Key('profile_back'),
-                onPressed: () => context.go(DriverRoutes.dashboard)),
-            title: const Text('Profile',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
-          ),
-          body: profile == null
-              ? const DriverListSkeleton(itemCount: 3, itemHeight: 104)
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
-                  children: [
-                      DriverCard(
-                        child: Row(children: [
-                          _ProfilePhoto(profile: profile, capture: capture),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(profile.fullName,
-                                      key: const Key('profile_name'),
-                                      style: const TextStyle(
-                                          color: DriverColors.ink,
-                                          fontSize: 19,
-                                          fontWeight: FontWeight.w800)),
-                                  const SizedBox(height: 3),
-                                  Text(formatPhone(profile.phoneNumber),
-                                      style: const TextStyle(
-                                          color: DriverColors.muted,
-                                          fontSize: 13)),
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          // Light status-bar icons over the navy header.
+          value: SystemUiOverlayStyle.light,
+          child: Scaffold(
+            backgroundColor: DriverColors.surface,
+            body: profile == null
+                ? const SafeArea(
+                    child: DriverListSkeleton(itemCount: 3, itemHeight: 104))
+                : ListView(padding: EdgeInsets.zero, children: [
+                    _Header(profile: profile, capture: capture),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Two to a row, half the width each.
+                            IntrinsicHeight(
+                              child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: _TileCard(
+                                        keyName: 'menu_trips',
+                                        icon: Icons.inventory_2_outlined,
+                                        title: 'Trips',
+                                        subtitle: 'View all trips',
+                                        onTap: () =>
+                                            context.go(DriverRoutes.trips),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: _TileCard(
+                                        keyName: 'menu_wallet',
+                                        icon: Icons
+                                            .account_balance_wallet_outlined,
+                                        title: 'Wallet',
+                                        subtitle: 'Earnings & payouts',
+                                        onTap: () =>
+                                            context.go(DriverRoutes.wallet),
+                                      ),
+                                    ),
+                                  ]),
+                            ),
+                            const SizedBox(height: 14),
+                            DriverCard(
+                              padding: EdgeInsets.zero,
+                              child: Column(children: [
+                                _MenuRow(
+                                  keyName: 'menu_edit_details',
+                                  icon: Icons.person_outline_rounded,
+                                  title: 'Personal info',
+                                  subtitle:
+                                      'Name, contact, address, emergency contact',
+                                  onTap: () =>
+                                      context.push(DriverRoutes.editProfile),
+                                ),
+                                const _RowDivider(),
+                                _MenuRow(
+                                  keyName: 'menu_vehicle',
+                                  icon: Icons.local_shipping_outlined,
+                                  title: 'Duty vehicle',
+                                  subtitle: profile.currentVehicle
+                                          ?.registrationNumber ??
+                                      'The vehicle you go on duty with',
+                                  onTap: () => context.go(DriverRoutes.vehicle),
+                                ),
+                                const _RowDivider(),
+                                _MenuRow(
+                                  keyName: 'menu_my_vehicles',
+                                  icon: Icons.two_wheeler_rounded,
+                                  title: 'My vehicles',
+                                  subtitle:
+                                      'Add your own vehicles, with pictures',
+                                  onTap: () =>
+                                      context.push(DriverRoutes.myVehicles),
+                                ),
+                                const _RowDivider(),
+                                _MenuRow(
+                                  keyName: 'menu_documents',
+                                  icon: Icons.folder_open_rounded,
+                                  title: 'Documents',
+                                  subtitle:
+                                      'Aadhaar, licence and police certificate',
+                                  onTap: () =>
+                                      context.push(DriverRoutes.verification),
+                                ),
+                                const _RowDivider(),
+                                _MenuRow(
+                                  keyName: 'menu_payout',
+                                  icon: Icons.account_balance_outlined,
+                                  title: 'Payout details',
+                                  subtitle: profile.payout.summary ??
+                                      'Add a UPI id or bank account',
+                                  onTap: () =>
+                                      context.push(DriverRoutes.payout),
+                                ),
+                              ]),
+                            ),
+                            const SizedBox(height: 18),
+                            const SectionTitle('Verification'),
+                            const SizedBox(height: 10),
+                            _KycCard(profile: profile),
+                            if ((profile.emergencyContactName ?? '')
+                                    .isNotEmpty ||
+                                (profile.emergencyContactPhone ?? '')
+                                    .isNotEmpty) ...[
+                              const SizedBox(height: 18),
+                              const SectionTitle('Emergency contact'),
+                              const SizedBox(height: 10),
+                              DriverCard(
+                                child: Column(children: [
+                                  InfoRow('Name',
+                                      profile.emergencyContactName ?? '—'),
+                                  InfoRow(
+                                      'Phone',
+                                      formatPhone(
+                                          profile.emergencyContactPhone)),
                                 ]),
-                          ),
-                        ]),
-                      ),
-                      const SizedBox(height: 18),
-                      const SectionTitle('Account'),
-                      const SizedBox(height: 10),
-                      DriverCard(
-                        padding: EdgeInsets.zero,
-                        child: Column(children: [
-                          _MenuRow(
-                            keyName: 'menu_edit_details',
-                            icon: Icons.person_outline_rounded,
-                            title: 'Edit details',
-                            subtitle:
-                                'Name, contact, address, emergency contact',
-                            onTap: () => context.push(DriverRoutes.editProfile),
-                          ),
-                          const Divider(height: 1, indent: 60),
-                          _MenuRow(
-                            keyName: 'menu_my_vehicles',
-                            icon: Icons.two_wheeler_rounded,
-                            title: 'My vehicles',
-                            subtitle: 'Add your own vehicles, with pictures',
-                            onTap: () => context.push(DriverRoutes.myVehicles),
-                          ),
-                          const Divider(height: 1, indent: 60),
-                          _MenuRow(
-                            keyName: 'menu_documents',
-                            icon: Icons.folder_open_rounded,
-                            title: 'Documents',
-                            subtitle: 'Aadhaar, licence and police certificate',
-                            onTap: () =>
-                                context.push(DriverRoutes.verification),
-                          ),
-                          const Divider(height: 1, indent: 60),
-                          _MenuRow(
-                            keyName: 'menu_payout',
-                            icon: Icons.account_balance_outlined,
-                            title: 'Payout details',
-                            subtitle: profile.payout.summary ??
-                                'Add a UPI id or bank account',
-                            onTap: () => context.push(DriverRoutes.payout),
-                          ),
-                        ]),
-                      ),
-                      const SizedBox(height: 18),
-                      const SectionTitle('Verification'),
-                      const SizedBox(height: 10),
-                      _KycCard(profile: profile),
-                      if ((profile.emergencyContactName ?? '').isNotEmpty ||
-                          (profile.emergencyContactPhone ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 18),
-                        const SectionTitle('Emergency contact'),
-                        const SizedBox(height: 10),
-                        DriverCard(
-                          child: Column(children: [
-                            InfoRow(
-                                'Name', profile.emergencyContactName ?? '—'),
-                            InfoRow('Phone',
-                                formatPhone(profile.emergencyContactPhone)),
+                              ),
+                            ],
+                            const SizedBox(height: 22),
+                            SecondaryButton(
+                              key: const Key('sign_out'),
+                              label: 'Sign out',
+                              icon: Icons.logout_rounded,
+                              color: DriverColors.red,
+                              onPressed: () => _signOut(context),
+                            ),
+                            const SizedBox(height: 6),
+                            Center(
+                              child: TextButton(
+                                key: const Key('delete_account'),
+                                onPressed: () => _deleteAccount(context),
+                                child: const Text('Delete my account',
+                                    style: TextStyle(
+                                        color: DriverColors.muted,
+                                        fontSize: 13)),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Center(child: _VersionLabel()),
                           ]),
-                        ),
-                      ],
-                      const SizedBox(height: 22),
-                      SecondaryButton(
-                        key: const Key('sign_out'),
-                        label: 'Sign out',
-                        icon: Icons.logout_rounded,
-                        color: DriverColors.red,
-                        onPressed: () => _signOut(context),
-                      ),
-                      const SizedBox(height: 6),
-                      Center(
-                        child: TextButton(
-                          key: const Key('delete_account'),
-                          onPressed: () => _deleteAccount(context),
-                          child: const Text('Delete my account',
-                              style: TextStyle(
-                                  color: DriverColors.muted, fontSize: 13)),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Center(child: _VersionLabel()),
-                    ]),
+                    ),
+                  ]),
+          ),
         );
       });
+}
+
+/// The navy band at the top: the way back, the driver's picture, name and
+/// number, and where they stand (verified or not, and their duty vehicle).
+class _Header extends StatelessWidget {
+  const _Header({required this.profile, required this.capture});
+
+  final DriverProfile profile;
+  final PhotoCapture capture;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color, icon) = profile.isEligible
+        ? ('VERIFIED DRIVER', DriverColors.mint, Icons.verified_rounded)
+        : switch (profile.onboardingStatus) {
+            OnboardingStatus.underReview => (
+                'UNDER REVIEW',
+                const Color(0xFFFFC466),
+                Icons.hourglass_top_rounded
+              ),
+            OnboardingStatus.actionRequired => (
+                'ACTION NEEDED',
+                const Color(0xFFFF8A93),
+                Icons.error_outline_rounded
+              ),
+            _ => (
+                'KYC INCOMPLETE',
+                const Color(0xFFFF8A93),
+                Icons.gpp_maybe_outlined
+              ),
+          };
+    return ColoredBox(
+      color: DriverColors.navy,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 22),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Material(
+              color: Colors.white,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                key: const Key('profile_back'),
+                onTap: () => context.go(DriverRoutes.dashboard),
+                child: const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Icon(Icons.arrow_back_rounded,
+                      color: DriverColors.ink,
+                      size: 20,
+                      semanticLabel: 'Back'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(children: [
+              _ProfilePhoto(profile: profile, capture: capture),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(profile.fullName,
+                          key: const Key('profile_name'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Text(formatPhone(profile.phoneNumber),
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: .65),
+                              fontSize: 13.5)),
+                    ]),
+              ),
+            ]),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                  color: const Color(0xFF000A1A),
+                  borderRadius: BorderRadius.circular(18)),
+              child: Row(children: [
+                Icon(icon, color: color, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(label,
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: .6)),
+                ),
+                const Icon(Icons.local_shipping_outlined,
+                    color: Colors.white70, size: 16),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                      profile.currentVehicle?.registrationNumber ??
+                          'No vehicle',
+                      key: const Key('header_vehicle'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// One of the two half-width cards under the header: an icon, what it opens,
+/// and a line about it.
+class _TileCard extends StatelessWidget {
+  const _TileCard({
+    required this.keyName,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String keyName;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: Key(keyName),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(icon, color: DriverColors.ink, size: 26),
+              const SizedBox(height: 14),
+              Text(title,
+                  style: const TextStyle(
+                      color: DriverColors.ink,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              Row(children: [
+                Expanded(
+                  child: Text(subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: DriverColors.muted, fontSize: 13)),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: DriverColors.muted, size: 20),
+              ]),
+            ]),
+          ),
+        ),
+      );
+}
+
+/// The dashed line between two rows of the menu card.
+class _RowDivider extends StatelessWidget {
+  const _RowDivider();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: DashedDivider(),
+      );
 }
 
 class _MenuRow extends StatelessWidget {
@@ -269,17 +483,10 @@ class _MenuRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
           child: Row(children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                  color: const Color(0xFFE8F1FB),
-                  borderRadius: BorderRadius.circular(11)),
-              child: Icon(icon, color: DriverColors.blue, size: 19),
-            ),
-            const SizedBox(width: 12),
+            Icon(icon, color: DriverColors.ink, size: 24),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,7 +494,7 @@ class _MenuRow extends StatelessWidget {
                     Text(title,
                         style: const TextStyle(
                             color: DriverColors.ink,
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700)),
                     Text(subtitle,
                         maxLines: 1,
@@ -427,13 +634,16 @@ class _ProfilePhotoState extends State<_ProfilePhoto> {
       onTap: _busy ? null : _change,
       behavior: HitTestBehavior.opaque,
       child: Stack(clipBehavior: Clip.none, children: [
-        DriverAvatar(profile.fullName, size: 64, photoUrl: profile.photoUrl),
+        ClipOval(
+          child: DriverAvatar(profile.fullName,
+              size: 64, photoUrl: profile.photoUrl),
+        ),
         if (_busy)
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: .7),
-                  borderRadius: BorderRadius.circular(64 * .32)),
+                  shape: BoxShape.circle),
               child: const Center(
                   child: SizedBox(
                       width: 22,

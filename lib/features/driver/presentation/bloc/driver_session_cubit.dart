@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart' show ValueNotifier;
+import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
+import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
@@ -119,24 +121,65 @@ final class TripEndedExternally extends DriverEvent {
 
 /// Owns everything that has to keep working while the driver is on duty,
 /// independent of which screen is showing: the profile/duty state, the
-/// periodic location pings that make them assignable, and polling for a newly
-/// assigned (or externally cancelled) trip. The backend assigns trips
-/// synchronously to the nearest online driver and has no push channel wired
-/// up, so polling `driver/trips/active` is how a trip reaches the app.
+/// location updates that make them assignable, and noticing a newly
+/// assigned (or externally cancelled) trip.
+///
+/// Trips arrive by push, not polling: the backend nudges this phone over
+/// [DriverRealtime]'s socket when one of the driver's trips changes, and the
+/// cubit then re-reads `driver/trips/active` once. Only while that socket is
+/// down does it fall back to asking every [pollInterval] — so a server that
+/// used to answer every driver every few seconds now hears from a phone when
+/// something actually happened.
 class DriverSessionCubit extends Cubit<DriverSessionState> {
   DriverSessionCubit({
     required DriverRepository repository,
     required DriverLocationService location,
-    this.pingInterval = const Duration(seconds: 10),
-    this.pollInterval = const Duration(seconds: 5),
+    DriverRealtime? realtime,
+    this.pingInterval = const Duration(seconds: 30),
+    this.pollInterval = const Duration(seconds: 30),
+    this.minMoveMeters = 25,
+    this.minLocationGap = const Duration(seconds: 5),
   })  : _repo = repository,
         _location = location,
-        super(const DriverSessionState());
+        _realtime = realtime,
+        super(const DriverSessionState()) {
+    final realtime = _realtime;
+    if (realtime != null) {
+      _pushSub = realtime.pushes.listen(_onPush);
+      realtime.status.addListener(_onRealtimeStatus);
+    }
+  }
 
   final DriverRepository _repo;
   final DriverLocationService _location;
+  final DriverRealtime? _realtime;
+
+  /// The longest the backend goes without hearing where an on-duty driver
+  /// is, even when they haven't moved (it's how it knows they're still there).
   final Duration pingInterval;
+
+  /// How often to ask for the active trip — only while the push socket is
+  /// down. With it up, there's nothing to ask.
   final Duration pollInterval;
+
+  /// Movement that's worth telling the backend about straight away (less is
+  /// GPS wobble, or a driver waiting in one spot)…
+  final double minMoveMeters;
+
+  /// …but no more often than this.
+  final Duration minLocationGap;
+
+  static final _offline = ValueNotifier<RealtimeStatus>(RealtimeStatus.off);
+
+  /// Whether pushes are getting through — for a "reconnecting" hint.
+  ValueListenable<RealtimeStatus> get realtimeStatus =>
+      _realtime?.status ?? _offline;
+
+  final _tripChanges = StreamController<String>.broadcast();
+
+  /// Ids of trips the server says changed — for a screen waiting on one
+  /// (the payment QR waits for "paid") instead of it polling on its own.
+  Stream<String> get tripChanges => _tripChanges.stream;
 
   final _events = StreamController<DriverEvent>.broadcast();
   Stream<DriverEvent> get events => _events.stream;
@@ -162,12 +205,22 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   }
 
   StreamSubscription<GeoPoint>? _positionSub;
+  StreamSubscription<RealtimePush>? _pushSub;
   Timer? _pingTimer;
   Timer? _pollTimer;
   bool _working = false;
   bool _loading = false;
   bool _pinging = false;
   bool _polling = false;
+
+  /// A sync was asked for while one couldn't run (one in flight, or a trip
+  /// action busy) — run it as soon as that's over rather than drop it, or a
+  /// push landing at the wrong moment would be lost until the next one.
+  bool _syncAgain = false;
+
+  /// The last fix the backend was told about, and when.
+  GeoPoint? _lastSent;
+  DateTime? _lastSentAt;
 
   /// Bumped around every driver-initiated trip action. A poll that started
   /// before an action finished carries stale data; comparing epochs lets it
@@ -246,6 +299,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       tripKnown: true,
     ));
 
+    // Signed in and known to the server: listen for pushes — not only on
+    // duty, since a driver waiting on document review hears of it this way.
+    _realtime?.start();
     if (profile.isOnline || resolvedTrip != null) {
       _startBackgroundWork();
     } else {
@@ -266,6 +322,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// Signed out (or the shell went away): stop tracking and forget
   /// everything, so the next driver on this device starts clean.
   void reset() {
+    _realtime?.stop();
     _stopBackgroundWork();
     _fix = null;
     dutyStartedAt.value = null;
@@ -474,6 +531,10 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       _tripAction(() => _repo.addTripPhoto(tripId,
           stage: stage, photo: photo, itemId: itemId));
 
+  /// Takes back one photo of the whole order — a wrong shot.
+  Future<(Trip?, AppFailure?)> removeTripPhoto(String tripId, String photoId) =>
+      _tripAction(() => _repo.removeTripPhoto(tripId, photoId));
+
   /// Where the driver is right now, for stamping a photo: the latest fix
   /// from the duty stream, else a fresh one. Null when none can be had.
   Future<GeoPoint?> currentFix() async =>
@@ -512,10 +573,12 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     _epoch++;
     if (trip == null) {
       _set(state.copyWith(tripBusy: false));
+      _flushDeferredSync();
       return (null, failure ?? const UnknownFailure());
     }
     _applyTrip(trip);
     _set(state.copyWith(tripBusy: false));
+    _flushDeferredSync();
     return (trip, null);
   }
 
@@ -591,7 +654,11 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     _working = true;
     _listenToPositions();
     _pingTimer = Timer.periodic(pingInterval, (_) => _pingLocation());
-    _pollTimer = Timer.periodic(pollInterval, (_) => _pollActiveTrip());
+    // A safety net, not the mechanism: it does nothing while pushes are
+    // getting through.
+    _pollTimer = Timer.periodic(pollInterval, (_) {
+      if (!(_realtime?.isLive ?? false)) unawaited(_pollActiveTrip());
+    });
     unawaited(_pingLocation());
   }
 
@@ -603,6 +670,8 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     _pollTimer = null;
     _positionSub?.cancel();
     _positionSub = null;
+    _lastSent = null;
+    _lastSentAt = null;
   }
 
   void _listenToPositions() {
@@ -613,6 +682,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
         if (state.locationUnavailable) {
           _set(state.copyWith(locationUnavailable: false));
         }
+        if (_movedEnough(point)) unawaited(_sendFix(point));
       },
       onError: (Object _) {
         if (!state.locationUnavailable) {
@@ -646,18 +716,84 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
           _set(state.copyWith(locationUnavailable: false));
         }
       }
-      // Failures are dropped: the next tick sends a fresher fix anyway.
-      await _repo.sendLocation(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
+      await _sendFix(position);
     } finally {
       _pinging = false;
     }
   }
 
+  /// Whether [point] is far enough from what the backend last heard, and
+  /// long enough after it, to send now rather than at the next heartbeat.
+  bool _movedEnough(GeoPoint point) {
+    final sent = _lastSent, at = _lastSentAt;
+    if (!_working || sent == null || at == null) return false;
+    if (DateTime.now().difference(at) < minLocationGap) return false;
+    return _metersBetween(sent, point) >= minMoveMeters;
+  }
+
+  /// Over the socket when it's up (no extra request at all), else REST.
+  /// Failures are dropped: the next movement or heartbeat sends a fresher fix.
+  Future<void> _sendFix(GeoPoint position) async {
+    _lastSent = position;
+    _lastSentAt = DateTime.now();
+    final viaSocket =
+        _realtime?.sendLocation(position.latitude, position.longitude) ?? false;
+    if (viaSocket) return;
+    await _repo.sendLocation(
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
+  }
+
+  static double _metersBetween(GeoPoint a, GeoPoint b) {
+    const earth = 6371000.0;
+    double rad(double deg) => deg * math.pi / 180;
+    final dLat = rad(b.latitude - a.latitude);
+    final dLng = rad(b.longitude - a.longitude);
+    final h = math.pow(math.sin(dLat / 2), 2) +
+        math.cos(rad(a.latitude)) *
+            math.cos(rad(b.latitude)) *
+            math.pow(math.sin(dLng / 2), 2);
+    return 2 * earth * math.asin(math.sqrt(h));
+  }
+
+  // -- pushes --------------------------------------------------------------
+
+  void _onPush(RealtimePush push) {
+    if (isClosed) return;
+    switch (push) {
+      case TripChanged(:final tripId):
+        _tripChanges.add(tripId);
+        if (_working || state.activeTrip?.id == tripId) {
+          unawaited(_pollActiveTrip());
+        }
+      case ProfileChanged():
+        unawaited(load(silent: true));
+    }
+  }
+
+  /// Back online after a gap: whatever was pushed meanwhile was lost, so
+  /// catch up once.
+  void _onRealtimeStatus() {
+    if (_realtime?.status.value == RealtimeStatus.live && _working) {
+      unawaited(_pollActiveTrip());
+    }
+  }
+
+  void _flushDeferredSync() {
+    if (!_syncAgain) return;
+    _syncAgain = false;
+    unawaited(_pollActiveTrip());
+  }
+
+  /// Re-reads the active trip and adopts it. Called on a push, on
+  /// reconnecting, and by the fallback timer while the socket is down.
   Future<void> _pollActiveTrip() async {
-    if (!_working || _polling || state.tripBusy || isClosed) return;
+    if (!_working || isClosed) return;
+    if (_polling || state.tripBusy) {
+      _syncAgain = true;
+      return;
+    }
     _polling = true;
     final epoch = _epoch;
     try {
@@ -667,11 +803,16 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       await _reconcileActiveTrip(trip, epoch);
     } finally {
       _polling = false;
+      if (!state.tripBusy) _flushDeferredSync();
     }
   }
 
-  /// Runs one poll immediately (also what the timer calls).
-  Future<void> pollNow() => _pollActiveTrip();
+  /// Syncs the active trip immediately — e.g. the app came back to the
+  /// foreground, where a push may have been missed while it was asleep.
+  Future<void> pollNow() {
+    _realtime?.reconnectNow();
+    return _pollActiveTrip();
+  }
 
   Future<void> _reconcileActiveTrip(Trip? serverTrip, int epoch) async {
     final previous = state.activeTrip;
@@ -700,6 +841,10 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   @override
   Future<void> close() {
     _stopBackgroundWork();
+    _realtime?.status.removeListener(_onRealtimeStatus);
+    _pushSub?.cancel();
+    _realtime?.stop();
+    _tripChanges.close();
     _events.close();
     position.dispose();
     dutyStartedAt.dispose();

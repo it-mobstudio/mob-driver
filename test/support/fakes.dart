@@ -592,7 +592,7 @@ class FakeDriverRepository implements DriverRepository {
     if (json == null) return (tripsById[tripId], null);
     final field = '${stage.wire}_photo_url';
     if (itemId == null) {
-      json[field] = 'https://cdn.example.com/${stage.wire}-order.jpg';
+      _addOrderPhoto(json, '${stage.wire}_photos', field, stage.wire);
     } else {
       final item = (json['items'] as List)
           .cast<Map<String, dynamic>>()
@@ -607,6 +607,47 @@ class FakeDriverRepository implements DriverRepository {
 
   /// Raw JSON of trips whose pickup photos a test wants tracked.
   final Map<String, Map<String, dynamic>> tripJsonById = {};
+
+  int _photoSeq = 0;
+
+  /// Adds one order photo the way the backend does: appended to [listField],
+  /// with [urlField] following the newest.
+  void _addOrderPhoto(Map<String, dynamic> owner, String listField,
+      String urlField, String name) {
+    final id = 'ph-${++_photoSeq}';
+    final url = 'https://cdn.example.com/$name-order-$id.jpg';
+    owner[listField] = [
+      ...((owner[listField] as List?) ?? const []),
+      {'id': id, 'url': url},
+    ];
+    owner[urlField] = url;
+  }
+
+  AppFailure? removePhotoFailure;
+
+  @override
+  Future<(Trip?, AppFailure?)> removeTripPhoto(
+      String tripId, String photoId) async {
+    calls.add('removePhoto:$photoId');
+    if (removePhotoFailure != null) return (null, removePhotoFailure);
+    return _editTrip(tripId, (json) {
+      void drop(Map<String, dynamic> owner, String listField, String urlField) {
+        final list = ((owner[listField] as List?) ?? const [])
+            .cast<Map<String, dynamic>>();
+        if (!list.any((p) => p['id'] == photoId)) return;
+        final left = list.where((p) => p['id'] != photoId).toList();
+        owner[listField] = left;
+        owner[urlField] = left.isEmpty ? null : left.last['url'];
+      }
+
+      drop(json, 'pickup_photos', 'pickup_photo_url');
+      drop(json, 'delivery_photos', 'delivery_photo_url');
+      for (final stop
+          in ((json['stops'] as List?) ?? const []).cast<Map<String, dynamic>>()) {
+        drop(stop, 'photos', 'photo_url');
+      }
+    });
+  }
 
   @override
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId) async {
@@ -661,7 +702,7 @@ class FakeDriverRepository implements DriverRepository {
     return _editTrip(tripId, (json) {
       final stop = _stopJson(json, stopId);
       if (itemId == null) {
-        stop['photo_url'] = 'https://cdn.example.com/stop-$stopId.jpg';
+        _addOrderPhoto(stop, 'photos', 'photo_url', 'stop-$stopId');
         return;
       }
       final field =

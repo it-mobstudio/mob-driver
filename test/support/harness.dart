@@ -249,6 +249,17 @@ Future<void> swipe(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
+/// Pulls a map screen's sheet all the way up, as a driver would to see what's
+/// under what it shows at rest.
+Future<void> pullUpSheet(WidgetTester tester) async {
+  // The handle is a 4 px bar in a taller box; the drag lands on the sheet
+  // around it, which is what a thumb does too.
+  await tester.drag(
+      find.byKey(const Key('map_sheet_grabber')), const Offset(0, -600),
+      warnIfMissed: false);
+  await tester.pumpAndSettle();
+}
+
 /// At a COD drop the app first asks how the customer paid. Tests about the
 /// QR screen pick "Show QR code"; when no payment is due this does nothing.
 Future<void> payByQrIfAsked(WidgetTester tester) async {

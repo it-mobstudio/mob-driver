@@ -10,6 +10,8 @@ import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.d
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/pages/dashboard_page.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/pages/profile_page.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/duty_top_bar.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/shared/widgets/skeleton_shimmer.dart';
 
@@ -26,19 +28,22 @@ Widget dashboardApp(TestRig rig, {bool permissionGranted = true}) => BlocProvide
         builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(disableAnimations: true),
             child: child!),
+        // The dashboard is both where the app starts and where the profile
+        // page's back button returns to.
         routerConfig: GoRouter(routes: [
-          GoRoute(
-            path: '/',
-            builder: (_, __) => DriverDashboardPage(
-              checkLocationPermission: (_) async => permissionGranted,
-              mapBuilder: stubHomeMap,
+          for (final path in ['/', DriverRoutes.dashboard])
+            GoRoute(
+              path: path,
+              builder: (_, __) => DriverDashboardPage(
+                checkLocationPermission: (_) async => permissionGranted,
+                mapBuilder: stubHomeMap,
+              ),
             ),
-          ),
           GoRoute(path: DriverRoutes.tripPattern, builder: (_, s) => Scaffold(body: Text('TRIP ${s.pathParameters['id']}'))),
           GoRoute(path: DriverRoutes.trips, builder: (_, __) => const Scaffold(body: Text('TRIPS'))),
           GoRoute(path: DriverRoutes.wallet, builder: (_, __) => const Scaffold(body: Text('WALLET'))),
           GoRoute(path: DriverRoutes.vehicle, builder: (_, __) => const Scaffold(body: Text('VEHICLE'))),
-          GoRoute(path: DriverRoutes.profile, builder: (_, __) => const Scaffold(body: Text('PROFILE'))),
+          GoRoute(path: DriverRoutes.profile, builder: (_, __) => const DriverProfilePage()),
         ]),
       ),
     );
@@ -125,6 +130,42 @@ void main() {
     });
   });
 
+  group('the map and its sheet', () {
+    rigTest('working time sits in the header, over a map that gets the rest of the screen', (tester, rig) async {
+      await rig.cubit.load();
+      await tester.pumpWidget(dashboardApp(rig));
+      await tester.pumpAndSettle();
+
+      final header = tester.getRect(find.byType(DutyHeaderSurface));
+      final banner = tester.getRect(find.byKey(const Key('summary_banner')));
+      expect(header.contains(banner.center), isTrue, reason: 'the banner is at the top, under the duty pill');
+      expect(find.byKey(const Key('summary_banner')).hitTestable(), findsOneWidget);
+
+      final sheetTop = tester.getTopLeft(find.byKey(const Key('map_sheet_grabber'))).dy;
+      expect(sheetTop - header.bottom, greaterThan(header.height), reason: 'the map is the big thing on screen');
+      expect(find.text('Start duty').hitTestable(), findsOneWidget);
+    });
+
+    rigTest('with a trip on, pulling the sheet up shows its route, and it goes back down', (tester, rig) async {
+      rig.repo.profileValue = fakeProfile(online: true);
+      rig.repo.activeTripValue = fakeTrip();
+      await rig.cubit.load();
+      await tester.pumpWidget(dashboardApp(rig));
+      await tester.pumpAndSettle();
+      final resting = tester.getTopLeft(find.byKey(const Key('map_sheet_grabber'))).dy;
+      expect(find.text('Open trip').hitTestable(), findsOneWidget);
+      expect(find.text('DROP').hitTestable(), findsNothing, reason: 'the route is under the fold');
+
+      await pullUpSheet(tester);
+      expect(find.text('DROP').hitTestable(), findsOneWidget);
+      expect(tester.getTopLeft(find.byKey(const Key('map_sheet_grabber'))).dy, lessThan(resting));
+
+      await tester.drag(find.byKey(const Key('map_sheet_grabber')), const Offset(0, 600), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.byKey(const Key('map_sheet_grabber'))).dy, moreOrLessEquals(resting, epsilon: 1));
+    });
+  });
+
   group('offline', () {
     rigTest('greets the driver, shows the vehicle, and offers to start duty', (tester, rig) async {
       await rig.cubit.load();
@@ -135,10 +176,10 @@ void main() {
       expect(find.text('Start duty'), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('no_trip_title'))).data, 'You’re off duty');
 
-      // Name, badge and vehicle live behind the profile button.
+      // Name, badge and vehicle are on the profile page the button opens.
       await tester.tap(find.byKey(const Key('profile_button')));
       await tester.pumpAndSettle();
-      expect(tester.widget<Text>(find.byKey(const Key('driver_name'))).data, 'Seed Driver 1');
+      expect(tester.widget<Text>(find.byKey(const Key('profile_name'))).data, 'Seed Driver 1');
       expect(find.text('VERIFIED DRIVER'), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('header_vehicle'))).data, 'No vehicle');
     });
@@ -198,7 +239,7 @@ void main() {
 
       expect(rig.repo.calls, contains('startDuty:v-1:12.9716,77.5946'));
       expect(tester.widget<Text>(find.byKey(const Key('duty_status'))).data, 'On Duty');
-      expect(find.text('🔎 Finding orders near you'), findsOneWidget);
+      expect(find.text('Finding orders near you'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('profile_button')));
       await tester.pumpAndSettle();
@@ -306,8 +347,8 @@ void main() {
       await tester.tap(find.byKey(const Key('profile_button')));
       await tester.pumpAndSettle();
       expect(find.text('ACTION NEEDED'), findsOneWidget);
-      // Dismiss the sheet (tap the barrier) — back to the dashboard.
-      await tester.tapAt(const Offset(20, 20));
+      // Back to the dashboard.
+      await tester.tap(find.byKey(const Key('profile_back')));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Start duty'));
@@ -416,23 +457,49 @@ void main() {
     });
   });
 
-  group('profile menu', () {
-    rigTest('the profile button opens a menu to trips, wallet, vehicle and profile', (tester, rig) async {
+  group('profile page', () {
+    Future<void> openProfile(WidgetTester tester, TestRig rig) async {
       await rig.cubit.load();
       await tester.pumpWidget(dashboardApp(rig));
       await settle(tester);
-
       await tester.tap(find.byKey(const Key('profile_button')));
       await tester.pumpAndSettle();
+    }
 
-      expect(find.byKey(const Key('menu_trips')), findsOneWidget);
-      expect(find.byKey(const Key('menu_wallet')), findsOneWidget);
-      expect(find.byKey(const Key('menu_vehicle')), findsOneWidget);
-      expect(find.byKey(const Key('menu_profile')), findsOneWidget);
+    rigTest('the profile button opens the profile page itself — no menu in between', (tester, rig) async {
+      await openProfile(tester, rig);
 
-      await tester.tap(find.byKey(const Key('menu_trips')));
+      expect(find.byType(DriverProfilePage), findsOneWidget);
+      expect(find.byType(DriverDashboardPage), findsNothing);
+      for (final key in ['menu_trips', 'menu_wallet', 'menu_vehicle', 'menu_edit_details']) {
+        expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      }
+
+      await tester.tap(find.byKey(const Key('profile_back')));
       await tester.pumpAndSettle();
-      expect(find.text('TRIPS'), findsOneWidget);
+      expect(find.byType(DriverDashboardPage), findsOneWidget);
+    });
+
+    rigTest('Trips and Wallet are two cards side by side, half the width each', (tester, rig) async {
+      await openProfile(tester, rig);
+
+      final trips = tester.getRect(find.byKey(const Key('menu_trips')));
+      final wallet = tester.getRect(find.byKey(const Key('menu_wallet')));
+      expect(trips.top, wallet.top);
+      expect(trips.width, moreOrLessEquals(wallet.width, epsilon: .5));
+      expect(trips.height, moreOrLessEquals(wallet.height, epsilon: .5));
+      expect(trips.right, lessThan(wallet.left));
+    });
+
+    rigTest('each card opens its screen', (tester, rig) async {
+      for (final (key, screen) in [('menu_trips', 'TRIPS'), ('menu_wallet', 'WALLET'), ('menu_vehicle', 'VEHICLE')]) {
+        await openProfile(tester, rig);
+        await tester.ensureVisible(find.byKey(Key(key)));
+        await tester.tap(find.byKey(Key(key)));
+        await tester.pumpAndSettle();
+        expect(find.text(screen), findsOneWidget, reason: key);
+        await tester.pumpWidget(const SizedBox());
+      }
     });
   });
 

@@ -61,7 +61,8 @@ class DriverMap extends StatefulWidget {
   State<DriverMap> createState() => _DriverMapState();
 }
 
-class _DriverMapState extends State<DriverMap> with SingleTickerProviderStateMixin {
+class _DriverMapState extends State<DriverMap>
+    with SingleTickerProviderStateMixin {
   static const _fallbackCenter = LatLng(12.9716, 77.5946); // Bengaluru
   static const _vehicleAsset = 'assets/icons/driver_marker.svg';
 
@@ -133,9 +134,8 @@ class _DriverMapState extends State<DriverMap> with SingleTickerProviderStateMix
             Paint()..color = Colors.white);
         canvas.drawCircle(const Offset(size / 2, size / 2), size / 2 - 3.4,
             Paint()..color = const Color(0xFF0454A3));
-        final image = await recorder
-            .endRecording()
-            .toImage(size.toInt(), size.toInt());
+        final image =
+            await recorder.endRecording().toImage(size.toInt(), size.toInt());
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         if (bytes == null) return BitmapDescriptor.defaultMarker;
         return BitmapDescriptor.bytes(bytes.buffer.asUint8List(),
@@ -162,7 +162,8 @@ class _DriverMapState extends State<DriverMap> with SingleTickerProviderStateMix
     if (kIsWeb) {
       // The web map ignores `padding`: aim below the driver so they land in
       // the middle of the part of the map the bottom panel leaves visible.
-      target = DriverGlide.aimAbove(target, widget.bottomPadding / 2, zoom ?? _zoom);
+      target =
+          DriverGlide.aimAbove(target, widget.bottomPadding / 2, zoom ?? _zoom);
     }
     await controller.animateCamera(
       zoom == null
@@ -208,16 +209,15 @@ class _DriverMapState extends State<DriverMap> with SingleTickerProviderStateMix
         Marker(
           markerId: const MarkerId('pickup'),
           position: pickup,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           anchor: const Offset(.5, 1),
         ),
       if (widget.data.drop case final drop?)
         Marker(
           markerId: const MarkerId('drop'),
           position: drop,
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           anchor: const Offset(.5, 1),
         ),
     };
@@ -239,35 +239,58 @@ class _DriverMapState extends State<DriverMap> with SingleTickerProviderStateMix
     };
   }
 
+  /// Whether the native map exists. It's let go while a full-screen page
+  /// (the trip, with its own map) covers this one: a Google map holds tens of
+  /// megabytes of tiles and GPU memory, and two at once is what gets the app
+  /// killed on a low-memory phone — often while the camera is open on top.
+  bool _hosted = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // False for a route hidden under an opaque one (not under a sheet or a
+    // dialog, where the map still shows).
+    final visible = TickerMode.valuesOf(context).enabled;
+    if (visible == _hosted) return;
+    _hosted = visible;
+    if (!visible) {
+      _controller = null;
+      _created = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final start = widget.data.driver ?? _fallbackCenter;
+    final start = _glide.position ?? widget.data.driver ?? _fallbackCenter;
     return Stack(children: [
-      GoogleMap(
-        style: kMobMapStyle,
-        initialCameraPosition: CameraPosition(target: start, zoom: 15.5),
-        markers: _markers(),
-        polylines: _polylines(),
-        padding: EdgeInsets.only(bottom: widget.bottomPadding),
-        zoomControlsEnabled: false,
-        mapToolbarEnabled: false,
-        compassEnabled: false,
-        myLocationButtonEnabled: false,
-        onCameraMoveStarted: () {
-          if (_programmaticMove) return;
-          if (_following) setState(() => _following = false);
-        },
-        onCameraMove: (position) => _zoom = position.zoom,
-        onCameraIdle: () => _programmaticMove = false,
-        onMapCreated: (controller) {
-          _controller = controller;
-          if (mounted) setState(() => _created = true);
-          // Opened centred on the driver — which on the web (no `padding`)
-          // is behind the bottom panel. Aim above it straight away.
-          final driver = widget.data.driver;
-          if (kIsWeb && driver != null) unawaited(_moveTo(driver));
-        },
-      ),
+      if (!_hosted)
+        const Positioned.fill(child: ColoredBox(color: Color(0xFFE8EDF2)))
+      else
+        GoogleMap(
+          style: kMobMapStyle,
+          initialCameraPosition: CameraPosition(target: start, zoom: 15.5),
+          markers: _markers(),
+          polylines: _polylines(),
+          padding: EdgeInsets.only(bottom: widget.bottomPadding),
+          zoomControlsEnabled: false,
+          mapToolbarEnabled: false,
+          compassEnabled: false,
+          myLocationButtonEnabled: false,
+          onCameraMoveStarted: () {
+            if (_programmaticMove) return;
+            if (_following) setState(() => _following = false);
+          },
+          onCameraMove: (position) => _zoom = position.zoom,
+          onCameraIdle: () => _programmaticMove = false,
+          onMapCreated: (controller) {
+            _controller = controller;
+            if (mounted) setState(() => _created = true);
+            // Opened centred on the driver — which on the web (no `padding`)
+            // is behind the bottom panel. Aim above it straight away.
+            final driver = widget.data.driver;
+            if (kIsWeb && driver != null) unawaited(_moveTo(driver));
+          },
+        ),
       // Fades away once the map exists, so there's no white flash while
       // tiles load (mirrors TripMap's own reveal).
       Positioned.fill(
@@ -326,7 +349,8 @@ class _MapFab extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(13),
-            child: SvgPicture.asset(assetPath, width: iconSize, height: iconSize),
+            child:
+                SvgPicture.asset(assetPath, width: iconSize, height: iconSize),
           ),
         ),
       );

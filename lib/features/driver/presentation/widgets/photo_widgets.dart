@@ -101,7 +101,9 @@ class PhotoTile extends StatelessWidget {
               child: Ink(
                 height: height,
                 decoration: BoxDecoration(
-                  color: _showError ? const Color(0xFFFFF5F5) : const Color(0xFFF7F9FC),
+                  color: _showError
+                      ? const Color(0xFFFFF5F5)
+                      : const Color(0xFFF7F9FC),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: _filled
@@ -114,7 +116,7 @@ class PhotoTile extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(13),
-                  child: _filled ? _filledView() : _emptyView(),
+                  child: _filled ? _filledView(context) : _emptyView(),
                 ),
               ),
             ),
@@ -126,7 +128,10 @@ class PhotoTile extends StatelessWidget {
                 ? Padding(
                     padding: const EdgeInsets.only(top: 6, left: 4),
                     child: Text(errorText!,
-                        style: const TextStyle(color: DriverColors.red, fontSize: 12, fontWeight: FontWeight.w600)),
+                        style: const TextStyle(
+                            color: DriverColors.red,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
                   )
                 : const SizedBox(width: double.infinity),
           ),
@@ -136,7 +141,8 @@ class PhotoTile extends StatelessWidget {
   Widget _emptyView() => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.add_a_photo_outlined,
-              color: _showError ? DriverColors.red : DriverColors.blue, size: 26),
+              color: _showError ? DriverColors.red : DriverColors.blue,
+              size: 26),
           const SizedBox(height: 6),
           Text(label,
               textAlign: TextAlign.center,
@@ -150,38 +156,43 @@ class PhotoTile extends StatelessWidget {
         ]),
       );
 
-  Widget _filledView() => Stack(fit: StackFit.expand, children: [
-        if (photo != null)
-          Image.memory(photo!.bytes, fit: BoxFit.cover)
-        else
-          Image.network(
-            networkUrl!,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.image_not_supported_outlined,
-                    color: DriverColors.muted)),
-          ),
-        Positioned(
-          left: 8,
-          bottom: 8,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: .62),
-                borderRadius: BorderRadius.circular(20)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.check_circle_rounded,
-                  color: Colors.white, size: 13),
-              const SizedBox(width: 4),
-              Text(enabled ? '$label · Tap to change' : label,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700)),
-            ]),
-          ),
+  Widget _filledView(BuildContext context) {
+    // The slot is never wider than the screen; decode no bigger than that.
+    final decodeWidth = thumbPixels(context, MediaQuery.sizeOf(context).width);
+    return Stack(fit: StackFit.expand, children: [
+      if (photo != null)
+        Image.memory(photo!.bytes, fit: BoxFit.cover, cacheWidth: decodeWidth)
+      else
+        Image.network(
+          networkUrl!,
+          fit: BoxFit.cover,
+          cacheWidth: decodeWidth,
+          errorBuilder: (_, __, ___) => const Center(
+              child: Icon(Icons.image_not_supported_outlined,
+                  color: DriverColors.muted)),
         ),
-      ]);
+      Positioned(
+        left: 8,
+        bottom: 8,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: .62),
+              borderRadius: BorderRadius.circular(20)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.check_circle_rounded,
+                color: Colors.white, size: 13),
+            const SizedBox(width: 4),
+            Text(enabled ? '$label · Tap to change' : label,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700)),
+          ]),
+        ),
+      ),
+    ]);
+  }
 }
 
 /// Takes a proof picture — camera only, never the gallery — and burns where
@@ -212,7 +223,8 @@ Future<CapturedPhoto?> takeGeoPhoto(
   if (photo == null) return null;
   final position = await fix;
   if (position == null) {
-    fail('Turn on location — proof photos are stamped with where they were taken.');
+    fail(
+        'Turn on location — proof photos are stamped with where they were taken.');
     return null;
   }
   return capture.geoStamp(

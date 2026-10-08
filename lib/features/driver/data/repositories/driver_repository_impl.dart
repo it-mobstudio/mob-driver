@@ -337,6 +337,11 @@ class DriverRepositoryImpl implements DriverRepository {
           stage: stage.wire, photo: photo, itemId: itemId)));
 
   @override
+  Future<(Trip?, AppFailure?)> removeTripPhoto(String tripId, String photoId) =>
+      _guard(() async =>
+          Trip.fromJson(await _remote.removeTripPhoto(tripId, photoId)));
+
+  @override
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId) =>
       _guard(
           () async => Trip.fromJson(await _remote.resetItem(tripId, itemId)));

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
@@ -9,6 +8,7 @@ import 'package:m_o_b_demand_side/core/location/location_permission_helper.dart'
 import 'package:m_o_b_demand_side/core/utils/formatters.dart';
 import 'package:m_o_b_demand_side/core/utils/polyline_codec.dart';
 import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
+import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
@@ -19,14 +19,16 @@ import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/duty_flow.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/duty_top_bar.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/finder_video.dart';
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/map_sheet.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/vehicle_art.dart';
 import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
 import 'package:m_o_b_demand_side/shared/widgets/skeleton_shimmer.dart';
 
-/// "Today": a full-screen map centred on the driver, the duty toggle, the
-/// active trip (or the wait for one), and a way to everything else (trips,
-/// wallet, vehicle, profile) behind the profile button.
+/// "Today": the duty toggle and the day's working time over a map centred on
+/// the driver, with a sheet that shows the active trip (or the wait for one)
+/// — and the profile button, which opens the profile page: the way to
+/// everything else (trips, wallet, vehicles, documents).
 class DriverDashboardPage extends StatefulWidget {
   const DriverDashboardPage(
       {super.key, this.checkLocationPermission, this.mapBuilder});
@@ -49,9 +51,9 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
   late final DriverSessionCubit _cubit = context.read<DriverSessionCubit>();
   late final VoidCallback _refreshHook = _refresh;
 
-  final _panelKey = GlobalKey();
-  double _panelHeight = 170;
-  bool _measureScheduled = false;
+  /// How much of the map's bottom edge the resting sheet covers, so the
+  /// map's floating buttons and the camera's centre stay above it.
+  double _panelHeight = 220;
 
   @override
   void initState() {
@@ -75,18 +77,6 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
     return days != null && days >= 0 && days <= 30 ? days : null;
   }
 
-  /// Tells the map how much of its bottom edge the panel covers, so its
-  /// floating buttons and the camera's centre stay above it.
-  void _measurePanel() {
-    if (!mounted) return;
-    final box = _panelKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box != null &&
-        box.hasSize &&
-        (box.size.height - _panelHeight).abs() > 1) {
-      setState(() => _panelHeight = box.size.height);
-    }
-  }
-
   DriverMapData _mapData(GeoPoint? point, Trip? trip) {
     final driver = point == null ? null : LatLng(point.latitude, point.longitude);
     if (trip == null || !trip.status.isActive) {
@@ -105,13 +95,6 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
           .toList(),
     );
   }
-
-  void _openProfileMenu(DriverProfile profile) => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => _ProfileMenuSheet(profile: profile),
-      );
 
   void _openStats(DriverStats stats) => showModalBottomSheet<void>(
         context: context,
@@ -188,24 +171,18 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
 
   Widget _content(
       BuildContext context, DriverSessionState state, DriverProfile profile) {
-    if (!_measureScheduled) {
-      _measureScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _measurePanel());
-    }
     final mapBuilder = widget.mapBuilder ?? defaultDriverMapBuilder;
     final trip = state.activeTrip;
 
     return Column(children: [
       // The pill, any warning banners, and the working-time bar sit on a
-      // solid gradient panel — the map only starts below it, never bleeding
+      // solid white header — the map only starts below it, never bleeding
       // through behind them (a transparent overlay here was the bug).
       DutyHeaderSurface(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             DutyStatusRow(
-              onDark: true,
-              leading: SvgPicture.asset('assets/images/mob_logo.svg', height: 22, semanticsLabel: 'MOB'),
               avatar: DriverAvatar(profile.fullName, size: 44, photoUrl: profile.photoUrl),
               online: state.isOnline,
               busy: state.dutyBusy,
@@ -213,7 +190,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                   ? startDutyFlow(context,
                       checkPermission: widget.checkLocationPermission)
                   : endDutyFlow(context),
-              onProfileTap: () => _openProfileMenu(profile),
+              onProfileTap: () => context.go(DriverRoutes.profile),
             ),
             AnimatedSize(
               duration: const Duration(milliseconds: 240),
@@ -256,15 +233,13 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                 ],
               ]),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             WorkingTimeBanner(
-              onDark: true,
               online: state.isOnline,
               dutyStartedAt: _cubit.dutyStartedAt,
               todayEarnings: state.stats.today.earnings,
               onTap: () => _openStats(state.stats),
             ),
-            const SizedBox(height: 14),
           ]),
         ),
       ),
@@ -281,26 +256,56 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
               ),
             ),
           ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: NotificationListener<SizeChangedLayoutNotification>(
-              onNotification: (_) {
-                WidgetsBinding.instance
-                    .addPostFrameCallback((_) => _measurePanel());
-                return false;
-              },
-              child: SizeChangedLayoutNotifier(
-                child: _BottomPanel(
-                  key: _panelKey,
-                  state: state,
-                  checkLocationPermission: widget.checkLocationPermission,
-                ),
-              ),
-            ),
-          ),
+          Positioned.fill(child: _sheet(state)),
         ]),
       ),
     ]);
+  }
+
+  /// The sheet over the map: what's happening now (off duty / looking / the
+  /// active trip) at rest, and the trip's route on the way up.
+  Widget _sheet(DriverSessionState state) {
+    final trip = state.activeTrip;
+    final Widget peek;
+    Widget? details;
+    final String key;
+    if (trip != null) {
+      key = trip.id;
+      peek = _ActiveTripPanel(trip: trip);
+      details = _ActiveTripDetails(trip: trip);
+    } else if (!state.tripKnown) {
+      key = 'loading';
+      peek = const SkeletonShimmer(child: SkeletonBlock(height: 92, radius: 18));
+    } else if (!state.isOnline) {
+      key = 'offline';
+      peek = _OfflinePanel(
+          busy: state.dutyBusy,
+          vehicle: state.profile?.currentVehicle,
+          checkLocationPermission: widget.checkLocationPermission);
+    } else {
+      key = 'looking';
+      peek = const _LookingForOrdersPanel();
+    }
+
+    return MapSheet(
+      onRestingHeight: (height) {
+        if ((height - _panelHeight).abs() > 1) {
+          setState(() => _panelHeight = height);
+        }
+      },
+      peek: AnimatedSize(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 240),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          child: KeyedSubtree(key: ValueKey(key), child: peek),
+        ),
+      ),
+      more: details,
+    );
   }
 
   Widget _initial(DriverSessionState state) {
@@ -430,67 +435,7 @@ class _VerificationCard extends StatelessWidget {
   }
 }
 
-// -- bottom panel ---------------------------------------------------------
-
-class _BottomPanel extends StatelessWidget {
-  const _BottomPanel({super.key, required this.state, this.checkLocationPermission});
-  final DriverSessionState state;
-  final LocationPermissionCheck? checkLocationPermission;
-
-  @override
-  Widget build(BuildContext context) {
-    final trip = state.activeTrip;
-    final Widget content;
-    final String key;
-    if (trip != null) {
-      key = trip.id;
-      content = _ActiveTripPanel(trip: trip);
-    } else if (!state.tripKnown) {
-      key = 'loading';
-      content = const Padding(
-        padding: EdgeInsets.symmetric(vertical: 10),
-        child: SkeletonShimmer(child: SkeletonBlock(height: 92, radius: 18)),
-      );
-    } else if (!state.isOnline) {
-      key = 'offline';
-      content = _OfflinePanel(
-          busy: state.dutyBusy,
-          vehicle: state.profile?.currentVehicle,
-          checkLocationPermission: checkLocationPermission);
-    } else {
-      key = 'looking';
-      content = const _LookingForOrdersPanel();
-    }
-
-    return Container(
-      width: double.infinity,
-      constraints:
-          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .55),
-      padding: EdgeInsets.fromLTRB(
-          20, 18, 20, 18 + MediaQuery.paddingOf(context).bottom),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          BoxShadow(color: Color(0x26001533), blurRadius: 30, offset: Offset(0, -6)),
-        ],
-      ),
-      child: SingleChildScrollView(
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 240),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: KeyedSubtree(key: ValueKey(key), child: content),
-          ),
-        ),
-      ),
-    );
-  }
-}
+// -- the sheet ------------------------------------------------------------
 
 class _OfflinePanel extends StatelessWidget {
   const _OfflinePanel({required this.busy, this.vehicle, this.checkLocationPermission});
@@ -501,7 +446,6 @@ class _OfflinePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Column(mainAxisSize: MainAxisSize.min, children: [
-        const _Grabber(),
         Row(children: [
           // The driver's own kind of vehicle, parked — it rolls in once.
           Container(
@@ -545,19 +489,6 @@ class _OfflinePanel extends StatelessWidget {
       ]);
 }
 
-/// The little handle at the top of the bottom panel.
-class _Grabber extends StatelessWidget {
-  const _Grabber();
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 38,
-        height: 4,
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(color: DriverColors.line, borderRadius: BorderRadius.circular(4)),
-      );
-}
-
 /// Drives its child in from the right with a small overshoot — once.
 class _RollIn extends StatelessWidget {
   const _RollIn({required this.child});
@@ -582,30 +513,58 @@ class _LookingForOrdersPanel extends StatelessWidget {
   const _LookingForOrdersPanel();
 
   static const _messages = [
-    '🔎 Finding orders near you',
-    '📦 Looking for your next order',
-    '💪 Trying hard to find an order',
-    '✨ Hang tight, we’re on it!',
+    'Finding orders near you',
+    'Looking for your next order',
+    'Still searching nearby',
+    'Hang tight, we’re on it',
   ];
 
   @override
   Widget build(BuildContext context) =>
-      const Column(mainAxisSize: MainAxisSize.min, children: [
-        _Grabber(),
-        FinderAnimation(size: 128),
-        SizedBox(height: 6),
-        SizedBox(
+      Column(mainAxisSize: MainAxisSize.min, children: [
+        const FinderAnimation(size: 120),
+        const SizedBox(height: 4),
+        const SizedBox(
           height: 26,
           child: RotatingStatusText(
               key: Key('no_trip_title'), messages: _messages),
         ),
-        SizedBox(height: 6),
-        Text('Keep the app open — we’ll ring and vibrate when an order arrives.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: DriverColors.muted, fontSize: 12.5, height: 1.4)),
+        const SizedBox(height: 6),
+        // Orders arrive by push; while that link is down they still come,
+        // just later (the app asks every so often) — say so rather than
+        // let the driver wonder why it's quiet.
+        ValueListenableBuilder<RealtimeStatus>(
+          valueListenable: context.read<DriverSessionCubit>().realtimeStatus,
+          builder: (_, status, __) => status == RealtimeStatus.connecting
+              ? const Row(
+                  key: Key('reconnecting_hint'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox.square(
+                      dimension: 12,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 1.6, color: DriverColors.orange),
+                    ),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text('Reconnecting — new orders may take a moment',
+                          style: TextStyle(
+                              color: DriverColors.orange,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                )
+              : const Text(
+                  'Keep the app open — we’ll ring and vibrate when an order arrives.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: DriverColors.muted, fontSize: 12.5, height: 1.4)),
+        ),
       ]);
 }
 
+/// The active trip at rest: what stage it's at, and the way into it.
 class _ActiveTripPanel extends StatelessWidget {
   const _ActiveTripPanel({required this.trip});
   final Trip trip;
@@ -613,7 +572,6 @@ class _ActiveTripPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Column(mainAxisSize: MainAxisSize.min, children: [
-        const _Grabber(),
         Row(children: [
           Container(
             width: 56,
@@ -652,7 +610,24 @@ class _ActiveTripPanel extends StatelessWidget {
           StatusPill(trip.isCod ? 'COD' : 'PREPAID',
               color: trip.isCod ? DriverColors.orange : DriverColors.green),
         ]),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
+        PrimaryButton(
+          label: 'Open trip',
+          icon: Icons.arrow_forward_rounded,
+          onPressed: () => context.push(DriverRoutes.trip(trip.id)),
+        ),
+      ]);
+}
+
+/// The rest of the active trip, a pull of the sheet away: where it goes and
+/// what it pays.
+class _ActiveTripDetails extends StatelessWidget {
+  const _ActiveTripDetails({required this.trip});
+  final Trip trip;
+
+  @override
+  Widget build(BuildContext context) =>
+      Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -673,12 +648,6 @@ class _ActiveTripPanel extends StatelessWidget {
               '${formatDistance(trip.distanceMeters)} · ${formatDuration(trip.durationSeconds)}',
               style: const TextStyle(color: DriverColors.muted, fontSize: 12.5, fontWeight: FontWeight.w600)),
         ]),
-        const SizedBox(height: 14),
-        PrimaryButton(
-          label: 'Open trip',
-          icon: Icons.arrow_forward_rounded,
-          onPressed: () => context.push(DriverRoutes.trip(trip.id)),
-        ),
       ]);
 }
 
@@ -736,179 +705,6 @@ class _Route extends StatelessWidget {
 }
 
 // -- sheets ---------------------------------------------------------------
-
-/// Everything that used to live behind bottom-nav tabs: trips, wallet,
-/// vehicle, profile — reached from the map screen's profile button.
-class _ProfileMenuSheet extends StatelessWidget {
-  const _ProfileMenuSheet({required this.profile});
-  final DriverProfile profile;
-
-  void _go(BuildContext context, String path) {
-    Navigator.pop(context);
-    context.go(path);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final vehicle = profile.currentVehicle;
-    return Material(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: DriverColors.line,
-                    borderRadius: BorderRadius.circular(4)),
-              ),
-              const SizedBox(height: 18),
-              Row(children: [
-                DriverAvatar(profile.fullName,
-                    size: 48, photoUrl: profile.photoUrl),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(profile.fullName,
-                          key: const Key('driver_name'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: DriverColors.ink,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 6),
-                      Row(children: [
-                        if (profile.isEligible)
-                          const StatusPill('VERIFIED DRIVER',
-                              color: DriverColors.green,
-                              icon: Icons.verified_rounded)
-                        else if (profile.onboardingStatus ==
-                            OnboardingStatus.underReview)
-                          const StatusPill('UNDER REVIEW',
-                              color: DriverColors.orange,
-                              icon: Icons.hourglass_top_rounded)
-                        else if (profile.onboardingStatus ==
-                            OnboardingStatus.actionRequired)
-                          const StatusPill('ACTION NEEDED',
-                              color: DriverColors.red,
-                              icon: Icons.error_outline_rounded)
-                        else
-                          const StatusPill('KYC INCOMPLETE',
-                              color: DriverColors.red,
-                              icon: Icons.gpp_maybe_outlined),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                                color: const Color(0xFFF1F4F8),
-                                borderRadius: BorderRadius.circular(20)),
-                            child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.two_wheeler_rounded,
-                                      color: DriverColors.muted, size: 14),
-                                  const SizedBox(width: 5),
-                                  Flexible(
-                                    child: Text(
-                                        vehicle?.registrationNumber ??
-                                            'No vehicle',
-                                        key: const Key('header_vehicle'),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            color: DriverColors.ink,
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: .4)),
-                                  ),
-                                ]),
-                          ),
-                        ),
-                      ]),
-                    ],
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 18),
-              _MenuTile(
-                  keyName: 'menu_trips',
-                  icon: Icons.receipt_long_outlined,
-                  label: 'Trips',
-                  onTap: () => _go(context, DriverRoutes.trips)),
-              _MenuTile(
-                  keyName: 'menu_wallet',
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: 'Wallet',
-                  onTap: () => _go(context, DriverRoutes.wallet)),
-              _MenuTile(
-                  keyName: 'menu_vehicle',
-                  icon: Icons.two_wheeler_rounded,
-                  label: 'My vehicle',
-                  onTap: () => _go(context, DriverRoutes.vehicle)),
-              _MenuTile(
-                  keyName: 'menu_profile',
-                  icon: Icons.person_outline_rounded,
-                  label: 'Profile & settings',
-                  onTap: () => _go(context, DriverRoutes.profile)),
-            ]),
-          ),
-        ),
-      );
-  }
-}
-
-class _MenuTile extends StatelessWidget {
-  const _MenuTile({
-    required this.keyName,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final String keyName;
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        key: Key(keyName),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13),
-          child: Row(children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                  color: const Color(0xFFE8F1FB),
-                  borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: DriverColors.blue, size: 19),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(label,
-                  style: const TextStyle(
-                      color: DriverColors.ink,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700)),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: DriverColors.muted),
-          ]),
-        ),
-      );
-}
 
 class _StatsSheet extends StatelessWidget {
   const _StatsSheet({required this.stats});

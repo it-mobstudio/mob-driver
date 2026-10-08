@@ -15,8 +15,7 @@ import 'package:m_o_b_demand_side/features/driver/presentation/widgets/swipe_but
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_photos.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/voice_note_player.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/trip_page.dart'
-    show kCancelReasons;
+import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_stage_actions.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
 /// Everything about one order: the photos the company asked for at the
@@ -27,8 +26,10 @@ import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 ///
 /// Reached two ways: from the incoming-order offer ("View order details"),
 /// where "Pickup order" commits the driver; and from the trip screen's
-/// "View details" ([fromTrip]), where it's for reading — only the
-/// before-pickup "Problem at pickup" stays.
+/// "View details" ([fromTrip]), where the bar pinned to the bottom carries
+/// the same next step as the trip screen (reached pickup → pickup order →
+/// deliver order), so the trip can be moved along from here too. Everything
+/// above that bar scrolls.
 class OrderDetailsPage extends StatefulWidget {
   const OrderDetailsPage({
     super.key,
@@ -50,7 +51,7 @@ class OrderDetailsPage extends StatefulWidget {
 }
 
 class _OrderDetailsPageState extends State<OrderDetailsPage>
-    with TripPhotoSlots<OrderDetailsPage> {
+    with TripPhotoSlots<OrderDetailsPage>, TripStageActions<OrderDetailsPage> {
   late final DriverSessionCubit _cubit = context.read<DriverSessionCubit>();
   Trip? _trip;
   bool _itemsExpanded = true;
@@ -64,6 +65,34 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
 
   @override
   void onTripUpdated(Trip trip) => setState(() => _trip = trip);
+
+  @override
+  DriverSessionCubit get stageCubit => _cubit;
+
+  @override
+  String get stageTripId => widget.tripId;
+
+  @override
+  Trip? get stageTrip => _trip;
+
+  @override
+  void onStageTrip(Trip trip) => setState(() => _trip = trip);
+
+  /// The pickup photos are taken right here, so a swipe without them points
+  /// at the slots above instead of opening the photo screen.
+  @override
+  Future<bool> ensurePhotos(PhotoStage stage) async {
+    final trip = latestTrip;
+    if (stage != PhotoStage.pickup || trip == null) {
+      return super.ensurePhotos(stage);
+    }
+    final problem = missingPhotosMessage(trip, stage);
+    if (problem == null) return true;
+    AppHaptics.error();
+    if (!_itemsExpanded) setState(() => _itemsExpanded = true);
+    TopSnackBar.show(context, message: problem, type: TopSnackBarType.error);
+    return false;
+  }
 
   @override
   void initState() {
@@ -125,29 +154,42 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
   @override
   Widget build(BuildContext context) {
     final trip = _trip;
-    return Scaffold(
-      backgroundColor: DriverColors.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: .5,
-        foregroundColor: DriverColors.ink,
-        titleSpacing: 0,
-        title: const Text('Order details',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
-        actions: [
-          const Center(child: HelpChip(key: Key('order_details_help'))),
-          const SizedBox(width: 14),
-        ],
+    final tripBusy =
+        context.select<DriverSessionCubit, bool>((c) => c.state.tripBusy);
+    // Keeps up with the live trip: a step taken on a screen opened from here
+    // (the photos, the item check, the payment) moves this one along too.
+    return BlocListener<DriverSessionCubit, DriverSessionState>(
+      listenWhen: (before, after) => before.activeTrip != after.activeTrip,
+      listener: (context, state) {
+        final live = state.activeTrip;
+        if (live != null && live.id == widget.tripId) {
+          setState(() => _trip = live);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: DriverColors.surface,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: .5,
+          foregroundColor: DriverColors.ink,
+          titleSpacing: 0,
+          title: const Text('Order details',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+          actions: [
+            const Center(child: HelpChip(key: Key('order_details_help'))),
+            const SizedBox(width: 14),
+          ],
+        ),
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: trip == null
+              ? const Center(child: CircularProgressIndicator())
+              : _body(trip),
+        ),
+        bottomNavigationBar: trip == null ? null : _bottomBar(trip, tripBusy),
       ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        child: trip == null
-            ? const Center(child: CircularProgressIndicator())
-            : _body(trip),
-      ),
-      bottomNavigationBar: trip == null ? null : _bottomBar(trip),
     );
   }
 
@@ -159,7 +201,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         OrderSection(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             OrderHeader(
                 reference: trip.displayReference, placedAt: trip.createdAt),
             if (trip.hasNotes) ...[
@@ -168,7 +211,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
             ],
             if (trip.hasVoiceNote) ...[
               const SizedBox(height: 12),
-              VoiceNotePlayer(url: trip.voiceNoteUrl!, seconds: trip.voiceNoteSeconds),
+              VoiceNotePlayer(
+                  url: trip.voiceNoteUrl!, seconds: trip.voiceNoteSeconds),
             ],
             if (trip.wantsPickupPhotos) ...[
               const SizedBox(height: 22),
@@ -253,9 +297,12 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
     );
   }
 
-  Widget? _bottomBar(Trip trip) {
+  /// Pinned under the scrolling details: the trip's next step — and, before
+  /// pickup, the way to report a problem.
+  Widget? _bottomBar(Trip trip, bool tripBusy) {
     final commit = !widget.fromTrip && trip.status == TripStatus.assigned;
-    if (!commit && !trip.canCancel) return null;
+    final advance = widget.fromTrip && trip.status.isActive;
+    if (!commit && !advance && !trip.canCancel) return null;
     return Material(
       color: Colors.white,
       child: SafeArea(
@@ -268,7 +315,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   key: const Key('order_details_problem'),
-                  onPressed: _busy ? null : _problemAtPickup,
+                  onPressed: _busy || tripBusy ? null : _problemAtPickup,
                   icon: const Icon(Icons.warning_amber_rounded,
                       color: DriverColors.red),
                   label: const Text('Problem at pickup'),
@@ -278,7 +325,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
                         color: DriverColors.red.withValues(alpha: .35)),
                     shape: const StadiumBorder(),
                     minimumSize: const Size.fromHeight(48),
-                    textStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                    textStyle: const TextStyle(
+                        fontFamily: 'Inter', fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -290,6 +338,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
                 loading: _busy,
                 onConfirmed: () => _pickupOrder(trip),
               ),
+            ] else if (advance) ...[
+              if (trip.canCancel) const SizedBox(height: 10),
+              stageSwipe(trip,
+                  busy: tripBusy || _busy,
+                  swipeKey: const Key('order_details_swipe')),
             ],
           ]),
         ),
@@ -310,7 +363,8 @@ class _ProblemSheetState extends State<_ProblemSheet> {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
         child: Material(
           color: Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),

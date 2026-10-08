@@ -201,6 +201,14 @@ class DriverRemoteDatasource {
         files: {'photo': photo},
       );
 
+  /// Takes back one photo of the whole order (from the pickup, the drop or an
+  /// in-between stop). Answers with the whole trip.
+  Future<Map<String, dynamic>> removeTripPhoto(
+          String tripId, String photoId) async =>
+      asMap((await _dio
+              .delete<dynamic>('/driver/trips/$tripId/photos/$photoId'))
+          .data);
+
   /// The driver has reached an in-between stop. Answers with the whole trip.
   Future<Map<String, dynamic>> arriveAtStop(String tripId, String stopId) =>
       _post('/driver/trips/$tripId/stops/$stopId/arrive');

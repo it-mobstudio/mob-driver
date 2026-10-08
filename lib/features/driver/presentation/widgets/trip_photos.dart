@@ -8,15 +8,30 @@ import 'package:m_o_b_demand_side/features/driver/presentation/widgets/order_wid
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/photo_widgets.dart';
 import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
 
+/// How many photos of the whole order one stop takes (the backend's limit).
+const kMaxOrderPhotos = 10;
+
 /// Taking and sending a trip's proof photos (pickup or delivery), shared by
 /// every screen that shows a photo slot. Each photo is geo-stamped, shown at
 /// once from memory, and uploaded straight away; a failed upload drops it.
+///
+/// The whole order can have several photos — each one taken is added, and a
+/// wrong one can be removed — while an item has one, which a retake replaces.
 ///
 /// Every helper is about the main pickup / final drop, or — given `stop` —
 /// one in-between stop (whose kind decides the stage).
 mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
   final Map<String, CapturedPhoto> _local = {};
   final Set<String> _uploading = {};
+
+  /// Order photos on their way up, by slot — shown after the ones already on
+  /// the server until the upload answers.
+  final Map<String, List<CapturedPhoto>> _pending = {};
+
+  /// Order photos taken on this screen, by their server id: shown from memory
+  /// rather than fetched back.
+  final Map<String, CapturedPhoto> _taken = {};
+  final Set<String> _removing = {};
 
   DriverSessionCubit get photoCubit;
   PhotoCapture get photoCapture;
@@ -27,7 +42,7 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
   static String _slot(PhotoStage stage, TripItem? item, TripWaypoint? stop) =>
       '${stop?.id ?? 'main'}:${stage.wire}:${item?.id ?? 'order'}';
 
-  bool get photoUploading => _uploading.isNotEmpty;
+  bool get photoUploading => _uploading.isNotEmpty || _pending.isNotEmpty;
 
   CapturedPhoto? localPhoto(PhotoStage stage,
           [TripItem? item, TripWaypoint? stop]) =>
@@ -48,9 +63,15 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
       locate: photoCubit.currentFix,
     );
     if (photo == null || !mounted) return;
+    final ofOrder = item == null;
+    final before = {for (final p in trip.orderPhotos(stage, stop: stop)) p.id};
     setState(() {
-      _local[slot] = photo;
-      _uploading.add(slot);
+      if (ofOrder) {
+        (_pending[slot] ??= []).add(photo);
+      } else {
+        _local[slot] = photo;
+        _uploading.add(slot);
+      }
     });
     final (updated, failure) = stop == null
         ? await photoCubit.addTripPhoto(trip.id,
@@ -59,8 +80,22 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
             photo: photo, itemId: item?.id);
     if (!mounted) return;
     setState(() {
-      _uploading.remove(slot);
-      if (updated == null) _local.remove(slot);
+      if (ofOrder) {
+        _pending[slot]?.remove(photo);
+        if (_pending[slot]?.isEmpty ?? false) _pending.remove(slot);
+        // The one the server just added is this picture.
+        final added = updated
+            ?.orderPhotos(stage,
+                stop: stop == null
+                    ? null
+                    : updated.stops.where((s) => s.id == stop.id).firstOrNull)
+            .where((p) => p.canRemove && !before.contains(p.id))
+            .lastOrNull;
+        if (added != null) _taken[added.id] = photo;
+      } else {
+        _uploading.remove(slot);
+        if (updated == null) _local.remove(slot);
+      }
     });
     if (updated == null) {
       AppHaptics.error();
@@ -73,7 +108,44 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
     onTripUpdated(updated);
   }
 
-  /// The label plus either the big order-photo box or the per-item progress
+  /// Takes back one photo of the whole order, once the driver confirms.
+  Future<void> removeTripPhoto(Trip trip, String photoId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove this photo?'),
+        content: const Text('You can take another one in its place.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Keep')),
+          TextButton(
+              key: const Key('photo_remove_confirm'),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Remove')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _removing.add(photoId));
+    final (updated, failure) = await photoCubit.removeTripPhoto(trip.id, photoId);
+    if (!mounted) return;
+    setState(() {
+      _removing.remove(photoId);
+      if (updated != null) _taken.remove(photoId);
+    });
+    if (updated == null) {
+      AppHaptics.error();
+      TopSnackBar.show(context,
+          message: failure?.message ?? 'Couldn’t remove the photo. Try again.',
+          type: TopSnackBarType.error);
+      return;
+    }
+    AppHaptics.lightTap();
+    onTripUpdated(updated);
+  }
+
+  /// The label plus either the order's photos or the per-item progress
   /// (the item slots themselves go in the item list — see [itemPhotoSlot]).
   Widget photoSection(Trip trip, PhotoStage stage,
       {required bool enabled, TripWaypoint? stop}) {
@@ -85,7 +157,7 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
               ? 'Order & item photos'
               : mode.wantsItemPhotos
                   ? 'Item photos'
-                  : 'Upload photo',
+                  : 'Upload photos',
           required: true),
       const SizedBox(height: 10),
       if (mode.wantsItemPhotos && total > 0) ...[
@@ -94,19 +166,35 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
             total: total),
         if (mode.wantsOrderPhoto) const SizedBox(height: 14),
       ],
-      if (mode.wantsOrderPhoto)
-        CameraPhotoBox(
-          key: Key('${stop?.id ?? stage.wire}_photo_box'),
-          photo: localPhoto(stage, null, stop),
-          photoUrl: trip.orderPhotoUrl(stage, stop: stop),
-          uploading: isUploading(stage, null, stop),
-          enabled: enabled,
-          hint: stage == PhotoStage.pickup
-              ? 'Tap to add photo of the package'
-              : 'Tap to add photo of the delivered package',
-          onTap: () => takeTripPhoto(trip, stage, null, stop),
-        ),
+      if (mode.wantsOrderPhoto) _orderPhotos(trip, stage, enabled, stop),
     ]);
+  }
+
+  Widget _orderPhotos(
+      Trip trip, PhotoStage stage, bool enabled, TripWaypoint? stop) {
+    final saved = trip.orderPhotos(stage, stop: stop);
+    final pending = _pending[_slot(stage, null, stop)] ?? const [];
+    return OrderPhotoGrid(
+      addKey: Key('${stop?.id ?? stage.wire}_photo_box'),
+      photos: [
+        for (final photo in saved)
+          OrderPhotoEntry(
+            id: photo.canRemove ? photo.id : null,
+            bytes: _taken[photo.id]?.bytes,
+            url: photo.url,
+            busy: _removing.contains(photo.id),
+          ),
+        for (final photo in pending)
+          OrderPhotoEntry(bytes: photo.bytes, busy: true),
+      ],
+      enabled: enabled,
+      canAdd: saved.length + pending.length < kMaxOrderPhotos,
+      hint: stage == PhotoStage.pickup
+          ? 'Tap to add photo of the package'
+          : 'Tap to add photo of the delivered package',
+      onAdd: () => takeTripPhoto(trip, stage, null, stop),
+      onRemove: (id) => removeTripPhoto(trip, id),
+    );
   }
 
   /// The camera slot under one item, for orders wanting a photo per item.

@@ -58,6 +58,36 @@ enum PickupPhotoMode {
       .firstWhere((mode) => mode.wire == value, orElse: () => PickupPhotoMode.none);
 }
 
+/// One photo of the whole order, on the server. A stop can have several; a
+/// wrong one is removed by its [id].
+class OrderPhoto extends Equatable {
+  const OrderPhoto({required this.id, required this.url});
+
+  /// The backend's list (`[{id, url}]`), or — from a backend that only knows
+  /// one photo per stop — that one [fallbackUrl], which can't be removed.
+  static List<OrderPhoto> listFrom(dynamic json, {String? fallbackUrl}) {
+    if (json is List) {
+      return [
+        for (final row in asMapList(json))
+          if ((readString(row['url']) ?? '').isNotEmpty)
+            OrderPhoto(
+                id: readString(row['id']) ?? '', url: readString(row['url'])!),
+      ];
+    }
+    return (fallbackUrl ?? '').isEmpty
+        ? const []
+        : [OrderPhoto(id: '', url: fallbackUrl!)];
+  }
+
+  final String id;
+  final String url;
+
+  bool get canRemove => id.isNotEmpty;
+
+  @override
+  List<Object?> get props => [id, url];
+}
+
 /// Where a proof photo is taken: at the pickup before the delivery starts, or
 /// at the drop before it's finished.
 enum PhotoStage {
@@ -214,7 +244,7 @@ class TripWaypoint extends Equatable {
     this.notes,
     this.reference,
     this.status = WaypointStatus.pending,
-    this.photoUrl,
+    this.photos = const [],
   });
 
   factory TripWaypoint.fromJson(Map<String, dynamic> json) => TripWaypoint(
@@ -229,7 +259,8 @@ class TripWaypoint extends Equatable {
         notes: readString(json['notes']),
         reference: readString(json['reference']),
         status: WaypointStatus.parse(readString(json['status'])),
-        photoUrl: readString(json['photo_url']),
+        photos: OrderPhoto.listFrom(json['photos'],
+            fallbackUrl: readString(json['photo_url'])),
       );
 
   final String id;
@@ -246,9 +277,9 @@ class TripWaypoint extends Equatable {
   final String? reference;
   final WaypointStatus status;
 
-  /// The photo of what was collected / handed over here (orders wanting one
-  /// photo of the order at each stop).
-  final String? photoUrl;
+  /// The photos of what was collected / handed over here (orders wanting a
+  /// photo of the order at each stop), oldest first.
+  final List<OrderPhoto> photos;
 
   bool get isDone => status == WaypointStatus.done;
   bool get isArrived => status == WaypointStatus.arrived;
@@ -272,7 +303,7 @@ class TripWaypoint extends Equatable {
 
   @override
   List<Object?> get props =>
-      [id, position, isPickup, address, status, photoUrl, contactName];
+      [id, position, isPickup, address, status, photos, contactName];
 }
 
 /// One end of a trip — the pickup or the drop.
@@ -343,9 +374,9 @@ class Trip extends Equatable {
     this.invoiceNumber,
     this.verifyItems = false,
     this.pickupPhoto = PickupPhotoMode.none,
-    this.pickupPhotoUrl,
+    this.pickupPhotos = const [],
     this.deliveryPhoto = PickupPhotoMode.none,
-    this.deliveryPhotoUrl,
+    this.deliveryPhotos = const [],
     this.deliveryOtp = false,
     this.items = const [],
     this.stops = const [],
@@ -395,9 +426,11 @@ class Trip extends Equatable {
       invoiceNumber: readString(json['invoice_number']),
       verifyItems: readBool(json['verify_items']),
       pickupPhoto: PickupPhotoMode.parse(readString(json['pickup_photo'])),
-      pickupPhotoUrl: readString(json['pickup_photo_url']),
+      pickupPhotos: OrderPhoto.listFrom(json['pickup_photos'],
+          fallbackUrl: readString(json['pickup_photo_url'])),
       deliveryPhoto: PickupPhotoMode.parse(readString(json['delivery_photo'])),
-      deliveryPhotoUrl: readString(json['delivery_photo_url']),
+      deliveryPhotos: OrderPhoto.listFrom(json['delivery_photos'],
+          fallbackUrl: readString(json['delivery_photo_url'])),
       deliveryOtp: readBool(json['delivery_otp']),
       items: asMapList(json['items']).map(TripItem.fromJson).toList(),
       stops: asMapList(json['stops']).map(TripWaypoint.fromJson).toList(),
@@ -460,14 +493,14 @@ class Trip extends Equatable {
   /// The company asked the driver to confirm every item at the drop.
   final bool verifyItems;
 
-  /// The photos owed at the pickup: none, one of the whole order
-  /// ([pickupPhotoUrl]), or one per item (`items[].pickupPhotoUrl`).
+  /// The photos owed at the pickup: none, of the whole order (at least one,
+  /// in [pickupPhotos]), or one per item (`items[].pickupPhotoUrl`).
   final PickupPhotoMode pickupPhoto;
-  final String? pickupPhotoUrl;
+  final List<OrderPhoto> pickupPhotos;
 
   /// The same at the drop, owed before payment / completion.
   final PickupPhotoMode deliveryPhoto;
-  final String? deliveryPhotoUrl;
+  final List<OrderPhoto> deliveryPhotos;
 
   /// A prepaid trip that still needs the customer's delivery OTP to finish
   /// (COD trips always do).
@@ -559,11 +592,12 @@ class Trip extends Equatable {
   // The photo helpers below are about the main pickup / final drop, or — with
   // [stop] — one in-between stop, under the same rules for its kind.
 
-  String? orderPhotoUrl(PhotoStage stage, {TripWaypoint? stop}) => stop != null
-      ? stop.photoUrl
-      : stage == PhotoStage.pickup
-          ? pickupPhotoUrl
-          : deliveryPhotoUrl;
+  List<OrderPhoto> orderPhotos(PhotoStage stage, {TripWaypoint? stop}) =>
+      stop != null
+          ? stop.photos
+          : stage == PhotoStage.pickup
+              ? pickupPhotos
+              : deliveryPhotos;
 
   /// The company asked for photos at this stop.
   bool wantsPhotos(PhotoStage stage, {TripWaypoint? stop}) =>
@@ -575,7 +609,7 @@ class Trip extends Equatable {
 
   bool orderPhotoMissing(PhotoStage stage, {TripWaypoint? stop}) =>
       photoMode(stage).wantsOrderPhoto &&
-      (orderPhotoUrl(stage, stop: stop) ?? '').isEmpty;
+      orderPhotos(stage, stop: stop).isEmpty;
 
   int missingItemPhotos(PhotoStage stage, {TripWaypoint? stop}) =>
       photoMode(stage).wantsItemPhotos
@@ -623,9 +657,9 @@ class Trip extends Equatable {
         voiceNoteUrl,
         verifyItems,
         pickupPhoto,
-        pickupPhotoUrl,
+        pickupPhotos,
         deliveryPhoto,
-        deliveryPhotoUrl,
+        deliveryPhotos,
         deliveryOtp,
         items,
         stops,

@@ -130,13 +130,60 @@ void main() {
       expect(rig.repo.calls, isNot(contains('arrive:$tripId')));
     });
 
-    rigTest('View details opens the order details for reading', (tester, rig) async {
+    rigTest('View details opens the order details, with the same next step pinned under them', (tester, rig) async {
       await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
       await tester.tap(find.byKey(const Key('timeline_view_details_1')));
       await tester.pumpAndSettle();
       expect(find.text('Order details'), findsOneWidget);
       expect(find.byKey(const Key('order_details_pickup')), findsNothing);
       expect(find.byKey(const Key('order_details_problem')), findsNothing, reason: 'too late to cancel');
+      expect(tester.widget<SwipeButton>(find.byKey(const Key('order_details_swipe'))).label, 'Deliver order');
+    });
+
+    rigTest('the trip can be moved along from the order details, stage by stage', (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip());
+      await tester.tap(find.byKey(const Key('timeline_view_details_0')));
+      await tester.pumpAndSettle();
+      String detailsAction() =>
+          tester.widget<SwipeButton>(find.byKey(const Key('order_details_swipe'))).label;
+
+      expect(detailsAction(), 'Reached pickup');
+      expect(find.byKey(const Key('order_details_problem')), findsOneWidget, reason: 'still before pickup');
+
+      rig.repo.actionResult = (fakeTrip(status: 'arrived_at_pickup'), null);
+      await swipe(tester, 'Reached pickup');
+      expect(rig.repo.calls, contains('arrive:$tripId'));
+      expect(detailsAction(), 'Pickup order');
+
+      rig.repo.actionResult = (fakeTrip(status: 'in_progress'), null);
+      await swipe(tester, 'Pickup order');
+      expect(rig.repo.calls, contains('start:$tripId'));
+      expect(detailsAction(), 'Deliver order');
+      expect(find.byKey(const Key('order_details_problem')), findsNothing);
+
+      // The action stays put at the bottom of the screen while the details scroll.
+      final before = tester.getTopLeft(find.byKey(const Key('order_details_swipe')));
+      await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.byKey(const Key('order_details_swipe'))), before);
+
+      // Back on the trip screen, it has moved along too.
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(action(tester), 'Deliver order');
+    });
+
+    rigTest('at rest the sheet shows only the stop being worked on; the rest is a pull away', (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip());
+
+      expect(find.byKey(const Key('timeline_map_0')).hitTestable(), findsOneWidget);
+      expect(find.byKey(const Key('timeline_view_details_1')).hitTestable(), findsNothing, reason: 'the drop is under the fold');
+      expect(find.byKey(const Key('trip_swipe')).hitTestable(), findsOneWidget, reason: 'the action is always there');
+
+      await pullUpSheet(tester);
+      expect(find.text('UP NEXT'), findsOneWidget);
+      expect(find.byKey(const Key('timeline_view_details_1')).hitTestable(), findsOneWidget);
+      expect(find.byKey(const Key('trip_swipe')).hitTestable(), findsOneWidget);
     });
 
     rigTest('COD in progress: Deliver order goes to payment collection', (tester, rig) async {
@@ -498,8 +545,9 @@ void main() {
       expect(find.text('Enter delivery OTP'), findsNothing);
 
       // The customer pays; Razorpay's webhook makes the server mark the trip paid.
+      // (No push socket in the rig, so this is the 5s fallback check.)
       rig.repo.tripsById[tripId] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
-      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
 
       expect(find.text('Enter delivery OTP'), findsOneWidget);

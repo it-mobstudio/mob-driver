@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
 import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
 import 'package:m_o_b_demand_side/core/utils/formatters.dart';
+import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
 import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
@@ -43,6 +44,7 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
 
   /// Polls the trip while a verified code is on screen, to notice the payment.
   Timer? _watch;
+  StreamSubscription<String>? _paidPush;
 
   /// Once a second, for the "valid for mm:ss" countdown.
   Timer? _tick;
@@ -57,15 +59,25 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
   @override
   void dispose() {
     _watch?.cancel();
+    _paidPush?.cancel();
     _tick?.cancel();
     super.dispose();
   }
 
   void _startWatching(PaymentQr qr) {
     _watch?.cancel();
+    _paidPush?.cancel();
     _tick?.cancel();
     if (qr.paymentIsVerified) {
-      _watch = Timer.periodic(const Duration(seconds: 3), (_) => _checkPaid());
+      // The server says when Razorpay confirms the payment (a push for this
+      // trip); the slow timer only covers the push socket being down.
+      final cubit = context.read<DriverSessionCubit>();
+      _paidPush = cubit.tripChanges
+          .where((id) => id == widget.tripId)
+          .listen((_) => _checkPaid());
+      _watch = Timer.periodic(const Duration(seconds: 5), (_) {
+        if (cubit.realtimeStatus.value != RealtimeStatus.live) _checkPaid();
+      });
     }
     if (qr.expiresAt != null) {
       _tick = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -88,6 +100,7 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
     if (_leaving) return;
     _leaving = true;
     _watch?.cancel();
+    _paidPush?.cancel();
     _tick?.cancel();
     AppHaptics.success();
     context.pushReplacement(
@@ -103,6 +116,7 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
   Future<void> _load() async {
     // An old code's timers must not outlive it (nor tick over the skeleton).
     _watch?.cancel();
+    _paidPush?.cancel();
     _tick?.cancel();
     setState(() {
       _loading = true;

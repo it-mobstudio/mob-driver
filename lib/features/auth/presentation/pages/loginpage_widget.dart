@@ -93,7 +93,7 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
             backgroundColor: Colors.white,
             body: LayoutBuilder(
               builder: (context, constraints) {
-                final headerHeight = constraints.maxHeight * .42;
+                final headerHeight = constraints.maxHeight * .5;
                 final bodyHeight = constraints.maxHeight - headerHeight;
 
                 return Column(
@@ -123,41 +123,21 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 24,
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Driver login',
-                                          style: GoogleFonts.inter(
-                                            color: DriverColors.ink,
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 27,
-                                            letterSpacing: -.8,
-                                            height: 1.2,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        const Text(
-                                          'Enter your mobile number to sign in.',
-                                          style: TextStyle(
-                                              color: DriverColors.muted,
-                                              fontSize: 14,
-                                              height: 1.5),
-                                        ),
-                                      ],
+                                    child: Text(
+                                      'Log in or sign up',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        color: DriverColors.ink,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 18,
+                                        height: 1.3,
+                                      ),
                                     ),
                                   ),
-                                  const Text('Mobile number',
-                                      style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: DriverColors.navy)),
-                                  const SizedBox(height: 8),
                                   AppTextField(
                                     controller: _mobileController,
                                     focusNode: _mobileFocusNode,
-                                    hintText: '10-digit mobile number',
+                                    hintText: 'Enter mobile number',
                                     autofillHints: const [
                                       AutofillHints.telephoneNumberNational
                                     ],
@@ -182,10 +162,11 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                                           ? null
                                           : () => _submit(context),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: DriverColors.blue,
+                                        backgroundColor:
+                                            const Color(0xFF2557D6),
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
-                                              BorderRadius.circular(16),
+                                              BorderRadius.circular(12),
                                         ),
                                         elevation: 0,
                                       ),
@@ -211,19 +192,6 @@ class _LoginpageWidgetState extends State<LoginpageWidget> {
                                               ),
                                             ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 14),
-                                  const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.lock_outline_rounded,
-                                          size: 14, color: DriverColors.muted),
-                                      SizedBox(width: 6),
-                                      Text('We’ll send you an OTP to sign in',
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color: DriverColors.muted)),
-                                    ],
                                   ),
                                 ],
                               ),
@@ -328,26 +296,14 @@ class _PhonePrefix extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 16, right: 10),
+      padding: const EdgeInsets.only(left: 16, right: 12),
       child: Center(
         widthFactor: 1,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Semantics(
-                label: 'India',
-                child: const ExcludeSemantics(
-                    child: Text('🇮🇳', style: TextStyle(fontSize: 23)))),
-            const SizedBox(width: 8),
-            Text('+91',
-                style: GoogleFonts.inter(
-                    color: DriverColors.navy,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(width: 12),
-            Container(width: 1, height: 22, color: DriverColors.line),
-          ],
-        ),
+        child: Text('+91',
+            style: GoogleFonts.inter(
+                color: DriverColors.navy,
+                fontSize: 14,
+                fontWeight: FontWeight.w600)),
       ),
     );
   }

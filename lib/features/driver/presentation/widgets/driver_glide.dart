@@ -10,13 +10,34 @@ import 'package:m_o_b_demand_side/features/driver/presentation/widgets/svg_marke
 /// last heading, so a parked vehicle doesn't spin.
 ///
 /// Owned by a map's State: call [moveTo] with every new fix, read [position]
-/// and [bearing] when building the markers; [onTick] is called every frame
-/// while it moves so the map can redraw.
+/// and [bearing] when building the markers; [onTick] is called while it
+/// moves (at most every [minTickGap], and once on arrival) so the map can
+/// redraw.
 class DriverGlide {
-  DriverGlide({required TickerProvider vsync, required VoidCallback onTick})
-      : _controller = AnimationController(vsync: vsync, duration: _glide) {
-    _controller.addListener(onTick);
+  DriverGlide({
+    required TickerProvider vsync,
+    required VoidCallback onTick,
+    this.minTickGap = const Duration(milliseconds: 66),
+  }) : _controller = AnimationController(vsync: vsync, duration: _glide) {
+    _controller.addListener(() {
+      final elapsed = _controller.lastElapsedDuration;
+      final last = _lastTick;
+      final due = elapsed == null || // placed at once, not animated
+          _controller.value >= 1 || // arrived: draw the exact end point
+          last == null ||
+          elapsed < last || // a new glide started
+          elapsed - last >= minTickGap;
+      if (!due) return;
+      _lastTick = elapsed;
+      onTick();
+    });
   }
+
+  /// Each redraw re-sends every marker to the native map over the platform
+  /// channel. ~15 a second still looks like driving, and costs a low-end
+  /// phone a quarter of what 60 does.
+  final Duration minTickGap;
+  Duration? _lastTick;
 
   /// A little under the usual gap between fixes, so the vehicle arrives just
   /// before the next one and never visibly waits or lags behind.
@@ -67,7 +88,9 @@ class DriverGlide {
     }
     final meters = distanceMeters(current, target);
     _fromBearing = bearing;
-    _toBearing = meters >= _turnThresholdMeters ? bearingBetween(current, target) : _fromBearing;
+    _toBearing = meters >= _turnThresholdMeters
+        ? bearingBetween(current, target)
+        : _fromBearing;
     if (!animate || meters > _jumpMeters) {
       _from = null;
       _to = target;
@@ -89,7 +112,8 @@ class DriverGlide {
   /// ignores `GoogleMap.padding` — without it the driver sits dead centre,
   /// hidden under the bottom panel.
   static LatLng aimAbove(LatLng point, double pixelsUp, double zoom) {
-    final metersPerPixel = 156543.03392 * math.cos(_rad(point.latitude)) / math.pow(2, zoom);
+    final metersPerPixel =
+        156543.03392 * math.cos(_rad(point.latitude)) / math.pow(2, zoom);
     final degrees = pixelsUp * metersPerPixel / 111320;
     return LatLng(point.latitude - degrees, point.longitude);
   }
@@ -101,24 +125,28 @@ class DriverGlide {
     final lat1 = _rad(a.latitude), lat2 = _rad(b.latitude);
     final dLng = _rad(b.longitude - a.longitude);
     final y = math.sin(dLng) * math.cos(lat2);
-    final x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
+    final x = math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
     return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
 
   /// Great-circle distance in metres.
   static double distanceMeters(LatLng a, LatLng b) {
     const earth = 6371000.0;
-    final dLat = _rad(b.latitude - a.latitude), dLng = _rad(b.longitude - a.longitude);
+    final dLat = _rad(b.latitude - a.latitude),
+        dLng = _rad(b.longitude - a.longitude);
     final h = math.pow(math.sin(dLat / 2), 2) +
-        math.cos(_rad(a.latitude)) * math.cos(_rad(b.latitude)) * math.pow(math.sin(dLng / 2), 2);
+        math.cos(_rad(a.latitude)) *
+            math.cos(_rad(b.latitude)) *
+            math.pow(math.sin(dLng / 2), 2);
     return 2 * earth * math.asin(math.sqrt(h));
   }
 
   /// The signed turn (−180…180°) from [from] to [to] — so 350° → 10° turns
   /// 20° right, not 340° left.
-  static double _shortestTurn(double from, double to) => ((to - from + 540) % 360) - 180;
+  static double _shortestTurn(double from, double to) =>
+      ((to - from + 540) % 360) - 180;
 }
-
 
 /// The vehicle picture turned to a bearing, for the web (its map can't
 /// rotate a marker). Pictures are drawn per 10° as they're first needed;

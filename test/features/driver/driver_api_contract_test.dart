@@ -469,6 +469,31 @@ void main() {
       expect(files.keys, ['photo']);
     });
 
+    test('order photos come as a list, and removeTripPhoto → DELETE .../photos/{id}', () async {
+      http.on('POST', '/driver/trips/$id/pickup-photo', {
+        ...tripJson(pickupPhoto: 'order'),
+        'pickup_photo_url': 'https://cdn.example.com/b.jpg',
+        'pickup_photos': [
+          {'id': 'ph-a', 'url': 'https://cdn.example.com/a.jpg'},
+          {'id': 'ph-b', 'url': 'https://cdn.example.com/b.jpg'},
+        ],
+      });
+      final (added, _) = await repo.addTripPhoto(id, stage: PhotoStage.pickup, photo: photo('p.jpg'));
+      expect(added?.pickupPhotos.map((p) => p.id), ['ph-a', 'ph-b']);
+
+      http.on('DELETE', '/driver/trips/$id/photos/ph-b', {
+        ...tripJson(pickupPhoto: 'order'),
+        'pickup_photo_url': 'https://cdn.example.com/a.jpg',
+        'pickup_photos': [
+          {'id': 'ph-a', 'url': 'https://cdn.example.com/a.jpg'},
+        ],
+      });
+      final (trip, failure) = await repo.removeTripPhoto(id, 'ph-b');
+      expect(failure, isNull);
+      expect(trip?.pickupPhotos.single.url, 'https://cdn.example.com/a.jpg');
+      expect(http.requests.last.method, 'DELETE');
+    });
+
     test('resetItem → DELETE .../items/{id}/verify', () async {
       http.on('DELETE', '/driver/trips/$id/items/$itemId/verify', tripJson(status: 'in_progress', verifyItems: true, items: [itemJson()]));
       final (trip, failure) = await repo.resetItem(id, itemId);

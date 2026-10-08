@@ -43,9 +43,10 @@ class DriverCard extends StatelessWidget {
     color: Colors.white,
     borderRadius: BorderRadius.circular(20),
     border: Border.all(color: const Color(0xFFEDF0F5)),
+    // One soft shadow: the border already outlines the card, and every
+    // blurred layer is paid for on each frame the card is on screen.
     boxShadow: const [
-      BoxShadow(color: Color(0x0A001533), blurRadius: 22, offset: Offset(0, 8)),
-      BoxShadow(color: Color(0x05001533), blurRadius: 3, offset: Offset(0, 1)),
+      BoxShadow(color: Color(0x0A001533), blurRadius: 10, offset: Offset(0, 3)),
     ],
   );
 
@@ -414,6 +415,12 @@ class InfoBanner extends StatelessWidget {
       );
 }
 
+/// How many pixels wide to decode a picture shown [logicalWidth] wide:
+/// decoding at display size, not the file's, is what keeps a screen of
+/// photos from costing tens of megabytes on a low-memory phone.
+int thumbPixels(BuildContext context, double logicalWidth) =>
+    (logicalWidth * MediaQuery.devicePixelRatioOf(context)).ceil();
+
 class DriverAvatar extends StatelessWidget {
   const DriverAvatar(this.name, {super.key, this.size = 44, this.photoUrl});
   final String name;
@@ -448,6 +455,7 @@ class DriverAvatar extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
+        cacheWidth: thumbPixels(context, size),
         errorBuilder: (_, __, ___) => initial,
       ),
     );

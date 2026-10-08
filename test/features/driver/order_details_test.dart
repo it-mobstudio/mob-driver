@@ -91,7 +91,7 @@ void main() {
     await openDetails(tester, rig, withItems());
 
     expect(find.byKey(const Key('pickup_photo_box')), findsNothing);
-    expect(find.text('Upload photo'), findsNothing);
+    expect(find.text('Upload photos'), findsNothing);
 
     await swipe(tester, 'Pickup order');
     expect(find.text('Reached pickup'), findsOneWidget);
@@ -99,7 +99,7 @@ void main() {
 
   rigTest('one order photo: refused until taken, then geo-stamped and uploaded', (tester, rig) async {
     await openTracked(tester, rig, withItemsJson(pickupPhoto: 'order'));
-    expect(find.text('Upload photo'), findsOneWidget);
+    expect(find.text('Upload photos'), findsOneWidget);
 
     await swipe(tester, 'Pickup order');
     expect(find.text('Add a photo of the package first.'), findsOneWidget);
@@ -113,10 +113,83 @@ void main() {
     final stamp = rig.capture.stamps.single;
     expect((stamp.latitude, stamp.longitude), (12.9716, 77.5946));
     expect(stamp.caption, '#E2E-1 · Pickup');
-    expect(find.text('Tap to change'), findsOneWidget);
+    expect(find.text('1 photo added'), findsOneWidget);
 
     await swipe(tester, 'Pickup order');
     expect(find.text('Reached pickup'), findsOneWidget);
+  });
+
+  rigTest('several order photos can be taken, and a wrong one removed', (tester, rig) async {
+    await openTracked(tester, rig, withItemsJson(pickupPhoto: 'order'));
+
+    // Each tap adds a photo — the first to the empty box, the rest to the "Add photo" tile.
+    for (var taken = 1; taken <= 3; taken++) {
+      await tester.tap(find.byKey(const Key('pickup_photo_box')));
+      await tester.pumpAndSettle();
+      expect(rig.capture.cameraCalls, taken);
+    }
+    expect(rig.repo.pickupPhotos, ['order', 'order', 'order']);
+    expect(find.text('3 photos added'), findsOneWidget);
+    expect(rig.cubit.state.activeTrip!.pickupPhotos.map((p) => p.id), ['ph-1', 'ph-2', 'ph-3']);
+
+    // The bin on a photo asks first, then takes just that one back.
+    await tester.tap(find.byKey(const Key('photo_remove_ph-2')));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove this photo?'), findsOneWidget);
+    await tester.tap(find.text('Keep'));
+    await tester.pumpAndSettle();
+    expect(rig.repo.calls, isNot(contains('removePhoto:ph-2')));
+
+    await tester.tap(find.byKey(const Key('photo_remove_ph-2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('photo_remove_confirm')));
+    await tester.pumpAndSettle();
+    expect(rig.repo.calls, contains('removePhoto:ph-2'));
+    expect(find.text('2 photos added'), findsOneWidget);
+    expect(find.byKey(const Key('photo_remove_ph-2')), findsNothing);
+    expect(rig.cubit.state.activeTrip!.pickupPhotos.map((p) => p.id), ['ph-1', 'ph-3']);
+  });
+
+  rigTest('removing the last photo brings the empty box back, and the photo is owed again', (tester, rig) async {
+    await openTracked(tester, rig, withItemsJson(pickupPhoto: 'order'));
+    await tester.tap(find.byKey(const Key('pickup_photo_box')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('photo_remove_ph-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('photo_remove_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tap to add photo of the package'), findsOneWidget);
+    await swipe(tester, 'Pickup order');
+    expect(find.text('Add a photo of the package first.'), findsOneWidget);
+  });
+
+  rigTest('a photo that could not be removed stays, and says why', (tester, rig) async {
+    await openTracked(tester, rig, withItemsJson(pickupPhoto: 'order'));
+    await tester.tap(find.byKey(const Key('pickup_photo_box')));
+    await tester.pumpAndSettle();
+    rig.repo.removePhotoFailure = const BusinessFailure('This photo can’t be removed any more.');
+
+    await tester.tap(find.byKey(const Key('photo_remove_ph-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('photo_remove_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('This photo can’t be removed any more.'), findsOneWidget);
+    expect(find.text('1 photo added'), findsOneWidget);
+  });
+
+  rigTest('photos can no longer be added or removed once the delivery has started', (tester, rig) async {
+    final json = withItemsJson(pickupPhoto: 'order', status: 'in_progress')
+      ..['pickup_photos'] = [
+        {'id': 'ph-9', 'url': 'https://cdn.example.com/p.jpg'}
+      ];
+    await openTracked(tester, rig, json);
+
+    expect(find.text('1 photo added'), findsOneWidget);
+    expect(find.byKey(const Key('photo_remove_ph-9')), findsNothing);
+    expect(find.byKey(const Key('pickup_photo_box')), findsNothing);
   });
 
   rigTest('one photo per item: a slot under every item, all needed to proceed', (tester, rig) async {
@@ -154,7 +227,7 @@ void main() {
 
     expect(find.textContaining('Turn on location'), findsOneWidget);
     expect(rig.repo.pickupPhotos, isEmpty);
-    expect(find.text('Tap to change'), findsNothing);
+    expect(find.textContaining('added'), findsNothing);
   });
 
   rigTest('a failed upload drops the photo and says why', (tester, rig) async {
@@ -165,7 +238,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Upload failed.'), findsOneWidget);
-    expect(find.text('Tap to change'), findsNothing);
+    expect(find.textContaining('added'), findsNothing);
+    expect(find.text('Tap to add photo of the package'), findsOneWidget);
   });
 
   rigTest('the company\'s note shows when there is one, and not otherwise', (tester, rig) async {

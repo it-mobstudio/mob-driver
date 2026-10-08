@@ -123,6 +123,10 @@ abstract interface class DriverRepository {
     String? itemId,
   });
 
+  /// Takes back one photo of the whole order (taken at the pickup, the drop
+  /// or an in-between stop); returns the whole trip.
+  Future<(Trip?, AppFailure?)> removeTripPhoto(String tripId, String photoId);
+
   /// Takes an item back to pending.
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId);
 

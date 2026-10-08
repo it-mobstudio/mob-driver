@@ -30,6 +30,12 @@ import 'core/styles/app_theme.dart';
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    // Flutter keeps up to 100 MB of decoded pictures by default — on a 2–3 GB
+    // Android phone that's enough, with the map and the camera, to get the app
+    // killed. This app shows a few small thumbnails at a time; 40 MB is ample.
+    PaintingBinding.instance.imageCache
+      ..maximumSizeBytes = 40 << 20
+      ..maximumSize = 120;
     if (kIsWeb) {
       try {
         usePathUrlStrategy();

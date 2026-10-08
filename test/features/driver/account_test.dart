@@ -19,6 +19,11 @@ import '../../support/harness.dart';
 
 /// Stand-ins for the screens a page navigates to, so a tap is observable.
 List<GoRoute> stubRoutes() => [
+      // The dashboard's profile button opens the real profile page.
+      GoRoute(path: DriverRoutes.profile, builder: (_, __) => const DriverProfilePage()),
+      GoRoute(
+          path: DriverRoutes.dashboard,
+          builder: (_, __) => DriverDashboardPage(checkLocationPermission: (_) async => true, mapBuilder: stubHomeMap)),
       for (final path in [DriverRoutes.editProfile, DriverRoutes.verification, DriverRoutes.payout])
         GoRoute(path: path, builder: (_, __) => Scaffold(body: Text('STUB $path'))),
     ];
@@ -96,6 +101,7 @@ void main() {
   group('deleting the account', () {
     Future<void> tapDelete(WidgetTester tester) async {
       await tester.ensureVisible(find.byKey(const Key('delete_account')));
+      await tester.pump(); // the scroll lands on the next frame
       await tester.tap(find.byKey(const Key('delete_account')));
       await tester.pumpAndSettle();
     }
@@ -314,7 +320,7 @@ void main() {
       await tester.tap(find.byKey(const Key('profile_button')));
       await tester.pumpAndSettle();
       expect(find.text('UNDER REVIEW'), findsOneWidget);
-      await tester.tapAt(const Offset(20, 20)); // dismiss the sheet
+      await tester.tap(find.byKey(const Key('profile_back')));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('verification_card')));

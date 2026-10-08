@@ -111,7 +111,8 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/fonts/
+    # assets/fonts/ isn't listed: the fonts below are bundled through
+    # `fonts:`, and listing the folder shipped all 15 TTFs (~4 MB) a second time.
     - assets/images/
     - assets/images/vehicles/
     - assets/images/mobStar/

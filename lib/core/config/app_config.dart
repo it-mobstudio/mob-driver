@@ -5,9 +5,12 @@ class AppConfig {
   const AppConfig._();
 
   // Use --dart-define=API_BASE_URL=https://host/api/v1/ to override per
-  // environment (a real device needs the dev machine's LAN address, e.g.
-  // http://192.168.1.20:8000/api/v1/).
-  static const String _devMachineLanHost = '192.168.1.36';
+  // environment.
+  /// The dev backend's public ngrok tunnel (to `runserver` on :8000), used by
+  /// iOS — a real iPhone reaches it from any network, not just the Mac's
+  /// Wi-Fi. Free ngrok URLs change when the tunnel restarts: update it here.
+  static const String _devTunnelUrl =
+      'https://earring-barbed-willing.ngrok-free.dev/';
 
   static const String _apiBaseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
@@ -21,18 +24,34 @@ class AppConfig {
       return configured.endsWith('/') ? configured : '$configured/';
     }
     // Local Django dev server. Inside an Android emulator 127.0.0.1 is the
-    // emulator itself; the host machine is reachable at 10.0.2.2. On iOS a
-    // real iPhone needs the dev machine's LAN address (the simulator can use
-    // it too). Run the backend with `runserver 0.0.0.0:8000`.
-    final String host;
-    if (kIsWeb) {
-      host = '127.0.0.1';
-    } else if (defaultTargetPlatform == TargetPlatform.android) {
-      host = '10.0.2.2';
-    } else {
-      host = _devMachineLanHost;
+    // emulator itself; the host machine is reachable at 10.0.2.2. iOS (a real
+    // iPhone or the simulator) goes through the ngrok tunnel.
+    if (kIsWeb) return 'http://127.0.0.1:8000/api/v1/';
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:8000/api/v1/';
     }
-    return 'http://$host:8000/api/v1/';
+    return '${_devTunnelUrl}api/v1/';
+  }
+
+  static const String _realtimeUrlOverride = String.fromEnvironment(
+    'REALTIME_URL',
+  );
+
+  /// The driver's live connection (`/ws/driver/`) on the same server as
+  /// [apiBaseUrl]: `http://host:8000/api/v1/` → `ws://host:8000/ws/driver/`,
+  /// `https://…` → `wss://…`. Override with `--dart-define=REALTIME_URL=…`
+  /// when the socket is served from elsewhere.
+  static Uri get realtimeUrl {
+    final configured = _realtimeUrlOverride.trim();
+    if (configured.isNotEmpty) return Uri.parse(configured);
+    final api = Uri.parse(apiBaseUrl);
+    // Whatever prefix the API sits under (a proxy path), minus `api/v1/`.
+    final prefix = api.path.replaceFirst(RegExp(r'api/v\d+/?$'), '');
+    final base = prefix.endsWith('/') ? prefix : '$prefix/';
+    return api.replace(
+      scheme: api.scheme == 'https' ? 'wss' : 'ws',
+      path: '${base}ws/driver/',
+    );
   }
 
   /// The in-app "update available" prompt asks the backend for the published
