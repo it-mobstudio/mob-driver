@@ -1,12 +1,12 @@
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_stats.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/my_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip_extras.dart';
+import 'package:mob_driver/features/driver/domain/entities/wallet.dart';
 
 /// Every call returns `(value, failure)`: exactly one is non-null (except
 /// [activeTrip], whose value is legitimately null when there's no trip — check
@@ -99,8 +99,10 @@ abstract interface class DriverRepository {
   Future<(Trip?, AppFailure?)> arrive(String id);
   Future<(Trip?, AppFailure?)> start(String id);
   Future<(PaymentQr?, AppFailure?)> paymentQr(String id);
+
   /// [method] `qr` (checked with the provider) or `cash` (paid to the driver).
-  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id, {String method = 'qr'});
+  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id,
+      {String method = 'qr'});
   Future<(DeliveryOtpSent?, AppFailure?)> resendDeliveryOtp(String id);
   Future<(Trip?, AppFailure?)> complete(String id, {String? otp});
   Future<(Trip?, AppFailure?)> cancel(String id, {required String reason});

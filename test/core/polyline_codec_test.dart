@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/core/utils/polyline_codec.dart';
+import 'package:mob_driver/core/utils/polyline_codec.dart';
 
 void main() {
   test('decodes Google\'s documented precision-5 example', () {
@@ -27,13 +27,16 @@ void main() {
     expect(points.last.longitude, closeTo(77.6408, 1e-6));
   });
 
-  test('the precision really matters: decoding a precision-6 shape as 5 is 10x off', () {
+  test(
+      'the precision really matters: decoding a precision-6 shape as 5 is 10x off',
+      () {
     const shape = 'ox|vWogs_sCw|Aoh\\ooB_sg@';
     final right = decodePolyline(shape, precision: 6).first;
     final wrong = decodePolyline(shape, precision: 5).first;
 
     expect(wrong.latitude, closeTo(right.latitude * 10, 1e-4));
-    expect(wrong.latitude, greaterThan(90), reason: 'not even a valid latitude');
+    expect(wrong.latitude, greaterThan(90),
+        reason: 'not even a valid latitude');
   });
 
   test('empty / null give an empty route', () {
@@ -41,7 +44,9 @@ void main() {
     expect(decodePolyline(''), isEmpty);
   });
 
-  test('a truncated string yields the points before the break instead of throwing', () {
+  test(
+      'a truncated string yields the points before the break instead of throwing',
+      () {
     const full = 'ox|vWogs_sCw|Aoh\\ooB_sg@';
     final partial = decodePolyline(full.substring(0, full.length - 3));
 

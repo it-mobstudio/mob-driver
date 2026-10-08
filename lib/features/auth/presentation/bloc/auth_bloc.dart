@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:m_o_b_demand_side/core/app_runtime/app_haptics.dart';
-import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
-
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/services/haptics.dart';
+import 'package:mob_driver/features/auth/domain/repositories/auth_repository.dart';
 // ── Events ───────────────────────────────────────────────────────────────────
 
 sealed class AuthEvent {}
@@ -70,7 +70,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await _repository.sendOtp(phoneNumber: event.phoneNumber);
     if (result == null) {
       AppHaptics.error();
-      emit(AuthError(failure?.message ?? 'Failed to send OTP. Please try again.'));
+      emit(AuthError(
+          failure?.message ?? tr('Failed to send OTP. Please try again.')));
       return;
     }
     emit(AuthOtpSent(event.phoneNumber, debugOtp: result.debugOtp));
@@ -87,7 +88,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
     if (result == null) {
       AppHaptics.error();
-      emit(AuthError(failure?.message ?? 'OTP verification failed.'));
+      emit(AuthError(failure?.message ?? tr('OTP verification failed.')));
       return;
     }
     emit(AuthVerified(userDetails: result.userDetails));

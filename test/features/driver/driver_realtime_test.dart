@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
+import 'package:mob_driver/features/driver/data/realtime/driver_realtime.dart';
 
 import '../../support/fake_socket.dart';
 
@@ -11,7 +11,9 @@ void main() {
 
   Future<void> settle([int ms = 10]) => RealtimeRig.settle(ms);
 
-  test('authenticates in the first frame, and is live once the server says ready', () async {
+  test(
+      'authenticates in the first frame, and is live once the server says ready',
+      () async {
     rig.realtime.start();
     await settle();
 
@@ -23,12 +25,14 @@ void main() {
     expect(rig.realtime.status.value, RealtimeStatus.live);
   });
 
-  test('turns server frames into pushes, ignoring what it does not know', () async {
+  test('turns server frames into pushes, ignoring what it does not know',
+      () async {
     final pushes = <RealtimePush>[];
     rig.realtime.pushes.listen(pushes.add);
     final socket = await rig.goLive();
 
-    socket.serverSends({'type': 'trip.changed', 'event': 'trip.assigned', 'trip_id': 't1'});
+    socket.serverSends(
+        {'type': 'trip.changed', 'event': 'trip.assigned', 'trip_id': 't1'});
     socket.serverSends({'type': 'driver.changed'});
     socket.serverSends({'type': 'something.from.the.future'});
     socket.serverSends({'type': 'trip.changed'}); // no trip id: dropped
@@ -40,6 +44,26 @@ void main() {
     expect(pushes[1], isA<ProfileChanged>());
   });
 
+  test('a demand hint carries its message and where to go', () async {
+    final pushes = <RealtimePush>[];
+    rig.realtime.pushes.listen(pushes.add);
+    final socket = await rig.goLive();
+
+    socket.serverSends({
+      'type': 'driver.hint',
+      'message': 'Busy near MG Road',
+      'lat': 12.97,
+      'lng': 77.6
+    });
+    socket.serverSends(
+        {'type': 'driver.hint', 'message': '  '}); // empty: dropped
+    await settle();
+
+    final hint = (pushes.single as HintReceived).hint;
+    expect(hint.message, 'Busy near MG Road');
+    expect(hint.hasLocation, isTrue);
+  });
+
   test('sends a location only once live', () async {
     rig.realtime.start();
     await settle();
@@ -48,7 +72,8 @@ void main() {
     rig.socket.serverSends({'type': 'ready'});
     await settle();
     expect(rig.realtime.sendLocation(12.9, 77.5), isTrue);
-    expect(rig.socket.sentOfType('location').single, {'type': 'location', 'lat': 12.9, 'lng': 77.5});
+    expect(rig.socket.sentOfType('location').single,
+        {'type': 'location', 'lat': 12.9, 'lng': 77.5});
   });
 
   test('a dropped connection is re-opened', () async {
@@ -70,7 +95,8 @@ void main() {
     expect(rig.socket.sent.first, {'type': 'auth', 'token': 'token-2'});
   });
 
-  test('no answer to a ping means the connection is dead: it reconnects', () async {
+  test('no answer to a ping means the connection is dead: it reconnects',
+      () async {
     rig = RealtimeRig(heartbeat: const Duration(milliseconds: 20));
     await rig.goLive();
 
@@ -126,10 +152,17 @@ void main() {
     );
     addTearDown(realtime.dispose);
 
-    for (final (failures, base) in [(0, 1000), (1, 2000), (3, 8000), (10, 30000), (60, 30000)]) {
+    for (final (failures, base) in [
+      (0, 1000),
+      (1, 2000),
+      (3, 8000),
+      (10, 30000),
+      (60, 30000)
+    ]) {
       for (var i = 0; i < 50; i++) {
         final ms = realtime.nextBackoff(failures).inMilliseconds;
-        expect(ms, inInclusiveRange(base ~/ 2, base), reason: 'after $failures failures');
+        expect(ms, inInclusiveRange(base ~/ 2, base),
+            reason: 'after $failures failures');
       }
     }
   });

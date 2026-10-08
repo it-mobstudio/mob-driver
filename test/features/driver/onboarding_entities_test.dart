@@ -1,13 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/core/utils/formatters.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/invoice_actions.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
+import 'package:mob_driver/core/utils/formatters.dart';
+import 'package:mob_driver/features/driver/data/media/invoice_actions.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_stats.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/domain/entities/wallet.dart';
 
 import '../../support/fakes.dart';
 
@@ -21,8 +21,10 @@ Map<String, dynamic> kycJson({
         'status': 'pending',
         'submitted': aadharSubmitted,
         'number_last4': aadharSubmitted ? '0123' : null,
-        'front_url': aadharSubmitted ? 'https://cdn.example.com/a-front.jpg' : null,
-        'back_url': aadharSubmitted ? 'https://cdn.example.com/a-back.jpg' : null,
+        'front_url':
+            aadharSubmitted ? 'https://cdn.example.com/a-front.jpg' : null,
+        'back_url':
+            aadharSubmitted ? 'https://cdn.example.com/a-back.jpg' : null,
         'rejection_note': null,
       },
       'dl': {
@@ -58,14 +60,25 @@ void main() {
       expect(p.onboardingStatus.needsSetup, isTrue);
     });
 
-    test('every status but approved keeps the driver in sign-up (no rides before approval)', () {
-      final forced = OnboardingStatus.values.where((s) => s.needsSetup).toList();
-      expect(forced, OnboardingStatus.values.where((s) => s != OnboardingStatus.approved).toList());
-      expect(OnboardingStatus.tryParse('vehicle_required'), OnboardingStatus.vehicleRequired);
+    test(
+        'every status but approved keeps the driver in sign-up (no rides before approval)',
+        () {
+      final forced =
+          OnboardingStatus.values.where((s) => s.needsSetup).toList();
+      expect(
+          forced,
+          OnboardingStatus.values
+              .where((s) => s != OnboardingStatus.approved)
+              .toList());
+      expect(OnboardingStatus.tryParse('vehicle_required'),
+          OnboardingStatus.vehicleRequired);
     });
 
-    test('what was submitted comes through, with the Aadhaar masked to its last four', () {
-      final p = DriverProfile.fromJson(profileJson(eligible: false, kyc: kycJson()));
+    test(
+        'what was submitted comes through, with the Aadhaar masked to its last four',
+        () {
+      final p =
+          DriverProfile.fromJson(profileJson(eligible: false, kyc: kycJson()));
 
       expect(p.aadhar.submitted, isTrue);
       expect(p.aadhar.reference, '•••• 0123');
@@ -76,31 +89,45 @@ void main() {
       expect(p.police.submitted, isFalse);
     });
 
-    test('a document needs an upload until it has been sent — or once it was sent back', () {
+    test(
+        'a document needs an upload until it has been sent — or once it was sent back',
+        () {
       const notSent = KycItem(KycStatus.pending);
       const inReview = KycItem(KycStatus.pending, submitted: true);
       const verified = KycItem(KycStatus.verified);
-      const rejected = KycItem(KycStatus.rejected, submitted: true, rejectionNote: 'Blurry');
+      const rejected =
+          KycItem(KycStatus.rejected, submitted: true, rejectionNote: 'Blurry');
 
       expect(notSent.needsUpload, isTrue);
       expect(inReview.needsUpload, isFalse);
-      expect(verified.needsUpload, isFalse, reason: 'verified without a scan on file is still verified');
+      expect(verified.needsUpload, isFalse,
+          reason: 'verified without a scan on file is still verified');
       expect(rejected.needsUpload, isTrue);
     });
 
-    test('a snapshot saved before onboarding existed still parses: eligible means approved', () {
-      final old = profileJson(eligible: true)..remove('onboarding_status')..remove('kyc')..remove('payout');
+    test(
+        'a snapshot saved before onboarding existed still parses: eligible means approved',
+        () {
+      final old = profileJson(eligible: true)
+        ..remove('onboarding_status')
+        ..remove('kyc')
+        ..remove('payout');
       final p = DriverProfile.fromJson(old);
       expect(p.onboardingStatus, OnboardingStatus.approved);
       expect(p.payout.isSet, isFalse);
 
-      final oldPending = profileJson(eligible: false)..remove('onboarding_status');
-      expect(DriverProfile.fromJson(oldPending).onboardingStatus, OnboardingStatus.underReview);
+      final oldPending = profileJson(eligible: false)
+        ..remove('onboarding_status');
+      expect(DriverProfile.fromJson(oldPending).onboardingStatus,
+          OnboardingStatus.underReview);
     });
 
     test('name and date of birth lock once the Aadhaar is verified', () {
-      expect(DriverProfile.fromJson(profileJson(eligible: true)).identityLocked, isTrue);
-      expect(DriverProfile.fromJson(profileJson(eligible: false)).identityLocked, isFalse);
+      expect(DriverProfile.fromJson(profileJson(eligible: true)).identityLocked,
+          isTrue);
+      expect(
+          DriverProfile.fromJson(profileJson(eligible: false)).identityLocked,
+          isFalse);
     });
 
     test('rejected documents are listed with the company\'s reason', () {
@@ -112,8 +139,10 @@ void main() {
         'police_rejection_note': 'Not attested',
       });
 
-      expect(p.rejectedDocuments.map((d) => d.$1), ['Aadhaar', 'Police verification']);
-      expect(p.rejectedDocuments.map((d) => d.$2.rejectionNote), ['Blurry', 'Not attested']);
+      expect(p.rejectedDocuments.map((d) => d.$1),
+          ['Aadhaar', 'Police verification']);
+      expect(p.rejectedDocuments.map((d) => d.$2.rejectionNote),
+          ['Blurry', 'Not attested']);
     });
 
     test('the licence expiry warning counts whole days from today', () {
@@ -124,12 +153,14 @@ void main() {
       });
       expect(p.licenceDaysLeft, 12);
 
-      final today = DriverProfile.fromJson({...profileJson(), 'dl_expiry_date': formatIsoDate(DateTime.now())});
+      final today = DriverProfile.fromJson(
+          {...profileJson(), 'dl_expiry_date': formatIsoDate(DateTime.now())});
       expect(today.licenceDaysLeft, 0);
     });
 
     test('payout details summarise as a UPI id or a masked account', () {
-      final upi = PayoutDetails.fromJson(const {'upi_id': 'ravi@okhdfc', 'is_set': true});
+      final upi = PayoutDetails.fromJson(
+          const {'upi_id': 'ravi@okhdfc', 'is_set': true});
       expect(upi.summary, 'ravi@okhdfc');
 
       final bank = PayoutDetails.fromJson(const {
@@ -143,7 +174,8 @@ void main() {
     });
 
     test('copyWith keeps everything else, including what was submitted', () {
-      final p = DriverProfile.fromJson(profileJson(eligible: false, kyc: kycJson()));
+      final p =
+          DriverProfile.fromJson(profileJson(eligible: false, kyc: kycJson()));
       final online = p.copyWith(isOnline: true);
       expect(online.isOnline, isTrue);
       expect(online.aadhar, p.aadhar);
@@ -167,13 +199,20 @@ void main() {
     });
 
     test('an empty string is sent (it clears the field); null is not', () {
-      expect(const ProfileUpdate(email: '', city: null).toJson(), {'email': ''});
+      expect(
+          const ProfileUpdate(email: '', city: null).toJson(), {'email': ''});
     });
   });
 
   group('Trip: invoice, items and earning', () {
-    Trip withItems(List<Map<String, dynamic>> items, {String status = 'in_progress', bool verify = true}) =>
-        Trip.fromJson(tripJson(status: status, verifyItems: verify, items: items, paymentMode: 'prepaid', paymentStatus: 'paid'));
+    Trip withItems(List<Map<String, dynamic>> items,
+            {String status = 'in_progress', bool verify = true}) =>
+        Trip.fromJson(tripJson(
+            status: status,
+            verifyItems: verify,
+            items: items,
+            paymentMode: 'prepaid',
+            paymentStatus: 'paid'));
 
     test('an order with no goods information parses as before', () {
       final t = fakeTrip();
@@ -194,7 +233,13 @@ void main() {
         verifyItems: true,
         items: [
           itemJson(id: 'i-1', imageUrl: 'https://img.example.com/c.jpg'),
-          itemJson(id: 'i-2', name: 'TMT bar', quantity: 20, unit: '', status: 'delivered', proofImageUrl: 'https://img.example.com/p.jpg'),
+          itemJson(
+              id: 'i-2',
+              name: 'TMT bar',
+              quantity: 20,
+              unit: '',
+              status: 'delivered',
+              proofImageUrl: 'https://img.example.com/p.jpg'),
         ],
       ));
 
@@ -210,30 +255,44 @@ void main() {
     });
 
     test('quantity reads with its unit when there is one', () {
-      expect(TripItem.fromJson(itemJson(quantity: 4, unit: 'bags')).quantityLabel, '4 bags');
-      expect(TripItem.fromJson(itemJson(quantity: 4, unit: '')).quantityLabel, '4');
+      expect(
+          TripItem.fromJson(itemJson(quantity: 4, unit: 'bags')).quantityLabel,
+          '4 bags');
+      expect(TripItem.fromJson(itemJson(quantity: 4, unit: '')).quantityLabel,
+          '4');
     });
 
-    test('an in-progress order still owed answers needs verification; once answered it does not', () {
+    test(
+        'an in-progress order still owed answers needs verification; once answered it does not',
+        () {
       final pending = withItems([itemJson(id: 'a'), itemJson(id: 'b')]);
       expect(pending.needsItemVerification, isTrue);
       expect(pending.pendingItemCount, 2);
       expect(pending.resolvedItemCount, 0);
 
-      final oneLeft = withItems([itemJson(id: 'a', status: 'delivered'), itemJson(id: 'b')]);
+      final oneLeft = withItems(
+          [itemJson(id: 'a', status: 'delivered'), itemJson(id: 'b')]);
       expect(oneLeft.needsItemVerification, isTrue);
       expect(oneLeft.resolvedItemCount, 1);
 
       // "Not delivered" is an answer too — it's what unblocks the trip.
-      final done = withItems([itemJson(id: 'a', status: 'delivered'), itemJson(id: 'b', status: 'not_delivered', note: 'Damaged')]);
+      final done = withItems([
+        itemJson(id: 'a', status: 'delivered'),
+        itemJson(id: 'b', status: 'not_delivered', note: 'Damaged')
+      ]);
       expect(done.needsItemVerification, isFalse);
       expect(done.items.last.driverNote, 'Damaged');
     });
 
-    test('verification is only asked for when the company asked, and only mid-delivery', () {
-      expect(withItems([itemJson()], verify: false).needsItemVerification, isFalse);
-      expect(withItems([itemJson()], status: 'assigned').needsItemVerification, isFalse);
-      expect(withItems([itemJson()], status: 'completed').needsItemVerification, isFalse);
+    test(
+        'verification is only asked for when the company asked, and only mid-delivery',
+        () {
+      expect(withItems([itemJson()], verify: false).needsItemVerification,
+          isFalse);
+      expect(withItems([itemJson()], status: 'assigned').needsItemVerification,
+          isFalse);
+      expect(withItems([itemJson()], status: 'completed').needsItemVerification,
+          isFalse);
     });
 
     test('a changed item makes a different trip, so the poller notices it', () {
@@ -270,28 +329,45 @@ void main() {
 
     test('an empty answer is zeroes, never nulls', () {
       final s = WalletSummary.fromJson(const {});
-      expect([s.balance, s.today.earnings, s.week.trips, s.lifetimePayouts], [0.0, 0.0, 0, 0.0]);
+      expect([s.balance, s.today.earnings, s.week.trips, s.lifetimePayouts],
+          [0.0, 0.0, 0, 0.0]);
       expect(s.last7Days, isEmpty);
     });
 
     test('statement rows carry a sign and a kind', () {
       final credit = WalletEntry.fromJson(const {
-        'id': 'w1', 'kind': 'trip_earning', 'amount': '68.00', 'balance_after': '68.00',
-        'description': 'Delivery to Indiranagar', 'created_at': '2026-09-23T09:00:00Z',
+        'id': 'w1',
+        'kind': 'trip_earning',
+        'amount': '68.00',
+        'balance_after': '68.00',
+        'description': 'Delivery to Indiranagar',
+        'created_at': '2026-09-23T09:00:00Z',
       });
       final payout = WalletEntry.fromJson(const {
-        'id': 'w2', 'kind': 'payout', 'amount': '-40.00', 'balance_after': '28.00', 'reference': 'UTR123',
+        'id': 'w2',
+        'kind': 'payout',
+        'amount': '-40.00',
+        'balance_after': '28.00',
+        'reference': 'UTR123',
       });
 
-      expect((credit.kind, credit.isCredit, credit.amount), (WalletKind.tripEarning, true, 68.0));
-      expect((payout.kind, payout.isCredit, payout.reference), (WalletKind.payout, false, 'UTR123'));
-      expect(WalletEntry.fromJson(const {'id': 'x', 'kind': 'something_new'}).kind, WalletKind.unknown);
+      expect((credit.kind, credit.isCredit, credit.amount),
+          (WalletKind.tripEarning, true, 68.0));
+      expect((payout.kind, payout.isCredit, payout.reference),
+          (WalletKind.payout, false, 'UTR123'));
+      expect(
+          WalletEntry.fromJson(const {'id': 'x', 'kind': 'something_new'}).kind,
+          WalletKind.unknown);
     });
   });
 
   group('stats', () {
     test('earnings are read next to the fare total', () {
-      final s = PeriodStats.fromJson(const {'total_fare': '185.00', 'earnings': '148.00', 'trips_completed': 2});
+      final s = PeriodStats.fromJson(const {
+        'total_fare': '185.00',
+        'earnings': '148.00',
+        'trips_completed': 2
+      });
       expect((s.totalFare, s.earnings), (185.0, 148.0));
       expect(PeriodStats.fromJson(const {}).earnings, 0);
     });
@@ -316,7 +392,8 @@ void main() {
     test('day headings are relative for the last two days', () {
       final now = DateTime(2026, 9, 23, 15);
       expect(formatDayHeading(DateTime(2026, 9, 23, 1), now: now), 'Today');
-      expect(formatDayHeading(DateTime(2026, 9, 22, 23), now: now), 'Yesterday');
+      expect(
+          formatDayHeading(DateTime(2026, 9, 22, 23), now: now), 'Yesterday');
       expect(formatDayHeading(DateTime(2026, 9, 20), now: now), 'Sun, 20 Sep');
     });
 
@@ -329,10 +406,14 @@ void main() {
 
   group('invoice helpers', () {
     test('a WhatsApp link addresses the customer by digits only', () {
-      final uri = whatsAppUri(phone: '+91 98888 00002', message: 'Hi Asha, invoice: https://x.com/a b?c=1&d=2');
+      final uri = whatsAppUri(
+          phone: '+91 98888 00002',
+          message: 'Hi Asha, invoice: https://x.com/a b?c=1&d=2');
 
-      expect((uri.scheme, uri.host, uri.path), ('https', 'wa.me', '/919888800002'));
-      expect(uri.queryParameters['text'], 'Hi Asha, invoice: https://x.com/a b?c=1&d=2');
+      expect((uri.scheme, uri.host, uri.path),
+          ('https', 'wa.me', '/919888800002'));
+      expect(uri.queryParameters['text'],
+          'Hi Asha, invoice: https://x.com/a b?c=1&d=2');
     });
 
     test('without a number it opens WhatsApp\'s own chat picker', () {
@@ -340,15 +421,24 @@ void main() {
       expect(whatsAppUri(phone: '', message: 'x').path, '/');
     });
 
-    test('the shared file keeps the company\'s name for it, or is named after the invoice', () {
-      expect(invoiceFileName('https://files.example.com/invoices/INV-1001.pdf'), 'INV-1001.pdf');
-      expect(invoiceFileName('https://files.example.com/photo.JPG?x=1'), 'photo.JPG');
-      expect(invoiceFileName('https://files.example.com/download?id=5', invoiceNumber: 'INV/1001'), 'Invoice-INV_1001.pdf');
-      expect(invoiceFileName('https://files.example.com/download?id=5'), 'Invoice.pdf');
+    test(
+        'the shared file keeps the company\'s name for it, or is named after the invoice',
+        () {
+      expect(invoiceFileName('https://files.example.com/invoices/INV-1001.pdf'),
+          'INV-1001.pdf');
+      expect(invoiceFileName('https://files.example.com/photo.JPG?x=1'),
+          'photo.JPG');
+      expect(
+          invoiceFileName('https://files.example.com/download?id=5',
+              invoiceNumber: 'INV/1001'),
+          'Invoice-INV_1001.pdf');
+      expect(invoiceFileName('https://files.example.com/download?id=5'),
+          'Invoice.pdf');
     });
 
     test('a captured photo\'s type follows its name', () {
-      CapturedPhoto photo(String name) => CapturedPhoto(bytes: Uint8List(1), filename: name);
+      CapturedPhoto photo(String name) =>
+          CapturedPhoto(bytes: Uint8List(1), filename: name);
       expect(photo('a.jpg').mimeType, 'image/jpeg');
       expect(photo('A.PNG').mimeType, 'image/png');
       expect(photo('a.webp').mimeType, 'image/webp');

@@ -1,9 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:mob_driver/core/l10n/tr.dart';
 
 sealed class AppFailure {
-  const AppFailure(this.message, {this.code});
-  final String message;
+  const AppFailure(this._message, {this.code});
+  final String _message;
+
+  /// In the driver's language when it's one of the app's own messages;
+  /// a message written by the server shows as the server wrote it.
+  String get message => tr(_message);
 
   /// Machine-readable reason from the backend (e.g. `INVALID_DELIVERY_OTP`,
   /// `ALREADY_PAID`) when it sent one, so callers can react to a specific
@@ -48,9 +53,9 @@ extension DioExceptionMapper on DioException {
       case DioExceptionType.connectionError:
         return NetworkFailure(_networkMessage(this));
       case DioExceptionType.badCertificate:
-        return const NetworkFailure('SSL certificate error.');
+        return NetworkFailure(tr('SSL certificate error.'));
       case DioExceptionType.cancel:
-        return const UnknownFailure('Request was cancelled.');
+        return UnknownFailure(tr('Request was cancelled.'));
       case DioExceptionType.badResponse:
         final statusCode = response?.statusCode;
         final data = response?.data;
@@ -58,7 +63,7 @@ extension DioExceptionMapper on DioException {
 
         if (statusCode == 401) {
           return AuthFailure(
-            envelope?.message ?? 'Authentication required. Please log in.',
+            envelope?.message ?? tr('Authentication required. Please log in.'),
             envelope?.code,
           );
         }
@@ -84,7 +89,7 @@ extension DioExceptionMapper on DioException {
           }
         }
         return ServerFailure(
-          'Server error (${statusCode ?? 'unknown'}).',
+          tr('Server error ({p0}).', {'p0': statusCode ?? 'unknown'}),
           statusCode: statusCode,
         );
       case DioExceptionType.unknown:
@@ -98,7 +103,7 @@ extension DioExceptionMapper on DioException {
         return UnknownFailure(
           (errMessage != null && errMessage.isNotEmpty)
               ? errMessage
-              : 'An unexpected error occurred.',
+              : tr('An unexpected error occurred.'),
         );
     }
   }
@@ -113,7 +118,7 @@ String _networkMessage(DioException e) {
   const generic = 'No internet connection. Please check your network.';
   if (!kDebugMode) return generic;
   final host = e.requestOptions.uri.authority;
-  final hint = kIsWeb
+  const hint = kIsWeb
       ? 'In a browser this is also what a CORS block looks like: the backend '
           'must send Access-Control-Allow-Origin (it does when DEBUG=True).'
       : 'Is the backend running, and reachable from this device? (Android '
@@ -141,7 +146,7 @@ _ErrorEnvelope? _parseErrorEnvelope(Map<dynamic, dynamic> body) {
   final detailMessage = _firstDetailMessage(error['details']);
   final message = detailMessage ?? error['message']?.toString().trim() ?? '';
   return _ErrorEnvelope(
-    message.isEmpty ? 'Something went wrong. Please try again.' : message,
+    message.isEmpty ? tr('Something went wrong. Please try again.') : message,
     code,
   );
 }

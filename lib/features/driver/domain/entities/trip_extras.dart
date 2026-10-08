@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
-import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
-import 'package:m_o_b_demand_side/core/utils/polyline_codec.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/utils/json_readers.dart';
+import 'package:mob_driver/core/utils/polyline_codec.dart';
 
 /// `GET driver/trips/{id}/payment/qr` — the code the customer scans to pay a
 /// COD trip's fare.
@@ -96,7 +97,7 @@ class DeliveryOtpSent extends Equatable {
 
   factory DeliveryOtpSent.fromJson(Map<String, dynamic> json) =>
       DeliveryOtpSent(
-        message: readString(json['message']) ?? 'OTP sent.',
+        message: readString(json['message']) ?? tr('OTP sent.'),
         debugOtp: readString(json['otp']),
       );
 

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/features/driver/data/local/driver_snapshot_cache.dart';
-import 'package:m_o_b_demand_side/features/driver/data/repositories/driver_repository_impl.dart';
-import 'package:m_o_b_demand_side/features/driver/data/datasources/driver_remote_datasource.dart';
+import 'package:mob_driver/features/driver/data/datasources/driver_remote_datasource.dart';
+import 'package:mob_driver/features/driver/data/local/driver_snapshot_cache.dart';
+import 'package:mob_driver/features/driver/data/repositories/driver_repository_impl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fakes.dart';
@@ -25,7 +25,9 @@ void main() {
   test('round-trips the profile and stats', () async {
     final cache = build();
     await cache.saveProfile(profileJson(online: true));
-    await cache.saveStats({'today': {'trips_completed': 3}});
+    await cache.saveStats({
+      'today': {'trips_completed': 3}
+    });
 
     final stored = await cache.read();
 
@@ -39,22 +41,30 @@ void main() {
     expect(stored.stats, isNull);
   });
 
-  test('a snapshot belonging to someone else is never shown, and is wiped', () async {
+  test('a snapshot belonging to someone else is never shown, and is wiped',
+      () async {
     final cache = build();
     await cache.saveProfile(profileJson()); // id d-1
-    await cache.saveStats({'today': {'trips_completed': 9}});
+    await cache.saveStats({
+      'today': {'trips_completed': 9}
+    });
 
     signedInAs = 'another-driver';
     final stored = await cache.read();
 
     expect(stored.me, isNull);
-    expect(stored.stats, isNull, reason: 'stats have no owner of their own — they follow the profile');
-    expect(prefs.getKeys(), isEmpty, reason: 'and the stale data is removed, not just hidden');
+    expect(stored.stats, isNull,
+        reason: 'stats have no owner of their own — they follow the profile');
+    expect(prefs.getKeys(), isEmpty,
+        reason: 'and the stale data is removed, not just hidden');
   });
 
-  test('stats are ignored when there is no profile to vouch for them', () async {
+  test('stats are ignored when there is no profile to vouch for them',
+      () async {
     final cache = build();
-    await cache.saveStats({'today': {'trips_completed': 9}});
+    await cache.saveStats({
+      'today': {'trips_completed': 9}
+    });
     expect((await cache.read()).stats, isNull);
   });
 
@@ -66,13 +76,15 @@ void main() {
     expect(prefs.getKeys(), isEmpty);
   });
 
-  test('corrupt stored JSON is treated as "nothing cached", not a crash', () async {
+  test('corrupt stored JSON is treated as "nothing cached", not a crash',
+      () async {
     await prefs.setString('driver_snapshot_me_v1', '{not json');
     final stored = await build().read();
     expect(stored.me, isNull);
   });
 
-  test('with no signed-in id to check against, the snapshot is still read', () async {
+  test('with no signed-in id to check against, the snapshot is still read',
+      () async {
     signedInAs = null;
     final cache = build();
     await cache.saveProfile(profileJson());
@@ -90,7 +102,8 @@ void main() {
           'today': {'trips_completed': 2, 'total_fare': '185.00'},
           'all_time': {'trips_completed': 9},
         });
-      repo = DriverRepositoryImpl(DriverRemoteDatasource(scriptedDio(adapter)), cache: build());
+      repo = DriverRepositoryImpl(DriverRemoteDatasource(scriptedDio(adapter)),
+          cache: build());
     });
 
     test('a successful fetch is what the next launch paints', () async {
@@ -99,7 +112,8 @@ void main() {
 
       await repo.profile();
       await repo.stats();
-      await Future<void>.delayed(Duration.zero); // cache writes are fire-and-forget
+      await Future<void>.delayed(
+          Duration.zero); // cache writes are fire-and-forget
 
       final after = await repo.cachedSnapshot();
       expect(after.profile?.fullName, 'Seed Driver 1');

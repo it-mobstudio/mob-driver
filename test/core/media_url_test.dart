@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/core/config/app_config.dart';
+import 'package:mob_driver/core/config/app_config.dart';
 
 void main() {
   final api = Uri.parse(AppConfig.apiBaseUrl);

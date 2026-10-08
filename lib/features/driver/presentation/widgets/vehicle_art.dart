@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:mob_driver/core/constants/app_assets.dart';
+
 /// The picture for a kind of vehicle, chosen from its name first ("Tata Ace",
 /// "Truck 14 ft") and its category second — the same rules and the same 3D
 /// pictures (Microsoft Fluent Emoji, MIT) as the customer booking web app
@@ -7,11 +9,14 @@ import 'package:flutter/material.dart';
 String vehicleArtAsset({String? category, String? name}) {
   final n = (name ?? '').toLowerCase();
   String art;
-  if (RegExp(r'lorry|trailer|container|\b(14|17|19|20|22|24|32)\s*ft').hasMatch(n)) {
+  if (RegExp(r'lorry|trailer|container|\b(14|17|19|20|22|24|32)\s*ft')
+      .hasMatch(n)) {
     art = 'lorry';
-  } else if (RegExp(r'mini|\bace\b|tempo|bolero|dost|\bvan\b|chhota').hasMatch(n)) {
+  } else if (RegExp(r'mini|\bace\b|tempo|bolero|dost|\bvan\b|chhota')
+      .hasMatch(n)) {
     art = 'pickup';
-  } else if (RegExp(r'truck|tonne|\bton\b|eicher|407|canter|\bft\b').hasMatch(n)) {
+  } else if (RegExp(r'truck|tonne|\bton\b|eicher|407|canter|\bft\b')
+      .hasMatch(n)) {
     art = 'truck';
   } else if (RegExp(r'pickup|pick-up|4 ?wheel').hasMatch(n)) {
     art = 'pickup';
@@ -26,7 +31,7 @@ String vehicleArtAsset({String? category, String? name}) {
       _ => 'pickup',
     };
   }
-  return 'assets/images/vehicles/$art.png';
+  return AppAssets.vehicle(art);
 }
 
 class VehicleArt extends StatelessWidget {

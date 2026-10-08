@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
+import 'package:mob_driver/features/driver/data/realtime/driver_realtime.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// One scripted server connection: what the app sent, and buttons for what
@@ -53,8 +53,8 @@ class _FakeSink implements WebSocketSink {
   final FakeSocket _socket;
 
   @override
-  void add(dynamic data) =>
-      _socket.sent.add(Map<String, dynamic>.from(jsonDecode(data as String)));
+  void add(dynamic data) => _socket.sent
+      .add(Map<String, dynamic>.from(jsonDecode(data as String) as Map));
 
   @override
   Future<void> close([int? closeCode, String? closeReason]) async {

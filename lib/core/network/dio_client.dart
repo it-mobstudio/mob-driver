@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:m_o_b_demand_side/core/network/auth_interceptor.dart';
-import 'package:m_o_b_demand_side/core/network/logging_interceptor.dart';
+import 'package:mob_driver/core/network/auth_interceptor.dart';
+import 'package:mob_driver/core/network/logging_interceptor.dart';
 import 'package:sentry_dio/sentry_dio.dart';
 
 class DioClient {

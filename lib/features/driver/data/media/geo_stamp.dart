@@ -1,14 +1,12 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart' show compute, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/painting.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:image/image.dart' as img;
 import 'package:intl/intl.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
 
 /// What gets burned into the bottom of a proof photo, GPS-camera style: where
 /// and when it was taken, and what it's of. Part of the picture itself (not
@@ -84,10 +82,15 @@ Future<String?> lookUpAddress(double latitude, double longitude) async {
   }
 }
 
-/// Draws [stamp] as a dark band across the bottom of [photo] and re-encodes it
-/// as a JPEG. The band scales with the picture, so the text reads the same on
-/// a 1600 px shot as on a small one.
-Future<CapturedPhoto> renderGeoStamp(CapturedPhoto photo, GeoStamp stamp) async {
+/// Draws [stamp] as a dark band across the bottom of [photo]. The band
+/// scales with the picture, so the text reads the same on any size of shot.
+///
+/// Drawn on the GPU and exported by the engine (native code) as a lossless
+/// PNG; the one lossy, size-reducing encode happens after, in
+/// [PhotoCapture.optimizeForUpload]. No pixel work runs in Dart: on an older
+/// phone that took seconds.
+Future<CapturedPhoto> renderGeoStamp(
+    CapturedPhoto photo, GeoStamp stamp) async {
   final codec = await ui.instantiateImageCodec(photo.bytes);
   final source = (await codec.getNextFrame()).image;
   final pixelsWide = source.width, pixelsHigh = source.height;
@@ -145,25 +148,14 @@ Future<CapturedPhoto> renderGeoStamp(CapturedPhoto photo, GeoStamp stamp) async 
     y += p.height + gap;
   }
 
-  final stamped = await recorder
-      .endRecording()
-      .toImage(pixelsWide, pixelsHigh);
-  final rgba = await stamped.toByteData(format: ui.ImageByteFormat.rawRgba);
+  final stamped = await recorder.endRecording().toImage(pixelsWide, pixelsHigh);
+  final png = await stamped.toByteData(format: ui.ImageByteFormat.png);
   source.dispose();
   stamped.dispose();
-  if (rgba == null) return photo;
-
-  final jpeg = await compute(
-    _encodeJpeg,
-    (
-      bytes: rgba.buffer.asUint8List(rgba.offsetInBytes, rgba.lengthInBytes),
-      width: pixelsWide,
-      height: pixelsHigh,
-    ),
-  );
+  if (png == null) return photo;
   return CapturedPhoto(
-    bytes: jpeg,
-    filename: 'geo-${stamp.takenAt.millisecondsSinceEpoch}.jpg',
+    bytes: png.buffer.asUint8List(png.offsetInBytes, png.lengthInBytes),
+    filename: 'geo-${stamp.takenAt.millisecondsSinceEpoch}.png',
   );
 }
 
@@ -188,16 +180,4 @@ ui.Paragraph _paragraph(
     ))
     ..addText(text);
   return builder.build()..layout(ui.ParagraphConstraints(width: maxWidth));
-}
-
-// Runs off the UI thread (on mobile): encoding a 1600 px JPEG in Dart takes a
-// noticeable moment.
-Uint8List _encodeJpeg(({Uint8List bytes, int width, int height}) raw) {
-  final image = img.Image.fromBytes(
-    width: raw.width,
-    height: raw.height,
-    bytes: raw.bytes.buffer,
-    numChannels: 4,
-  );
-  return img.encodeJpg(image, quality: 85);
 }

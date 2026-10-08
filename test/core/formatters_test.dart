@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/core/utils/formatters.dart';
+import 'package:mob_driver/core/utils/formatters.dart';
 
 void main() {
   group('formatMoney', () {

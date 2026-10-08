@@ -4,24 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/delivery_otp_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/edit_profile_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/incoming_order_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/item_verification_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/order_details_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/order_photos_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/delivery_complete_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/payment_qr_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/payout_details_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/trip_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/verification_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/wallet_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_home_map.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_map.dart';
+import 'package:mob_driver/app/routes.dart';
+import 'package:mob_driver/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/edit_profile_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/payout_details_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/verification_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/wallet_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/trip/delivery_complete_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/trip/delivery_otp_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/trip/incoming_order_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/trip/item_verification_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/trip/order_details_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/trip/order_photos_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/trip/payment_qr_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/trip/trip_page.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/map/home_map.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/map/trip_map.dart';
 
 import 'fakes.dart';
 import 'fonts.dart';
@@ -36,11 +36,13 @@ Widget stubMap(BuildContext context, TripMapData data, double bottomPadding) =>
         key: const Key('map'),
       ),
       if (data.route.isNotEmpty)
-        Text('routeFirst=${data.route.first.latitude.toStringAsFixed(4)},'
+        Text(
+            'routeFirst=${data.route.first.latitude.toStringAsFixed(4)},'
             '${data.route.first.longitude.toStringAsFixed(4)}',
             key: const Key('map_first')),
       if (data.route.isNotEmpty)
-        Text('routeLast=${data.route.last.latitude.toStringAsFixed(4)},'
+        Text(
+            'routeLast=${data.route.last.latitude.toStringAsFixed(4)},'
             '${data.route.last.longitude.toStringAsFixed(4)}',
             key: const Key('map_last')),
     ]);
@@ -49,8 +51,8 @@ Widget stubMap(BuildContext context, TripMapData data, double bottomPadding) =>
 /// as [stubMap]. Exposes an SOS trigger so the dialog it opens is testable —
 /// bottom-right, like the real floating button, so it isn't hidden under the
 /// dashboard's own top overlay (banners painted later in the same Stack).
-Widget stubHomeMap(BuildContext context, DriverMapData data,
-        double bottomPadding, VoidCallback onSos) =>
+Widget stubHomeMap(BuildContext context, HomeMapData data, double bottomPadding,
+        VoidCallback onSos) =>
     Stack(children: [
       Align(
         alignment: Alignment.topLeft,
@@ -111,7 +113,8 @@ class TestRig {
 
   /// One page on its own (plus any [routes] it navigates to, and the app's
   /// blocs) — for screens that aren't part of the trip flow.
-  Widget host(Widget home, {List<GoRoute> routes = const []}) => MultiBlocProvider(
+  Widget host(Widget home, {List<GoRoute> routes = const []}) =>
+      MultiBlocProvider(
         providers: [
           BlocProvider<DriverSessionCubit>.value(value: cubit),
           BlocProvider<AuthBloc>.value(value: auth),
@@ -138,26 +141,26 @@ class TestRig {
             initialLocation: initialLocation,
             routes: [
               GoRoute(
-                path: DriverRoutes.dashboard,
-                builder: (_, __) => const Scaffold(body: Center(child: Text('DASHBOARD'))),
+                path: AppRoutes.dashboard,
+                builder: (_, __) =>
+                    const Scaffold(body: Center(child: Text('DASHBOARD'))),
               ),
               GoRoute(
-                path: DriverRoutes.tripPattern,
+                path: AppRoutes.tripPattern,
                 builder: (_, s) => TripPage(
                     tripId: s.pathParameters['id']!,
                     mapBuilder: stubMap,
                     invoiceActions: invoice),
               ),
               GoRoute(
-                path: DriverRoutes.incomingOrderPattern,
-                builder: (_, s) =>
-                    IncomingOrderPage(
-                        tripId: s.pathParameters['id']!,
-                        mapBuilder: stubMap,
-                        alert: alert),
+                path: AppRoutes.incomingOrderPattern,
+                builder: (_, s) => IncomingOrderPage(
+                    tripId: s.pathParameters['id']!,
+                    mapBuilder: stubMap,
+                    alert: alert),
               ),
               GoRoute(
-                path: DriverRoutes.orderDetailsPattern,
+                path: AppRoutes.orderDetailsPattern,
                 builder: (_, s) => OrderDetailsPage(
                     tripId: s.pathParameters['id']!,
                     fromTrip: s.uri.queryParameters['from'] == 'trip',
@@ -165,13 +168,13 @@ class TestRig {
                     invoiceActions: invoice),
               ),
               GoRoute(
-                path: DriverRoutes.deliveredPattern,
+                path: AppRoutes.deliveredPattern,
                 builder: (_, s) => DeliveryCompletePage(
                     tripId: s.pathParameters['id']!,
                     trip: s.extra is Trip ? s.extra as Trip : null),
               ),
               GoRoute(
-                path: DriverRoutes.photosPattern,
+                path: AppRoutes.photosPattern,
                 builder: (_, s) => OrderPhotosPage(
                     tripId: s.pathParameters['id']!,
                     stage: s.pathParameters['stage'] == 'delivery'
@@ -180,25 +183,34 @@ class TestRig {
                     capture: capture),
               ),
               GoRoute(
-                path: DriverRoutes.itemsPattern,
+                path: AppRoutes.itemsPattern,
+                builder: (_, s) => ItemVerificationPage(
+                    tripId: s.pathParameters['id']!, capture: capture),
+              ),
+              GoRoute(
+                path: AppRoutes.verification,
+                builder: (_, __) => VerificationPage(capture: capture),
+              ),
+              GoRoute(
+                  path: AppRoutes.editProfile,
+                  builder: (_, __) => const EditProfilePage()),
+              GoRoute(
+                  path: AppRoutes.payout,
+                  builder: (_, __) => const PayoutDetailsPage()),
+              GoRoute(
+                  path: AppRoutes.wallet,
+                  builder: (_, __) => const WalletPage()),
+              GoRoute(
+                path: AppRoutes.paymentPattern,
                 builder: (_, s) =>
-                    ItemVerificationPage(tripId: s.pathParameters['id']!, capture: capture),
+                    PaymentQrPage(tripId: s.pathParameters['id']!),
               ),
               GoRoute(
-                path: DriverRoutes.verification,
-                builder: (_, __) => DriverVerificationPage(capture: capture),
-              ),
-              GoRoute(path: DriverRoutes.editProfile, builder: (_, __) => const EditProfilePage()),
-              GoRoute(path: DriverRoutes.payout, builder: (_, __) => const PayoutDetailsPage()),
-              GoRoute(path: DriverRoutes.wallet, builder: (_, __) => const DriverWalletPage()),
-              GoRoute(
-                path: DriverRoutes.paymentPattern,
-                builder: (_, s) => PaymentQrPage(tripId: s.pathParameters['id']!),
-              ),
-              GoRoute(
-                path: DriverRoutes.otpPattern,
+                path: AppRoutes.deliveryOtpPattern,
                 builder: (_, s) {
-                  final extra = s.extra is Map ? Map<String, dynamic>.from(s.extra as Map) : <String, dynamic>{};
+                  final extra = s.extra is Map
+                      ? Map<String, dynamic>.from(s.extra as Map)
+                      : <String, dynamic>{};
                   return DeliveryOtpPage(
                     tripId: s.pathParameters['id']!,
                     debugOtp: extra['debugOtp']?.toString(),
@@ -236,8 +248,6 @@ void rigTest(
     }
   });
 }
-
-
 
 /// Drags a [SwipeButton] (by its label) all the way across, as a driver
 /// would, and lets whatever it starts finish.

@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:geolocator/geolocator.dart';
 
+import 'package:mob_driver/core/l10n/tr.dart';
+
 class GeoPoint extends Equatable {
   const GeoPoint(this.latitude, this.longitude);
   final double latitude;
@@ -67,9 +69,10 @@ class GeolocatorLocationService implements DriverLocationService {
           intervalDuration: const Duration(seconds: 5),
           // Keeps location (and with it trip polling) alive when the driver
           // switches to their maps app to navigate.
-          foregroundNotificationConfig: const ForegroundNotificationConfig(
-            notificationTitle: 'MOB Driver is on duty',
-            notificationText: 'Sharing your location so trips can be assigned.',
+          foregroundNotificationConfig: ForegroundNotificationConfig(
+            notificationTitle: tr('MOB Driver is on duty'),
+            notificationText:
+                tr('Sharing your location so trips can be assigned.'),
             enableWakeLock: true,
             setOngoing: true,
           ),

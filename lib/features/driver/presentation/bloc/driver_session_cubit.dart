@@ -1,21 +1,23 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
-import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
-import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/repositories/driver_repository.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/features/driver/data/location/driver_location_service.dart';
+import 'package:mob_driver/features/driver/data/location/location_reporter.dart';
+import 'package:mob_driver/features/driver/data/realtime/driver_realtime.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/domain/entities/demand_hint.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_stats.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/my_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip_extras.dart';
+import 'package:mob_driver/features/driver/domain/entities/wallet.dart';
+import 'package:mob_driver/features/driver/domain/repositories/driver_repository.dart';
 
 enum SessionLoad { initial, loading, ready, failed }
 
@@ -143,6 +145,15 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
         _location = location,
         _realtime = realtime,
         super(const DriverSessionState()) {
+    _reporter = LocationReporter(
+      location: location,
+      heartbeat: pingInterval,
+      minMoveMeters: minMoveMeters,
+      minGap: minLocationGap,
+      send: _sendFix,
+      onAvailabilityChanged: (available) =>
+          _set(state.copyWith(locationUnavailable: !available)),
+    );
     final realtime = _realtime;
     if (realtime != null) {
       _pushSub = realtime.pushes.listen(_onPush);
@@ -153,6 +164,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   final DriverRepository _repo;
   final DriverLocationService _location;
   final DriverRealtime? _realtime;
+  late final LocationReporter _reporter;
 
   /// The longest the backend goes without hearing where an on-duty driver
   /// is, even when they haven't moved (it's how it knows they're still there).
@@ -184,13 +196,12 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   final _events = StreamController<DriverEvent>.broadcast();
   Stream<DriverEvent> get events => _events.stream;
 
-  GeoPoint? _lastPosition;
-  GeoPoint? get lastPosition => _lastPosition;
+  GeoPoint? get lastPosition => _reporter.position.value;
 
-  /// The driver's latest fix, for widgets that follow it live (the trip map).
+  /// The driver's latest fix, for widgets that follow it live (the maps).
   /// Kept out of [DriverSessionState] so a GPS tick doesn't rebuild every
   /// screen listening to the cubit.
-  final ValueNotifier<GeoPoint?> position = ValueNotifier<GeoPoint?>(null);
+  ValueListenable<GeoPoint?> get position => _reporter.position;
 
   /// When the current duty session began, for the dashboard's "Working time"
   /// clock. Kept out of [DriverSessionState] (like [position]) since nothing
@@ -199,28 +210,21 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// — an undercount, not a guess dressed up as fact.
   final ValueNotifier<DateTime?> dutyStartedAt = ValueNotifier<DateTime?>(null);
 
-  set _fix(GeoPoint? value) {
-    _lastPosition = value;
-    position.value = value;
-  }
+  /// The latest "go where the orders are" nudge from the server, while the
+  /// driver is waiting for one. Cleared once a trip comes or duty ends.
+  final ValueNotifier<DemandHint?> demandHint =
+      ValueNotifier<DemandHint?>(null);
 
-  StreamSubscription<GeoPoint>? _positionSub;
   StreamSubscription<RealtimePush>? _pushSub;
-  Timer? _pingTimer;
   Timer? _pollTimer;
   bool _working = false;
   bool _loading = false;
-  bool _pinging = false;
   bool _polling = false;
 
   /// A sync was asked for while one couldn't run (one in flight, or a trip
   /// action busy) — run it as soon as that's over rather than drop it, or a
   /// push landing at the wrong moment would be lost until the next one.
   bool _syncAgain = false;
-
-  /// The last fix the backend was told about, and when.
-  GeoPoint? _lastSent;
-  DateTime? _lastSentAt;
 
   /// Bumped around every driver-initiated trip action. A poll that started
   /// before an action finished carries stale data; comparing epochs lets it
@@ -275,7 +279,8 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       if (state.profile == null) {
         _set(state.copyWith(
           load: SessionLoad.failed,
-          loadError: profileFailure?.message ?? 'Could not load your profile.',
+          loadError:
+              profileFailure?.message ?? tr('Could not load your profile.'),
         ));
       }
       return;
@@ -324,8 +329,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   void reset() {
     _realtime?.stop();
     _stopBackgroundWork();
-    _fix = null;
+    _reporter.reset();
     dutyStartedAt.value = null;
+    demandHint.value = null;
     _epoch++;
     // Personal data must not outlive the session it belonged to.
     unawaited(_repo.clearCache());
@@ -443,11 +449,11 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     final position = await _location.currentPosition();
     if (position == null) {
       _set(state.copyWith(dutyBusy: false));
-      return const BusinessFailure(
-        'Could not get your location. Turn on GPS and try again.',
+      return BusinessFailure(
+        tr('Could not get your location. Turn on GPS and try again.'),
       );
     }
-    _fix = position;
+    _reporter.useFix(position);
 
     final (profile, failure) = await _repo.startDuty(
       vehicleId: vehicleId,
@@ -488,6 +494,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       locationUnavailable: false,
     ));
     dutyStartedAt.value = null;
+    demandHint.value = null;
     if (state.activeTrip == null) _stopBackgroundWork();
     return null;
   }
@@ -537,8 +544,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
 
   /// Where the driver is right now, for stamping a photo: the latest fix
   /// from the duty stream, else a fresh one. Null when none can be had.
-  Future<GeoPoint?> currentFix() async =>
-      _lastPosition ?? await _location.currentPosition();
+  Future<GeoPoint?> currentFix() => _reporter.currentFix();
 
   Future<(Trip?, AppFailure?)> resetItem(String tripId, String itemId) =>
       _tripAction(() => _repo.resetItem(tripId, itemId));
@@ -564,7 +570,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     Future<(Trip?, AppFailure?)> Function() call,
   ) async {
     if (state.tripBusy) {
-      return (null, const BusinessFailure('Please wait a moment…'));
+      return (null, BusinessFailure(tr('Please wait a moment…')));
     }
     _epoch++;
     _set(state.copyWith(tripBusy: true));
@@ -597,7 +603,8 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// delivery OTP), then refreshes the trip so the UI moves on to the OTP
   /// step. If the backend says it was already paid, the trip is refreshed
   /// anyway — the local copy was simply stale.
-  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String tripId, {String method = 'qr'}) async {
+  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String tripId,
+      {String method = 'qr'}) async {
     _epoch++;
     final (sent, failure) = await _repo.collectPayment(tripId, method: method);
     if (sent != null || failure?.code == 'ALREADY_PAID') {
@@ -635,11 +642,10 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
 
   /// Route from where the driver is now to the trip's next stop.
   Future<(NavRoute?, AppFailure?)> navigation(String tripId) async {
-    final position = _lastPosition ?? await _location.currentPosition();
+    final position = await _reporter.currentFix();
     if (position == null) {
-      return (null, const BusinessFailure('Your location is not available.'));
+      return (null, BusinessFailure(tr('Your location is not available.')));
     }
-    _fix = position;
     return _repo.navigation(
       tripId,
       latitude: position.latitude,
@@ -652,90 +658,24 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   void _startBackgroundWork() {
     if (_working || isClosed) return;
     _working = true;
-    _listenToPositions();
-    _pingTimer = Timer.periodic(pingInterval, (_) => _pingLocation());
+    _reporter.start();
     // A safety net, not the mechanism: it does nothing while pushes are
     // getting through.
     _pollTimer = Timer.periodic(pollInterval, (_) {
       if (!(_realtime?.isLive ?? false)) unawaited(_pollActiveTrip());
     });
-    unawaited(_pingLocation());
   }
 
   void _stopBackgroundWork() {
     _working = false;
-    _pingTimer?.cancel();
+    _reporter.stop();
     _pollTimer?.cancel();
-    _pingTimer = null;
     _pollTimer = null;
-    _positionSub?.cancel();
-    _positionSub = null;
-    _lastSent = null;
-    _lastSentAt = null;
-  }
-
-  void _listenToPositions() {
-    _positionSub?.cancel();
-    _positionSub = _location.positionStream().listen(
-      (point) {
-        _fix = point;
-        if (state.locationUnavailable) {
-          _set(state.copyWith(locationUnavailable: false));
-        }
-        if (_movedEnough(point)) unawaited(_sendFix(point));
-      },
-      onError: (Object _) {
-        if (!state.locationUnavailable) {
-          _set(state.copyWith(locationUnavailable: true));
-        }
-      },
-      // A stream that ends (e.g. after the driver revoked permission) is
-      // re-opened on the next ping tick rather than left dead.
-      onDone: () => _positionSub = null,
-    );
-  }
-
-  Future<void> _pingLocation() async {
-    if (!_working || _pinging || isClosed) return;
-    if (_positionSub == null) _listenToPositions();
-
-    _pinging = true;
-    try {
-      var position = _lastPosition;
-      if (position == null) {
-        position = await _location.currentPosition();
-        if (position == null) {
-          if (!state.locationUnavailable) {
-            _set(state.copyWith(locationUnavailable: true));
-          }
-          return;
-        }
-        _fix = position;
-        // Getting a fix means the GPS/permission problem is over.
-        if (state.locationUnavailable) {
-          _set(state.copyWith(locationUnavailable: false));
-        }
-      }
-      await _sendFix(position);
-    } finally {
-      _pinging = false;
-    }
-  }
-
-  /// Whether [point] is far enough from what the backend last heard, and
-  /// long enough after it, to send now rather than at the next heartbeat.
-  bool _movedEnough(GeoPoint point) {
-    final sent = _lastSent, at = _lastSentAt;
-    if (!_working || sent == null || at == null) return false;
-    if (DateTime.now().difference(at) < minLocationGap) return false;
-    return _metersBetween(sent, point) >= minMoveMeters;
   }
 
   /// Over the socket when it's up (no extra request at all), else REST.
   /// Failures are dropped: the next movement or heartbeat sends a fresher fix.
   Future<void> _sendFix(GeoPoint position) async {
-    _lastSent = position;
-    _lastSentAt = DateTime.now();
     final viaSocket =
         _realtime?.sendLocation(position.latitude, position.longitude) ?? false;
     if (viaSocket) return;
@@ -743,18 +683,6 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       latitude: position.latitude,
       longitude: position.longitude,
     );
-  }
-
-  static double _metersBetween(GeoPoint a, GeoPoint b) {
-    const earth = 6371000.0;
-    double rad(double deg) => deg * math.pi / 180;
-    final dLat = rad(b.latitude - a.latitude);
-    final dLng = rad(b.longitude - a.longitude);
-    final h = math.pow(math.sin(dLat / 2), 2) +
-        math.cos(rad(a.latitude)) *
-            math.cos(rad(b.latitude)) *
-            math.pow(math.sin(dLng / 2), 2);
-    return 2 * earth * math.asin(math.sqrt(h));
   }
 
   // -- pushes --------------------------------------------------------------
@@ -769,6 +697,8 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
         }
       case ProfileChanged():
         unawaited(load(silent: true));
+      case HintReceived(:final hint):
+        if (state.isOnline && state.activeTrip == null) demandHint.value = hint;
     }
   }
 
@@ -820,6 +750,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     if (serverTrip != null) {
       if (previous?.id != serverTrip.id) {
         _set(state.copyWith(activeTrip: serverTrip));
+        demandHint.value = null;
         _events.add(NewTripAssigned(serverTrip));
       } else if (serverTrip != previous) {
         _set(state.copyWith(activeTrip: serverTrip));
@@ -846,8 +777,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     _realtime?.stop();
     _tripChanges.close();
     _events.close();
-    position.dispose();
+    _reporter.dispose();
     dutyStartedAt.dispose();
+    demandHint.dispose();
     return super.close();
   }
 }

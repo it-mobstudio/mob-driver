@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
+import 'package:mob_driver/core/utils/json_readers.dart';
 
 class DriverVehicle extends Equatable {
   const DriverVehicle({

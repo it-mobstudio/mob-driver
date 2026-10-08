@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/geo_stamp.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
-import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/theme/app_colors.dart';
+import 'package:mob_driver/core/utils/image_decode.dart';
+import 'package:mob_driver/core/widgets/progress_overlay.dart';
+import 'package:mob_driver/core/widgets/top_snack_bar.dart';
+import 'package:mob_driver/features/driver/data/location/driver_location_service.dart';
+import 'package:mob_driver/features/driver/data/media/geo_stamp.dart';
+import 'package:mob_driver/features/driver/data/media/photo_capture.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
 
 /// A picture from the network with a quiet fallback — used for item pictures,
 /// proof photos and document scans, which may be missing, slow, or on a host
@@ -28,8 +31,8 @@ class NetworkThumb extends StatelessWidget {
     final fallback = Container(
       width: size,
       height: size,
-      color: const Color(0xFFF1F4F8),
-      child: Icon(fallbackIcon, color: DriverColors.muted, size: size * .42),
+      color: AppColors.surfaceMuted,
+      child: Icon(fallbackIcon, color: AppColors.muted, size: size * .42),
     );
     final source = url;
     return ClipRRect(
@@ -102,15 +105,15 @@ class PhotoTile extends StatelessWidget {
                 height: height,
                 decoration: BoxDecoration(
                   color: _showError
-                      ? const Color(0xFFFFF5F5)
-                      : const Color(0xFFF7F9FC),
+                      ? AppColors.redSoft
+                      : AppColors.surfaceMuted,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: _filled
-                        ? DriverColors.green
+                        ? AppColors.green
                         : _showError
-                            ? DriverColors.red
-                            : DriverColors.line,
+                            ? AppColors.red
+                            : AppColors.line,
                     width: _filled || _showError ? 1.6 : 1.2,
                   ),
                 ),
@@ -128,8 +131,8 @@ class PhotoTile extends StatelessWidget {
                 ? Padding(
                     padding: const EdgeInsets.only(top: 6, left: 4),
                     child: Text(errorText!,
-                        style: const TextStyle(
-                            color: DriverColors.red,
+                        style: TextStyle(
+                            color: AppColors.red,
                             fontSize: 12,
                             fontWeight: FontWeight.w600)),
                   )
@@ -141,18 +144,17 @@ class PhotoTile extends StatelessWidget {
   Widget _emptyView() => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.add_a_photo_outlined,
-              color: _showError ? DriverColors.red : DriverColors.blue,
-              size: 26),
+              color: _showError ? AppColors.red : AppColors.blue, size: 26),
           const SizedBox(height: 6),
           Text(label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: DriverColors.ink,
+              style: TextStyle(
+                  color: AppColors.ink,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700)),
           if (optional)
-            const Text('Optional',
-                style: TextStyle(color: DriverColors.muted, fontSize: 11)),
+            Text(tr('Optional'),
+                style: TextStyle(color: AppColors.muted, fontSize: 11)),
         ]),
       );
 
@@ -167,9 +169,9 @@ class PhotoTile extends StatelessWidget {
           networkUrl!,
           fit: BoxFit.cover,
           cacheWidth: decodeWidth,
-          errorBuilder: (_, __, ___) => const Center(
+          errorBuilder: (_, __, ___) => Center(
               child: Icon(Icons.image_not_supported_outlined,
-                  color: DriverColors.muted)),
+                  color: AppColors.muted)),
         ),
       Positioned(
         left: 8,
@@ -183,7 +185,10 @@ class PhotoTile extends StatelessWidget {
             const Icon(Icons.check_circle_rounded,
                 color: Colors.white, size: 13),
             const SizedBox(width: 4),
-            Text(enabled ? '$label · Tap to change' : label,
+            Text(
+                enabled
+                    ? tr('{label} · Tap to change', {'label': label})
+                    : label,
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10.5,
@@ -212,7 +217,12 @@ Future<CapturedPhoto?> takeGeoPhoto(
     }
   }
 
+  // Both looked up while the camera is open, so they're usually ready the
+  // moment the photo is.
   final fix = locate();
+  final address = fix.then((p) => p == null
+      ? Future<String?>.value()
+      : capture.addressAt(p.latitude, p.longitude));
   final CapturedPhoto? photo;
   try {
     photo = await capture.takePhoto();
@@ -220,22 +230,28 @@ Future<CapturedPhoto?> takeGeoPhoto(
     fail(e.message);
     return null;
   }
-  if (photo == null) return null;
-  final position = await fix;
-  if (position == null) {
-    fail(
-        'Turn on location — proof photos are stamped with where they were taken.');
-    return null;
-  }
-  return capture.geoStamp(
-    photo,
-    GeoStamp(
-      latitude: position.latitude,
-      longitude: position.longitude,
-      takenAt: DateTime.now(),
-      caption: caption,
-    ),
-  );
+  if (photo == null || !context.mounted) return null;
+  final shot = photo;
+
+  return runWithProgress(context, tr('Preparing photo…'), () async {
+    final position = await fix;
+    if (position == null) {
+      fail(tr(
+          'Turn on location — proof photos are stamped with where they were taken.'));
+      return null;
+    }
+    final stamped = await capture.geoStamp(
+      shot,
+      GeoStamp(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        takenAt: DateTime.now(),
+        caption: caption,
+        address: await address,
+      ),
+    );
+    return capture.optimizeForUpload(stamped);
+  });
 }
 
 /// "Take a photo" or "Choose from gallery" — for document scans, which a
@@ -250,7 +266,7 @@ Future<CapturedPhoto?> chooseDocumentPhoto(
     context: context,
     backgroundColor: Colors.transparent,
     builder: (ctx) => Material(
-      color: Colors.white,
+      color: AppColors.card,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
       child: SafeArea(
         child: Padding(
@@ -258,18 +274,17 @@ Future<CapturedPhoto?> chooseDocumentPhoto(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             ListTile(
               key: const Key('photo_source_camera'),
-              leading: const Icon(Icons.photo_camera_outlined,
-                  color: DriverColors.blue),
-              title: const Text('Take a photo',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              leading: Icon(Icons.photo_camera_outlined, color: AppColors.blue),
+              title: Text(tr('Take a photo'),
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
               onTap: () => Navigator.pop(ctx, true),
             ),
             ListTile(
               key: const Key('photo_source_gallery'),
-              leading: const Icon(Icons.photo_library_outlined,
-                  color: DriverColors.blue),
-              title: const Text('Choose from gallery',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              leading:
+                  Icon(Icons.photo_library_outlined, color: AppColors.blue),
+              title: Text(tr('Choose from gallery'),
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
               onTap: () => Navigator.pop(ctx, false),
             ),
           ]),
@@ -279,7 +294,11 @@ Future<CapturedPhoto?> chooseDocumentPhoto(
   );
   if (source == null || !context.mounted) return null;
   try {
-    return source ? await capture.takePhoto() : await capture.pickFromGallery();
+    final photo =
+        source ? await capture.takePhoto() : await capture.pickFromGallery();
+    if (photo == null || !context.mounted) return null;
+    return await runWithProgress(context, tr('Preparing photo…'),
+        () => capture.optimizeForUpload(photo));
   } on PhotoCaptureException catch (e) {
     if (context.mounted) {
       TopSnackBar.show(context,

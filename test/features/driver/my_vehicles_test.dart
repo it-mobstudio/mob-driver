@@ -1,20 +1,21 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
 import 'package:go_router/go_router.dart';
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
-import 'package:m_o_b_demand_side/features/driver/data/datasources/driver_remote_datasource.dart';
-import 'package:m_o_b_demand_side/features/driver/data/repositories/driver_repository_impl.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/my_vehicles_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/profile_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/vehicle_form_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/vehicle_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/vehicle_picker_sheet.dart';
+import 'package:mob_driver/app/routes.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/features/driver/data/datasources/driver_remote_datasource.dart';
+import 'package:mob_driver/features/driver/data/repositories/driver_repository_impl.dart';
+import 'package:mob_driver/features/driver/domain/driver_limits.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/my_vehicle.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/profile_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/vehicles/my_vehicles_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/vehicles/vehicle_form_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/vehicles/vehicle_page.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/duty/vehicle_picker_sheet.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fonts.dart';
@@ -54,10 +55,10 @@ Widget hostVehicles(TestRig rig, {Widget? home}) => rig.host(
       home ?? const MyVehiclesPage(),
       routes: [
         GoRoute(
-            path: DriverRoutes.newVehicle,
+            path: AppRoutes.newVehicle,
             builder: (_, __) => VehicleFormPage(capture: rig.capture)),
         GoRoute(
-          path: DriverRoutes.editVehiclePattern,
+          path: AppRoutes.editVehiclePattern,
           builder: (_, s) => VehicleFormPage(
             vehicleId: s.pathParameters['id'],
             initial: s.extra is MyVehicle ? s.extra as MyVehicle : null,
@@ -65,7 +66,7 @@ Widget hostVehicles(TestRig rig, {Widget? home}) => rig.host(
           ),
         ),
         GoRoute(
-            path: DriverRoutes.myVehicles,
+            path: AppRoutes.myVehicles,
             builder: (_, __) => const MyVehiclesPage()),
       ],
     );
@@ -292,13 +293,15 @@ void main() {
     rigTest('the add button stops at the limit and says why',
         (tester, rig) async {
       rig.repo.myVehiclesValue.addAll([
-        for (var i = 0; i < kMaxOwnVehicles; i++)
+        for (var i = 0; i < DriverLimits.maxOwnVehicles; i++)
           mine(id: 'v$i', plate: 'KA01AA${1000 + i}', photos: 0)
       ]);
       await tester.pumpWidget(hostVehicles(rig));
       await tester.pumpAndSettle();
 
-      expect(find.text('You have $kMaxOwnVehicles vehicles (the limit)'),
+      expect(
+          find.text(
+              'You have ${DriverLimits.maxOwnVehicles} vehicles (the limit)'),
           findsOneWidget);
       expect(
           tester
@@ -366,8 +369,16 @@ void main() {
       expect(find.text('Add a vehicle'), findsOneWidget,
           reason: 'the form\'s title');
       // Each type is a picture card: its name, then category and capacity.
-      expect(find.descendant(of: find.byKey(const Key('vehicle_type_vt-bike')), matching: find.text('Bike')), findsOneWidget);
-      expect(find.descendant(of: find.byKey(const Key('vehicle_type_vt-tempo')), matching: find.text('Tempo')), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(const Key('vehicle_type_vt-bike')),
+              matching: find.text('Bike')),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(const Key('vehicle_type_vt-tempo')),
+              matching: find.text('Tempo')),
+          findsOneWidget);
 
       await tester.tap(find.byKey(const Key('vehicle_type_vt-bike')));
       await tester.pump();
@@ -417,7 +428,7 @@ void main() {
 
     rigTest('the add-picture slot goes away at the limit', (tester, rig) async {
       await openForm(tester, rig);
-      for (var i = 0; i < kMaxVehiclePhotos; i++) {
+      for (var i = 0; i < DriverLimits.maxVehiclePhotos; i++) {
         await pickPhoto(tester);
       }
       expect(find.text('PICTURES  ·  6 OF 6'), findsOneWidget);
@@ -453,23 +464,34 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.textContaining('looks too short'), findsWidgets);
-      expect(find.text('Enter the capacity as a number above 0, or leave it empty.'), findsWidgets);
+      expect(
+          find.text(
+              'Enter the capacity as a number above 0, or leave it empty.'),
+          findsWidgets);
       expect(rig.repo.vehicleCalls, isEmpty);
 
       await tester.enterText(find.byKey(const Key('vehicle_capacity')), '');
       await tester.pump();
-      expect(find.byWidgetPredicate((w) => w is TextField && w.decoration?.errorText == 'Enter the capacity as a number above 0, or leave it empty.'),
-          findsNothing, reason: 'clears as it is fixed');
+      expect(
+          find.byWidgetPredicate((w) =>
+              w is TextField &&
+              w.decoration?.errorText ==
+                  'Enter the capacity as a number above 0, or leave it empty.'),
+          findsNothing,
+          reason: 'clears as it is fixed');
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
     });
 
-    rigTest('while signing up, a vehicle needs at least one picture', (tester, rig) async {
-      rig.repo.profileValue = DriverProfile.fromJson(profileJson(eligible: false, onboarding: 'vehicle_required'));
+    rigTest('while signing up, a vehicle needs at least one picture',
+        (tester, rig) async {
+      rig.repo.profileValue = DriverProfile.fromJson(
+          profileJson(eligible: false, onboarding: 'vehicle_required'));
       await rig.cubit.load();
       await openForm(tester, rig);
       await tester.tap(find.byKey(const Key('vehicle_type_vt-bike')));
-      await tester.enterText(find.byKey(const Key('vehicle_plate')), 'KA05MN7788');
+      await tester.enterText(
+          find.byKey(const Key('vehicle_plate')), 'KA05MN7788');
       await tester.tap(find.byKey(const Key('vehicle_save')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
@@ -582,8 +604,7 @@ void main() {
       rig.repo.profileValue = fakeProfile(online: true);
       await rig.cubit.load();
 
-      await tester
-          .pumpWidget(hostVehicles(rig, home: const DriverVehiclePage()));
+      await tester.pumpWidget(hostVehicles(rig, home: const VehiclePage()));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('my_vehicles_entry')));
       await tester.tap(find.byKey(const Key('my_vehicles_entry')));
@@ -631,8 +652,7 @@ void main() {
         (tester, rig) async {
       rig.repo.profileValue = fakeProfile(online: true);
       await rig.cubit.load();
-      await tester
-          .pumpWidget(rig.host(DriverProfilePage(capture: rig.capture)));
+      await tester.pumpWidget(rig.host(ProfilePage(capture: rig.capture)));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('profile_photo')));
@@ -653,8 +673,7 @@ void main() {
     rigTest('backing out of the picker changes nothing', (tester, rig) async {
       rig.repo.profileValue = fakeProfile(online: true);
       await rig.cubit.load();
-      await tester
-          .pumpWidget(rig.host(DriverProfilePage(capture: rig.capture)));
+      await tester.pumpWidget(rig.host(ProfilePage(capture: rig.capture)));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('profile_photo')));

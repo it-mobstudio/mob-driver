@@ -7,7 +7,13 @@ import 'package:flutter/services.dart';
 /// real Inter font makes widget tests measure text the way the app does.
 Future<void> loadAppFonts() async {
   final loader = FontLoader('Inter');
-  for (final file in const ['Regular', 'Medium', 'SemiBold', 'Bold']) {
+  for (final file in const [
+    'Regular',
+    'Medium',
+    'SemiBold',
+    'Bold',
+    'ExtraBold'
+  ]) {
     loader.addFont(rootBundle.load('assets/fonts/Inter-$file.ttf'));
   }
   await loader.load();

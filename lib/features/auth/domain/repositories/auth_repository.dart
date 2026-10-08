@@ -1,4 +1,4 @@
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
 
 class OtpRequestResult {
   const OtpRequestResult({required this.message, this.debugOtp});

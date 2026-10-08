@@ -24,18 +24,21 @@ class ScriptedAdapter implements HttpClientAdapter {
   ) async {
     requests.add(options);
     final route = _routes['${options.method} ${options.path}'];
-    final (body, status) =
-        route == null ? ('{"detail":"no route"}', 404) : (_encode(route.body), route.status);
+    final (body, status) = route == null
+        ? ('{"detail":"no route"}', 404)
+        : (_encode(route.body), route.status);
     return ResponseBody.fromString(body, status, headers: {
       Headers.contentTypeHeader: [Headers.jsonContentType],
     });
   }
 
-  static String _encode(dynamic body) => body is String ? body : jsonEncode(body);
+  static String _encode(dynamic body) =>
+      body is String ? body : jsonEncode(body);
 
   @override
   void close({bool force = false}) {}
 }
 
 Dio scriptedDio(ScriptedAdapter adapter) =>
-    Dio(BaseOptions(baseUrl: 'http://test/api/v1/'))..httpClientAdapter = adapter;
+    Dio(BaseOptions(baseUrl: 'http://test/api/v1/'))
+      ..httpClientAdapter = adapter;

@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/item_widgets.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
+import 'package:mob_driver/app/routes.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/core/theme/app_colors.dart';
+import 'package:mob_driver/features/driver/data/media/photo_capture.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/trip/item_status.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fonts.dart';
@@ -35,9 +35,9 @@ Future<Trip> openTripPage(
       invoiceUrl: invoice, invoiceNumber: number, cod: cod);
   await rig.cubit.load();
   await tester.pumpWidget(rig.app(switch (location) {
-    'items' => DriverRoutes.items(trip.id),
-    'details' => DriverRoutes.orderDetails(trip.id, fromTrip: true),
-    _ => DriverRoutes.trip(trip.id),
+    'items' => AppRoutes.items(trip.id),
+    'details' => AppRoutes.orderDetails(trip.id, fromTrip: true),
+    _ => AppRoutes.trip(trip.id),
   }));
   await tester.pumpAndSettle();
   return trip;
@@ -56,8 +56,8 @@ bool tappable(WidgetTester tester, String key) {
   final widget =
       tester.widget(button.evaluate().isEmpty ? find.byKey(Key(key)) : button);
   return switch (widget) {
-    ElevatedButton b => b.onPressed != null,
-    OutlinedButton b => b.onPressed != null,
+    final ElevatedButton b => b.onPressed != null,
+    final OutlinedButton b => b.onPressed != null,
     _ => true,
   };
 }
@@ -115,7 +115,7 @@ void main() {
       rig.repo.activeTripValue = trip;
       rig.repo.tripsById[trip.id] = trip;
       await rig.cubit.load();
-      await tester.pumpWidget(rig.app(DriverRoutes.trip(trip.id)));
+      await tester.pumpWidget(rig.app(AppRoutes.trip(trip.id)));
       await tester.pumpAndSettle();
 
       await swipe(tester, 'Deliver order');
@@ -371,7 +371,7 @@ void main() {
       rig.repo.profileValue = fakeProfile();
       rig.repo.tripsById[done.id] = done;
       await rig.cubit.load();
-      await tester.pumpWidget(rig.app(DriverRoutes.items(done.id)));
+      await tester.pumpWidget(rig.app(AppRoutes.items(done.id)));
       await tester.pumpAndSettle();
 
       expect(find.text('Items'), findsOneWidget,
@@ -453,8 +453,8 @@ void main() {
           '1 delivered · 1 problem · 1 to check');
       expect(find.textContaining('Hand each item over'), findsNothing);
       // Bar order follows the list: delivered, problem, still to check.
-      expect(barColors(tester),
-          [DriverColors.green, DriverColors.red, DriverColors.line]);
+      expect(
+          barColors(tester), [AppColors.green, AppColors.red, AppColors.line]);
     });
 
     rigTest('how many, and what to watch out for, are impossible to miss',
@@ -489,7 +489,8 @@ void main() {
   group('the invoice', () {
     rigTest('is offered with its number, and only when the company sent one',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
+      await openTripPage(tester, rig,
+          invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       expect(find.byKey(const Key('invoice_card')), findsOneWidget);
       expect(textOf(tester, 'invoice_title'), 'Invoice INV-1001');
       for (final action in ['download', 'whatsapp', 'share']) {
@@ -508,7 +509,8 @@ void main() {
     });
 
     rigTest('Download opens the invoice link', (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
+      await openTripPage(tester, rig,
+          invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       await tester.tap(find.byKey(const Key('invoice_download')));
       await tester.pumpAndSettle();
       expect(rig.invoice.downloads, [invoiceUrl]);
@@ -517,7 +519,8 @@ void main() {
     rigTest(
         'WhatsApp opens the customer\'s chat with a message carrying the link',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
+      await openTripPage(tester, rig,
+          invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       await tester.tap(find.byKey(const Key('invoice_whatsapp')));
       await tester.pumpAndSettle();
 
@@ -530,7 +533,8 @@ void main() {
     rigTest(
         'Share hands over the file, named after the company\'s own file name',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
+      await openTripPage(tester, rig,
+          invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       await tester.tap(find.byKey(const Key('invoice_share')));
       await tester.pumpAndSettle();
 
@@ -542,7 +546,8 @@ void main() {
 
     rigTest('a failure is explained and the buttons come back',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
+      await openTripPage(tester, rig,
+          invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       rig.invoice.problem = 'WhatsApp isn’t available on this phone.';
 
       await tester.tap(find.byKey(const Key('invoice_whatsapp')));
@@ -557,7 +562,8 @@ void main() {
     rigTest(
         'while a file is being fetched, the buttons are locked and one shows progress',
         (tester, rig) async {
-      await openTripPage(tester, rig, invoice: invoiceUrl, number: 'INV-1001', location: 'details');
+      await openTripPage(tester, rig,
+          invoice: invoiceUrl, number: 'INV-1001', location: 'details');
       rig.invoice.gate = Completer<void>();
 
       await tester.tap(find.byKey(const Key('invoice_share')));
@@ -589,8 +595,8 @@ void main() {
       rig.repo.profileValue = fakeProfile();
       rig.repo.tripsById[done.id] = done;
       await rig.cubit.load();
-      await tester.pumpWidget(
-          rig.app(DriverRoutes.orderDetails(done.id, fromTrip: true)));
+      await tester
+          .pumpWidget(rig.app(AppRoutes.orderDetails(done.id, fromTrip: true)));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('invoice_card')), findsOneWidget);
@@ -608,7 +614,7 @@ void main() {
       rig.repo.profileValue = fakeProfile();
       rig.repo.tripsById[done.id] = done;
       await rig.cubit.load();
-      await tester.pumpWidget(rig.app(DriverRoutes.trip(done.id)));
+      await tester.pumpWidget(rig.app(AppRoutes.trip(done.id)));
       await tester.pumpAndSettle();
 
       expect(find.text('You earned'), findsOneWidget);
@@ -632,7 +638,7 @@ void main() {
         null
       );
       await rig.cubit.load();
-      await tester.pumpWidget(rig.app(DriverRoutes.trip(trip.id)));
+      await tester.pumpWidget(rig.app(AppRoutes.trip(trip.id)));
       await tester.pumpAndSettle();
 
       await swipe(tester, 'Deliver order');

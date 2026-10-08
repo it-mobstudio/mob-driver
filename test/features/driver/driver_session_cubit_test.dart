@@ -1,16 +1,15 @@
 import 'dart:async';
-
-import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
-import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
 import 'dart:typed_data';
 
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/features/driver/data/location/driver_location_service.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_stats.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/domain/entities/wallet.dart';
+import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
 
 import '../../support/fakes.dart';
 
@@ -31,6 +30,15 @@ void main() {
   Future<void> settle([int ms = 100]) =>
       Future<void>.delayed(Duration(milliseconds: ms));
 
+  /// Waits (up to a second) for [condition], instead of guessing how long
+  /// the async work takes on a busy machine.
+  Future<void> eventually(bool Function() condition) async {
+    for (var i = 0; i < 100 && !condition(); i++) {
+      await settle(10);
+    }
+    expect(condition(), isTrue);
+  }
+
   setUp(() {
     repo = FakeDriverRepository();
     location = FakeLocationService();
@@ -45,7 +53,9 @@ void main() {
   });
 
   group('load', () {
-    test('populates profile, stats and no active trip; stays idle while offline', () async {
+    test(
+        'populates profile, stats and no active trip; stays idle while offline',
+        () async {
       await cubit.load();
 
       expect(cubit.state.load, SessionLoad.ready);
@@ -53,7 +63,8 @@ void main() {
       expect(cubit.state.activeTrip, isNull);
       expect(cubit.state.isOnline, isFalse);
       await settle();
-      expect(repo.pings, isEmpty, reason: 'an offline driver must not be pinging');
+      expect(repo.pings, isEmpty,
+          reason: 'an offline driver must not be pinging');
     });
 
     test('a profile failure on first load is surfaced', () async {
@@ -71,14 +82,16 @@ void main() {
       expect(cubit.state.profile, isNotNull);
     });
 
-    test('resumes tracking when the server says the driver is already online', () async {
+    test('resumes tracking when the server says the driver is already online',
+        () async {
       repo.profileValue = fakeProfile(online: true);
       await cubit.load();
       await settle();
       expect(repo.pings, isNotEmpty);
     });
 
-    test('an existing trip at startup is shown without a "new trip" alert', () async {
+    test('an existing trip at startup is shown without a "new trip" alert',
+        () async {
       repo.profileValue = fakeProfile(online: true);
       repo.activeTripValue = fakeTrip();
       await cubit.load();
@@ -89,9 +102,12 @@ void main() {
   });
 
   group('cache-first first paint', () {
-    test('paints the cached profile and stats while the network is still answering', () async {
+    test(
+        'paints the cached profile and stats while the network is still answering',
+        () async {
       repo.cachedProfile = fakeProfile();
-      repo.cachedStats = const DriverStats(today: PeriodStats(tripsCompleted: 5));
+      repo.cachedStats =
+          const DriverStats(today: PeriodStats(tripsCompleted: 5));
       repo.profileGate = Completer<void>(); // a slow network
 
       final loading = cubit.load();
@@ -117,13 +133,16 @@ void main() {
       expect(cubit.state.profile?.isOnline, isTrue);
     });
 
-    test('a cached "online" does NOT start GPS pings — only the backend\'s answer does', () async {
+    test(
+        'a cached "online" does NOT start GPS pings — only the backend\'s answer does',
+        () async {
       repo.cachedProfile = fakeProfile(online: true);
       repo.profileGate = Completer<void>();
 
       final loading = cubit.load();
       await settle(120);
-      expect(repo.pings, isEmpty, reason: 'nothing has been confirmed with the server yet');
+      expect(repo.pings, isEmpty,
+          reason: 'nothing has been confirmed with the server yet');
 
       repo.profileValue = fakeProfile(); // server says: actually offline
       repo.profileGate!.complete();
@@ -132,7 +151,8 @@ void main() {
       expect(repo.pings, isEmpty);
     });
 
-    test('with no network AND a cache, the driver still sees their dashboard', () async {
+    test('with no network AND a cache, the driver still sees their dashboard',
+        () async {
       repo.cachedProfile = fakeProfile();
       repo.profileFailure = const NetworkFailure();
 
@@ -155,7 +175,9 @@ void main() {
       expect(repo.clearCacheCalls, 1);
     });
 
-    test('a trip call that FAILS still ends the placeholder (best knowledge, not forever)', () async {
+    test(
+        'a trip call that FAILS still ends the placeholder (best knowledge, not forever)',
+        () async {
       repo.activeTripFailure = const NetworkFailure();
       await cubit.load();
       expect(cubit.state.tripKnown, isTrue);
@@ -163,7 +185,8 @@ void main() {
   });
 
   group('duty', () {
-    test('goOnline sends the first GPS fix with the vehicle and starts pinging', () async {
+    test('goOnline sends the first GPS fix with the vehicle and starts pinging',
+        () async {
       await cubit.load();
 
       final failure = await cubit.goOnline('v-1');
@@ -177,7 +200,9 @@ void main() {
       expect(repo.pings.first.lat, closeTo(12.9716, 1e-9));
     });
 
-    test('goOnline refuses (without calling the backend) when there is no GPS fix', () async {
+    test(
+        'goOnline refuses (without calling the backend) when there is no GPS fix',
+        () async {
       await cubit.load();
       location.fix = null;
 
@@ -189,10 +214,12 @@ void main() {
       expect(cubit.state.dutyBusy, isFalse);
     });
 
-    test('a backend rejection is returned and leaves the driver offline', () async {
+    test('a backend rejection is returned and leaves the driver offline',
+        () async {
       await cubit.load();
-      repo.startDutyFailure =
-          const BusinessFailure('This vehicle is being used by another driver.', code: 'VEHICLE_IN_USE');
+      repo.startDutyFailure = const BusinessFailure(
+          'This vehicle is being used by another driver.',
+          code: 'VEHICLE_IN_USE');
 
       final failure = await cubit.goOnline('v-1');
 
@@ -216,7 +243,8 @@ void main() {
       expect(repo.pings.length, pingsAfterStop);
     });
 
-    test('goOffline is refused while a trip is active and keeps tracking', () async {
+    test('goOffline is refused while a trip is active and keeps tracking',
+        () async {
       repo.profileValue = fakeProfile(online: true);
       repo.activeTripValue = fakeTrip();
       await cubit.load();
@@ -238,21 +266,22 @@ void main() {
       expect(repo.pings.last.lat, closeTo(12.99, 1e-9));
     });
 
-    test('a failing GPS stream flags the location as unavailable, and recovers', () async {
+    test('a failing GPS stream flags the location as unavailable, and recovers',
+        () async {
       await cubit.load();
       await cubit.goOnline('v-1');
 
       location.stream.addError(Exception('GPS off'));
-      await settle(20);
-      expect(cubit.state.locationUnavailable, isTrue);
+      await eventually(() => cubit.state.locationUnavailable);
 
       location.stream.add(const GeoPoint(12.97, 77.59));
-      await settle(20);
-      expect(cubit.state.locationUnavailable, isFalse);
+      await eventually(() => !cubit.state.locationUnavailable);
     });
   });
 
-  test('a driver resumed as online with no location permission is flagged, then recovers once a fix is possible', () async {
+  test(
+      'a driver resumed as online with no location permission is flagged, then recovers once a fix is possible',
+      () async {
     location.fix = null; // permission not granted yet
     repo.profileValue = fakeProfile(online: true);
     await cubit.load();
@@ -260,7 +289,8 @@ void main() {
     expect(cubit.state.locationUnavailable, isTrue);
     expect(repo.pings, isEmpty);
 
-    location.fix = const GeoPoint(12.97, 77.59); // they tapped Fix and allowed it
+    location.fix =
+        const GeoPoint(12.97, 77.59); // they tapped Fix and allowed it
     await settle(120);
 
     expect(cubit.state.locationUnavailable, isFalse);
@@ -273,15 +303,18 @@ void main() {
       await cubit.load();
     });
 
-    test('a trip assigned while online raises exactly one NewTripAssigned', () async {
+    test('a trip assigned while online raises exactly one NewTripAssigned',
+        () async {
       repo.activeTripValue = fakeTrip();
       await settle(150); // several polls
 
-      expect(cubit.state.activeTrip?.id, '604807b6-7053-4f5f-bf99-163eb9620dc3');
+      expect(
+          cubit.state.activeTrip?.id, '604807b6-7053-4f5f-bf99-163eb9620dc3');
       expect(events.whereType<NewTripAssigned>(), hasLength(1));
     });
 
-    test('a network error during a poll is not mistaken for the trip vanishing', () async {
+    test('a network error during a poll is not mistaken for the trip vanishing',
+        () async {
       repo.activeTripValue = fakeTrip();
       await settle(80);
       events.clear();
@@ -294,7 +327,8 @@ void main() {
       expect(events, isEmpty);
     });
 
-    test('progress made elsewhere is reflected (status change, no new alert)', () async {
+    test('progress made elsewhere is reflected (status change, no new alert)',
+        () async {
       repo.activeTripValue = fakeTrip();
       await settle(80);
       events.clear();
@@ -306,13 +340,18 @@ void main() {
       expect(events, isEmpty);
     });
 
-    test('the company cancelling the trip raises TripEndedExternally with its final state', () async {
+    test(
+        'the company cancelling the trip raises TripEndedExternally with its final state',
+        () async {
       repo.activeTripValue = fakeTrip();
       await settle(80);
       events.clear();
 
-      repo.tripsById['604807b6-7053-4f5f-bf99-163eb9620dc3'] =
-          Trip.fromJson(tripJson(status: 'cancelled', cancelledBy: 'company', cancellationReason: 'Order cancelled'));
+      repo.tripsById['604807b6-7053-4f5f-bf99-163eb9620dc3'] = Trip.fromJson(
+          tripJson(
+              status: 'cancelled',
+              cancelledBy: 'company',
+              cancellationReason: 'Order cancelled'));
       repo.activeTripValue = null;
       await settle(120);
 
@@ -344,10 +383,12 @@ void main() {
       expect(cubit.state.tripBusy, isFalse);
     });
 
-    test('a rejected action returns the failure and leaves the trip untouched', () async {
+    test('a rejected action returns the failure and leaves the trip untouched',
+        () async {
       repo.actionResult = (
         null,
-        const BusinessFailure('Trip must be arrived.', code: 'INVALID_TRIP_STATUS_TRANSITION')
+        const BusinessFailure('Trip must be arrived.',
+            code: 'INVALID_TRIP_STATUS_TRANSITION')
       );
 
       final (trip, failure) = await cubit.startTrip(id);
@@ -358,8 +399,11 @@ void main() {
       expect(cubit.state.tripBusy, isFalse);
     });
 
-    test('completing clears the active trip, refreshes stats, and passes the OTP through', () async {
-      repo.actionResult = (fakeTrip(status: 'completed', paymentStatus: 'paid'), null);
+    test(
+        'completing clears the active trip, refreshes stats, and passes the OTP through',
+        () async {
+      repo.actionResult =
+          (fakeTrip(status: 'completed', paymentStatus: 'paid'), null);
 
       final (trip, _) = await cubit.complete(id, otp: '1234');
 
@@ -368,7 +412,9 @@ void main() {
       expect(cubit.state.activeTrip, isNull);
     });
 
-    test('a poll that was already in flight cannot resurrect a just-completed trip', () async {
+    test(
+        'a poll that was already in flight cannot resurrect a just-completed trip',
+        () async {
       repo.activeTripValue = fakeTrip(status: 'in_progress');
       await settle(80);
 
@@ -377,7 +423,8 @@ void main() {
       repo.activeTripGate = Completer<void>();
       await settle(60);
       // ...meanwhile the driver completes the trip.
-      repo.actionResult = (fakeTrip(status: 'completed', paymentStatus: 'paid'), null);
+      repo.actionResult =
+          (fakeTrip(status: 'completed', paymentStatus: 'paid'), null);
       await cubit.complete(id, otp: '1234');
       expect(cubit.state.activeTrip, isNull);
 
@@ -389,12 +436,15 @@ void main() {
 
       expect(cubit.state.activeTrip, isNull);
       expect(events.whereType<NewTripAssigned>(), isEmpty,
-          reason: 'the finished trip must not be re-announced as a new assignment');
+          reason:
+              'the finished trip must not be re-announced as a new assignment');
       expect(events.whereType<TripEndedExternally>(), isEmpty,
-          reason: 'the driver ended it themself — not an external cancellation');
+          reason:
+              'the driver ended it themself — not an external cancellation');
     });
 
-    test('a second action while one is in flight is refused, not queued', () async {
+    test('a second action while one is in flight is refused, not queued',
+        () async {
       repo.actionGate = Completer<void>();
       repo.actionResult = (fakeTrip(status: 'arrived_at_pickup'), null);
 
@@ -409,8 +459,10 @@ void main() {
       expect(repo.calls.where((c) => c.startsWith('arrive')), hasLength(1));
     });
 
-    test('collecting COD payment refreshes the trip so the OTP step appears', () async {
-      repo.tripsById[id] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
+    test('collecting COD payment refreshes the trip so the OTP step appears',
+        () async {
+      repo.tripsById[id] =
+          fakeTrip(status: 'in_progress', paymentStatus: 'paid');
 
       final (sent, failure) = await cubit.collectPayment(id);
 
@@ -420,8 +472,10 @@ void main() {
     });
 
     test('ALREADY_PAID still refreshes the (stale) local trip', () async {
-      repo.collectResult = (null, const BusinessFailure('already paid', code: 'ALREADY_PAID'));
-      repo.tripsById[id] = fakeTrip(status: 'in_progress', paymentStatus: 'paid');
+      repo.collectResult =
+          (null, const BusinessFailure('already paid', code: 'ALREADY_PAID'));
+      repo.tripsById[id] =
+          fakeTrip(status: 'in_progress', paymentStatus: 'paid');
 
       final (_, failure) = await cubit.collectPayment(id);
 
@@ -445,14 +499,16 @@ void main() {
   });
 
   group('onboarding', () {
-    DriverProfile signedUp({String status = 'profile_incomplete'}) => DriverProfile.fromJson(profileJson(
+    DriverProfile signedUp({String status = 'profile_incomplete'}) =>
+        DriverProfile.fromJson(profileJson(
           eligible: false,
           onboarding: status,
           fullName: status == 'profile_incomplete' ? '' : 'Ravi Kumar',
           profileComplete: status != 'profile_incomplete',
         ));
 
-    CapturedPhoto photo() => CapturedPhoto(bytes: Uint8List(2), filename: 'a.jpg');
+    CapturedPhoto photo() =>
+        CapturedPhoto(bytes: Uint8List(2), filename: 'a.jpg');
 
     test('sign-up stays up until the company approves the driver', () async {
       repo.profileValue = signedUp();
@@ -461,11 +517,14 @@ void main() {
 
       repo.profileChangeResult = signedUp(status: 'documents_required');
       await cubit.updateProfile(const ProfileUpdate(fullName: 'Ravi Kumar'));
-      expect(cubit.state.needsOnboarding, isTrue, reason: 'documents are still to come');
+      expect(cubit.state.needsOnboarding, isTrue,
+          reason: 'documents are still to come');
 
       repo.profileChangeResult = signedUp(status: 'under_review');
-      await cubit.submitAadhar(number: '234567890123', front: photo(), back: photo());
-      expect(cubit.state.needsOnboarding, isTrue, reason: 'waiting for review — no rides before approval');
+      await cubit.submitAadhar(
+          number: '234567890123', front: photo(), back: photo());
+      expect(cubit.state.needsOnboarding, isTrue,
+          reason: 'waiting for review — no rides before approval');
       expect(cubit.state.profile!.onboardingStatus.waitingForReview, isTrue);
     });
 
@@ -474,38 +533,61 @@ void main() {
       expect(cubit.state.needsOnboarding, isFalse);
     });
 
-    test('every profile-changing call adopts the profile the backend answered with', () async {
+    test(
+        'every profile-changing call adopts the profile the backend answered with',
+        () async {
       repo.profileValue = signedUp();
       await cubit.load();
 
       repo.profileChangeResult = signedUp(status: 'documents_required');
-      expect(await cubit.updateProfile(const ProfileUpdate(fullName: 'Ravi Kumar')), isNull);
+      expect(
+          await cubit
+              .updateProfile(const ProfileUpdate(fullName: 'Ravi Kumar')),
+          isNull);
       expect(cubit.state.profile?.fullName, 'Ravi Kumar');
       expect(repo.profileUpdates.single.fullName, 'Ravi Kumar');
 
       await cubit.uploadPhoto(photo());
-      await cubit.submitLicence(number: 'KA01 20110012345', expiry: DateTime(2027, 3, 1), front: photo());
+      await cubit.submitLicence(
+          number: 'KA01 20110012345',
+          expiry: DateTime(2027, 3, 1),
+          front: photo());
       await cubit.submitPolice(photo());
-      expect(repo.calls, containsAll(['updateProfile', 'uploadPhoto', 'submitLicence', 'submitPolice']));
+      expect(
+          repo.calls,
+          containsAll([
+            'updateProfile',
+            'uploadPhoto',
+            'submitLicence',
+            'submitPolice'
+          ]));
       expect(repo.licenceSubmissions.single.hasBack, isFalse);
     });
 
     test('a refusal is handed back and the profile stays as it was', () async {
       repo.profileValue = signedUp();
       await cubit.load();
-      repo.profileChangeFailure = const BusinessFailure('You must be at least 18 years old.', code: 'VALIDATION_ERROR');
+      repo.profileChangeFailure = const BusinessFailure(
+          'You must be at least 18 years old.',
+          code: 'VALIDATION_ERROR');
 
-      final failure = await cubit.updateProfile(ProfileUpdate(dateOfBirth: DateTime(2015)));
+      final failure =
+          await cubit.updateProfile(ProfileUpdate(dateOfBirth: DateTime(2015)));
 
       expect(failure?.message, 'You must be at least 18 years old.');
-      expect(cubit.state.profile?.onboardingStatus, OnboardingStatus.profileIncomplete);
+      expect(cubit.state.profile?.onboardingStatus,
+          OnboardingStatus.profileIncomplete);
     });
 
-    test('deleting the account forgets everything; a refusal leaves the session intact', () async {
+    test(
+        'deleting the account forgets everything; a refusal leaves the session intact',
+        () async {
       repo.profileValue = fakeProfile();
       await cubit.load();
 
-      repo.deleteAccountFailure = const BusinessFailure('You still have money in your wallet.', code: 'WALLET_BALANCE_PENDING');
+      repo.deleteAccountFailure = const BusinessFailure(
+          'You still have money in your wallet.',
+          code: 'WALLET_BALANCE_PENDING');
       final refused = await cubit.deleteAccount();
       expect(refused?.code, 'WALLET_BALANCE_PENDING');
       expect(cubit.state.profile, isNotNull);
@@ -514,20 +596,28 @@ void main() {
       repo.deleteAccountFailure = null;
       expect(await cubit.deleteAccount(), isNull);
       expect(cubit.state.profile, isNull);
-      expect(repo.clearCacheCalls, 1, reason: 'personal data must not outlive the account');
+      expect(repo.clearCacheCalls, 1,
+          reason: 'personal data must not outlive the account');
     });
   });
 
   group('wallet', () {
     test('the summary and statement are read through the session', () async {
-      repo.walletValue = const WalletSummary(balance: 260, today: WalletPeriod(earnings: 150, trips: 1));
+      repo.walletValue = const WalletSummary(
+          balance: 260, today: WalletPeriod(earnings: 150, trips: 1));
       repo.walletEntriesValue = [
-        const WalletEntry(id: 'a', kind: WalletKind.payout, amount: -40, balanceAfter: 60),
-        const WalletEntry(id: 'b', kind: WalletKind.tripEarning, amount: 100, balanceAfter: 100),
+        const WalletEntry(
+            id: 'a', kind: WalletKind.payout, amount: -40, balanceAfter: 60),
+        const WalletEntry(
+            id: 'b',
+            kind: WalletKind.tripEarning,
+            amount: 100,
+            balanceAfter: 100),
       ];
 
       final (summary, _) = await cubit.loadWallet();
-      final (page, _) = await cubit.loadWalletEntries(kinds: [WalletKind.payout]);
+      final (page, _) =
+          await cubit.loadWalletEntries(kinds: [WalletKind.payout]);
 
       expect(summary?.balance, 260);
       expect(page?.items.map((e) => e.id), ['a']);
@@ -537,7 +627,8 @@ void main() {
 
   group('item verification', () {
     setUp(() async {
-      repo.startItemTrip([itemJson(id: 'a'), itemJson(id: 'b', name: 'TMT bar')]);
+      repo.startItemTrip(
+          [itemJson(id: 'a'), itemJson(id: 'b', name: 'TMT bar')]);
       repo.profileValue = fakeProfile(online: true);
       await cubit.load();
     });
@@ -545,34 +636,43 @@ void main() {
     test('an answer updates the live trip in place', () async {
       expect(cubit.state.activeTrip?.pendingItemCount, 2);
 
-      final (trip, failure) = await cubit.verifyItem(cubit.state.activeTrip!.id, 'a', status: ItemStatus.delivered);
+      final (trip, failure) = await cubit.verifyItem(
+          cubit.state.activeTrip!.id, 'a',
+          status: ItemStatus.delivered);
 
       expect(failure, isNull);
       expect(trip?.resolvedItemCount, 1);
       expect(cubit.state.activeTrip?.items.first.status, ItemStatus.delivered);
-      expect(cubit.state.activeTrip?.needsItemVerification, isTrue, reason: 'one item still to go');
+      expect(cubit.state.activeTrip?.needsItemVerification, isTrue,
+          reason: 'one item still to go');
     });
 
     test('the photo and the reason travel with the answer', () async {
       final id = cubit.state.activeTrip!.id;
       await cubit.verifyItem(id, 'b',
-          status: ItemStatus.notDelivered, note: 'Damaged', photo: CapturedPhoto(bytes: Uint8List(3)));
+          status: ItemStatus.notDelivered,
+          note: 'Damaged',
+          photo: CapturedPhoto(bytes: Uint8List(3)));
 
       final answer = repo.itemAnswers.single;
-      expect((answer.itemId, answer.status, answer.note, answer.hasPhoto), ('b', ItemStatus.notDelivered, 'Damaged', true));
+      expect((answer.itemId, answer.status, answer.note, answer.hasPhoto),
+          ('b', ItemStatus.notDelivered, 'Damaged', true));
       expect(cubit.state.activeTrip?.items.last.proofImageUrl, isNotNull);
     });
 
     test('answering everything clears the verification requirement', () async {
       final id = cubit.state.activeTrip!.id;
       await cubit.verifyItem(id, 'a', status: ItemStatus.delivered);
-      await cubit.verifyItem(id, 'b', status: ItemStatus.notDelivered, note: 'Out of stock');
+      await cubit.verifyItem(id, 'b',
+          status: ItemStatus.notDelivered, note: 'Out of stock');
       expect(cubit.state.activeTrip?.needsItemVerification, isFalse);
     });
 
     test('taking an answer back makes the item pending again', () async {
       final id = cubit.state.activeTrip!.id;
-      await cubit.verifyItem(id, 'a', status: ItemStatus.delivered, photo: CapturedPhoto(bytes: Uint8List(1)));
+      await cubit.verifyItem(id, 'a',
+          status: ItemStatus.delivered,
+          photo: CapturedPhoto(bytes: Uint8List(1)));
 
       final (trip, _) = await cubit.resetItem(id, 'a');
 
@@ -581,10 +681,13 @@ void main() {
     });
 
     test('a refusal leaves the trip untouched and reports why', () async {
-      repo.verifyItemFailure = const BusinessFailure('Items are verified at the drop.', code: 'TRIP_NOT_IN_PROGRESS');
+      repo.verifyItemFailure = const BusinessFailure(
+          'Items are verified at the drop.',
+          code: 'TRIP_NOT_IN_PROGRESS');
       final before = cubit.state.activeTrip;
 
-      final (trip, failure) = await cubit.verifyItem(before!.id, 'a', status: ItemStatus.delivered);
+      final (trip, failure) =
+          await cubit.verifyItem(before!.id, 'a', status: ItemStatus.delivered);
 
       expect(trip, isNull);
       expect(failure?.code, 'TRIP_NOT_IN_PROGRESS');
@@ -592,7 +695,9 @@ void main() {
       expect(cubit.state.tripBusy, isFalse);
     });
 
-    test('a poll that was already in flight cannot put back an answer the driver just changed', () async {
+    test(
+        'a poll that was already in flight cannot put back an answer the driver just changed',
+        () async {
       final id = cubit.state.activeTrip!.id;
       // The poll asks the server while item "a" is still pending…
       final staleTrip = cubit.state.activeTrip;

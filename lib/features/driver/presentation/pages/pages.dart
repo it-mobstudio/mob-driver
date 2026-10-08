@@ -1,20 +1,40 @@
-export 'dashboard_page.dart' show DriverDashboardPage;
-export 'delivery_otp_page.dart' show DeliveryOtpPage;
-export 'edit_profile_page.dart' show EditProfilePage;
-export 'incoming_order_page.dart' show IncomingOrderPage;
-export 'item_verification_page.dart' show ItemVerificationPage;
-export 'onboarding_page.dart' show OnboardingPage;
-export 'order_details_page.dart' show OrderDetailsPage;
-export 'order_photos_page.dart' show OrderPhotosPage;
-export 'delivery_complete_page.dart' show DeliveryCompletePage;
-export 'payment_qr_page.dart' show PaymentQrPage;
-export 'payout_details_page.dart' show PayoutDetailsPage;
-export 'profile_page.dart' show DriverProfilePage;
-export 'stop_page.dart' show StopPage;
-export 'trip_page.dart' show TripPage;
-export 'trips_page.dart' show DriverTripsPage;
-export 'vehicle_page.dart' show DriverVehiclePage;
-export 'verification_page.dart' show DriverVerificationPage;
-export 'wallet_page.dart' show DriverWalletPage;
-export 'my_vehicles_page.dart' show MyVehiclesPage;
-export 'vehicle_form_page.dart' show VehicleFormPage;
+export 'package:mob_driver/features/driver/presentation/pages/account/edit_profile_page.dart'
+    show EditProfilePage;
+export 'package:mob_driver/features/driver/presentation/pages/account/payout_details_page.dart'
+    show PayoutDetailsPage;
+export 'package:mob_driver/features/driver/presentation/pages/account/profile_page.dart'
+    show ProfilePage;
+export 'package:mob_driver/features/driver/presentation/pages/account/trips_page.dart'
+    show TripsPage;
+export 'package:mob_driver/features/driver/presentation/pages/account/verification_page.dart'
+    show VerificationPage;
+export 'package:mob_driver/features/driver/presentation/pages/account/wallet_page.dart'
+    show WalletPage;
+export 'package:mob_driver/features/driver/presentation/pages/dashboard_page.dart'
+    show DashboardPage;
+export 'package:mob_driver/features/driver/presentation/pages/onboarding_page.dart'
+    show OnboardingPage;
+export 'package:mob_driver/features/driver/presentation/pages/trip/delivery_complete_page.dart'
+    show DeliveryCompletePage;
+export 'package:mob_driver/features/driver/presentation/pages/trip/delivery_otp_page.dart'
+    show DeliveryOtpPage;
+export 'package:mob_driver/features/driver/presentation/pages/trip/incoming_order_page.dart'
+    show IncomingOrderPage;
+export 'package:mob_driver/features/driver/presentation/pages/trip/item_verification_page.dart'
+    show ItemVerificationPage;
+export 'package:mob_driver/features/driver/presentation/pages/trip/order_details_page.dart'
+    show OrderDetailsPage;
+export 'package:mob_driver/features/driver/presentation/pages/trip/order_photos_page.dart'
+    show OrderPhotosPage;
+export 'package:mob_driver/features/driver/presentation/pages/trip/payment_qr_page.dart'
+    show PaymentQrPage;
+export 'package:mob_driver/features/driver/presentation/pages/trip/stop_page.dart'
+    show StopPage;
+export 'package:mob_driver/features/driver/presentation/pages/trip/trip_page.dart'
+    show TripPage;
+export 'package:mob_driver/features/driver/presentation/pages/vehicles/my_vehicles_page.dart'
+    show MyVehiclesPage;
+export 'package:mob_driver/features/driver/presentation/pages/vehicles/vehicle_form_page.dart'
+    show VehicleFormPage;
+export 'package:mob_driver/features/driver/presentation/pages/vehicles/vehicle_page.dart'
+    show VehiclePage;

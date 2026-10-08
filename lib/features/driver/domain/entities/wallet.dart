@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/utils/json_readers.dart';
 
 /// Earnings over one stretch of time (`today`, `week`, ...).
 class WalletPeriod extends Equatable {
@@ -104,9 +105,12 @@ enum WalletKind {
   adjustment('adjustment', 'Adjustment'),
   unknown('unknown', 'Transaction');
 
-  const WalletKind(this.wire, this.label);
+  const WalletKind(this.wire, this._label);
   final String wire;
-  final String label;
+  final String _label;
+
+  /// In the driver's language.
+  String get label => tr(_label);
 
   static WalletKind parse(String? value) => WalletKind.values.firstWhere(
         (kind) => kind.wire == value,

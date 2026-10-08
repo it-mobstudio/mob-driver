@@ -1,7 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/geo_stamp.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/features/driver/data/media/geo_stamp.dart';
+import 'package:mob_driver/features/driver/data/media/photo_compressor.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
 
 /// The camera couldn't be used (permission off, no camera, ...). [message] is
 /// fit to show the driver as-is.
@@ -23,13 +25,31 @@ abstract interface class PhotoCapture {
   /// Opens the gallery. Null when the driver backs out.
   Future<CapturedPhoto?> pickFromGallery();
 
-  /// Burns [stamp] (location, time, what it shows) into [photo] — for proof
-  /// photos. Adds the street address when it can be looked up quickly.
+  /// Burns [stamp] (location, time, what it shows, the address if known)
+  /// into [photo] — for proof photos.
   Future<CapturedPhoto> geoStamp(CapturedPhoto photo, GeoStamp stamp);
+
+  /// The street address at a spot, for the stamp; null when it can't be had
+  /// quickly. Asked for while the camera is open, so it's usually ready.
+  Future<String?> addressAt(double latitude, double longitude);
+
+  /// The last step before upload: a small WebP (see [PhotoCompressor]).
+  /// Done once, at the end, so a stamped photo isn't compressed twice.
+  Future<CapturedPhoto> optimizeForUpload(CapturedPhoto photo);
 }
 
 class DevicePhotoCapture implements PhotoCapture {
-  const DevicePhotoCapture();
+  const DevicePhotoCapture({this.compressor = const PhotoCompressor()});
+
+  final PhotoCompressor compressor;
+
+  @override
+  Future<CapturedPhoto> optimizeForUpload(CapturedPhoto photo) =>
+      compressor.compress(photo);
+
+  @override
+  Future<String?> addressAt(double latitude, double longitude) =>
+      lookUpAddress(latitude, longitude);
 
   static final ImagePicker _picker = ImagePicker();
 
@@ -41,9 +61,8 @@ class DevicePhotoCapture implements PhotoCapture {
 
   @override
   Future<CapturedPhoto> geoStamp(CapturedPhoto photo, GeoStamp stamp) async {
-    final address = await lookUpAddress(stamp.latitude, stamp.longitude);
     try {
-      return await renderGeoStamp(photo, stamp.withAddress(address));
+      return await renderGeoStamp(photo, stamp);
     } catch (_) {
       // A photo that can't be decoded here is still a photo; the server
       // checks it's an image.
@@ -55,13 +74,13 @@ class DevicePhotoCapture implements PhotoCapture {
     try {
       final file = await _picker.pickImage(
         source: source,
-        // Re-encoded on the way in: a phone camera's 12 MP original is several
-        // MB (slow on mobile data, and over the backend's upload limit), while
-        // a 1600 px JPEG is plenty to read a licence or see a parcel — and it
-        // turns an iPhone's HEIC into a JPEG the backend accepts.
-        imageQuality: 82,
-        maxWidth: 1600,
-        maxHeight: 1600,
+        // Scaled down by the camera itself (native, instant): a 12 MP
+        // original is several MB, while 1280 px is plenty to read a licence
+        // or see a parcel, and every later step has a fraction of the pixels
+        // to handle. Also turns an iPhone's HEIC into a JPEG.
+        imageQuality: 85,
+        maxWidth: 1280,
+        maxHeight: 1280,
         preferredCameraDevice: CameraDevice.rear,
       );
       if (file == null) return null;
@@ -73,8 +92,9 @@ class DevicePhotoCapture implements PhotoCapture {
       final denied = e.code.contains('denied') || e.code.contains('access');
       throw PhotoCaptureException(
         denied
-            ? 'Camera or photo access is off. Allow it in Settings to add pictures.'
-            : 'Couldn’t open the camera. Please try again.',
+            ? tr(
+                'Camera or photo access is off. Allow it in Settings to add pictures.')
+            : tr('Couldn’t open the camera. Please try again.'),
       );
     }
   }

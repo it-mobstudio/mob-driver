@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
+import 'package:mob_driver/core/utils/json_readers.dart';
 
 abstract interface class AuthRemoteDatasource {
   /// `POST driver/auth/otp/request` — texts a 4-digit OTP to a driver the
@@ -22,7 +22,8 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
   final Dio _dio;
 
   @override
-  Future<Map<String, dynamic>> requestOtp({required String phoneNumber}) async =>
+  Future<Map<String, dynamic>> requestOtp(
+          {required String phoneNumber}) async =>
       asMap((await _dio.post<dynamic>(
         '/driver/auth/otp/request',
         data: {'phone_number': phoneNumber},

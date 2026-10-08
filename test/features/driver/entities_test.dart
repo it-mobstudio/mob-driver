@@ -2,10 +2,10 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_stats.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip_extras.dart';
 
 import '../../support/fakes.dart';
 
@@ -52,7 +52,9 @@ void main() {
       expect(trip.isPaid, isTrue);
     });
 
-    test('an empty cancelled_by / reason (how the backend sends "none") reads as null', () {
+    test(
+        'an empty cancelled_by / reason (how the backend sends "none") reads as null',
+        () {
       final trip = Trip.fromJson(tripJson());
       expect(trip.cancelledBy, isNull);
       expect(trip.cancellationReason, isNull);
@@ -65,7 +67,8 @@ void main() {
     });
 
     test('numbers arrive either as strings or as JSON numbers', () {
-      final asNumbers = Trip.fromJson({...tripJson(), 'pickup_lat': 12.9716, 'total_fare': 111.62});
+      final asNumbers = Trip.fromJson(
+          {...tripJson(), 'pickup_lat': 12.9716, 'total_fare': 111.62});
       expect(asNumbers.pickup.latitude, 12.9716);
       expect(asNumbers.totalFare, 111.62);
     });
@@ -82,12 +85,15 @@ void main() {
         ],
         'delivery_photos': <Map<String, dynamic>>[],
       });
-      expect(trip.pickupPhotos.map((p) => (p.id, p.canRemove)), [('a', true), ('b', true)]);
+      expect(trip.pickupPhotos.map((p) => (p.id, p.canRemove)),
+          [('a', true), ('b', true)]);
       expect(trip.hasPhotos(PhotoStage.pickup), isTrue);
       expect(trip.hasPhotos(PhotoStage.delivery), isFalse);
     });
 
-    test('a backend that only sends the one photo URL still counts — it just can\'t be removed', () {
+    test(
+        'a backend that only sends the one photo URL still counts — it just can\'t be removed',
+        () {
       final trip = Trip.fromJson({
         ...tripJson(pickupPhoto: 'order'),
         'pickup_photo_url': 'https://cdn.example.com/only.jpg',
@@ -110,7 +116,8 @@ void main() {
     });
 
     test('prepaid needs neither', () {
-      final trip = fakeTrip(status: 'in_progress', paymentMode: 'prepaid', paymentStatus: 'paid');
+      final trip = fakeTrip(
+          status: 'in_progress', paymentMode: 'prepaid', paymentStatus: 'paid');
       expect(trip.needsPaymentCollection, isFalse);
       expect(trip.needsDeliveryOtp, isFalse);
     });
@@ -130,7 +137,9 @@ void main() {
       expect(TripStatus.completed.isActive, isFalse);
     });
 
-    test('equal trips compare equal, so an unchanged poll does not rebuild the UI', () {
+    test(
+        'equal trips compare equal, so an unchanged poll does not rebuild the UI',
+        () {
       expect(fakeTrip(), fakeTrip());
       expect(fakeTrip(), isNot(fakeTrip(status: 'arrived_at_pickup')));
       expect(fakeTrip(), isNot(fakeTrip(paymentStatus: 'paid')));
@@ -163,15 +172,28 @@ void main() {
     });
 
     test('a locked account is called out', () {
-      final profile = DriverProfile.fromJson({...profileJson(), 'account_status': 'locked_dl_expired'});
+      final profile = DriverProfile.fromJson(
+          {...profileJson(), 'account_status': 'locked_dl_expired'});
       expect(profile.blockers.single, contains('licence expired'));
     });
   });
 
   test('DriverStats parses today and all-time', () {
     final stats = DriverStats.fromJson({
-      'today': {'trips_completed': 2, 'trips_cancelled': 1, 'total_fare': '185.00', 'cod_collected': '85.00', 'distance_meters': 8400},
-      'all_time': {'trips_completed': 9, 'trips_cancelled': 1, 'total_fare': '900.50', 'cod_collected': '400.00', 'distance_meters': 40000},
+      'today': {
+        'trips_completed': 2,
+        'trips_cancelled': 1,
+        'total_fare': '185.00',
+        'cod_collected': '85.00',
+        'distance_meters': 8400
+      },
+      'all_time': {
+        'trips_completed': 9,
+        'trips_cancelled': 1,
+        'total_fare': '900.50',
+        'cod_collected': '400.00',
+        'distance_meters': 40000
+      },
     });
     expect(stats.today.tripsCompleted, 2);
     expect(stats.today.totalFare, 185.0);
@@ -179,7 +201,9 @@ void main() {
     expect(DriverStats.fromJson({}).today.tripsCompleted, 0);
   });
 
-  test('PaymentQr accepts the amount as a JSON number (how the backend sends it)', () {
+  test(
+      'PaymentQr accepts the amount as a JSON number (how the backend sends it)',
+      () {
     final qr = PaymentQr.fromJson({
       'qr_payload': 'upi://pay?pa=mob-delivery%40upi&am=111.62&cu=INR',
       'amount': 111.62,
@@ -189,7 +213,9 @@ void main() {
     expect(qr.payload, startsWith('upi://pay?'));
   });
 
-  test('PaymentQr from Razorpay carries the hosted image, is verifiable, and knows when it lapses', () {
+  test(
+      'PaymentQr from Razorpay carries the hosted image, is verifiable, and knows when it lapses',
+      () {
     final qr = PaymentQr.fromJson({
       'provider': 'razorpay',
       'reference': 'qr_Nx4a1',
@@ -206,16 +232,21 @@ void main() {
     expect(qr.reference, 'qr_Nx4a1');
     expect(qr.amount, 111.62);
     expect(qr.isExpiredAt(DateTime.utc(2026, 9, 21, 10, 14, 59)), isFalse);
-    expect(qr.isExpiredAt(DateTime.utc(2026, 9, 21, 10, 15)), isTrue, reason: 'valid until, not including, the closing time');
+    expect(qr.isExpiredAt(DateTime.utc(2026, 9, 21, 10, 15)), isTrue,
+        reason: 'valid until, not including, the closing time');
   });
 
-  test('a PaymentQr with no provider is the local stand-in: nothing verifies it and it never lapses', () {
-    final qr = PaymentQr.fromJson({'qr_payload': 'upi://pay?pa=x', 'amount': 5, 'currency': 'INR'});
+  test(
+      'a PaymentQr with no provider is the local stand-in: nothing verifies it and it never lapses',
+      () {
+    final qr = PaymentQr.fromJson(
+        {'qr_payload': 'upi://pay?pa=x', 'amount': 5, 'currency': 'INR'});
     expect(qr.provider, 'upi_static');
     expect(qr.paymentIsVerified, isFalse);
     expect(qr.hasImage, isFalse);
     expect(qr.isExpiredAt(DateTime.utc(2100)), isFalse);
-    expect(PaymentQr.fromJson({'image_url': '', 'amount': 1}).hasImage, isFalse, reason: 'an empty URL is no image');
+    expect(PaymentQr.fromJson({'image_url': '', 'amount': 1}).hasImage, isFalse,
+        reason: 'an empty URL is no image');
   });
 
   test('NavRoute decodes its polyline at the precision the backend states', () {
@@ -234,8 +265,10 @@ void main() {
     expect(route.distanceMeters, 3739);
   });
 
-  test('DeliveryOtpSent exposes the debug OTP only when the backend sent one', () {
-    expect(DeliveryOtpSent.fromJson({'message': 'ok', 'otp': '1234'}).debugOtp, '1234');
+  test('DeliveryOtpSent exposes the debug OTP only when the backend sent one',
+      () {
+    expect(DeliveryOtpSent.fromJson({'message': 'ok', 'otp': '1234'}).debugOtp,
+        '1234');
     expect(DeliveryOtpSent.fromJson({'message': 'ok'}).debugOtp, isNull);
   });
 }

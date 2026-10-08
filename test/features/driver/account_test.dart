@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
-import 'package:m_o_b_demand_side/core/utils/formatters.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/dashboard_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/edit_profile_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/payout_details_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/profile_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/pages/trips_page.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
+import 'package:mob_driver/app/routes.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/utils/formatters.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_stats.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/edit_profile_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/payout_details_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/profile_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/trips_page.dart';
+import 'package:mob_driver/features/driver/presentation/pages/dashboard_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fonts.dart';
@@ -20,12 +22,19 @@ import '../../support/harness.dart';
 /// Stand-ins for the screens a page navigates to, so a tap is observable.
 List<GoRoute> stubRoutes() => [
       // The dashboard's profile button opens the real profile page.
-      GoRoute(path: DriverRoutes.profile, builder: (_, __) => const DriverProfilePage()),
+      GoRoute(path: AppRoutes.profile, builder: (_, __) => const ProfilePage()),
       GoRoute(
-          path: DriverRoutes.dashboard,
-          builder: (_, __) => DriverDashboardPage(checkLocationPermission: (_) async => true, mapBuilder: stubHomeMap)),
-      for (final path in [DriverRoutes.editProfile, DriverRoutes.verification, DriverRoutes.payout])
-        GoRoute(path: path, builder: (_, __) => Scaffold(body: Text('STUB $path'))),
+          path: AppRoutes.dashboard,
+          builder: (_, __) => DashboardPage(
+              checkLocationPermission: (_) async => true,
+              mapBuilder: stubHomeMap)),
+      for (final path in [
+        AppRoutes.editProfile,
+        AppRoutes.verification,
+        AppRoutes.payout
+      ])
+        GoRoute(
+            path: path, builder: (_, __) => Scaffold(body: Text('STUB $path'))),
     ];
 
 /// Once the session ends the screen falls back to its loading skeleton (in the
@@ -37,12 +46,15 @@ Future<void> settleAfterSessionEnds(WidgetTester tester) async {
   }
 }
 
-String textOf(WidgetTester tester, String key) => tester.widget<Text>(find.byKey(Key(key))).data!;
+String textOf(WidgetTester tester, String key) =>
+    tester.widget<Text>(find.byKey(Key(key))).data!;
 
 TextField fieldOf(WidgetTester tester, String key) =>
-    tester.widget<TextField>(find.descendant(of: find.byKey(Key(key)), matching: find.byType(TextField)));
+    tester.widget<TextField>(find.descendant(
+        of: find.byKey(Key(key)), matching: find.byType(TextField)));
 
-Future<void> open(WidgetTester tester, TestRig rig, Widget page, {DriverProfile? profile, double height = 3200}) async {
+Future<void> open(WidgetTester tester, TestRig rig, Widget page,
+    {DriverProfile? profile, double height = 3200}) async {
   tester.view.physicalSize = Size(1080, height);
   rig.repo.profileValue = profile ?? fakeProfile();
   await rig.cubit.load();
@@ -57,43 +69,80 @@ void main() {
   setUpAll(loadAppFonts);
 
   group('profile', () {
-    rigTest('leads with who the driver is and the things they can change', (tester, rig) async {
-      await open(tester, rig, const DriverProfilePage());
+    rigTest('leads with who the driver is and the things they can change',
+        (tester, rig) async {
+      await open(tester, rig, const ProfilePage());
 
       expect(textOf(tester, 'profile_name'), 'Seed Driver 1');
-      for (final row in ['menu_edit_details', 'menu_documents', 'menu_payout']) {
+      for (final row in [
+        'menu_edit_details',
+        'menu_documents',
+        'menu_payout'
+      ]) {
         expect(find.byKey(Key(row)), findsOneWidget, reason: row);
       }
       expect(find.text('Add a UPI id or bank account'), findsOneWidget);
     });
 
-    rigTest('the payout row says where earnings go once that is set', (tester, rig) async {
-      await open(tester, rig, const DriverProfilePage(), profile: withPayout({'upi_id': 'ravi@okhdfc', 'is_set': true}));
+    rigTest(
+        'Language lets the driver pick Hindi or Kannada, and the app follows',
+        (tester, rig) async {
+      SharedPreferences.setMockInitialValues({});
+      addTearDown(
+          () => AppLanguageController.instance.value = AppLanguage.english);
+      await open(tester, rig, const ProfilePage());
+
+      await tester.ensureVisible(find.byKey(const Key('menu_language')));
+      await tester.tap(find.byKey(const Key('menu_language')));
+      await tester.pumpAndSettle();
+      // Each language is offered in its own script.
+      expect(find.text('हिन्दी'), findsOneWidget);
+      expect(find.text('ಕನ್ನಡ'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('language_hi')));
+      await tester.pumpAndSettle();
+      expect(AppLanguageController.instance.value, AppLanguage.hindi);
+
+      await open(tester, rig, const ProfilePage());
+      expect(find.text('UPI आईडी या बैंक खाता जोड़ें'), findsOneWidget);
+      expect(find.text('Add a UPI id or bank account'), findsNothing);
+    });
+
+    rigTest('the payout row says where earnings go once that is set',
+        (tester, rig) async {
+      await open(tester, rig, const ProfilePage(),
+          profile: withPayout({'upi_id': 'ravi@okhdfc', 'is_set': true}));
       expect(find.text('ravi@okhdfc'), findsOneWidget);
     });
 
     rigTest('each row opens its screen', (tester, rig) async {
       for (final (row, path) in [
-        ('menu_edit_details', DriverRoutes.editProfile),
-        ('menu_documents', DriverRoutes.verification),
-        ('menu_payout', DriverRoutes.payout),
+        ('menu_edit_details', AppRoutes.editProfile),
+        ('menu_documents', AppRoutes.verification),
+        ('menu_payout', AppRoutes.payout),
       ]) {
-        await open(tester, rig, const DriverProfilePage());
+        await open(tester, rig, const ProfilePage());
         await tester.tap(find.byKey(Key(row)));
         await tester.pumpAndSettle();
         expect(find.text('STUB $path'), findsOneWidget, reason: row);
       }
     });
 
-    rigTest('the verification summary opens the documents page', (tester, rig) async {
-      await open(tester, rig, const DriverProfilePage());
+    rigTest('the verification summary opens the documents page',
+        (tester, rig) async {
+      await open(tester, rig, const ProfilePage());
       await tester.tap(find.text('Aadhaar'));
       await tester.pumpAndSettle();
-      expect(find.text('STUB ${DriverRoutes.verification}'), findsOneWidget);
+      expect(find.text('STUB ${AppRoutes.verification}'), findsOneWidget);
     });
 
-    rigTest('the photo, when there is one, replaces the initial', (tester, rig) async {
-      await open(tester, rig, const DriverProfilePage(), profile: DriverProfile.fromJson({...profileJson(), 'profile_photo_url': 'https://cdn.example.com/me.jpg'}));
+    rigTest('the photo, when there is one, replaces the initial',
+        (tester, rig) async {
+      await open(tester, rig, const ProfilePage(),
+          profile: DriverProfile.fromJson({
+            ...profileJson(),
+            'profile_photo_url': 'https://cdn.example.com/me.jpg'
+          }));
       expect(find.byType(Image), findsWidgets);
     });
   });
@@ -106,12 +155,14 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    rigTest('asks first, and "Keep my account" changes nothing', (tester, rig) async {
-      await open(tester, rig, const DriverProfilePage());
+    rigTest('asks first, and "Keep my account" changes nothing',
+        (tester, rig) async {
+      await open(tester, rig, const ProfilePage());
       await tapDelete(tester);
 
       expect(find.text('Delete your account?'), findsOneWidget);
-      expect(find.textContaining('active trip or money left in your wallet'), findsOneWidget);
+      expect(find.textContaining('active trip or money left in your wallet'),
+          findsOneWidget);
       await tester.tap(find.text('Keep my account'));
       await tester.pumpAndSettle();
 
@@ -119,20 +170,26 @@ void main() {
       expect(rig.authRepo.signOutCalls, 0);
     });
 
-    rigTest('confirming deletes the account and signs the driver out', (tester, rig) async {
-      await open(tester, rig, const DriverProfilePage());
+    rigTest('confirming deletes the account and signs the driver out',
+        (tester, rig) async {
+      await open(tester, rig, const ProfilePage());
       await tapDelete(tester);
       await tester.tap(find.byKey(const Key('delete_account_confirm')));
       await settleAfterSessionEnds(tester);
 
       expect(rig.repo.deleteAccountCalls, 1);
       expect(rig.authRepo.signOutCalls, 1);
-      expect(rig.cubit.state.profile, isNull, reason: 'the session forgot the driver');
+      expect(rig.cubit.state.profile, isNull,
+          reason: 'the session forgot the driver');
     });
 
-    rigTest('a refusal (money still owed) is explained and the driver stays signed in', (tester, rig) async {
-      await open(tester, rig, const DriverProfilePage());
-      rig.repo.deleteAccountFailure = const BusinessFailure('You still have ₹150.00 in your wallet. Ask your company to pay it out first.', code: 'WALLET_BALANCE_PENDING');
+    rigTest(
+        'a refusal (money still owed) is explained and the driver stays signed in',
+        (tester, rig) async {
+      await open(tester, rig, const ProfilePage());
+      rig.repo.deleteAccountFailure = const BusinessFailure(
+          'You still have ₹150.00 in your wallet. Ask your company to pay it out first.',
+          code: 'WALLET_BALANCE_PENDING');
 
       await tapDelete(tester);
       await tester.tap(find.byKey(const Key('delete_account_confirm')));
@@ -144,8 +201,10 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
-    rigTest('a driver who is on duty is taken off it first', (tester, rig) async {
-      await open(tester, rig, const DriverProfilePage(), profile: fakeProfile(online: true));
+    rigTest('a driver who is on duty is taken off it first',
+        (tester, rig) async {
+      await open(tester, rig, const ProfilePage(),
+          profile: fakeProfile(online: true));
       await tapDelete(tester);
       await tester.tap(find.byKey(const Key('delete_account_confirm')));
       await settleAfterSessionEnds(tester);
@@ -154,9 +213,13 @@ void main() {
       expect(rig.repo.deleteAccountCalls, 1);
     });
 
-    rigTest('and if going off duty is refused, nothing is deleted', (tester, rig) async {
-      await open(tester, rig, const DriverProfilePage(), profile: fakeProfile(online: true));
-      rig.repo.endDutyFailure = const BusinessFailure('This driver has an active trip.', code: 'DRIVER_HAS_ACTIVE_TRIP');
+    rigTest('and if going off duty is refused, nothing is deleted',
+        (tester, rig) async {
+      await open(tester, rig, const ProfilePage(),
+          profile: fakeProfile(online: true));
+      rig.repo.endDutyFailure = const BusinessFailure(
+          'This driver has an active trip.',
+          code: 'DRIVER_HAS_ACTIVE_TRIP');
 
       await tapDelete(tester);
       await tester.tap(find.byKey(const Key('delete_account_confirm')));
@@ -169,27 +232,34 @@ void main() {
   });
 
   group('payout details', () {
-    rigTest('UPI: a malformed id is refused, a good one is saved', (tester, rig) async {
+    rigTest('UPI: a malformed id is refused, a good one is saved',
+        (tester, rig) async {
       await open(tester, rig, const PayoutDetailsPage());
       expect(find.byKey(const Key('field_upi')), findsOneWidget);
 
-      await tester.enterText(find.byKey(const Key('field_upi')), 'not-a-upi-id');
+      await tester.enterText(
+          find.byKey(const Key('field_upi')), 'not-a-upi-id');
       await tester.tap(find.byKey(const Key('payout_save')));
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid UPI id, like name@bank.'), findsOneWidget);
+      expect(
+          find.text('Enter a valid UPI id, like name@bank.'), findsOneWidget);
       expect(rig.repo.profileUpdates, isEmpty);
 
-      await tester.enterText(find.byKey(const Key('field_upi')), ' ravi@okhdfc ');
+      await tester.enterText(
+          find.byKey(const Key('field_upi')), ' ravi@okhdfc ');
       await tester.tap(find.byKey(const Key('payout_save')));
       await tester.pumpAndSettle();
 
       expect(rig.repo.profileUpdates.single.payoutUpiId, 'ravi@okhdfc');
-      expect(rig.repo.profileUpdates.single.bankAccountNumber, isNull, reason: 'only the chosen method is sent');
+      expect(rig.repo.profileUpdates.single.bankAccountNumber, isNull,
+          reason: 'only the chosen method is sent');
       expect(find.text('Payout details saved.'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
     });
 
-    rigTest('bank: holder, account and IFSC are all needed, IFSC is upper-cased', (tester, rig) async {
+    rigTest(
+        'bank: holder, account and IFSC are all needed, IFSC is upper-cased',
+        (tester, rig) async {
       await open(tester, rig, const PayoutDetailsPage());
       await tester.tap(find.text('Bank account'));
       await tester.pumpAndSettle();
@@ -197,13 +267,18 @@ void main() {
       await tester.tap(find.byKey(const Key('payout_save')));
       await tester.pumpAndSettle();
       expect(find.text('Enter the account holder’s name.'), findsOneWidget);
-      expect(find.text('Enter the account number (9–18 digits).'), findsOneWidget);
-      expect(find.text('Enter a valid IFSC code, like HDFC0001234.'), findsOneWidget);
+      expect(
+          find.text('Enter the account number (9–18 digits).'), findsOneWidget);
+      expect(find.text('Enter a valid IFSC code, like HDFC0001234.'),
+          findsOneWidget);
       expect(rig.repo.profileUpdates, isEmpty);
 
-      await tester.enterText(find.byKey(const Key('field_bank_holder')), 'Ravi Kumar');
-      await tester.enterText(find.byKey(const Key('field_bank_account')), '12a34-5678 9012');
-      await tester.enterText(find.byKey(const Key('field_bank_ifsc')), 'hdfc0001234');
+      await tester.enterText(
+          find.byKey(const Key('field_bank_holder')), 'Ravi Kumar');
+      await tester.enterText(
+          find.byKey(const Key('field_bank_account')), '12a34-5678 9012');
+      await tester.enterText(
+          find.byKey(const Key('field_bank_ifsc')), 'hdfc0001234');
       await tester.tap(find.byKey(const Key('payout_save')));
       await tester.pumpAndSettle();
 
@@ -216,36 +291,52 @@ void main() {
     });
 
     rigTest('a saved UPI id is shown and filled in', (tester, rig) async {
-      await open(tester, rig, const PayoutDetailsPage(), profile: withPayout({'upi_id': 'ravi@okhdfc', 'is_set': true}));
+      await open(tester, rig, const PayoutDetailsPage(),
+          profile: withPayout({'upi_id': 'ravi@okhdfc', 'is_set': true}));
 
       expect(find.textContaining('Currently: ravi@okhdfc'), findsOneWidget);
       expect(fieldOf(tester, 'field_upi').controller!.text, 'ravi@okhdfc');
     });
 
-    rigTest('a saved bank account opens on Bank, never shows the number, and can be kept as it is', (tester, rig) async {
+    rigTest(
+        'a saved bank account opens on Bank, never shows the number, and can be kept as it is',
+        (tester, rig) async {
       await open(
         tester,
         rig,
         const PayoutDetailsPage(),
-        profile: withPayout({'bank_account_holder': 'Ravi Kumar', 'bank_account_last4': '9012', 'bank_ifsc': 'HDFC0001234', 'is_set': true}),
+        profile: withPayout({
+          'bank_account_holder': 'Ravi Kumar',
+          'bank_account_last4': '9012',
+          'bank_ifsc': 'HDFC0001234',
+          'is_set': true
+        }),
       );
 
-      expect(fieldOf(tester, 'field_bank_holder').controller!.text, 'Ravi Kumar');
-      expect(fieldOf(tester, 'field_bank_ifsc').controller!.text, 'HDFC0001234');
-      expect(fieldOf(tester, 'field_bank_account').controller!.text, isEmpty, reason: 'the full number is never sent to the phone');
-      expect(find.text('Saved account ends 9012. Leave blank to keep it.'), findsOneWidget);
+      expect(
+          fieldOf(tester, 'field_bank_holder').controller!.text, 'Ravi Kumar');
+      expect(
+          fieldOf(tester, 'field_bank_ifsc').controller!.text, 'HDFC0001234');
+      expect(fieldOf(tester, 'field_bank_account').controller!.text, isEmpty,
+          reason: 'the full number is never sent to the phone');
+      expect(find.text('Saved account ends 9012. Leave blank to keep it.'),
+          findsOneWidget);
 
       await tester.tap(find.byKey(const Key('payout_save')));
       await tester.pumpAndSettle();
 
-      expect(rig.repo.profileUpdates.single.bankAccountNumber, isNull, reason: 'blank means keep');
+      expect(rig.repo.profileUpdates.single.bankAccountNumber, isNull,
+          reason: 'blank means keep');
       expect(rig.repo.profileUpdates.single.bankIfsc, 'HDFC0001234');
       await tester.pump(const Duration(seconds: 4));
     });
 
-    rigTest('the backend\'s objection is shown on the page', (tester, rig) async {
+    rigTest('the backend\'s objection is shown on the page',
+        (tester, rig) async {
       await open(tester, rig, const PayoutDetailsPage());
-      rig.repo.profileChangeFailure = const BusinessFailure('Enter a valid UPI id, like name@bank.', code: 'VALIDATION_ERROR');
+      rig.repo.profileChangeFailure = const BusinessFailure(
+          'Enter a valid UPI id, like name@bank.',
+          code: 'VALIDATION_ERROR');
 
       await tester.enterText(find.byKey(const Key('field_upi')), 'ravi@okhdfc');
       await tester.tap(find.byKey(const Key('payout_save')));
@@ -265,15 +356,20 @@ void main() {
       });
       await open(tester, rig, const EditProfilePage(), profile: profile);
 
-      expect(fieldOf(tester, 'field_full_name').controller!.text, 'Seed Driver 1');
+      expect(
+          fieldOf(tester, 'field_full_name').controller!.text, 'Seed Driver 1');
       expect(fieldOf(tester, 'field_city').controller!.text, 'Bengaluru');
-      expect(fieldOf(tester, 'field_email').controller!.text, 'ravi@example.com');
-      expect(fieldOf(tester, 'field_emergency_phone').controller!.text, '9999900000');
+      expect(
+          fieldOf(tester, 'field_email').controller!.text, 'ravi@example.com');
+      expect(fieldOf(tester, 'field_emergency_phone').controller!.text,
+          '9999900000');
       expect(fieldOf(tester, 'field_full_name').enabled, isTrue);
     });
 
     rigTest('changes are saved', (tester, rig) async {
-      await open(tester, rig, const EditProfilePage(), profile: DriverProfile.fromJson({...profileJson(eligible: false), 'aadhar_status': 'pending'}));
+      await open(tester, rig, const EditProfilePage(),
+          profile: DriverProfile.fromJson(
+              {...profileJson(eligible: false), 'aadhar_status': 'pending'}));
 
       await tester.enterText(find.byKey(const Key('field_city')), 'Mysuru');
       await tester.ensureVisible(find.byKey(const Key('details_submit')));
@@ -285,8 +381,11 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
-    rigTest('name and date of birth are locked once the ID is verified — and not sent', (tester, rig) async {
-      await open(tester, rig, const EditProfilePage()); // fakeProfile(): Aadhaar verified
+    rigTest(
+        'name and date of birth are locked once the ID is verified — and not sent',
+        (tester, rig) async {
+      await open(tester, rig,
+          const EditProfilePage()); // fakeProfile(): Aadhaar verified
 
       expect(fieldOf(tester, 'field_full_name').enabled, isFalse);
       expect(find.textContaining('match your verified ID'), findsOneWidget);
@@ -304,15 +403,25 @@ void main() {
   });
 
   group('the dashboard while waiting on the company', () {
-    Future<void> openDashboard(WidgetTester tester, TestRig rig, DriverProfile profile) => open(
+    Future<void> openDashboard(
+            WidgetTester tester, TestRig rig, DriverProfile profile) =>
+        open(
           tester,
           rig,
-          DriverDashboardPage(checkLocationPermission: (_) async => true, mapBuilder: stubHomeMap),
+          DashboardPage(
+              checkLocationPermission: (_) async => true,
+              mapBuilder: stubHomeMap),
           profile: profile,
         );
 
-    rigTest('under review: says so, wears the right badge, and opens the documents', (tester, rig) async {
-      await openDashboard(tester, rig, DriverProfile.fromJson(profileJson(eligible: false, onboarding: 'under_review')));
+    rigTest(
+        'under review: says so, wears the right badge, and opens the documents',
+        (tester, rig) async {
+      await openDashboard(
+          tester,
+          rig,
+          DriverProfile.fromJson(
+              profileJson(eligible: false, onboarding: 'under_review')));
 
       expect(find.text('Your documents are being reviewed'), findsOneWidget);
       expect(textOf(tester, 'verification_action'), 'View documents');
@@ -325,10 +434,11 @@ void main() {
 
       await tester.tap(find.byKey(const Key('verification_card')));
       await tester.pumpAndSettle();
-      expect(find.text('STUB ${DriverRoutes.verification}'), findsOneWidget);
+      expect(find.text('STUB ${AppRoutes.verification}'), findsOneWidget);
     });
 
-    rigTest('an approved driver sees no verification card', (tester, rig) async {
+    rigTest('an approved driver sees no verification card',
+        (tester, rig) async {
       await openDashboard(tester, rig, fakeProfile());
       expect(find.byKey(const Key('verification_card')), findsNothing);
 
@@ -337,9 +447,12 @@ void main() {
       expect(find.text('VERIFIED DRIVER'), findsOneWidget);
     });
 
-    rigTest('a licence close to expiry gets a warning; one far off does not', (tester, rig) async {
-      String iso(int days) => formatIsoDate(DateTime.now().add(Duration(days: days)));
-      DriverProfile expiring(int days) => DriverProfile.fromJson({...profileJson(), 'dl_expiry_date': iso(days)});
+    rigTest('a licence close to expiry gets a warning; one far off does not',
+        (tester, rig) async {
+      String iso(int days) =>
+          formatIsoDate(DateTime.now().add(Duration(days: days)));
+      DriverProfile expiring(int days) => DriverProfile.fromJson(
+          {...profileJson(), 'dl_expiry_date': iso(days)});
 
       await openDashboard(tester, rig, expiring(10));
       expect(find.byKey(const Key('licence_banner')), findsOneWidget);
@@ -352,11 +465,14 @@ void main() {
       expect(find.textContaining('expires today'), findsOneWidget);
 
       await openDashboard(tester, rig, expiring(1));
-      expect(find.textContaining('expires in 1 day.'), findsOneWidget, reason: 'singular');
+      expect(find.textContaining('expires in 1 day.'), findsOneWidget,
+          reason: 'singular');
     });
 
     rigTest('today\'s earnings lead the numbers', (tester, rig) async {
-      rig.repo.statsValue = const DriverStats(today: PeriodStats(tripsCompleted: 3, earnings: 240.5, totalFare: 300));
+      rig.repo.statsValue = const DriverStats(
+          today:
+              PeriodStats(tripsCompleted: 3, earnings: 240.5, totalFare: 300));
       await openDashboard(tester, rig, fakeProfile());
       // Stats live in the sheet the "Today's earnings" banner opens.
       await tester.tap(find.byKey(const Key('summary_banner')));
@@ -367,16 +483,20 @@ void main() {
   });
 
   group('trip history', () {
-    rigTest('each completed trip says what it paid the driver', (tester, rig) async {
-      final paid = Trip.fromJson(tripJson(id: 'trip-paid', status: 'completed', driverEarning: '89.30'));
-      final cancelled = Trip.fromJson(tripJson(id: 'trip-cancelled', status: 'cancelled'));
+    rigTest('each completed trip says what it paid the driver',
+        (tester, rig) async {
+      final paid = Trip.fromJson(tripJson(
+          id: 'trip-paid', status: 'completed', driverEarning: '89.30'));
+      final cancelled =
+          Trip.fromJson(tripJson(id: 'trip-cancelled', status: 'cancelled'));
       rig.repo.tripsById
         ..[paid.id] = paid
         ..[cancelled.id] = cancelled;
-      await open(tester, rig, const DriverTripsPage());
+      await open(tester, rig, const TripsPage());
 
       expect(textOf(tester, 'trip_earning_trip-paid'), 'You earned ₹89.30');
-      expect(find.byKey(const Key('trip_earning_trip-cancelled')), findsNothing);
+      expect(
+          find.byKey(const Key('trip_earning_trip-cancelled')), findsNothing);
     });
   });
 }

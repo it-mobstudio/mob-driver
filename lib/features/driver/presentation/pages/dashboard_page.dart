@@ -4,71 +4,61 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
-import 'package:m_o_b_demand_side/core/location/location_permission_helper.dart';
-import 'package:m_o_b_demand_side/core/utils/formatters.dart';
-import 'package:m_o_b_demand_side/core/utils/polyline_codec.dart';
-import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
-import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_home_map.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/duty_flow.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/duty_top_bar.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/finder_video.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/map_sheet.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/vehicle_art.dart';
-import 'package:m_o_b_demand_side/shared/nav_visibility.dart';
-import 'package:m_o_b_demand_side/shared/widgets/skeleton_shimmer.dart';
+import 'package:mob_driver/app/routes.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/services/location_permission.dart';
+import 'package:mob_driver/core/theme/app_colors.dart';
+import 'package:mob_driver/core/utils/formatters.dart';
+import 'package:mob_driver/core/utils/launchers.dart';
+import 'package:mob_driver/core/utils/polyline_codec.dart';
+import 'package:mob_driver/core/widgets/app_card.dart';
+import 'package:mob_driver/core/widgets/buttons.dart';
+import 'package:mob_driver/core/widgets/centered_message.dart';
+import 'package:mob_driver/core/widgets/info_banner.dart';
+import 'package:mob_driver/core/widgets/profile_avatar.dart';
+import 'package:mob_driver/core/widgets/skeleton_shimmer.dart';
+import 'package:mob_driver/core/widgets/status_pill.dart';
+import 'package:mob_driver/features/driver/data/location/driver_location_service.dart';
+import 'package:mob_driver/features/driver/data/realtime/driver_realtime.dart';
+import 'package:mob_driver/features/driver/domain/driver_limits.dart';
+import 'package:mob_driver/features/driver/domain/entities/demand_hint.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_stats.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/duty/duty_flow.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/duty/duty_header.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/duty/finding_orders.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/map/home_map.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/map/map_sheet.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/vehicle_art.dart';
 
 /// "Today": the duty toggle and the day's working time over a map centred on
 /// the driver, with a sheet that shows the active trip (or the wait for one)
 /// — and the profile button, which opens the profile page: the way to
 /// everything else (trips, wallet, vehicles, documents).
-class DriverDashboardPage extends StatefulWidget {
-  const DriverDashboardPage(
+class DashboardPage extends StatefulWidget {
+  const DashboardPage(
       {super.key, this.checkLocationPermission, this.mapBuilder});
-
-  static const routeName = 'DriverDashboard';
-  static const routePath = DriverRoutes.dashboard;
 
   /// Test seam for the OS location prompt.
   final LocationPermissionCheck? checkLocationPermission;
 
   /// Replaces the Google map — used by tests, which can't host a platform
   /// view (the same seam [TripPage] uses for its own map).
-  final DriverMapBuilder? mapBuilder;
+  final HomeMapBuilder? mapBuilder;
 
   @override
-  State<DriverDashboardPage> createState() => _DriverDashboardPageState();
+  State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DriverDashboardPageState extends State<DriverDashboardPage> {
+class _DashboardPageState extends State<DashboardPage> {
   late final DriverSessionCubit _cubit = context.read<DriverSessionCubit>();
-  late final VoidCallback _refreshHook = _refresh;
 
   /// How much of the map's bottom edge the resting sheet covers, so the
   /// map's floating buttons and the camera's centre stay above it.
   double _panelHeight = 220;
-
-  @override
-  void initState() {
-    super.initState();
-    // Re-selecting Today (from the profile menu's back button) refreshes it.
-    refreshDriverDashboard = _refreshHook;
-  }
-
-  @override
-  void dispose() {
-    if (refreshDriverDashboard == _refreshHook) refreshDriverDashboard = null;
-    super.dispose();
-  }
-
-  Future<void> _refresh() => _cubit.load(silent: true);
 
   /// Days left on the licence when it's about to lapse (a month's notice),
   /// otherwise null. An expired one locks the account, so there's no banner.
@@ -77,12 +67,13 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
     return days != null && days >= 0 && days <= 30 ? days : null;
   }
 
-  DriverMapData _mapData(GeoPoint? point, Trip? trip) {
-    final driver = point == null ? null : LatLng(point.latitude, point.longitude);
+  HomeMapData _mapData(GeoPoint? point, Trip? trip) {
+    final driver =
+        point == null ? null : LatLng(point.latitude, point.longitude);
     if (trip == null || !trip.status.isActive) {
-      return DriverMapData(driver: driver);
+      return HomeMapData(driver: driver);
     }
-    return DriverMapData(
+    return HomeMapData(
       driver: driver,
       pickup: trip.pickup.hasCoordinates
           ? LatLng(trip.pickup.latitude!, trip.pickup.longitude!)
@@ -90,9 +81,10 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
       drop: trip.drop.hasCoordinates
           ? LatLng(trip.drop.latitude!, trip.drop.longitude!)
           : null,
-      route: decodePolyline(trip.routePolyline, precision: trip.polylinePrecision)
-          .map((p) => LatLng(p.latitude, p.longitude))
-          .toList(),
+      route:
+          decodePolyline(trip.routePolyline, precision: trip.polylinePrecision)
+              .map((p) => LatLng(p.latitude, p.longitude))
+              .toList(),
     );
   }
 
@@ -111,35 +103,36 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Emergency SOS'),
+        title: Text(tr('Emergency SOS')),
         content: Text(
           phone.isEmpty
-              ? 'No emergency contact is saved yet. Add one from your profile so it’s ready if you ever need it.'
-              : 'Call your emergency contact${name.isEmpty ? '' : ' ($name)'}?',
+              ? tr(
+                  'No emergency contact is saved yet. Add one from your profile so it’s ready if you ever need it.')
+              : tr('Call your emergency contact{p0}?',
+                  {'p0': name.isEmpty ? '' : ' ($name)'}),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close')),
+              onPressed: () => Navigator.pop(ctx), child: Text(tr('Close'))),
           if (phone.isNotEmpty)
             TextButton(
               key: const Key('sos_call'),
               onPressed: () {
                 Navigator.pop(ctx);
-                unawaited(callPhone(phone));
+                unawaited(Launchers.call(phone));
               },
-              child: const Text('Call now',
+              child: Text(tr('Call now'),
                   style: TextStyle(
-                      color: DriverColors.red, fontWeight: FontWeight.w800)),
+                      color: AppColors.red, fontWeight: FontWeight.w800)),
             )
           else
             TextButton(
               key: const Key('sos_add_contact'),
               onPressed: () {
                 Navigator.pop(ctx);
-                context.push(DriverRoutes.editProfile);
+                context.push(AppRoutes.editProfile);
               },
-              child: const Text('Add contact'),
+              child: Text(tr('Add contact')),
             ),
         ],
       ),
@@ -152,7 +145,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
       builder: (context, state) {
         final profile = state.profile;
         return Scaffold(
-          backgroundColor: DriverColors.surface,
+          backgroundColor: AppColors.surface,
           body: AnimatedSwitcher(
             duration: const Duration(milliseconds: 260),
             child: profile == null
@@ -171,7 +164,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
 
   Widget _content(
       BuildContext context, DriverSessionState state, DriverProfile profile) {
-    final mapBuilder = widget.mapBuilder ?? defaultDriverMapBuilder;
+    final mapBuilder = widget.mapBuilder ?? defaultHomeMapBuilder;
     final trip = state.activeTrip;
 
     return Column(children: [
@@ -181,16 +174,18 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
       DutyHeaderSurface(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             DutyStatusRow(
-              avatar: DriverAvatar(profile.fullName, size: 44, photoUrl: profile.photoUrl),
+              avatar: ProfileAvatar(profile.fullName,
+                  size: 44, photoUrl: profile.photoUrl),
               online: state.isOnline,
               busy: state.dutyBusy,
               onToggle: (goOnline) => goOnline
                   ? startDutyFlow(context,
                       checkPermission: widget.checkLocationPermission)
                   : endDutyFlow(context),
-              onProfileTap: () => context.go(DriverRoutes.profile),
+              onProfileTap: () => context.go(AppRoutes.profile),
             ),
             AnimatedSize(
               duration: const Duration(milliseconds: 240),
@@ -206,12 +201,15 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                     key: const Key('licence_banner'),
                     solid: true,
                     text: days == 0
-                        ? 'Your driving licence expires today. Renew it to keep taking trips.'
-                        : 'Your driving licence expires in $days day${days == 1 ? '' : 's'}. Renew it to keep taking trips.',
+                        ? tr(
+                            'Your driving licence expires today. Renew it to keep taking trips.')
+                        : tr(
+                            'Your driving licence expires in {days} day{p0}. Renew it to keep taking trips.',
+                            {'days': days, 'p0': days == 1 ? '' : 's'}),
                     icon: Icons.event_busy_rounded,
                     action: TextButton(
-                      onPressed: () => context.push(DriverRoutes.verification),
-                      child: const Text('View'),
+                      onPressed: () => context.push(AppRoutes.verification),
+                      child: Text(tr('View')),
                     ),
                   ),
                 ],
@@ -220,14 +218,13 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                   InfoBanner(
                     key: const Key('location_banner'),
                     solid: true,
-                    text:
-                        'We can’t see your location, so you won’t be assigned trips. Turn on GPS and allow location access.',
+                    text: tr(
+                        'We can’t see your location, so you won’t be assigned trips. Turn on GPS and allow location access.'),
                     icon: Icons.location_off_rounded,
                     action: TextButton(
-                      onPressed: () =>
-                          (widget.checkLocationPermission ??
-                                  ensureLocationPermission)(context),
-                      child: const Text('Fix'),
+                      onPressed: () => (widget.checkLocationPermission ??
+                          ensureLocationPermission)(context),
+                      child: Text(tr('Fix')),
                     ),
                   ),
                 ],
@@ -275,7 +272,8 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
       details = _ActiveTripDetails(trip: trip);
     } else if (!state.tripKnown) {
       key = 'loading';
-      peek = const SkeletonShimmer(child: SkeletonBlock(height: 92, radius: 18));
+      peek =
+          const SkeletonShimmer(child: SkeletonBlock(height: 92, radius: 18));
     } else if (!state.isOnline) {
       key = 'offline';
       peek = _OfflinePanel(
@@ -314,9 +312,9 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
         key: const ValueKey('error'),
         child: CenteredMessage(
           icon: Icons.cloud_off_rounded,
-          title: 'Couldn’t load your dashboard',
+          title: tr('Couldn’t load your dashboard'),
           message: state.loadError,
-          actionLabel: 'Retry',
+          actionLabel: tr('Retry'),
           onAction: () => _cubit.load(),
         ),
       );
@@ -366,38 +364,38 @@ class _VerificationCard extends StatelessWidget {
 
     final (color, icon, title, lines, action) = switch (status) {
       OnboardingStatus.underReview => (
-          DriverColors.orange,
+          AppColors.orange,
           Icons.hourglass_top_rounded,
-          'Your documents are being reviewed',
+          tr('Your documents are being reviewed'),
           <String>[
             'We’ll unlock trips as soon as you’re approved — usually within a day.'
           ],
-          'View documents',
+          tr('View documents'),
         ),
       OnboardingStatus.actionRequired => (
-          DriverColors.red,
+          AppColors.red,
           Icons.error_outline_rounded,
-          'Some documents need fixing',
+          tr('Some documents need fixing'),
           [
             for (final (name, item) in rejected)
               '$name: ${item.rejectionNote ?? 'sent back for a fix'}',
           ],
-          'Fix documents',
+          tr('Fix documents'),
         ),
       _ => (
-          DriverColors.red,
+          AppColors.red,
           Icons.gpp_maybe_outlined,
-          'You can’t take trips yet',
+          tr('You can’t take trips yet'),
           profile.blockers.isEmpty
               ? <String>['Your account isn’t eligible for trips right now.']
               : profile.blockers,
-          'View documents',
+          tr('View documents'),
         ),
     };
 
-    return DriverCard(
+    return AppCard(
       key: const Key('verification_card'),
-      onTap: () => context.push(DriverRoutes.verification),
+      onTap: () => context.push(AppRoutes.verification),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
@@ -411,8 +409,8 @@ class _VerificationCard extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(title,
-                style: const TextStyle(
-                    color: DriverColors.ink,
+                style: TextStyle(
+                    color: AppColors.ink,
                     fontSize: 15,
                     fontWeight: FontWeight.w800)),
           ),
@@ -422,8 +420,8 @@ class _VerificationCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(line,
-                style: const TextStyle(
-                    color: DriverColors.muted, fontSize: 12.5, height: 1.4)),
+                style: TextStyle(
+                    color: AppColors.muted, fontSize: 12.5, height: 1.4)),
           ),
         const SizedBox(height: 6),
         Text(action,
@@ -438,7 +436,8 @@ class _VerificationCard extends StatelessWidget {
 // -- the sheet ------------------------------------------------------------
 
 class _OfflinePanel extends StatelessWidget {
-  const _OfflinePanel({required this.busy, this.vehicle, this.checkLocationPermission});
+  const _OfflinePanel(
+      {required this.busy, this.vehicle, this.checkLocationPermission});
   final bool busy;
   final DriverVehicle? vehicle;
   final LocationPermissionCheck? checkLocationPermission;
@@ -453,34 +452,41 @@ class _OfflinePanel extends StatelessWidget {
             height: 76,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFFF3F7FD), DriverColors.blueSoft],
+                colors: [AppColors.blueSoft, AppColors.blueSoft],
               ),
             ),
             alignment: Alignment.center,
             child: _RollIn(
               child: VehicleArt(
-                  name: vehicle?.vehicleTypeName, category: vehicle?.category, width: 66),
+                  name: vehicle?.vehicleTypeName,
+                  category: vehicle?.category,
+                  width: 66),
             ),
           ),
           const SizedBox(width: 16),
-          const Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('You’re off duty',
-                  key: Key('no_trip_title'),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(tr('You’re off duty'),
+                  key: const Key('no_trip_title'),
                   style: TextStyle(
-                      color: DriverColors.ink, fontSize: 19, letterSpacing: -.3, fontWeight: FontWeight.w800)),
-              SizedBox(height: 4),
-              Text('Go on duty to start receiving orders near you.',
-                  style: TextStyle(color: DriverColors.muted, fontSize: 13, height: 1.35)),
+                      color: AppColors.ink,
+                      fontSize: 19,
+                      letterSpacing: -.3,
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text(tr('Go on duty to start receiving orders near you.'),
+                  style: TextStyle(
+                      color: AppColors.muted, fontSize: 13, height: 1.35)),
             ]),
           ),
         ]),
         const SizedBox(height: 18),
         PrimaryButton(
-          label: 'Start duty',
+          label: tr('Start duty'),
           icon: Icons.play_arrow_rounded,
           loading: busy,
           onPressed: () =>
@@ -501,67 +507,160 @@ class _RollIn extends StatelessWidget {
       tween: Tween(begin: 1, end: 0),
       duration: const Duration(milliseconds: 700),
       curve: Curves.easeOutBack,
-      builder: (_, t, c) => Transform.translate(offset: Offset(60 * t, 0), child: c),
+      builder: (_, t, c) =>
+          Transform.translate(offset: Offset(60 * t, 0), child: c),
       child: child,
     );
   }
 }
 
-/// Online with nothing assigned: the radar, and a status line that keeps
-/// changing so a driver waiting a while can see the app is still at work.
-class _LookingForOrdersPanel extends StatelessWidget {
+/// Online with nothing assigned: the radar, a status line that keeps
+/// changing so a driver waiting a while can see the app is still at work,
+/// and — once it's been quiet a while, or the server knows where the work
+/// is — a suggestion of where to go.
+class _LookingForOrdersPanel extends StatefulWidget {
   const _LookingForOrdersPanel();
 
+  @override
+  State<_LookingForOrdersPanel> createState() => _LookingForOrdersPanelState();
+}
+
+class _LookingForOrdersPanelState extends State<_LookingForOrdersPanel> {
   static const _messages = [
-    'Finding orders near you',
-    'Looking for your next order',
-    'Still searching nearby',
-    'Hang tight, we’re on it',
+    ('🔎', 'Finding orders near you'),
+    ('📦', 'Looking for your next order'),
+    ('📍', 'Still searching nearby'),
+    ('⏳', 'Hang tight, we’re on it'),
   ];
 
+  Timer? _idleTimer;
+  bool _quietTooLong = false;
+
   @override
-  Widget build(BuildContext context) =>
-      Column(mainAxisSize: MainAxisSize.min, children: [
-        const FinderAnimation(size: 120),
-        const SizedBox(height: 4),
-        const SizedBox(
-          height: 26,
-          child: RotatingStatusText(
-              key: Key('no_trip_title'), messages: _messages),
+  void initState() {
+    super.initState();
+    _idleTimer = Timer(DriverLimits.idleHintAfter, () {
+      if (mounted) setState(() => _quietTooLong = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _idleTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<DriverSessionCubit>();
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      const FindingOrdersAnimation(size: 120),
+      const SizedBox(height: 4),
+      SizedBox(
+        height: 26,
+        child: RotatingStatusText(
+          key: const Key('no_trip_title'),
+          messages: [
+            for (final (emoji, text) in _messages) '$emoji ${tr(text)}'
+          ],
         ),
-        const SizedBox(height: 6),
-        // Orders arrive by push; while that link is down they still come,
-        // just later (the app asks every so often) — say so rather than
-        // let the driver wonder why it's quiet.
-        ValueListenableBuilder<RealtimeStatus>(
-          valueListenable: context.read<DriverSessionCubit>().realtimeStatus,
-          builder: (_, status, __) => status == RealtimeStatus.connecting
-              ? const Row(
-                  key: Key('reconnecting_hint'),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox.square(
-                      dimension: 12,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 1.6, color: DriverColors.orange),
-                    ),
-                    SizedBox(width: 8),
-                    Flexible(
-                      child: Text('Reconnecting — new orders may take a moment',
-                          style: TextStyle(
-                              color: DriverColors.orange,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                )
-              : const Text(
-                  'Keep the app open — we’ll ring and vibrate when an order arrives.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: DriverColors.muted, fontSize: 12.5, height: 1.4)),
+      ),
+      const SizedBox(height: 6),
+      ValueListenableBuilder<RealtimeStatus>(
+        valueListenable: cubit.realtimeStatus,
+        builder: (_, status, __) => status == RealtimeStatus.connecting
+            ? const _ReconnectingNote()
+            : Text(
+                tr('Keep the app open — we’ll ring and vibrate when an order arrives.'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: AppColors.muted, fontSize: 12.5, height: 1.4),
+              ),
+      ),
+      ValueListenableBuilder<DemandHint?>(
+        valueListenable: cubit.demandHint,
+        builder: (_, hint, __) {
+          if (hint == null && !_quietTooLong) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: _DemandHintCard(hint: hint),
+          );
+        },
+      ),
+    ]);
+  }
+}
+
+/// Orders arrive by push; while that link is down they still come, just
+/// later (the app asks every so often) — say so rather than let the driver
+/// wonder why it's quiet.
+class _ReconnectingNote extends StatelessWidget {
+  const _ReconnectingNote();
+
+  @override
+  Widget build(BuildContext context) => Row(
+        key: const Key('reconnecting_hint'),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox.square(
+            dimension: 12,
+            child: CircularProgressIndicator(
+                strokeWidth: 1.6, color: AppColors.orange),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              tr('Reconnecting — new orders may take a moment'),
+              style: TextStyle(
+                  color: AppColors.orange,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      );
+}
+
+/// Where to go for orders: the server's hint when it sent one (with
+/// directions if it named a place), otherwise the general advice to move.
+class _DemandHintCard extends StatelessWidget {
+  const _DemandHintCard({required this.hint});
+  final DemandHint? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final hint = this.hint;
+    return Container(
+      key: const Key('demand_hint'),
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+      decoration: BoxDecoration(
+        color: AppColors.blueSoft,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(children: [
+        const Text('🚀', style: TextStyle(fontSize: 22)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            hint?.message ??
+                tr('No orders nearby right now. Try moving to a busier area.'),
+            style: TextStyle(
+                color: AppColors.ink,
+                fontSize: 13.5,
+                height: 1.35,
+                fontWeight: FontWeight.w600),
+          ),
         ),
-      ]);
+        if (hint != null && hint.hasLocation)
+          TextButton(
+            key: const Key('demand_hint_directions'),
+            onPressed: () =>
+                Launchers.navigateToPoint(hint.latitude!, hint.longitude!),
+            child: Text(tr('Get directions')),
+          ),
+      ]),
+    );
+  }
 }
 
 /// The active trip at rest: what stage it's at, and the way into it.
@@ -577,44 +676,58 @@ class _ActiveTripPanel extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-                color: DriverColors.blueSoft, borderRadius: BorderRadius.circular(18)),
+                color: AppColors.blueSoft,
+                borderRadius: BorderRadius.circular(18)),
             alignment: Alignment.center,
-            child: _RollIn(child: VehicleArt(name: trip.vehicleTypeName, width: 42)),
+            child: _RollIn(
+                child: VehicleArt(name: trip.vehicleTypeName, width: 42)),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Container(
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(
-                    color: DriverColors.blue,
+                    color: AppColors.blue,
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: DriverColors.blue.withValues(alpha: .5), blurRadius: 6, spreadRadius: 1)],
+                    boxShadow: [
+                      BoxShadow(
+                          color: AppColors.blue.withValues(alpha: .5),
+                          blurRadius: 6,
+                          spreadRadius: 1)
+                    ],
                   ),
                 ),
                 const SizedBox(width: 7),
-                const Text('ACTIVE TRIP',
+                Text(tr('ACTIVE TRIP'),
                     style: TextStyle(
-                        color: DriverColors.blue, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: .8)),
+                        color: AppColors.blue,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .8)),
               ]),
               const SizedBox(height: 3),
               Text(trip.status.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: DriverColors.ink, fontSize: 18, letterSpacing: -.3, fontWeight: FontWeight.w800)),
+                  style: TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 18,
+                      letterSpacing: -.3,
+                      fontWeight: FontWeight.w800)),
             ]),
           ),
-          StatusPill(trip.isCod ? 'COD' : 'PREPAID',
-              color: trip.isCod ? DriverColors.orange : DriverColors.green),
+          StatusPill(trip.isCod ? 'COD' : tr('PREPAID'),
+              color: trip.isCod ? AppColors.orange : AppColors.green),
         ]),
         const SizedBox(height: 16),
         PrimaryButton(
-          label: 'Open trip',
+          label: tr('Open trip'),
           icon: Icons.arrow_forward_rounded,
-          onPressed: () => context.push(DriverRoutes.trip(trip.id)),
+          onPressed: () => context.push(AppRoutes.trip(trip.id)),
         ),
       ]);
 }
@@ -631,7 +744,7 @@ class _ActiveTripDetails extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: DriverColors.surface,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(18),
           ),
           child: _Route(pickup: trip.pickup.address, drop: trip.drop.address),
@@ -639,14 +752,20 @@ class _ActiveTripDetails extends StatelessWidget {
         const SizedBox(height: 14),
         Row(children: [
           Text(formatMoney(trip.totalFare, currency: trip.currency),
-              style: const TextStyle(
-                  color: DriverColors.ink, fontSize: 22, letterSpacing: -.5, fontWeight: FontWeight.w800)),
+              style: TextStyle(
+                  color: AppColors.ink,
+                  fontSize: 22,
+                  letterSpacing: -.5,
+                  fontWeight: FontWeight.w800)),
           const Spacer(),
-          const Icon(Icons.route_rounded, size: 16, color: DriverColors.muted),
+          Icon(Icons.route_rounded, size: 16, color: AppColors.muted),
           const SizedBox(width: 4),
           Text(
               '${formatDistance(trip.distanceMeters)} · ${formatDuration(trip.durationSeconds)}',
-              style: const TextStyle(color: DriverColors.muted, fontSize: 12.5, fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600)),
         ]),
       ]);
 }
@@ -658,7 +777,7 @@ class _Route extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(children: [
-        _point(DriverColors.green, Icons.north_rounded, 'PICKUP', pickup),
+        _point(AppColors.green, Icons.north_rounded, tr('PICKUP'), pickup),
         Padding(
           padding: const EdgeInsets.only(left: 10),
           child: Align(
@@ -669,14 +788,15 @@ class _Route extends StatelessWidget {
                     width: 2,
                     height: 3,
                     margin: const EdgeInsets.symmetric(vertical: 1.5),
-                    color: const Color(0xFFC5CED8)),
+                    color: AppColors.line),
             ]),
           ),
         ),
-        _point(DriverColors.red, Icons.south_rounded, 'DROP', drop),
+        _point(AppColors.red, Icons.south_rounded, tr('DROP'), drop),
       ]);
 
-  Widget _point(Color color, IconData icon, String label, String address) => Row(
+  Widget _point(Color color, IconData icon, String label, String address) =>
+      Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
@@ -691,13 +811,19 @@ class _Route extends StatelessWidget {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label,
                   style: TextStyle(
-                      color: color, fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: .8)),
+                      color: color,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: .8)),
               const SizedBox(height: 1),
               Text(address,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: DriverColors.ink, fontSize: 14, height: 1.3, fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 14,
+                      height: 1.3,
+                      fontWeight: FontWeight.w600)),
             ]),
           ),
         ],
@@ -715,7 +841,7 @@ class _StatsSheet extends StatelessWidget {
     final today = stats.today;
     final total = stats.allTime;
     return Material(
-      color: Colors.white,
+      color: AppColors.card,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       child: SafeArea(
         top: false,
@@ -730,36 +856,37 @@ class _StatsSheet extends StatelessWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: DriverColors.line,
+                      color: AppColors.line,
                       borderRadius: BorderRadius.circular(4)),
                 ),
               ),
               const SizedBox(height: 18),
-              const SectionTitle('Today'),
+              SectionTitle(tr('Today')),
               const SizedBox(height: 10),
-              DriverCard(
+              AppCard(
                 child: Column(children: [
                   Row(children: [
                     _Stat(
                         value: formatMoney(today.earnings),
-                        label: 'You earned',
+                        label: tr('You earned'),
                         keyName: 'stat_earnings',
-                        color: DriverColors.green),
+                        color: AppColors.green),
                     _Stat(
                         value: '${today.tripsCompleted}',
-                        label: 'Trips done',
+                        label: tr('Trips done'),
                         keyName: 'stat_trips'),
                     _Stat(
                         value: formatDistance(today.distanceMeters),
-                        label: 'Distance',
+                        label: tr('Distance'),
                         keyName: 'stat_distance'),
                   ]),
                   const Divider(height: 26),
-                  InfoRow('Trip value today', formatMoney(today.totalFare),
+                  InfoRow(tr('Trip value today'), formatMoney(today.totalFare),
                       key: const Key('stat_fare')),
-                  InfoRow('COD collected today', formatMoney(today.codCollected)),
-                  InfoRow('Cancelled today', '${today.tripsCancelled}'),
-                  InfoRow('All-time trips', '${total.tripsCompleted}'),
+                  InfoRow(tr('COD collected today'),
+                      formatMoney(today.codCollected)),
+                  InfoRow(tr('Cancelled today'), '${today.tripsCancelled}'),
+                  InfoRow(tr('All-time trips'), '${total.tripsCompleted}'),
                 ]),
               ),
             ],
@@ -771,12 +898,12 @@ class _StatsSheet extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat({
+  _Stat({
     required this.value,
     required this.label,
     required this.keyName,
-    this.color = DriverColors.ink,
-  });
+    Color? color,
+  }) : color = color ?? AppColors.ink;
   final String value;
   final String label;
   final String keyName;
@@ -791,9 +918,7 @@ class _Stat extends StatelessWidget {
               style: TextStyle(
                   color: color, fontSize: 17, fontWeight: FontWeight.w800)),
           const SizedBox(height: 3),
-          Text(label,
-              style:
-                  const TextStyle(color: DriverColors.muted, fontSize: 11.5)),
+          Text(label, style: TextStyle(color: AppColors.muted, fontSize: 11.5)),
         ]),
       );
 }

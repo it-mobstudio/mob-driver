@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/utils/json_readers.dart';
 
 /// Mirrors the backend's `TripStatus` (core/choices.py).
 enum TripStatus {
@@ -12,9 +13,12 @@ enum TripStatus {
   cancelled('cancelled', 'Cancelled'),
   unknown('unknown', 'Unknown');
 
-  const TripStatus(this.wire, this.label);
+  const TripStatus(this.wire, this._label);
   final String wire;
-  final String label;
+  final String _label;
+
+  /// In the driver's language.
+  String get label => tr(_label);
 
   static TripStatus parse(String? value) => TripStatus.values.firstWhere(
         (status) => status.wire == value,
@@ -54,8 +58,9 @@ enum PickupPhotoMode {
   /// A photo of every item is part of it.
   bool get wantsItemPhotos => this == perItem || this == both;
 
-  static PickupPhotoMode parse(String? value) => PickupPhotoMode.values
-      .firstWhere((mode) => mode.wire == value, orElse: () => PickupPhotoMode.none);
+  static PickupPhotoMode parse(String? value) =>
+      PickupPhotoMode.values.firstWhere((mode) => mode.wire == value,
+          orElse: () => PickupPhotoMode.none);
 }
 
 /// One photo of the whole order, on the server. A stop can have several; a
@@ -94,11 +99,14 @@ enum PhotoStage {
   pickup('pickup', 'Pickup'),
   delivery('delivery', 'Delivery');
 
-  const PhotoStage(this.wire, this.label);
+  const PhotoStage(this.wire, this._label);
 
   /// Also the endpoint: `driver/trips/{id}/<wire>-photo`.
   final String wire;
-  final String label;
+  final String _label;
+
+  /// In the driver's language.
+  String get label => tr(_label);
 }
 
 /// What the driver has said about one item at the drop.
@@ -141,7 +149,7 @@ class TripItem extends Equatable {
 
   factory TripItem.fromJson(Map<String, dynamic> json) => TripItem(
         id: readString(json['id']) ?? '',
-        name: readString(json['name']) ?? 'Item',
+        name: readString(json['name']) ?? tr('Item'),
         quantity: readInt(json['quantity']) ?? 1,
         unit: readString(json['unit']),
         sku: readString(json['sku']),
@@ -290,7 +298,7 @@ class TripWaypoint extends Equatable {
   /// `Stop 2`, counting the main pickup as stop 1.
   String get label => 'Stop ${position + 1}';
 
-  String get kindLabel => isPickup ? 'Pickup' : 'Drop';
+  String get kindLabel => isPickup ? tr('Pickup') : tr('Drop');
 
   /// The same place as a [TripStop], for the navigation / call helpers.
   TripStop get asStop => TripStop(

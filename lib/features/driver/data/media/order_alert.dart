@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:just_audio/just_audio.dart';
+import 'package:mob_driver/core/constants/app_assets.dart';
 import 'package:vibration/vibration.dart';
 
 /// The "an order has arrived" alarm: a chime on loop and strong, repeating
@@ -35,7 +36,7 @@ class DeviceOrderAlert implements OrderAlert {
   Future<void> _startSound() async {
     try {
       final player = _player = AudioPlayer();
-      await player.setAsset('assets/audios/new_order.m4a');
+      await player.setAsset(AppAssets.newOrderSound);
       await player.setLoopMode(LoopMode.one);
       await player.setVolume(1);
       if (_running) unawaited(player.play());

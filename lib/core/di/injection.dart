@@ -1,22 +1,22 @@
 import 'package:get_it/get_it.dart';
-import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
-import 'package:m_o_b_demand_side/core/config/app_config.dart';
-import 'package:m_o_b_demand_side/core/network/dio_client.dart';
+import 'package:mob_driver/core/auth/auth_session.dart';
+import 'package:mob_driver/core/config/app_config.dart';
+import 'package:mob_driver/core/network/dio_client.dart';
 
 // Auth
-import 'package:m_o_b_demand_side/features/auth/data/datasources/auth_remote_datasource.dart';
-import 'package:m_o_b_demand_side/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
-import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:mob_driver/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:mob_driver/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:mob_driver/features/auth/domain/repositories/auth_repository.dart';
+import 'package:mob_driver/features/auth/presentation/bloc/auth_bloc.dart';
 
 // Driver
-import 'package:m_o_b_demand_side/features/driver/data/datasources/driver_remote_datasource.dart';
-import 'package:m_o_b_demand_side/features/driver/data/local/driver_snapshot_cache.dart';
-import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
-import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
-import 'package:m_o_b_demand_side/features/driver/data/repositories/driver_repository_impl.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/repositories/driver_repository.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:mob_driver/features/driver/data/datasources/driver_remote_datasource.dart';
+import 'package:mob_driver/features/driver/data/local/driver_snapshot_cache.dart';
+import 'package:mob_driver/features/driver/data/location/driver_location_service.dart';
+import 'package:mob_driver/features/driver/data/realtime/driver_realtime.dart';
+import 'package:mob_driver/features/driver/data/repositories/driver_repository_impl.dart';
+import 'package:mob_driver/features/driver/domain/repositories/driver_repository.dart';
+import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -46,7 +46,8 @@ Future<void> setupDependencies() async {
     () => DriverRepositoryImpl(
       sl(),
       cache: DriverSnapshotCache(
-        currentDriverId: () => AuthSession.instance.userDetails?['id']?.toString(),
+        currentDriverId: () =>
+            AuthSession.instance.userDetails?['id']?.toString(),
       ),
     ),
   );

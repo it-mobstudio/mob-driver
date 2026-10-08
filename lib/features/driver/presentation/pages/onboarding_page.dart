@@ -1,24 +1,30 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:m_o_b_demand_side/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:m_o_b_demand_side/features/driver/data/realtime/driver_realtime.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/documents_section.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/driver_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/personal_details_form.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/trip_actions_ui.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/widgets/vehicle_art.dart';
-import 'package:m_o_b_demand_side/shared/widgets/top_snack_bar.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mob_driver/app/routes.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/theme/app_colors.dart';
+import 'package:mob_driver/core/widgets/app_card.dart';
+import 'package:mob_driver/core/widgets/buttons.dart';
+import 'package:mob_driver/core/widgets/info_banner.dart';
+import 'package:mob_driver/core/widgets/list_skeleton.dart';
+import 'package:mob_driver/core/widgets/status_pill.dart';
+import 'package:mob_driver/core/widgets/top_snack_bar.dart';
+import 'package:mob_driver/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:mob_driver/features/driver/data/media/photo_capture.dart';
+import 'package:mob_driver/features/driver/data/realtime/driver_realtime.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/my_vehicle.dart';
+import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/onboarding/documents_section.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/onboarding/personal_details_form.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/vehicle_art.dart';
 
 /// Joining as a driver, start to finish: who you are, your documents, your
 /// vehicle — then a "we're reviewing your request" screen until the company
-/// approves you. Shown full-screen over the app (see ScaffoldWithNavBar) for
+/// approves you. Shown full-screen over the app (see DriverShell) for
 /// as long as [OnboardingStatus.needsSetup], i.e. until approval: nobody looks
 /// for rides before they're verified.
 ///
@@ -57,18 +63,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sign out?'),
-        content: const Text(
-            'You can sign in again any time — your progress is saved.'),
+        title: Text(tr('Sign out?')),
+        content: Text(
+            tr('You can sign in again any time — your progress is saved.')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Stay')),
+              child: Text(tr('Stay'))),
           TextButton(
               key: const Key('onboarding_sign_out_confirm'),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Sign out',
-                  style: TextStyle(color: DriverColors.red))),
+              child:
+                  Text(tr('Sign out'), style: TextStyle(color: AppColors.red))),
         ],
       ),
     );
@@ -80,7 +86,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
   /// 0 details, 1 documents, 2 vehicle, 3 waiting for review.
   static int _stepFor(DriverProfile p) => switch (p.onboardingStatus) {
         OnboardingStatus.profileIncomplete => 0,
-        OnboardingStatus.documentsRequired || OnboardingStatus.actionRequired => 1,
+        OnboardingStatus.documentsRequired ||
+        OnboardingStatus.actionRequired =>
+          1,
         OnboardingStatus.vehicleRequired => 2,
         _ => 3,
       };
@@ -103,7 +111,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
           return Scaffold(
             key: const Key('onboarding'),
-            backgroundColor: DriverColors.surface,
+            backgroundColor: AppColors.surface,
             body: SafeArea(
               child: Column(children: [
                 _Header(step: step, steps: _steps, onSignOut: _signOut),
@@ -114,7 +122,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     transitionBuilder: (child, a) => FadeTransition(
                       opacity: a,
                       child: SlideTransition(
-                          position: Tween(begin: const Offset(.04, 0), end: Offset.zero).animate(a),
+                          position: Tween(
+                                  begin: const Offset(.04, 0), end: Offset.zero)
+                              .animate(a),
                           child: child),
                     ),
                     child: KeyedSubtree(
@@ -147,16 +157,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ? Container(
                           width: double.infinity,
                           padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                          decoration: const BoxDecoration(color: Colors.white, boxShadow: [
-                            BoxShadow(color: Color(0x14001533), blurRadius: 14, offset: Offset(0, -3)),
-                          ]),
+                          decoration: BoxDecoration(
+                              color: AppColors.card,
+                              boxShadow: const [
+                                BoxShadow(
+                                    color: Color(0x14001533),
+                                    blurRadius: 14,
+                                    offset: Offset(0, -3)),
+                              ]),
                           child: PrimaryButton(
                             key: const Key('onboarding_resume'),
                             label: natural >= 3
-                                ? 'Done — back to review'
+                                ? tr('Done — back to review')
                                 : natural == 2
-                                    ? 'Continue to your vehicle'
-                                    : 'Continue to documents',
+                                    ? tr('Continue to your vehicle')
+                                    : tr('Continue to documents'),
                             icon: Icons.arrow_forward_rounded,
                             onPressed: _resume,
                           ),
@@ -171,7 +186,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.step, required this.steps, required this.onSignOut});
+  const _Header(
+      {required this.step, required this.steps, required this.onSignOut});
   final int step;
   final int steps;
   final VoidCallback onSignOut;
@@ -180,21 +196,24 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        color: Colors.white,
+        color: AppColors.card,
         padding: const EdgeInsets.fromLTRB(20, 8, 8, 16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Expanded(
-              child: Text(step >= steps ? 'Almost there' : 'Set up your driver account',
-                  style: const TextStyle(
-                      color: DriverColors.ink,
+              child: Text(
+                  step >= steps
+                      ? tr('Almost there')
+                      : tr('Set up your driver account'),
+                  style: TextStyle(
+                      color: AppColors.ink,
                       fontSize: 17,
                       fontWeight: FontWeight.w800)),
             ),
             TextButton(
                 key: const Key('onboarding_sign_out'),
                 onPressed: onSignOut,
-                child: const Text('Sign out')),
+                child: Text(tr('Sign out'))),
           ]),
           const SizedBox(height: 6),
           Padding(
@@ -207,10 +226,10 @@ class _Header extends StatelessWidget {
                     height: 5,
                     decoration: BoxDecoration(
                       color: i < step
-                          ? DriverColors.green
+                          ? AppColors.green
                           : i == step
-                              ? DriverColors.blue
-                              : DriverColors.line,
+                              ? AppColors.blue
+                              : AppColors.line,
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -222,11 +241,12 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
               step >= steps
-                  ? 'Submitted · waiting for approval'
-                  : 'Step ${step + 1} of $steps · ${_names[step]}',
+                  ? tr('Submitted · waiting for approval')
+                  : tr('Step {p0} of {steps} · {p1}',
+                      {'p0': step + 1, 'steps': steps, 'p1': tr(_names[step])}),
               key: const Key('onboarding_step'),
-              style: const TextStyle(
-                  color: DriverColors.muted,
+              style: TextStyle(
+                  color: AppColors.muted,
                   fontSize: 12,
                   fontWeight: FontWeight.w700)),
         ]),
@@ -242,20 +262,19 @@ class _DetailsStep extends StatelessWidget {
   Widget build(BuildContext context) => ListView(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
         children: [
-          const Text('Tell us about yourself',
+          Text(tr('Tell us about yourself'),
               style: TextStyle(
-                  color: DriverColors.ink,
+                  color: AppColors.ink,
                   fontSize: 24,
                   fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          const Text(
-              'These details go on your driver profile. Use your name exactly as it appears on your driving licence.',
+          Text(tr('These details go on your driver profile. Use your name exactly as it appears on your driving licence.'),
               style: TextStyle(
-                  color: DriverColors.muted, fontSize: 13.5, height: 1.4)),
+                  color: AppColors.muted, fontSize: 13.5, height: 1.4)),
           const SizedBox(height: 22),
           PersonalDetailsForm(
             profile: profile,
-            submitLabel: 'Continue',
+            submitLabel: tr('Continue'),
             onSaved: onSaved,
           ),
         ],
@@ -277,25 +296,25 @@ class _DocumentsStep extends StatelessWidget {
   Widget build(BuildContext context) => ListView(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
         children: [
-          const Text('Upload your documents',
+          Text(tr('Upload your documents'),
               style: TextStyle(
-                  color: DriverColors.ink,
+                  color: AppColors.ink,
                   fontSize: 24,
                   fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
           if (profile.onboardingStatus == OnboardingStatus.actionRequired) ...[
-            const InfoBanner(
-              key: Key('onboarding_fix_banner'),
+            InfoBanner(
+              key: const Key('onboarding_fix_banner'),
               icon: Icons.error_outline_rounded,
-              color: DriverColors.red,
-              text: 'Something needs fixing — see the note on the document below and upload it again.',
+              color: AppColors.red,
+              text: tr(
+                  'Something needs fixing — see the note on the document below and upload it again.'),
             ),
             const SizedBox(height: 12),
           ],
-          const Text(
-              'Add your Aadhaar card and driving licence. Next you’ll add your vehicle, then we review everything — usually within a day.',
+          Text(tr('Add your Aadhaar card and driving licence. Next you’ll add your vehicle, then we review everything — usually within a day.'),
               style: TextStyle(
-                  color: DriverColors.muted, fontSize: 13.5, height: 1.4)),
+                  color: AppColors.muted, fontSize: 13.5, height: 1.4)),
           const SizedBox(height: 20),
           DocumentsSection(profile: profile, capture: capture),
           const SizedBox(height: 18),
@@ -304,13 +323,12 @@ class _DocumentsStep extends StatelessWidget {
               key: const Key('onboarding_edit_details'),
               onPressed: onEditDetails,
               icon: const Icon(Icons.arrow_back_rounded, size: 18),
-              label: const Text('Edit my details'),
+              label: Text(tr('Edit my details')),
             ),
           ),
         ],
       );
 }
-
 
 /// The driver's own vehicle — its type (picked from pictures), number plate
 /// and photos. At least one vehicle with a photo moves them on to review.
@@ -338,8 +356,8 @@ class _VehicleStepState extends State<_VehicleStep> {
     if (mounted) setState(() => _vehicles = vehicles ?? const []);
   }
 
-  Future<void> _add() => _openForm(DriverRoutes.newVehicle);
-  Future<void> _edit(String id) => _openForm(DriverRoutes.editVehicle(id));
+  Future<void> _add() => _openForm(AppRoutes.newVehicle);
+  Future<void> _edit(String id) => _openForm(AppRoutes.editVehicle(id));
 
   Future<void> _openForm(String route) async {
     await context.push(route);
@@ -357,18 +375,21 @@ class _VehicleStepState extends State<_VehicleStep> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
       children: [
-        const Text('Add your vehicle',
-            style: TextStyle(color: DriverColors.ink, fontSize: 24, fontWeight: FontWeight.w800)),
+        Text(tr('Add your vehicle'),
+            style: TextStyle(
+                color: AppColors.ink,
+                fontSize: 24,
+                fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
-        const Text(
-            'Pick what you drive — bike, auto, mini truck or truck — then add its number plate and a clear photo. This decides which orders you get.',
-            style: TextStyle(color: DriverColors.muted, fontSize: 13.5, height: 1.4)),
+        Text(tr('Pick what you drive — bike, auto, mini truck or truck — then add its number plate and a clear photo. This decides which orders you get.'),
+            style:
+                TextStyle(color: AppColors.muted, fontSize: 13.5, height: 1.4)),
         const SizedBox(height: 20),
         if (vehicles == null)
-          const DriverListSkeletonInline(itemCount: 1, itemHeight: 96)
+          const ListSkeletonInline(itemCount: 1, itemHeight: 96)
         else ...[
           for (final v in vehicles) ...[
-            DriverCard(
+            AppCard(
               key: Key('onboarding_vehicle_${v.id}'),
               padding: const EdgeInsets.all(12),
               onTap: () => _edit(v.id),
@@ -376,26 +397,37 @@ class _VehicleStepState extends State<_VehicleStep> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: v.photos.isNotEmpty
-                      ? Image.network(v.photos.first.url, width: 72, height: 56, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => VehicleArt(name: v.vehicleTypeName, width: 72))
+                      ? Image.network(v.photos.first.url,
+                          width: 72,
+                          height: 56,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              VehicleArt(name: v.vehicleTypeName, width: 72))
                       : VehicleArt(name: v.vehicleTypeName, width: 72),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(v.registrationNumber,
-                        style: const TextStyle(color: DriverColors.ink, fontWeight: FontWeight.w800, fontSize: 15)),
-                    const SizedBox(height: 2),
-                    Text(v.vehicleTypeName ?? '',
-                        style: const TextStyle(color: DriverColors.muted, fontSize: 12.5)),
-                  ]),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(v.registrationNumber,
+                            style: TextStyle(
+                                color: AppColors.ink,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15)),
+                        const SizedBox(height: 2),
+                        Text(v.vehicleTypeName ?? '',
+                            style: TextStyle(
+                                color: AppColors.muted, fontSize: 12.5)),
+                      ]),
                 ),
                 if (v.photos.isEmpty)
-                  const StatusPill('Add a photo', color: DriverColors.orange, icon: Icons.add_a_photo_outlined)
+                  StatusPill(tr('Add a photo'),
+                      color: AppColors.orange, icon: Icons.add_a_photo_outlined)
                 else
-                  const Icon(Icons.check_circle_rounded, color: DriverColors.green),
+                  Icon(Icons.check_circle_rounded, color: AppColors.green),
                 const SizedBox(width: 4),
-                const Icon(Icons.chevron_right_rounded, color: DriverColors.muted),
+                Icon(Icons.chevron_right_rounded, color: AppColors.muted),
               ]),
             ),
             const SizedBox(height: 10),
@@ -403,7 +435,9 @@ class _VehicleStepState extends State<_VehicleStep> {
           const SizedBox(height: 6),
           PrimaryButton(
             key: const Key('onboarding_add_vehicle'),
-            label: vehicles.isEmpty ? 'Add my vehicle' : 'Add another vehicle',
+            label: vehicles.isEmpty
+                ? tr('Add my vehicle')
+                : tr('Add another vehicle'),
             icon: Icons.add_rounded,
             loading: _busy,
             onPressed: _add,
@@ -414,7 +448,7 @@ class _VehicleStepState extends State<_VehicleStep> {
           child: TextButton.icon(
             onPressed: widget.onBack,
             icon: const Icon(Icons.arrow_back_rounded, size: 18),
-            label: const Text('Back to documents'),
+            label: Text(tr('Back to documents')),
           ),
         ),
       ],
@@ -449,7 +483,9 @@ class _ReviewStepState extends State<_ReviewStep> with WidgetsBindingObserver {
     // when the push socket is down.
     final cubit = context.read<DriverSessionCubit>();
     _poll = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (cubit.realtimeStatus.value != RealtimeStatus.live) _check(quiet: true);
+      if (cubit.realtimeStatus.value != RealtimeStatus.live) {
+        _check(quiet: true);
+      }
     });
   }
 
@@ -471,7 +507,9 @@ class _ReviewStepState extends State<_ReviewStep> with WidgetsBindingObserver {
     await context.read<DriverSessionCubit>().load(silent: true);
     if (mounted && !quiet) {
       setState(() => _checking = false);
-      TopSnackBar.show(context, message: 'Still under review — we’ll let you in as soon as you’re approved.');
+      TopSnackBar.show(context,
+          message: tr(
+              'Still under review — we’ll let you in as soon as you’re approved.'));
     }
   }
 
@@ -481,21 +519,34 @@ class _ReviewStepState extends State<_ReviewStep> with WidgetsBindingObserver {
     Widget row(String label, KycItem? item, {String? done}) {
       final status = item?.status;
       final (text, color, icon) = done != null
-          ? (done, DriverColors.green, Icons.check_circle_rounded)
+          ? (done, AppColors.green, Icons.check_circle_rounded)
           : status == KycStatus.verified
-              ? ('Verified', DriverColors.green, Icons.verified_rounded)
+              ? (tr('Verified'), AppColors.green, Icons.verified_rounded)
               : status == KycStatus.rejected
-                  ? ('Needs fixing', DriverColors.red, Icons.error_rounded)
+                  ? (tr('Needs fixing'), AppColors.red, Icons.error_rounded)
                   : (item?.submitted ?? false)
-                      ? ('In review', DriverColors.orange, Icons.schedule_rounded)
-                      : ('Not needed yet', DriverColors.muted, Icons.remove_circle_outline_rounded);
+                      ? (
+                          tr('In review'),
+                          AppColors.orange,
+                          Icons.schedule_rounded
+                        )
+                      : (
+                          tr('Not needed yet'),
+                          AppColors.muted,
+                          Icons.remove_circle_outline_rounded
+                        );
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(color: DriverColors.ink, fontWeight: FontWeight.w600))),
-          Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12.5)),
+          Expanded(
+              child: Text(label,
+                  style: TextStyle(
+                      color: AppColors.ink, fontWeight: FontWeight.w600))),
+          Text(text,
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.w700, fontSize: 12.5)),
         ]),
       );
     }
@@ -513,65 +564,75 @@ class _ReviewStepState extends State<_ReviewStep> with WidgetsBindingObserver {
             child: Container(
               width: 92,
               height: 92,
-              decoration: const BoxDecoration(color: Color(0xFFE7F7EF), shape: BoxShape.circle),
-              child: const Icon(Icons.task_alt_rounded, color: DriverColors.green, size: 48),
+              decoration: BoxDecoration(
+                  color: AppColors.greenSoft, shape: BoxShape.circle),
+              child: Icon(Icons.task_alt_rounded,
+                  color: AppColors.green, size: 48),
             ),
           ),
         ),
         const SizedBox(height: 18),
-        const Text('Thanks! We’re reviewing your request',
+        Text(tr('Thanks! We’re reviewing your request'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: DriverColors.ink, fontSize: 22, fontWeight: FontWeight.w800, height: 1.25)),
+            style: TextStyle(
+                color: AppColors.ink,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                height: 1.25)),
         const SizedBox(height: 8),
-        const Text(
+        Text(
             'Our team is checking your documents and vehicle — usually within 24 hours. You can start taking rides as soon as you’re approved; this screen updates by itself.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: DriverColors.muted, fontSize: 13.5, height: 1.45)),
+            style: TextStyle(
+                color: AppColors.muted, fontSize: 13.5, height: 1.45)),
         const SizedBox(height: 22),
-        DriverCard(
+        AppCard(
           child: Column(children: [
-            row('Your details', null, done: 'Submitted'),
+            row(tr('Your details'), null, done: tr('Submitted')),
             const Divider(height: 1),
-            row('Aadhaar card', p.aadhar),
+            row(tr('Aadhaar card'), p.aadhar),
             const Divider(height: 1),
-            row('Driving licence', p.drivingLicence),
+            row(tr('Driving licence'), p.drivingLicence),
             const Divider(height: 1),
-            row('Police verification', p.police),
+            row(tr('Police verification'), p.police),
             const Divider(height: 1),
-            row('Your vehicle', null, done: 'Submitted'),
+            row(tr('Your vehicle'), null, done: tr('Submitted')),
           ]),
         ),
         const SizedBox(height: 18),
-        const Text('Need to change something?',
-            style: TextStyle(color: DriverColors.ink, fontSize: 15, fontWeight: FontWeight.w800)),
+        Text(tr('Need to change something?'),
+            style: TextStyle(
+                color: AppColors.ink,
+                fontSize: 15,
+                fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
-        const Text('You can still edit what you sent while we review it.',
-            style: TextStyle(color: DriverColors.muted, fontSize: 12.5)),
+        Text(tr('You can still edit what you sent while we review it.'),
+            style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
         const SizedBox(height: 10),
-        DriverCard(
+        AppCard(
           padding: EdgeInsets.zero,
           child: Column(children: [
             _EditRow(
               key: const Key('onboarding_review_edit_details'),
               icon: Icons.person_outline_rounded,
-              title: 'Edit my details',
-              subtitle: 'Name, date of birth, address, emergency contact',
+              title: tr('Edit my details'),
+              subtitle: tr('Name, date of birth, address, emergency contact'),
               onTap: () => widget.onEdit(0),
             ),
             const Divider(height: 1, indent: 60),
             _EditRow(
               key: const Key('onboarding_review_edit_documents'),
               icon: Icons.badge_outlined,
-              title: 'Update documents',
-              subtitle: 'Aadhaar, driving licence, police certificate',
+              title: tr('Update documents'),
+              subtitle: tr('Aadhaar, driving licence, police certificate'),
               onTap: () => widget.onEdit(1),
             ),
             const Divider(height: 1, indent: 60),
             _EditRow(
               key: const Key('onboarding_review_edit_vehicle'),
               icon: Icons.local_shipping_outlined,
-              title: 'Manage my vehicle',
-              subtitle: 'Type, number plate and pictures',
+              title: tr('Manage my vehicle'),
+              subtitle: tr('Type, number plate and pictures'),
               onTap: () => widget.onEdit(2),
             ),
           ]),
@@ -579,7 +640,7 @@ class _ReviewStepState extends State<_ReviewStep> with WidgetsBindingObserver {
         const SizedBox(height: 18),
         PrimaryButton(
           key: const Key('onboarding_check_status'),
-          label: 'Check status',
+          label: tr('Check status'),
           icon: Icons.refresh_rounded,
           loading: _checking,
           onPressed: _check,
@@ -589,9 +650,13 @@ class _ReviewStepState extends State<_ReviewStep> with WidgetsBindingObserver {
   }
 }
 
-
 class _EditRow extends StatelessWidget {
-  const _EditRow({super.key, required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _EditRow(
+      {super.key,
+      required this.icon,
+      required this.title,
+      required this.subtitle,
+      required this.onTap});
   final IconData icon;
   final String title;
   final String subtitle;
@@ -606,18 +671,27 @@ class _EditRow extends StatelessWidget {
             Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(color: DriverColors.blueSoft, borderRadius: BorderRadius.circular(11)),
-              child: Icon(icon, color: DriverColors.blue, size: 19),
+              decoration: BoxDecoration(
+                  color: AppColors.blueSoft,
+                  borderRadius: BorderRadius.circular(11)),
+              child: Icon(icon, color: AppColors.blue, size: 19),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: const TextStyle(color: DriverColors.ink, fontWeight: FontWeight.w700, fontSize: 14)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(color: DriverColors.muted, fontSize: 12)),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: TextStyle(color: AppColors.muted, fontSize: 12)),
+                  ]),
             ),
-            const Icon(Icons.chevron_right_rounded, color: DriverColors.muted),
+            Icon(Icons.chevron_right_rounded, color: AppColors.muted),
           ]),
         ),
       );

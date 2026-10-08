@@ -1,20 +1,20 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
-import 'package:m_o_b_demand_side/core/utils/formatters.dart';
-import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
-import 'package:m_o_b_demand_side/features/driver/data/datasources/driver_remote_datasource.dart';
-import 'package:m_o_b_demand_side/features/driver/data/local/driver_snapshot_cache.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/repositories/driver_repository.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/core/utils/formatters.dart';
+import 'package:mob_driver/core/utils/json_readers.dart';
+import 'package:mob_driver/features/driver/data/datasources/driver_remote_datasource.dart';
+import 'package:mob_driver/features/driver/data/local/driver_snapshot_cache.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_stats.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/my_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip_extras.dart';
+import 'package:mob_driver/features/driver/domain/entities/wallet.dart';
+import 'package:mob_driver/features/driver/domain/repositories/driver_repository.dart';
 
 class DriverRepositoryImpl implements DriverRepository {
   DriverRepositoryImpl(
@@ -169,7 +169,7 @@ class DriverRepositoryImpl implements DriverRepository {
 
   @override
   Future<AppFailure?> deleteAccount() async {
-    final (_, failure) = await _guard(() => _remote.deleteAccount());
+    final (_, failure) = await _guard(_remote.deleteAccount);
     if (failure == null) await clearCache();
     return failure;
   }
@@ -293,8 +293,10 @@ class DriverRepositoryImpl implements DriverRepository {
       _guard(() async => PaymentQr.fromJson(await _remote.paymentQr(id)));
 
   @override
-  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id, {String method = 'qr'}) => _guard(
-      () async => DeliveryOtpSent.fromJson(await _remote.collectPayment(id, method: method)));
+  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id,
+          {String method = 'qr'}) =>
+      _guard(() async => DeliveryOtpSent.fromJson(
+          await _remote.collectPayment(id, method: method)));
 
   @override
   Future<(DeliveryOtpSent?, AppFailure?)> resendDeliveryOtp(String id) =>
@@ -358,9 +360,8 @@ class DriverRepositoryImpl implements DriverRepository {
     required CapturedPhoto photo,
     String? itemId,
   }) =>
-      _guard(() async => Trip.fromJson(await _remote.addStopPhoto(
-          tripId, stopId,
-          photo: photo, itemId: itemId)));
+      _guard(() async => Trip.fromJson(await _remote
+          .addStopPhoto(tripId, stopId, photo: photo, itemId: itemId)));
 
   @override
   Future<(Trip?, AppFailure?)> finishStop(String tripId, String stopId) =>

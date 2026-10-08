@@ -1,273 +1,83 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mob_driver/core/config/app_config.dart';
+import 'package:mob_driver/core/network/platform_header.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '/backend/api_requests/api_manager.dart';
-import '/core/config/app_config.dart';
-import '/core/network/platform_header.dart';
-import '/features/address/data/local/recent_address_searches_store.dart';
-import '/features/address/data/local/selected_address_store.dart';
-
+/// The signed-in driver: their tokens and the little we know about them
+/// before the profile loads (id, name, phone). Survives app restarts.
+///
+/// Listeners are told when the driver signs in or out — the router uses that
+/// to switch between the login flow and the app.
 class AuthSession extends ChangeNotifier {
   AuthSession._();
 
   static final AuthSession instance = AuthSession._();
 
-  static const String _accessTokenKey = 'auth_access_token';
-  static const String _refreshTokenKey = 'auth_refresh_token';
-  static const String _userDetailsKey = 'auth_user_details';
-  static const String _prefsAccessTokenKey = 'prefs_auth_access_token';
-  static const String _prefsRefreshTokenKey = 'prefs_auth_refresh_token';
-  static const String _prefsUserDetailsKey = 'prefs_auth_user_details';
-  static const String _isProFirstTimeKey = 'isProFirstTime';
-  static const String _needsRegistrationKey = 'auth_needs_registration';
-  static const String _authRefreshPath = String.fromEnvironment(
-    'AUTH_REFRESH_PATH',
-    defaultValue: 'driver/auth/refresh',
-  );
+  static const _refreshPath = 'driver/auth/refresh';
 
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  final _store = _SessionStore();
 
   String? _accessToken;
   String? _refreshToken;
   Map<String, dynamic>? _userDetails;
-  bool _needsRegistration = false;
 
-  bool get isAuthenticated =>
-      _accessToken != null && _accessToken!.trim().isNotEmpty;
+  bool get isAuthenticated => _accessToken != null;
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
+
   Map<String, dynamic>? get userDetails =>
-      _userDetails == null ? null : Map<String, dynamic>.from(_userDetails!);
-  // True when the user has a valid session (e.g. just verified OTP) but
-  // hasn't completed the signup form yet — used to keep them on /signup
-  // instead of routes that gate on isAuthenticated alone.
-  bool get needsRegistration => _needsRegistration;
+      _userDetails == null ? null : Map.of(_userDetails!);
 
-  /// Signed-in user's phone number, wherever the user_details payload put
-  /// it (the backend hasn't been consistent about the key name).
   String? get phoneNumber {
-    final details = _userDetails;
-    if (details == null) return null;
-    for (final key in const ['phone_number', 'phone', 'mobile']) {
-      final value = details[key];
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString().trim();
-      }
-    }
-    return null;
+    final value = _userDetails?['phone_number']?.toString().trim();
+    return value == null || value.isEmpty ? null : value;
   }
 
-  /// The identifier several backend endpoints require as `email_or_phone`
-  /// (login/OTP, update_user, FCM token sync) — whichever of the login
-  /// credential or a phone/email fallback is actually present in
-  /// user_details.
-  String? get emailOrPhone {
-    final details = _userDetails;
-    if (details == null) return null;
-    for (final key in const [
-      'email_or_phone',
-      'phone_number',
-      'phone',
-      'mobile',
-      'email',
-    ]) {
-      final value = details[key];
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString().trim();
-      }
-    }
-    return null;
-  }
-
-  Future<bool> get isProFirstTime async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_isProFirstTimeKey) ?? true;
-  }
-
+  /// Restores the last session. If only the refresh token survived, trades it
+  /// for a new access token straight away.
   Future<void> initialize() async {
-    SharedPreferences? prefs;
-    try {
-      prefs = await SharedPreferences.getInstance();
-    } catch (_) {}
+    _accessToken = await _store.read(_SessionStore.accessTokenKey);
+    _refreshToken = await _store.read(_SessionStore.refreshTokenKey);
+    _userDetails = _decode(await _store.read(_SessionStore.userDetailsKey));
 
-    try {
-      _accessToken = await _storage.read(key: _accessTokenKey);
-      _refreshToken = await _storage.read(key: _refreshTokenKey);
-      final userDetailsRaw = await _storage.read(key: _userDetailsKey);
-      if (userDetailsRaw != null && userDetailsRaw.isNotEmpty) {
-        try {
-          final decoded = jsonDecode(userDetailsRaw);
-          if (decoded is Map) {
-            _userDetails = Map<String, dynamic>.from(decoded);
-          }
-        } catch (_) {
-          _userDetails = null;
-        }
+    if (_accessToken == null && _refreshToken != null) {
+      try {
+        await refreshAccessToken();
+      } catch (_) {
+        // Offline at launch: the first request retries the refresh.
       }
-    } catch (_) {
-      // Fallback to shared preferences below.
     }
-
-    _accessToken = _normalizeString(_accessToken) ??
-        _normalizeString(prefs?.getString(_prefsAccessTokenKey));
-    _refreshToken = _normalizeString(_refreshToken) ??
-        _normalizeString(prefs?.getString(_prefsRefreshTokenKey));
-
-    final secureUserDetailsRaw = await _readSecureUserDetailsRaw();
-    final fallbackUserDetailsRaw = prefs?.getString(_prefsUserDetailsKey);
-    _userDetails = _decodeUserDetails(secureUserDetailsRaw) ??
-        _decodeUserDetails(fallbackUserDetailsRaw);
-
-    // Keep secure storage in sync when fallback values were recovered.
-    if (_accessToken != null && _accessToken!.isNotEmpty) {
-      await _storage.write(key: _accessTokenKey, value: _accessToken);
-      await prefs?.setString(_prefsAccessTokenKey, _accessToken!);
-    }
-    if (_refreshToken != null && _refreshToken!.isNotEmpty) {
-      await _storage.write(key: _refreshTokenKey, value: _refreshToken);
-      await prefs?.setString(_prefsRefreshTokenKey, _refreshToken!);
-    }
-    if (_userDetails != null && _userDetails!.isNotEmpty) {
-      final encoded = jsonEncode(_userDetails);
-      await _storage.write(key: _userDetailsKey, value: encoded);
-      await prefs?.setString(_prefsUserDetailsKey, encoded);
-    }
-
-    _needsRegistration = prefs?.getBool(_needsRegistrationKey) ?? false;
-
-    ApiManager.setAccessToken(_accessToken);
-    ApiManager.setAuthRecoveryHandlers(
-      refreshAccessToken: refreshAccessToken,
-      onAuthFailed: signOut,
-    );
-
-    // If access token is unavailable but refresh token exists, recover session.
-    if ((_accessToken == null || _accessToken!.isEmpty) &&
-        _refreshToken != null &&
-        _refreshToken!.isNotEmpty) {
-      await refreshAccessToken();
-    }
-  }
-
-  Future<void> saveTokens({
-    required String accessToken,
-    String? refreshToken,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    _accessToken = accessToken.trim();
-    _refreshToken = refreshToken?.trim();
-
-    await _storage.write(key: _accessTokenKey, value: _accessToken);
-    await prefs.setString(_prefsAccessTokenKey, _accessToken!);
-    if (_refreshToken != null && _refreshToken!.isNotEmpty) {
-      await _storage.write(key: _refreshTokenKey, value: _refreshToken);
-      await prefs.setString(_prefsRefreshTokenKey, _refreshToken!);
-    }
-
-    ApiManager.setAccessToken(_accessToken);
-    notifyListeners();
   }
 
   Future<void> saveSession({
     required String accessToken,
     String? refreshToken,
     Map<String, dynamic>? userDetails,
-    bool? isProFirstTime,
-    bool needsRegistration = false,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    _accessToken = accessToken.trim();
-    _refreshToken = _normalizeString(refreshToken);
-    _userDetails =
-        userDetails == null ? null : Map<String, dynamic>.from(userDetails);
-    _needsRegistration = needsRegistration;
+    _accessToken = _clean(accessToken);
+    _refreshToken = _clean(refreshToken);
+    _userDetails = userDetails == null ? null : Map.of(userDetails);
 
-    // A fresh session may belong to a different account than whatever was
-    // last signed in on this device — drop any address cached for the
-    // previous identity so it doesn't leak into the new session.
-    await SelectedAddressStore.clear();
-    await RecentAddressSearchesStore.clear();
-
-    await _storage.write(key: _accessTokenKey, value: _accessToken);
-    await prefs.setString(_prefsAccessTokenKey, _accessToken!);
-    if (_refreshToken != null && _refreshToken!.isNotEmpty) {
-      await _storage.write(key: _refreshTokenKey, value: _refreshToken);
-      await prefs.setString(_prefsRefreshTokenKey, _refreshToken!);
-    } else {
-      await _storage.delete(key: _refreshTokenKey);
-      await prefs.remove(_prefsRefreshTokenKey);
-    }
-
-    if (_userDetails != null && _userDetails!.isNotEmpty) {
-      final encoded = jsonEncode(_userDetails);
-      await _storage.write(key: _userDetailsKey, value: encoded);
-      await prefs.setString(_prefsUserDetailsKey, encoded);
-    } else {
-      await _storage.delete(key: _userDetailsKey);
-      await prefs.remove(_prefsUserDetailsKey);
-    }
-
-    if (isProFirstTime != null) {
-      await setIsProFirstTime(isProFirstTime);
-    }
-    await prefs.setBool(_needsRegistrationKey, needsRegistration);
-    ApiManager.setAccessToken(_accessToken);
-    notifyListeners();
-  }
-
-  Future<void> setNeedsRegistration(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    _needsRegistration = value;
-    await prefs.setBool(_needsRegistrationKey, value);
-    notifyListeners();
-  }
-
-  Future<void> saveUserDetails(Map<String, dynamic>? userDetails) async {
-    final prefs = await SharedPreferences.getInstance();
-    _userDetails =
-        userDetails == null ? null : Map<String, dynamic>.from(userDetails);
-    if (_userDetails == null || _userDetails!.isEmpty) {
-      await _storage.delete(key: _userDetailsKey);
-      await prefs.remove(_prefsUserDetailsKey);
-      return;
-    }
-    final encoded = jsonEncode(_userDetails);
-    await _storage.write(
-      key: _userDetailsKey,
-      value: encoded,
+    await _store.write(_SessionStore.accessTokenKey, _accessToken);
+    await _store.write(_SessionStore.refreshTokenKey, _refreshToken);
+    await _store.write(
+      _SessionStore.userDetailsKey,
+      _userDetails == null || _userDetails!.isEmpty
+          ? null
+          : jsonEncode(_userDetails),
     );
-    await prefs.setString(_prefsUserDetailsKey, encoded);
-  }
-
-  Future<void> setIsProFirstTime(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_isProFirstTimeKey, value);
+    notifyListeners();
   }
 
   Future<void> signOut() async {
     _accessToken = null;
     _refreshToken = null;
     _userDetails = null;
-    _needsRegistration = false;
-    await _storage.delete(key: _accessTokenKey);
-    await _storage.delete(key: _refreshTokenKey);
-    await _storage.delete(key: _userDetailsKey);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_prefsAccessTokenKey);
-    await prefs.remove(_prefsRefreshTokenKey);
-    await prefs.remove(_prefsUserDetailsKey);
-    await prefs.remove(_isProFirstTimeKey);
-    await prefs.remove(_needsRegistrationKey);
-    ApiManager.setAccessToken(null);
-    ApiManager.clearCache('homeData');
-    ApiManager.clearCache('browseProducts');
-    ApiManager.clearCache('productDetails');
-    await SelectedAddressStore.clear();
-    await RecentAddressSearchesStore.clear();
+    await _store.clear();
     notifyListeners();
   }
 
@@ -279,84 +89,109 @@ class AuthSession extends ChangeNotifier {
   /// caller can keep the session and retry later instead of signing a driver
   /// out in a dead spot on the road.
   Future<String?> refreshAccessToken() async {
-    if (_authRefreshPath.isEmpty) return null;
     final refreshToken = _refreshToken;
-    if (refreshToken == null || refreshToken.isEmpty) {
-      return null;
-    }
-    final uri = AppConfig.apiUri(_authRefreshPath);
-    final response = await http
-        .post(
-          uri,
-          headers: jsonHeadersWithPlatform(),
-          body: jsonEncode({'refreshToken': refreshToken}),
-        )
-        .timeout(const Duration(seconds: 15));
-    if (response.statusCode >= 500) {
-      throw StateError('Token refresh unavailable (${response.statusCode}).');
-    }
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      return null;
-    }
+    if (refreshToken == null) return null;
 
-    final decoded = jsonDecode(response.body);
-    final body = decoded is Map
-        ? Map<String, dynamic>.from(decoded)
-        : <String, dynamic>{};
+    // A bare client: the app's own one would try to refresh on a 401 here.
+    final response = await Dio(BaseOptions(
+      baseUrl: AppConfig.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      validateStatus: (_) => true,
+      headers: {if (appPlatformHeaderValue() case final p?) 'platform': p},
+    )).post<Object?>(_refreshPath, data: {'refreshToken': refreshToken});
 
-    final newAccessToken = _readFirstString(
-      body,
-      const ['accessToken', 'access_token', 'access'],
-    );
-    final newRefreshToken = _readFirstString(
-      body,
-      const ['refreshToken', 'refresh_token', 'refresh'],
-    );
-
-    if (newAccessToken == null || newAccessToken.isEmpty) {
-      return null;
+    final status = response.statusCode ?? 0;
+    if (status >= 500) {
+      throw StateError('Token refresh unavailable ($status).');
     }
-    await saveTokens(
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken ?? _refreshToken,
-    );
-    return newAccessToken;
+    final body = response.data;
+    if (status < 200 || status >= 300 || body is! Map) return null;
+
+    final newAccess =
+        _firstString(body, const ['accessToken', 'access_token', 'access']);
+    if (newAccess == null) return null;
+    final newRefresh =
+        _firstString(body, const ['refreshToken', 'refresh_token', 'refresh']);
+
+    _accessToken = newAccess;
+    _refreshToken = newRefresh ?? refreshToken;
+    await _store.write(_SessionStore.accessTokenKey, _accessToken);
+    await _store.write(_SessionStore.refreshTokenKey, _refreshToken);
+    notifyListeners();
+    return newAccess;
   }
 
-  String? _readFirstString(Map<String, dynamic> map, List<String> keys) {
+  static String? _firstString(Map<Object?, Object?> body, List<String> keys) {
     for (final key in keys) {
-      final value = map[key];
-      if (value is String && value.trim().isNotEmpty) {
-        return value.trim();
-      }
+      final value = _clean(body[key]?.toString());
+      if (value != null) return value;
     }
     return null;
   }
 
-  String? _normalizeString(String? value) {
-    if (value == null) return null;
-    final trimmed = value.trim();
-    return trimmed.isEmpty ? null : trimmed;
+  static String? _clean(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
-  Future<String?> _readSecureUserDetailsRaw() async {
+  static Map<String, dynamic>? _decode(String? raw) {
+    if (raw == null) return null;
     try {
-      return await _storage.read(key: _userDetailsKey);
+      final decoded = jsonDecode(raw);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
     } catch (_) {
       return null;
     }
   }
+}
 
-  Map<String, dynamic>? _decodeUserDetails(String? raw) {
-    if (raw == null || raw.isEmpty) {
+/// Where the session is kept: the OS keychain/keystore first, with a copy in
+/// shared preferences for devices whose secure storage is unreliable (a
+/// failing keystore would otherwise sign the driver out on every launch).
+class _SessionStore {
+  static const accessTokenKey = 'auth_access_token';
+  static const refreshTokenKey = 'auth_refresh_token';
+  static const userDetailsKey = 'auth_user_details';
+  static const _fallbackPrefix = 'prefs_';
+
+  static const _secure = FlutterSecureStorage();
+
+  Future<String?> read(String key) async {
+    String? value;
+    try {
+      value = await _secure.read(key: key);
+    } catch (_) {}
+    if (value == null || value.trim().isEmpty) {
+      value = (await _prefs())?.getString('$_fallbackPrefix$key');
+    }
+    return value == null || value.trim().isEmpty ? null : value.trim();
+  }
+
+  /// Writes [value], or removes the key when it's null.
+  Future<void> write(String key, String? value) async {
+    final prefs = await _prefs();
+    try {
+      value == null
+          ? await _secure.delete(key: key)
+          : await _secure.write(key: key, value: value);
+    } catch (_) {}
+    value == null
+        ? await prefs?.remove('$_fallbackPrefix$key')
+        : await prefs?.setString('$_fallbackPrefix$key', value);
+  }
+
+  Future<void> clear() async {
+    for (final key in const [accessTokenKey, refreshTokenKey, userDetailsKey]) {
+      await write(key, null);
+    }
+  }
+
+  Future<SharedPreferences?> _prefs() async {
+    try {
+      return await SharedPreferences.getInstance();
+    } catch (_) {
       return null;
     }
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is Map) {
-        return Map<String, dynamic>.from(decoded);
-      }
-    } catch (_) {}
-    return null;
   }
 }

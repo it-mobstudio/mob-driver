@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:mob_driver/core/l10n/tr.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -36,12 +37,14 @@ class DeviceInvoiceActions implements InvoiceActions {
   @override
   Future<String?> download(String url) async {
     final uri = Uri.tryParse(url);
-    if (uri == null || !uri.hasScheme) return 'This invoice link isn’t valid.';
+    if (uri == null || !uri.hasScheme) {
+      return tr('This invoice link isn’t valid.');
+    }
     try {
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      return opened ? null : 'Couldn’t open the invoice on this phone.';
+      return opened ? null : tr('Couldn’t open the invoice on this phone.');
     } catch (_) {
-      return 'Couldn’t open the invoice on this phone.';
+      return tr('Couldn’t open the invoice on this phone.');
     }
   }
 
@@ -61,8 +64,10 @@ class DeviceInvoiceActions implements InvoiceActions {
         responseType: ResponseType.bytes,
       )).get<List<int>>(url);
       final data = response.data;
-      if (data == null || data.isEmpty) return 'The invoice file is empty.';
-      if (data.length > _maxBytes) return 'This invoice is too large to share.';
+      if (data == null || data.isEmpty) return tr('The invoice file is empty.');
+      if (data.length > _maxBytes) {
+        return tr('This invoice is too large to share.');
+      }
 
       final bytes = Uint8List.fromList(data);
       final mime = _mimeFor(fileName);
@@ -82,9 +87,10 @@ class DeviceInvoiceActions implements InvoiceActions {
       ));
       return null;
     } on DioException {
-      return 'Couldn’t download the invoice. Check your connection and try again.';
+      return tr(
+          'Couldn’t download the invoice. Check your connection and try again.');
     } catch (_) {
-      return 'Couldn’t share the invoice. Please try again.';
+      return tr('Couldn’t share the invoice. Please try again.');
     }
   }
 
@@ -93,9 +99,9 @@ class DeviceInvoiceActions implements InvoiceActions {
     final uri = whatsAppUri(phone: phone, message: message);
     try {
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      return opened ? null : 'WhatsApp isn’t available on this phone.';
+      return opened ? null : tr('WhatsApp isn’t available on this phone.');
     } catch (_) {
-      return 'WhatsApp isn’t available on this phone.';
+      return tr('WhatsApp isn’t available on this phone.');
     }
   }
 

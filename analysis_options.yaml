@@ -2,9 +2,6 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
-    - lib/custom_code/**
-    - lib/flutter_flow/custom_functions.dart
-    - lib/flutter_flow/**
     - build/**
     - android/**
     - ios/**
@@ -12,10 +9,21 @@ analyzer:
   language:
     strict-casts: true
     strict-inference: true
+  errors:
+    # A future nobody awaits must say so (`unawaited(...)`), or it's a bug.
+    unawaited_futures: warning
 
 linter:
   rules:
+    always_use_package_imports: true
     avoid_print: true
+    directives_ordering: true
     prefer_const_constructors: true
+    prefer_const_declarations: true
     prefer_const_literals_to_create_immutables: true
+    prefer_final_locals: true
+    prefer_single_quotes: true
+    sort_child_properties_last: true
+    unawaited_futures: true
+    unnecessary_lambdas: true
     use_super_parameters: true

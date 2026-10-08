@@ -2,22 +2,22 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
-import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/invoice_actions.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/geo_stamp.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/order_alert.dart';
-import 'package:m_o_b_demand_side/features/driver/data/media/photo_capture.dart';
-import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_profile.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_stats.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/my_vehicle.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip_extras.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/wallet.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/repositories/driver_repository.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/features/auth/domain/repositories/auth_repository.dart';
+import 'package:mob_driver/features/driver/data/location/driver_location_service.dart';
+import 'package:mob_driver/features/driver/data/media/geo_stamp.dart';
+import 'package:mob_driver/features/driver/data/media/invoice_actions.dart';
+import 'package:mob_driver/features/driver/data/media/order_alert.dart';
+import 'package:mob_driver/features/driver/data/media/photo_capture.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_stats.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/my_vehicle.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip_extras.dart';
+import 'package:mob_driver/features/driver/domain/entities/wallet.dart';
+import 'package:mob_driver/features/driver/domain/repositories/driver_repository.dart';
 
 // -- JSON fixtures: shapes copied from a live run against the backend --------
 
@@ -320,7 +320,7 @@ class FakeDriverRepository implements DriverRepository {
   /// Makes an in-progress trip with these items the driver's active trip.
   Trip startItemTrip(List<Map<String, dynamic>> items,
       {String? invoiceUrl, String? invoiceNumber, bool cod = false}) {
-    itemsJson = items.map((i) => Map<String, dynamic>.from(i)).toList();
+    itemsJson = items.map(Map<String, dynamic>.from).toList();
     itemTripExtras = {
       'invoiceUrl': invoiceUrl,
       'invoiceNumber': invoiceNumber,
@@ -362,8 +362,16 @@ class FakeDriverRepository implements DriverRepository {
 
   // -- the driver's own vehicles ------------------------------------------------
   List<VehicleTypeOption> vehicleTypesValue = const [
-    VehicleTypeOption(id: 'vt-bike', name: 'Bike', category: 'two_wheeler', defaultCapacityKg: 20),
-    VehicleTypeOption(id: 'vt-tempo', name: 'Tempo', category: 'three_wheeler', defaultCapacityKg: 500),
+    VehicleTypeOption(
+        id: 'vt-bike',
+        name: 'Bike',
+        category: 'two_wheeler',
+        defaultCapacityKg: 20),
+    VehicleTypeOption(
+        id: 'vt-tempo',
+        name: 'Tempo',
+        category: 'three_wheeler',
+        defaultCapacityKg: 500),
   ];
   final List<MyVehicle> myVehiclesValue = [];
 
@@ -375,7 +383,10 @@ class FakeDriverRepository implements DriverRepository {
   int _vehicleSeq = 0;
 
   MyVehicle _rebuilt(MyVehicle v,
-          {String? plate, String? typeId, double? capacity, List<VehiclePhotoRef>? photos}) =>
+          {String? plate,
+          String? typeId,
+          double? capacity,
+          List<VehiclePhotoRef>? photos}) =>
       MyVehicle(
         id: v.id,
         registrationNumber: plate ?? v.registrationNumber,
@@ -383,16 +394,20 @@ class FakeDriverRepository implements DriverRepository {
         vehicleTypeName: v.vehicleTypeName,
         category: v.category,
         capacityKg: capacity ?? v.capacityKg,
-        photoUrl: (photos ?? v.photos).isEmpty ? null : (photos ?? v.photos).first.url,
+        photoUrl: (photos ?? v.photos).isEmpty
+            ? null
+            : (photos ?? v.photos).first.url,
         photos: photos ?? v.photos,
         isCurrent: v.isCurrent,
       );
 
   @override
-  Future<(List<VehicleTypeOption>?, AppFailure?)> vehicleTypes() async => (vehicleTypesValue, null);
+  Future<(List<VehicleTypeOption>?, AppFailure?)> vehicleTypes() async =>
+      (vehicleTypesValue, null);
 
   @override
-  Future<(List<MyVehicle>?, AppFailure?)> myVehicles() async => (List.of(myVehiclesValue), null);
+  Future<(List<MyVehicle>?, AppFailure?)> myVehicles() async =>
+      (List.of(myVehiclesValue), null);
 
   @override
   Future<(MyVehicle?, AppFailure?)> addVehicle({
@@ -401,7 +416,8 @@ class FakeDriverRepository implements DriverRepository {
     double? capacityKg,
     List<CapturedPhoto> photos = const [],
   }) async {
-    vehicleCalls.add('add:$registrationNumber:${photos.length}:$vehicleTypeId:$capacityKg');
+    vehicleCalls.add(
+        'add:$registrationNumber:${photos.length}:$vehicleTypeId:$capacityKg');
     if (myVehicleFailure != null) return (null, myVehicleFailure);
     final type = vehicleTypesValue.firstWhere((t) => t.id == vehicleTypeId);
     final id = 'v${++_vehicleSeq}';
@@ -413,7 +429,11 @@ class FakeDriverRepository implements DriverRepository {
       category: type.category,
       capacityKg: capacityKg ?? type.defaultCapacityKg,
       photoUrl: photos.isEmpty ? null : 'https://cdn.example.com/$id-0.jpg',
-      photos: [for (var i = 0; i < photos.length; i++) VehiclePhotoRef(id: '$id-p$i', url: 'https://cdn.example.com/$id-$i.jpg')],
+      photos: [
+        for (var i = 0; i < photos.length; i++)
+          VehiclePhotoRef(
+              id: '$id-p$i', url: 'https://cdn.example.com/$id-$i.jpg')
+      ],
     );
     myVehiclesValue.insert(0, vehicle);
     return (vehicle, null);
@@ -421,30 +441,44 @@ class FakeDriverRepository implements DriverRepository {
 
   @override
   Future<(MyVehicle?, AppFailure?)> updateVehicle(String id,
-      {String? vehicleTypeId, String? registrationNumber, double? capacityKg}) async {
-    vehicleCalls.add('update:$id:$registrationNumber:$vehicleTypeId:$capacityKg');
+      {String? vehicleTypeId,
+      String? registrationNumber,
+      double? capacityKg}) async {
+    vehicleCalls
+        .add('update:$id:$registrationNumber:$vehicleTypeId:$capacityKg');
     if (myVehicleFailure != null) return (null, myVehicleFailure);
     final i = myVehiclesValue.indexWhere((v) => v.id == id);
-    myVehiclesValue[i] = _rebuilt(myVehiclesValue[i], plate: registrationNumber, typeId: vehicleTypeId, capacity: capacityKg);
+    myVehiclesValue[i] = _rebuilt(myVehiclesValue[i],
+        plate: registrationNumber, typeId: vehicleTypeId, capacity: capacityKg);
     return (myVehiclesValue[i], null);
   }
 
   @override
-  Future<(MyVehicle?, AppFailure?)> addVehiclePhoto(String id, CapturedPhoto photo) async {
+  Future<(MyVehicle?, AppFailure?)> addVehiclePhoto(
+      String id, CapturedPhoto photo) async {
     vehicleCalls.add('photo:$id');
     if (myVehicleFailure != null) return (null, myVehicleFailure);
     final i = myVehiclesValue.indexWhere((v) => v.id == id);
-    final photos = [...myVehiclesValue[i].photos, VehiclePhotoRef(id: '$id-new${myVehiclesValue[i].photos.length}', url: 'https://cdn.example.com/$id-new.jpg')];
+    final photos = [
+      ...myVehiclesValue[i].photos,
+      VehiclePhotoRef(
+          id: '$id-new${myVehiclesValue[i].photos.length}',
+          url: 'https://cdn.example.com/$id-new.jpg')
+    ];
     myVehiclesValue[i] = _rebuilt(myVehiclesValue[i], photos: photos);
     return (myVehiclesValue[i], null);
   }
 
   @override
-  Future<(MyVehicle?, AppFailure?)> removeVehiclePhoto(String id, String photoId) async {
+  Future<(MyVehicle?, AppFailure?)> removeVehiclePhoto(
+      String id, String photoId) async {
     vehicleCalls.add('unphoto:$id:$photoId');
     if (myVehicleFailure != null) return (null, myVehicleFailure);
     final i = myVehiclesValue.indexWhere((v) => v.id == id);
-    myVehiclesValue[i] = _rebuilt(myVehiclesValue[i], photos: [for (final p in myVehiclesValue[i].photos) if (p.id != photoId) p]);
+    myVehiclesValue[i] = _rebuilt(myVehiclesValue[i], photos: [
+      for (final p in myVehiclesValue[i].photos)
+        if (p.id != photoId) p
+    ]);
     return (myVehiclesValue[i], null);
   }
 
@@ -642,8 +676,8 @@ class FakeDriverRepository implements DriverRepository {
 
       drop(json, 'pickup_photos', 'pickup_photo_url');
       drop(json, 'delivery_photos', 'delivery_photo_url');
-      for (final stop
-          in ((json['stops'] as List?) ?? const []).cast<Map<String, dynamic>>()) {
+      for (final stop in ((json['stops'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>()) {
         drop(stop, 'photos', 'photo_url');
       }
     });
@@ -688,7 +722,8 @@ class FakeDriverRepository implements DriverRepository {
   Future<(Trip?, AppFailure?)> arriveAtStop(
       String tripId, String stopId) async {
     calls.add('arriveAtStop:$stopId');
-    return _editTrip(tripId, (json) => _stopJson(json, stopId)['status'] = 'arrived');
+    return _editTrip(
+        tripId, (json) => _stopJson(json, stopId)['status'] = 'arrived');
   }
 
   @override
@@ -708,8 +743,8 @@ class FakeDriverRepository implements DriverRepository {
       final field =
           stop['kind'] == 'pickup' ? 'pickup_photo_url' : 'delivery_photo_url';
       (json['items'] as List)
-          .cast<Map<String, dynamic>>()
-          .firstWhere((i) => i['id'] == itemId)[field] =
+              .cast<Map<String, dynamic>>()
+              .firstWhere((i) => i['id'] == itemId)[field] =
           'https://cdn.example.com/stop-$itemId.jpg';
     });
   }
@@ -718,7 +753,8 @@ class FakeDriverRepository implements DriverRepository {
   Future<(Trip?, AppFailure?)> finishStop(String tripId, String stopId) async {
     calls.add('finishStop:$stopId');
     if (finishStopFailure != null) return (null, finishStopFailure);
-    return _editTrip(tripId, (json) => _stopJson(json, stopId)['status'] = 'done');
+    return _editTrip(
+        tripId, (json) => _stopJson(json, stopId)['status'] = 'done');
   }
 
   @override
@@ -823,7 +859,8 @@ class FakeDriverRepository implements DriverRepository {
   }
 
   @override
-  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id, {String method = 'qr'}) async {
+  Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String id,
+      {String method = 'qr'}) async {
     calls.add(method == 'qr' ? 'collect:$id' : 'collect:$id:$method');
     return collectResult;
   }
@@ -870,6 +907,18 @@ class FakePhotoCapture implements PhotoCapture {
   @override
   Future<CapturedPhoto> geoStamp(CapturedPhoto photo, GeoStamp stamp) async {
     stamps.add(stamp);
+    return photo;
+  }
+
+  @override
+  Future<String?> addressAt(double latitude, double longitude) async => null;
+
+  /// Every photo that went through the upload step.
+  final List<CapturedPhoto> optimized = [];
+
+  @override
+  Future<CapturedPhoto> optimizeForUpload(CapturedPhoto photo) async {
+    optimized.add(photo);
     return photo;
   }
 }
@@ -933,7 +982,6 @@ class FakeAuthRepository implements AuthRepository {
           {required String emailOrPhone, required String fcmToken}) async =>
       (true, null);
 }
-
 
 /// Records the new-order alarm instead of ringing.
 class FakeOrderAlert implements OrderAlert {

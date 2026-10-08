@@ -1,7 +1,8 @@
 import 'package:equatable/equatable.dart';
-import 'package:m_o_b_demand_side/core/utils/formatters.dart';
-import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/driver_vehicle.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/utils/formatters.dart';
+import 'package:mob_driver/core/utils/json_readers.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_vehicle.dart';
 
 /// Mirrors the backend's `VerificationStatus`.
 enum KycStatus {
@@ -310,9 +311,9 @@ class DriverProfile extends Equatable {
 
   /// Documents the company rejected, in words, for the "fix these" prompt.
   List<(String, KycItem)> get rejectedDocuments => [
-        ('Aadhaar', aadhar),
-        ('Driving licence', drivingLicence),
-        ('Police verification', police),
+        (tr('Aadhaar'), aadhar),
+        (tr('Driving licence'), drivingLicence),
+        (tr('Police verification'), police),
       ].where((d) => d.$2.status == KycStatus.rejected).toList();
 
   /// Everything still blocking the driver from going on duty, in words.
@@ -321,22 +322,23 @@ class DriverProfile extends Equatable {
     void check(String name, KycItem item) {
       switch (item.status) {
         case KycStatus.pending:
-          reasons.add('$name verification is pending.');
+          reasons.add(tr('{name} verification is pending.', {'name': name}));
         case KycStatus.rejected:
           final note = item.rejectionNote;
-          reasons.add('$name was rejected${note == null ? '.' : ': $note'}');
+          reasons.add(tr('{name} was rejected{p0}',
+              {'name': name, 'p0': note == null ? '.' : ': $note'}));
         case KycStatus.verified:
           break;
       }
     }
 
-    check('Aadhaar', aadhar);
-    check('Driving licence', drivingLicence);
-    check('Police', police);
+    check(tr('Aadhaar'), aadhar);
+    check(tr('Driving licence'), drivingLicence);
+    check(tr('Police'), police);
     if (accountStatus == 'locked_dl_expired') {
-      reasons.add('Your account is locked because your licence expired.');
+      reasons.add(tr('Your account is locked because your licence expired.'));
     } else if (accountStatus == 'disabled') {
-      reasons.add('Your account has been disabled.');
+      reasons.add(tr('Your account has been disabled.'));
     }
     return reasons;
   }

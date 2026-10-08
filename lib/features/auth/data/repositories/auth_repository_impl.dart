@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
-import 'package:m_o_b_demand_side/core/errors/app_failure.dart';
-import 'package:m_o_b_demand_side/core/utils/json_readers.dart';
-import 'package:m_o_b_demand_side/features/auth/data/datasources/auth_remote_datasource.dart';
-import 'package:m_o_b_demand_side/features/auth/domain/repositories/auth_repository.dart';
+import 'package:mob_driver/core/auth/auth_session.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/utils/json_readers.dart';
+import 'package:mob_driver/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:mob_driver/features/auth/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl(this._datasource);
@@ -18,7 +19,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final body = await _datasource.requestOtp(phoneNumber: phoneNumber);
       return (
         OtpRequestResult(
-          message: readString(body['message']) ?? 'OTP sent.',
+          message: readString(body['message']) ?? tr('OTP sent.'),
           debugOtp: readString(body['otp']),
         ),
         null
@@ -43,10 +44,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final accessToken = readString(body['accessToken']);
       if (accessToken == null) {
-        return (
-          null,
-          const BusinessFailure('Invalid response from the server.')
-        );
+        return (null, BusinessFailure(tr('Invalid response from the server.')));
       }
       final refreshToken = readString(body['refreshToken']);
 

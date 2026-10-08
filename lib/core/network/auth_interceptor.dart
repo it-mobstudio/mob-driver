@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:m_o_b_demand_side/core/auth/auth_session.dart';
-import 'package:m_o_b_demand_side/core/network/platform_header.dart';
+import 'package:mob_driver/core/auth/auth_session.dart';
+import 'package:mob_driver/core/network/platform_header.dart';
 
 class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._dio);

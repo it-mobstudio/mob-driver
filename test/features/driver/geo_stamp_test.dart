@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:m_o_b_demand_side/features/driver/data/media/geo_stamp.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/data/media/geo_stamp.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
 
 import '../../support/fonts.dart';
 
@@ -30,17 +30,18 @@ void main() {
     expect(_stamp.withAddress(null).lines.first, startsWith('Lat 12.971598°'));
   });
 
-  testWidgets('the stamp is drawn into the bottom of the picture as a JPEG', (tester) async {
+  testWidgets('the stamp is drawn into the bottom of the picture as a JPEG',
+      (tester) async {
     // A plain white 800x600 "photo".
     final white = img.Image(width: 800, height: 600)
       ..clear(img.ColorRgb8(255, 255, 255));
-    final photo = CapturedPhoto(
-        bytes: img.encodeJpg(white), filename: 'shot.jpg');
+    final photo =
+        CapturedPhoto(bytes: img.encodeJpg(white), filename: 'shot.jpg');
 
     final stamped = await tester.runAsync(() => renderGeoStamp(photo, _stamp));
 
-    expect(stamped!.filename, endsWith('.jpg'));
-    final decoded = img.decodeJpg(stamped.bytes)!;
+    expect(stamped!.filename, endsWith('.png'));
+    final decoded = img.decodePng(stamped.bytes)!;
     expect((decoded.width, decoded.height), (800, 600));
     // Top untouched, bottom darkened by the band.
     expect(decoded.getPixel(400, 20).r, greaterThan(240));

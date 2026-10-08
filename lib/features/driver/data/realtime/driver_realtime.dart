@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
+import 'package:mob_driver/features/driver/domain/entities/demand_hint.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Whether the server can reach this phone right now.
@@ -35,6 +36,12 @@ final class TripChanged extends RealtimePush {
 /// verified or sent back, account locked).
 final class ProfileChanged extends RealtimePush {
   const ProfileChanged();
+}
+
+/// Where the orders are — sent by the company or its demand forecasting.
+final class HintReceived extends RealtimePush {
+  const HintReceived(this.hint);
+  final DemandHint hint;
 }
 
 typedef SocketConnector = WebSocketChannel Function(Uri url);
@@ -198,11 +205,20 @@ class DriverRealtime {
       case 'trip.changed':
         final tripId = decoded['trip_id'];
         if (tripId is String) {
-          _pushes.add(TripChanged(
-              tripId: tripId, event: '${decoded['event'] ?? ''}'));
+          _pushes.add(
+              TripChanged(tripId: tripId, event: '${decoded['event'] ?? ''}'));
         }
       case 'driver.changed':
         _pushes.add(const ProfileChanged());
+      case 'driver.hint':
+        final message = decoded['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          _pushes.add(HintReceived(DemandHint(
+            message: message.trim(),
+            latitude: (decoded['lat'] as num?)?.toDouble(),
+            longitude: (decoded['lng'] as num?)?.toDouble(),
+          )));
+        }
       // 'pong' and anything newer than this app: nothing more to do.
     }
   }
@@ -256,7 +272,8 @@ class DriverRealtime {
   /// and all of that — "full jitter" spreads a fleet's reconnects out.
   Duration nextBackoff(int failures) {
     final cap = maxBackoff.inMilliseconds;
-    final base = math.min(cap, 1000 * math.pow(2, math.min(failures, 16)).toInt());
+    final base =
+        math.min(cap, 1000 * math.pow(2, math.min(failures, 16)).toInt());
     final ms = base ~/ 2 + _random.nextInt(base ~/ 2 + 1);
     return Duration(milliseconds: ms);
   }

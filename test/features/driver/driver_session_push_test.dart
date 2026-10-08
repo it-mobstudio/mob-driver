@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:m_o_b_demand_side/features/driver/data/location/driver_location_service.dart';
-import 'package:m_o_b_demand_side/features/driver/domain/entities/trip.dart';
-import 'package:m_o_b_demand_side/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:mob_driver/features/driver/data/location/driver_location_service.dart';
+import 'package:mob_driver/features/driver/domain/entities/trip.dart';
+import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
 
 import '../../support/fake_socket.dart';
 import '../../support/fakes.dart';
@@ -50,7 +50,9 @@ void main() {
     return socketRig.socket;
   }
 
-  test('a signed-in driver connects even off duty (to hear about document review)', () async {
+  test(
+      'a signed-in driver connects even off duty (to hear about document review)',
+      () async {
     await cubit.load();
     await settle();
     expect(socketRig.sockets, hasLength(1));
@@ -68,7 +70,11 @@ void main() {
     final before = activeTripCalls();
 
     repo.activeTripValue = fakeTrip();
-    socket.serverSends({'type': 'trip.changed', 'event': 'trip.assigned', 'trip_id': repo.activeTripValue!.id});
+    socket.serverSends({
+      'type': 'trip.changed',
+      'event': 'trip.assigned',
+      'trip_id': repo.activeTripValue!.id
+    });
     await settle();
 
     expect(activeTripCalls(), before + 1);
@@ -81,7 +87,11 @@ void main() {
     final changed = <String>[];
     cubit.tripChanges.listen(changed.add);
 
-    socket.serverSends({'type': 'trip.changed', 'event': 'trip.payment_collected', 'trip_id': 't9'});
+    socket.serverSends({
+      'type': 'trip.changed',
+      'event': 'trip.payment_collected',
+      'trip_id': 't9'
+    });
     await settle();
 
     expect(changed, ['t9']);
@@ -97,7 +107,9 @@ void main() {
     expect(repo.calls.where((c) => c == 'profile').length, before + 1);
   });
 
-  test('when the socket drops, the fallback poll takes over; when it is back, it catches up', () async {
+  test(
+      'when the socket drops, the fallback poll takes over; when it is back, it catches up',
+      () async {
     final socket = await onDutyAndLive();
     await socket.serverCloses(1006);
     final dropped = activeTripCalls();
@@ -109,20 +121,25 @@ void main() {
     socketRig.socket.serverSends({'type': 'ready'});
     await settle(40);
     final afterCatchUp = activeTripCalls();
-    expect(afterCatchUp, greaterThan(beforeLive), reason: 'a catch-up sync on reconnect');
+    expect(afterCatchUp, greaterThan(beforeLive),
+        reason: 'a catch-up sync on reconnect');
 
     await settle(120);
-    expect(activeTripCalls(), afterCatchUp, reason: 'live again: polling stops');
+    expect(activeTripCalls(), afterCatchUp,
+        reason: 'live again: polling stops');
   });
 
-  test('locations go over the socket while it is live, not as HTTP requests', () async {
+  test('locations go over the socket while it is live, not as HTTP requests',
+      () async {
     final socket = await onDutyAndLive();
     final httpBefore = repo.pings.length;
 
-    location.stream.add(const GeoPoint(12.99, 77.61)); // ~2 km away: worth sending
+    location.stream
+        .add(const GeoPoint(12.99, 77.61)); // ~2 km away: worth sending
     await settle();
 
-    expect(socket.sentOfType('location').last, {'type': 'location', 'lat': 12.99, 'lng': 77.61});
+    expect(socket.sentOfType('location').last,
+        {'type': 'location', 'lat': 12.99, 'lng': 77.61});
     expect(repo.pings.length, httpBefore);
   });
 
@@ -136,6 +153,23 @@ void main() {
     await settle();
 
     expect(socket.sentOfType('location').length, sent);
+  });
+
+  test('a demand hint is kept while waiting, and dropped once a trip comes',
+      () async {
+    final socket = await onDutyAndLive();
+    socket.serverSends({'type': 'driver.hint', 'message': 'Busy near MG Road'});
+    await settle();
+    expect(cubit.demandHint.value?.message, 'Busy near MG Road');
+
+    repo.activeTripValue = fakeTrip();
+    socket.serverSends({
+      'type': 'trip.changed',
+      'event': 'trip.assigned',
+      'trip_id': repo.activeTripValue!.id
+    });
+    await settle();
+    expect(cubit.demandHint.value, isNull);
   });
 
   test('signing out closes the socket', () async {

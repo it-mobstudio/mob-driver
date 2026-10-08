@@ -1,0 +1,478 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mob_driver/core/errors/app_failure.dart';
+import 'package:mob_driver/core/l10n/tr.dart';
+import 'package:mob_driver/core/services/haptics.dart';
+import 'package:mob_driver/core/theme/app_colors.dart';
+import 'package:mob_driver/core/widgets/buttons.dart';
+import 'package:mob_driver/core/widgets/info_banner.dart';
+import 'package:mob_driver/features/driver/data/media/photo_capture.dart';
+import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
+import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/onboarding/form_fields.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/photo_widgets.dart';
+
+/// The frame every bottom sheet in the driver app shares: rounded top, a grab
+/// handle, a title, and content that scrolls above the keyboard.
+class FormSheet extends StatelessWidget {
+  const FormSheet({
+    super.key,
+    required this.title,
+    required this.child,
+    this.subtitle,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        // A Material (not a painted Container): ink ripples inside need one
+        // above them, and an opaque box in between hides them.
+        child: Material(
+          color: AppColors.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          clipBehavior: Clip.antiAlias,
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                            color: AppColors.line,
+                            borderRadius: BorderRadius.circular(4)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(title,
+                        style: TextStyle(
+                            color: AppColors.ink,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800)),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(subtitle!,
+                          style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12.5,
+                              height: 1.4)),
+                    ],
+                    const SizedBox(height: 16),
+                    child,
+                  ]),
+            ),
+          ),
+        ),
+      );
+}
+
+Future<bool> _showSheet(BuildContext context, Widget sheet) async =>
+    await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => sheet,
+    ) ??
+    false;
+
+/// Aadhaar: the 12-digit number (only its last four digits are kept) and both
+/// sides of the card. Resolves true once the backend has accepted it.
+Future<bool> showAadharSheet(
+  BuildContext context, {
+  PhotoCapture capture = const DevicePhotoCapture(),
+  KycItem? current,
+}) =>
+    _showSheet(context, _AadharSheet(capture: capture, current: current));
+
+/// Driving licence: number, expiry and the card's front (and, optionally, back).
+Future<bool> showLicenceSheet(
+  BuildContext context, {
+  PhotoCapture capture = const DevicePhotoCapture(),
+  KycItem? current,
+}) =>
+    _showSheet(context, _LicenceSheet(capture: capture, current: current));
+
+/// Police verification certificate: one picture of it.
+Future<bool> showPoliceSheet(
+  BuildContext context, {
+  PhotoCapture capture = const DevicePhotoCapture(),
+  KycItem? current,
+}) =>
+    _showSheet(context, _PoliceSheet(capture: capture, current: current));
+
+class _RejectionNote extends StatelessWidget {
+  const _RejectionNote(this.item);
+  final KycItem? item;
+
+  @override
+  Widget build(BuildContext context) {
+    final note = item?.rejectionNote;
+    if (item?.status != KycStatus.rejected) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: InfoBanner(
+        key: const Key('rejection_note'),
+        text: tr(
+            'Sent back for a fix{p0}', {'p0': note == null ? '.' : ': $note'}),
+        icon: Icons.error_outline_rounded,
+        color: AppColors.red,
+      ),
+    );
+  }
+}
+
+/// State every document sheet shares: which pictures are chosen, whether a
+/// submit is in flight, and the error to show if the backend said no.
+mixin _SheetState<T extends StatefulWidget> on State<T> {
+  bool busy = false;
+  String? error;
+
+  /// Set when the driver taps submit with something missing: from then on
+  /// every missing field is outlined in red with what to do, and each message
+  /// clears as soon as it's fixed.
+  bool tried = false;
+
+  /// [message] once the driver has tried to submit, else nothing.
+  String? shown(String? message) => tried ? message : null;
+
+  /// Submit if nothing is missing; otherwise light up what is.
+  void submitOrShow(bool ready, VoidCallback submit) {
+    if (ready) return submit();
+    AppHaptics.error();
+    setState(() => tried = true);
+  }
+
+  PhotoCapture get capture;
+
+  Future<CapturedPhoto?> pick() => chooseDocumentPhoto(context, capture);
+
+  /// Runs [submit]; closes the sheet on success, shows the reason otherwise.
+  Future<void> run(
+      Future<AppFailure?> Function(DriverSessionCubit cubit) submit) async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    final failure = await submit(context.read<DriverSessionCubit>());
+    if (!mounted) return;
+    if (failure != null) {
+      AppHaptics.error();
+      setState(() {
+        busy = false;
+        error = failure.message;
+      });
+      return;
+    }
+    AppHaptics.success();
+    Navigator.pop(context, true);
+  }
+
+  Widget errorBanner() => AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        alignment: Alignment.topCenter,
+        child: error == null
+            ? const SizedBox(width: double.infinity)
+            : Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: InfoBanner(
+                  key: const Key('sheet_error'),
+                  text: error!,
+                  icon: Icons.error_outline_rounded,
+                  color: AppColors.red,
+                ),
+              ),
+      );
+}
+
+// -- Aadhaar -----------------------------------------------------------------
+
+class _AadharSheet extends StatefulWidget {
+  const _AadharSheet({required this.capture, this.current});
+  final PhotoCapture capture;
+  final KycItem? current;
+
+  @override
+  State<_AadharSheet> createState() => _AadharSheetState();
+}
+
+class _AadharSheetState extends State<_AadharSheet> with _SheetState {
+  final _number = TextEditingController();
+  CapturedPhoto? _front;
+  CapturedPhoto? _back;
+
+  @override
+  PhotoCapture get capture => widget.capture;
+
+  @override
+  void dispose() {
+    _number.dispose();
+    super.dispose();
+  }
+
+  String get _digits => _number.text.replaceAll(' ', '');
+  bool get _ready => _numberError == null && _front != null && _back != null;
+
+  String? get _numberError {
+    if (_digits.isEmpty) return tr('Enter your 12-digit Aadhaar number.');
+    if (_digits.length != 12) {
+      return tr('Aadhaar number must be 12 digits — you’ve entered {count}.',
+          {'count': _digits.length});
+    }
+    if (_digits.startsWith('0') || _digits.startsWith('1')) {
+      return tr(
+          'That doesn’t look like an Aadhaar number — they never start with 0 or 1.');
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) => FormSheet(
+        title: tr('Aadhaar card'),
+        subtitle: tr(
+            'Photograph both sides clearly. We only keep the last 4 digits of the number.'),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _RejectionNote(widget.current),
+          FormTextField(
+            key: const Key('field_aadhar_number'),
+            controller: _number,
+            label: tr('Aadhaar number'),
+            hint: '1234 5678 9012',
+            errorText: shown(_numberError),
+            keyboardType: TextInputType.number,
+            inputFormatters: const [GroupedDigitsFormatter()],
+            textInputAction: TextInputAction.done,
+            enabled: !busy,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(
+              child: PhotoTile(
+                key: const Key('aadhar_front'),
+                label: tr('Front'),
+                photo: _front,
+                errorText: shown(tr('Add the front side')),
+                enabled: !busy,
+                onTap: () async {
+                  final p = await pick();
+                  if (p != null) setState(() => _front = p);
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: PhotoTile(
+                key: const Key('aadhar_back'),
+                label: tr('Back'),
+                photo: _back,
+                errorText: shown(tr('Add the back side')),
+                enabled: !busy,
+                onTap: () async {
+                  final p = await pick();
+                  if (p != null) setState(() => _back = p);
+                },
+              ),
+            ),
+          ]),
+          errorBanner(),
+          const SizedBox(height: 18),
+          PrimaryButton(
+            key: const Key('aadhar_submit'),
+            label: tr('Submit Aadhaar'),
+            loading: busy,
+            onPressed: () => submitOrShow(
+                _ready,
+                () => run((cubit) => cubit.submitAadhar(
+                      number: _digits,
+                      front: _front!,
+                      back: _back!,
+                    ))),
+          ),
+        ]),
+      );
+}
+
+// -- Driving licence ---------------------------------------------------------------
+
+class _LicenceSheet extends StatefulWidget {
+  const _LicenceSheet({required this.capture, this.current});
+  final PhotoCapture capture;
+  final KycItem? current;
+
+  @override
+  State<_LicenceSheet> createState() => _LicenceSheetState();
+}
+
+class _LicenceSheetState extends State<_LicenceSheet> with _SheetState {
+  final _number = TextEditingController();
+  DateTime? _expiry;
+  CapturedPhoto? _front;
+  CapturedPhoto? _back;
+
+  @override
+  PhotoCapture get capture => widget.capture;
+
+  @override
+  void dispose() {
+    _number.dispose();
+    super.dispose();
+  }
+
+  bool get _ready => _numberError == null && _expiry != null && _front != null;
+
+  String? get _numberError {
+    final n = _number.text.trim();
+    if (n.isEmpty) {
+      return tr('Enter your licence number exactly as printed on the card.');
+    }
+    if (n.replaceAll(RegExp(r'[\s-]'), '').length < 8) {
+      return tr('That licence number looks too short — check the card.');
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now();
+    return FormSheet(
+      title: tr('Driving licence'),
+      subtitle: tr(
+          'Enter it exactly as printed on the card, then photograph the front.'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _RejectionNote(widget.current),
+        FormTextField(
+          key: const Key('field_dl_number'),
+          controller: _number,
+          label: tr('Licence number'),
+          hint: tr('KA01 20110012345'),
+          errorText: shown(_numberError),
+          textCapitalization: TextCapitalization.characters,
+          maxLength: 25,
+          enabled: !busy,
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 14),
+        FormDateField(
+          key: const Key('field_dl_expiry'),
+          label: tr('Valid until'),
+          value: _expiry,
+          enabled: !busy,
+          firstDate: DateTime(today.year, today.month, today.day),
+          lastDate: DateTime(today.year + 30, today.month, today.day),
+          initialDate: DateTime(today.year + 1, today.month, today.day),
+          helper: tr('An expired licence can’t be used.'),
+          errorText: shown(_expiry == null
+              ? tr('Pick the date your licence is valid until.')
+              : null),
+          onChanged: (d) => setState(() => _expiry = d),
+        ),
+        const SizedBox(height: 14),
+        Row(children: [
+          Expanded(
+            child: PhotoTile(
+              key: const Key('dl_front'),
+              label: tr('Front'),
+              photo: _front,
+              errorText: shown(tr('Add the front of the licence')),
+              enabled: !busy,
+              onTap: () async {
+                final p = await pick();
+                if (p != null) setState(() => _front = p);
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: PhotoTile(
+              key: const Key('dl_back'),
+              label: tr('Back'),
+              optional: true,
+              photo: _back,
+              enabled: !busy,
+              onTap: () async {
+                final p = await pick();
+                if (p != null) setState(() => _back = p);
+              },
+            ),
+          ),
+        ]),
+        errorBanner(),
+        const SizedBox(height: 18),
+        PrimaryButton(
+          key: const Key('dl_submit'),
+          label: tr('Submit licence'),
+          loading: busy,
+          onPressed: () => submitOrShow(
+              _ready,
+              () => run((cubit) => cubit.submitLicence(
+                    number: _number.text.trim(),
+                    expiry: _expiry!,
+                    front: _front!,
+                    back: _back,
+                  ))),
+        ),
+      ]),
+    );
+  }
+}
+
+// -- Police verification ----------------------------------------------------------------
+
+class _PoliceSheet extends StatefulWidget {
+  const _PoliceSheet({required this.capture, this.current});
+  final PhotoCapture capture;
+  final KycItem? current;
+
+  @override
+  State<_PoliceSheet> createState() => _PoliceSheetState();
+}
+
+class _PoliceSheetState extends State<_PoliceSheet> with _SheetState {
+  CapturedPhoto? _document;
+
+  @override
+  PhotoCapture get capture => widget.capture;
+
+  @override
+  Widget build(BuildContext context) => FormSheet(
+        title: tr('Police verification'),
+        subtitle: tr(
+            'A police clearance / verification certificate. You can add this later — it’s needed before you can take trips.'),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _RejectionNote(widget.current),
+          PhotoTile(
+            key: const Key('police_document'),
+            label: tr('Certificate'),
+            height: 150,
+            photo: _document,
+            errorText: shown(tr('Add a photo of the certificate')),
+            enabled: !busy,
+            onTap: () async {
+              final p = await pick();
+              if (p != null) setState(() => _document = p);
+            },
+          ),
+          errorBanner(),
+          const SizedBox(height: 18),
+          PrimaryButton(
+            key: const Key('police_submit'),
+            label: tr('Submit certificate'),
+            loading: busy,
+            onPressed: () => submitOrShow(_document != null,
+                () => run((cubit) => cubit.submitPolice(_document!))),
+          ),
+        ]),
+      );
+}
