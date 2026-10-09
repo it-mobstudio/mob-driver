@@ -50,6 +50,7 @@ extension DioExceptionMapper on DioException {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
+      case DioExceptionType.transformTimeout:
       case DioExceptionType.connectionError:
         return NetworkFailure(_networkMessage(this));
       case DioExceptionType.badCertificate:

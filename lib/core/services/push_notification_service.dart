@@ -94,7 +94,8 @@ class PushNotificationService {
     const androidInit = AndroidInitializationSettings('@mipmap/launcher_icon');
     const iosInit = DarwinInitializationSettings();
     await _localNotifications.initialize(
-      const InitializationSettings(android: androidInit, iOS: iosInit),
+      settings:
+          const InitializationSettings(android: androidInit, iOS: iosInit),
       onDidReceiveNotificationResponse: (response) {
         final payload = response.payload;
         if (payload == null || payload.isEmpty) return;
@@ -131,14 +132,14 @@ class PushNotificationService {
     try {
       if (!_initialized) await initialize();
       await _localNotifications.show(
-        _ongoingTripNotificationId,
-        title ??
+        id: _ongoingTripNotificationId,
+        title: title ??
             (eta == 'Tracking paused'
                 ? tr('Trip paused')
                 : tr('On the way · {eta}', {'eta': eta})),
-        tr('{tripId}  •  Delivery to {destination}',
+        body: tr('{tripId}  •  Delivery to {destination}',
             {'tripId': tripId, 'destination': destination}),
-        NotificationDetails(
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _tripChannel.id,
             _tripChannel.name,
@@ -180,10 +181,10 @@ class PushNotificationService {
     try {
       if (!_initialized) await initialize();
       await _localNotifications.show(
-        id,
-        title,
-        body,
-        NotificationDetails(
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _androidChannel.id,
             _androidChannel.name,
@@ -207,17 +208,17 @@ class PushNotificationService {
 
   Future<void> hideOngoingTrip() async {
     if (kIsWeb || !_initialized) return;
-    await _localNotifications.cancel(_ongoingTripNotificationId);
+    await _localNotifications.cancel(id: _ongoingTripNotificationId);
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) return;
     await _localNotifications.show(
-      message.hashCode,
-      notification.title,
-      notification.body,
-      NotificationDetails(
+      id: message.hashCode,
+      title: notification.title,
+      body: notification.body,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _androidChannel.id,
           _androidChannel.name,

@@ -62,7 +62,8 @@ class GeoStamp extends Equatable {
 Future<String?> lookUpAddress(double latitude, double longitude) async {
   if (kIsWeb) return null;
   try {
-    final places = await placemarkFromCoordinates(latitude, longitude)
+    final places = await Geocoding()
+        .placemarkFromCoordinates(latitude, longitude)
         .timeout(const Duration(seconds: 3));
     if (places.isEmpty) return null;
     final p = places.first;
