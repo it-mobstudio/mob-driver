@@ -104,9 +104,8 @@ class PhotoTile extends StatelessWidget {
               child: Ink(
                 height: height,
                 decoration: BoxDecoration(
-                  color: _showError
-                      ? AppColors.redSoft
-                      : AppColors.surfaceMuted,
+                  color:
+                      _showError ? AppColors.redSoft : AppColors.surfaceMuted,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: _filled

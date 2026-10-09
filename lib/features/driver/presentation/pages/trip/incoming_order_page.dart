@@ -165,6 +165,10 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
                     // Read-only: this isn't the place to go off duty or open
                     // the menu, only to answer.
                     child: BlocBuilder<DriverSessionCubit, DriverSessionState>(
+                      buildWhen: (a, b) =>
+                          a.activeTrip != b.activeTrip ||
+                          a.profile != b.profile ||
+                          a.stats != b.stats,
                       builder: (context, state) =>
                           Column(mainAxisSize: MainAxisSize.min, children: [
                         DutyStatusRow(
@@ -385,7 +389,7 @@ class _OfferActions extends StatelessWidget {
           label: tr('Accept order'),
           trailing: '${secondsLeft}s',
           remaining: totalSeconds == 0 ? 0 : secondsLeft / totalSeconds,
-          color: secondsLeft <= 10 ? AppColors.orange : AppColors.blue,
+          color: secondsLeft <= 10 ? AppColors.orange : AppColors.button,
           loading: busy,
           onConfirmed: () async => onAccept(),
         ),

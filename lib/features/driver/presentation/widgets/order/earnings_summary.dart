@@ -57,8 +57,7 @@ class HeavyUnloadingBanner extends StatelessWidget {
         key: const Key('heavy_unloading_banner'),
         padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
         decoration: BoxDecoration(
-            color: AppColors.redSoft,
-            borderRadius: BorderRadius.circular(16)),
+            color: AppColors.redSoft, borderRadius: BorderRadius.circular(16)),
         child: Row(children: [
           Expanded(
             child:

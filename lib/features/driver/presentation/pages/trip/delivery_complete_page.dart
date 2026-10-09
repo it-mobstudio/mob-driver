@@ -118,7 +118,7 @@ class _DeliveredBanner extends StatelessWidget {
     return Container(
       height: 132,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(gradient: AppColors.brandGradient),
+      decoration: const BoxDecoration(gradient: AppColors.brandGradient),
       child: Stack(children: [
         Positioned(
           right: 8,

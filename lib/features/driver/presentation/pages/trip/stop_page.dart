@@ -101,6 +101,8 @@ class _StopPageState extends State<StopPage> with TripPhotoSlots<StopPage> {
   @override
   Widget build(BuildContext context) =>
       BlocBuilder<DriverSessionCubit, DriverSessionState>(
+        buildWhen: (a, b) =>
+            a.activeTrip != b.activeTrip || a.tripBusy != b.tripBusy,
         builder: (context, state) {
           final trip = _trip(state);
           final stop = trip == null ? null : _stop(trip);

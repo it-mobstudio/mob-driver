@@ -15,15 +15,16 @@ class AppCard extends StatelessWidget {
 
   // A getter, not a cached field: it has to follow light/dark.
   static BoxDecoration get _decoration => BoxDecoration(
-    color: AppColors.card,
-    borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: AppColors.line),
-    // One soft shadow: the border already outlines the card, and every
-    // blurred layer is paid for on each frame the card is on screen.
-    boxShadow: const [
-      BoxShadow(color: Color(0x0A001533), blurRadius: 10, offset: Offset(0, 3)),
-    ],
-  );
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.line),
+        // One soft shadow: the border already outlines the card, and every
+        // blurred layer is paid for on each frame the card is on screen.
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x0A001533), blurRadius: 10, offset: Offset(0, 3)),
+        ],
+      );
 
   @override
   Widget build(BuildContext context) {

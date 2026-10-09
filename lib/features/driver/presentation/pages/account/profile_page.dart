@@ -127,9 +127,11 @@ class ProfilePage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<DriverSessionCubit, DriverSessionState>(
-          builder: (context, state) {
+  Widget build(BuildContext context) => BlocBuilder<DriverSessionCubit,
+          DriverSessionState>(
+      buildWhen: (a, b) =>
+          a.activeTrip != b.activeTrip || a.profile != b.profile,
+      builder: (context, state) {
         final profile = state.profile;
         return AnnotatedRegion<SystemUiOverlayStyle>(
           // Light status-bar icons over the navy header.
@@ -725,7 +727,7 @@ class _ProfilePhotoState extends State<_ProfilePhoto> {
           child: Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: AppColors.blue,
+              color: AppColors.button,
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
             ),

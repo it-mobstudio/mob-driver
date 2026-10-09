@@ -18,7 +18,7 @@ class TonalButton extends StatelessWidget {
         child: TextButton(
           onPressed: onPressed,
           style: TextButton.styleFrom(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.surfaceMuted,
             foregroundColor: AppColors.ink,
             minimumSize: const Size.fromHeight(44),
             shape:

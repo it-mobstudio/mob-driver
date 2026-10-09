@@ -101,8 +101,10 @@ class AppPalette {
     blueSoft: Color(0xFF16273D),
     button: Color(0xFF2F7CF0),
     mint: Color(0xFF2EE6B0),
-    green: Color(0xFF3CCB82),
-    orange: Color(0xFFF0A23A),
+    // Fills carry white text, so these stay as saturated as in light mode;
+    // they also read well as text on the dark cards (about 5:1).
+    green: Color(0xFF1FA463),
+    orange: Color(0xFFDD8A18),
     red: Color(0xFFF2666F),
     greenSoft: Color(0xFF16302A),
     orangeSoft: Color(0xFF33280F),
@@ -142,11 +144,12 @@ abstract final class AppColors {
   static Color get orangeSoft => _palette.orangeSoft;
   static Color get redSoft => _palette.redSoft;
 
-  /// The navy → blue sweep behind hero cards.
-  static LinearGradient get brandGradient => LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [navy, const Color(0xFF02336E), _palette.blue],
-        stops: const [0, .55, 1],
-      );
+  /// The navy → blue sweep behind hero cards. Brand colours, the same in
+  /// light and dark: it always carries white text.
+  static const brandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF001533), Color(0xFF02336E), Color(0xFF0454A3)],
+    stops: [0, .55, 1],
+  );
 }

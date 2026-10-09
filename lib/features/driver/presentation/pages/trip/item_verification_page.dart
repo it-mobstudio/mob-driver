@@ -162,6 +162,8 @@ class _ItemVerificationPageState extends State<ItemVerificationPage> {
   @override
   Widget build(BuildContext context) =>
       BlocBuilder<DriverSessionCubit, DriverSessionState>(
+        buildWhen: (a, b) =>
+            a.activeTrip != b.activeTrip || a.tripBusy != b.tripBusy,
         builder: (context, state) {
           final trip = _trip(state);
           return Scaffold(

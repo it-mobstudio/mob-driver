@@ -30,6 +30,8 @@ class PickupMark extends StatelessWidget {
         key: const Key('pickup_mark'),
         width: 13,
         height: 13,
+        // The artwork is dark navy; tint it so it shows in dark mode too.
+        colorFilter: ColorFilter.mode(AppColors.muted, BlendMode.srcIn),
       );
 }
 

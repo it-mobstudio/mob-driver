@@ -25,7 +25,7 @@ Widget dashboardApp(TestRig rig, {bool permissionGranted = true}) =>
     BlocProvider<DriverSessionCubit>.value(
       value: rig.cubit,
       child: MaterialApp.router(
-        theme: testTheme,
+        theme: rig.theme ?? testTheme,
         // The looping radar would keep pumpAndSettle busy forever; it holds
         // still under "reduce motion", as on a device with that setting.
         builder: (context, child) => MediaQuery(

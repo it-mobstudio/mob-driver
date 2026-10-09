@@ -744,7 +744,7 @@ class _ActiveTripDetails extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.surfaceMuted,
             borderRadius: BorderRadius.circular(18),
           ),
           child: _Route(pickup: trip.pickup.address, drop: trip.drop.address),

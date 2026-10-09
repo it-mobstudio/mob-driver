@@ -51,9 +51,13 @@ class VehiclePage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<DriverSessionCubit, DriverSessionState>(
-          builder: (context, state) {
+  Widget build(BuildContext context) => BlocBuilder<DriverSessionCubit,
+          DriverSessionState>(
+      buildWhen: (a, b) =>
+          a.activeTrip != b.activeTrip ||
+          a.profile != b.profile ||
+          a.dutyBusy != b.dutyBusy,
+      builder: (context, state) {
         final profile = state.profile;
         final vehicle = profile?.currentVehicle;
         return Scaffold(
@@ -167,13 +171,19 @@ class _VehicleCard extends StatelessWidget {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(vehicle.registrationNumber,
-                        key: const Key('vehicle_reg'),
-                        style: TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: .6)),
+                    // A plate is read as one unit: shrink, never wrap.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(vehicle.registrationNumber,
+                          key: const Key('vehicle_reg'),
+                          maxLines: 1,
+                          style: TextStyle(
+                              color: AppColors.ink,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: .6)),
+                    ),
                     const SizedBox(height: 3),
                     Text(
                       [

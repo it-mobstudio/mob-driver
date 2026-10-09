@@ -102,6 +102,9 @@ class TestRig {
   AuthBloc? _auth;
   AuthBloc get auth => _auth ??= AuthBloc(authRepo);
 
+  /// The app's real theme, for tests that look at light/dark rendering.
+  ThemeData? theme;
+
   Future<void> dispose() async {
     await cubit.close();
     // Only if a page asked for it — building a bloc just to close it, inside a
@@ -120,7 +123,7 @@ class TestRig {
           BlocProvider<AuthBloc>.value(value: auth),
         ],
         child: MaterialApp.router(
-          theme: testTheme,
+          theme: theme ?? testTheme,
           routerConfig: GoRouter(routes: [
             GoRoute(path: '/', builder: (_, __) => home),
             ...routes,
@@ -136,7 +139,7 @@ class TestRig {
           BlocProvider<AuthBloc>.value(value: auth),
         ],
         child: MaterialApp.router(
-          theme: testTheme,
+          theme: theme ?? testTheme,
           routerConfig: GoRouter(
             initialLocation: initialLocation,
             routes: [

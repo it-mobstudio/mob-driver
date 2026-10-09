@@ -174,7 +174,7 @@ class WorkingTimeBanner extends StatelessWidget {
         fontSize: 16,
         letterSpacing: -.2);
     return Material(
-      color: AppColors.surface,
+      color: AppColors.surfaceMuted,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         key: const Key('summary_banner'),

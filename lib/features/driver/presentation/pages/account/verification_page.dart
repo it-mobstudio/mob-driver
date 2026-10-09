@@ -33,6 +33,7 @@ class VerificationPage extends StatelessWidget {
                   const TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
         ),
         body: BlocBuilder<DriverSessionCubit, DriverSessionState>(
+          buildWhen: (a, b) => a.profile != b.profile,
           builder: (context, state) {
             final profile = state.profile;
             if (profile == null) {

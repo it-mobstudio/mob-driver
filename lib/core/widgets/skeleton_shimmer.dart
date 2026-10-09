@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:mob_driver/core/theme/app_colors.dart';
+
 Color get _base => AppColors.line;
 Color get _highlight => AppColors.surface;
 
