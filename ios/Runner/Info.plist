@@ -73,12 +73,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Allow local network access to connect to the development server.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Allow access to your camera so you can capture and upload images.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Allow access to contacts so you can choose a receiver phone number.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Allow local network access to connect to the development server.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Your location is used while you are on duty for live vehicle tracking, trip distance, and delivery operations.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
