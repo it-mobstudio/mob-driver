@@ -71,18 +71,32 @@ void main() {
     expect(find.text('DASHBOARD'), findsOneWidget);
   });
 
-  rigTest('the countdown running out declines it on its own',
-      (tester, rig) async {
-    rig.repo.actionResult = (fakeTrip(status: 'cancelled'), null);
+  rigTest('an offer never expires on the phone clock', (tester, rig) async {
     await openOffer(tester, rig, fakeTrip());
-
-    expect(tester.widget<Text>(find.byKey(const Key('swipe_trailing'))).data,
-        '30s');
+    expect(find.byKey(const Key('swipe_trailing')), findsNothing);
     await tester.pump(const Duration(seconds: 31));
     await tester.pumpAndSettle();
+    expect(rig.repo.calls.where((call) => call.startsWith('cancel[')), isEmpty);
+    expect(find.byKey(const Key('offer_accept')), findsOneWidget);
+  });
 
-    expect(rig.repo.calls, contains('cancel[No response from driver]:$tripId'));
-    expect(find.text('DASHBOARD'), findsOneWidget);
+  rigTest('backend withdrawal closes the offer without a local cancellation',
+      (tester, rig) async {
+    await openOffer(tester, rig, fakeTrip());
+    rig.repo.activeTripValue = null;
+    rig.repo.tripsById[tripId] = fakeTrip(status: 'cancelled');
+    await rig.cubit.pollNow();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('offer_accept')), findsNothing);
+    expect(rig.alert.ringing, isFalse);
+    expect(rig.repo.calls.where((call) => call.startsWith('cancel[')), isEmpty);
+  });
+
+  rigTest('unloading fee changes the acceptance action', (tester, rig) async {
+    await openOffer(tester, rig, fakeTrip(bonusFare: '100.00'));
+    expect(find.text('Accept order + unloading'), findsOneWidget);
+    await swipe(tester, 'Accept order + unloading');
+    expect(find.text('Reached pickup'), findsOneWidget);
   });
 
   rigTest('view order details opens the full order details page',

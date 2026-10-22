@@ -165,8 +165,10 @@ class _EarningsCard extends StatelessWidget {
     final bonus = (trip.bonusFare ?? 0) > 0 ? trip.bonusFare : null;
     // The server credits the driver's share of the fare plus the whole bonus
     // (driver_earning). Before it's known, fall back to the fare itself.
-    final earned = trip.driverEarning ?? (trip.totalFare ?? 0) + (bonus ?? 0);
-    final fareShare = earned - (bonus ?? 0);
+    final extra = trip.hasExtraBonus ? trip.extraBonusFare : null;
+    final earned = trip.driverEarning ??
+        (trip.totalFare ?? 0) + (bonus ?? 0) + (extra ?? 0);
+    final fareShare = earned - (bonus ?? 0) - (extra ?? 0);
 
     return Stack(
         clipBehavior: Clip.none,
@@ -200,7 +202,10 @@ class _EarningsCard extends StatelessWidget {
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 16),
               FareChips(
-                  tripFare: fareShare, bonus: bonus, currency: trip.currency),
+                  tripFare: fareShare,
+                  bonus: bonus ?? (extra != null ? 0 : null),
+                  extraBonus: extra,
+                  currency: trip.currency),
             ]),
           ),
           // The badge pops in with a little spring — the moment worth marking.

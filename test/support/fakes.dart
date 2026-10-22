@@ -974,7 +974,9 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<(AuthVerifyResult?, AppFailure?)> verifyOtp(
-          {required String phoneNumber, required String otp}) async =>
+          {required String phoneNumber,
+          required String otp,
+          bool replaceSession = false}) async =>
       (null, const UnknownFailure());
 
   @override

@@ -12,6 +12,7 @@ class EarningsSummary extends StatelessWidget {
     super.key,
     required this.tripFare,
     this.bonus,
+    this.extraBonus,
     this.currency = 'INR',
   });
 
@@ -19,12 +20,18 @@ class EarningsSummary extends StatelessWidget {
 
   /// Null or zero: no bonus chip, no banner.
   final double? bonus;
+
+  /// Null or zero: no extra-bonus chip.
+  final double? extraBonus;
   final String currency;
 
   @override
   Widget build(BuildContext context) {
     final hasBonus = bonus != null && bonus! > 0;
-    final total = (tripFare ?? 0) + (hasBonus ? bonus! : 0);
+    final hasExtra = extraBonus != null && extraBonus! > 0;
+    final total = (tripFare ?? 0) +
+        (hasBonus ? bonus! : 0) +
+        (hasExtra ? extraBonus! : 0);
     return Column(children: [
       Text(tr('You’ll receive'),
           style: TextStyle(
@@ -39,9 +46,10 @@ class EarningsSummary extends StatelessWidget {
       const SizedBox(height: 16),
       FareChips(
           tripFare: tripFare,
-          bonus: hasBonus ? bonus : null,
+          bonus: hasBonus || hasExtra ? (bonus ?? 0) : null,
+          extraBonus: hasExtra ? extraBonus : null,
           currency: currency),
-      if (hasBonus) ...[
+      if (hasBonus || hasExtra) ...[
         const SizedBox(height: 12),
         const HeavyUnloadingBanner(),
       ],

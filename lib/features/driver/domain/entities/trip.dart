@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:mob_driver/core/l10n/tr.dart';
 import 'package:mob_driver/core/utils/json_readers.dart';
+import 'package:mob_driver/features/driver/domain/driver_limits.dart';
 
 /// Mirrors the backend's `TripStatus` (core/choices.py).
 enum TripStatus {
@@ -376,6 +377,8 @@ class Trip extends Equatable {
     this.surgeMultiplier,
     this.totalFare,
     this.bonusFare,
+    this.extraBonusFare,
+    this.amountToCollect,
     this.currency = 'INR',
     this.codCollectedAt,
     this.invoiceUrl,
@@ -426,6 +429,8 @@ class Trip extends Equatable {
       surgeMultiplier: readDouble(json['surge_multiplier']),
       totalFare: readDouble(json['total_fare']),
       bonusFare: readDouble(json['bonus_fare']),
+      extraBonusFare: readDouble(json['extra_bonus_fare']),
+      amountToCollect: readDouble(json['amount_to_collect']),
       currency: readString(json['currency']) ?? 'INR',
       paymentMode: PaymentMode.parse(readString(json['payment_mode'])),
       isPaid: readString(json['payment_status']) == 'paid',
@@ -486,9 +491,30 @@ class Trip extends Equatable {
   final double? totalFare;
 
   /// An extra flat amount for this trip specifically (e.g. for unloading
-  /// heavy goods), on top of [totalFare] — never charged to the customer.
+  /// heavy goods), on top of [totalFare] — paid to the driver in full, and
+  /// part of what the customer pays ([collectAmount]).
   /// Null (not just zero) when none was set at booking.
   final double? bonusFare;
+
+  /// What the company added on top of [bonusFare] after booking, when the load
+  /// turned out heavier than expected — shown on its own as "Extra loading
+  /// bonus". Null or zero when there is none.
+  final double? extraBonusFare;
+  bool get hasExtraBonus => (extraBonusFare ?? 0) > 0;
+
+  /// What the server says the customer pays (fare + unloading + extra
+  /// loading), when it says.
+  final double? amountToCollect;
+
+  /// What the driver collects on a cash-on-delivery order: the fare plus the
+  /// unloading bonus and the extra loading bonus.
+  double get collectAmount =>
+      amountToCollect ??
+      (totalFare ?? 0) + (bonusFare ?? 0) + (extraBonusFare ?? 0);
+
+  String get acceptOrderLabel => (bonusFare ?? 0) > 0 || hasExtraBonus
+      ? tr('Accept order + unloading')
+      : tr('Accept order');
   final String currency;
   final PaymentMode paymentMode;
   final bool isPaid;
@@ -615,9 +641,18 @@ class Trip extends Equatable {
         PickupPhotoMode.perItem => itemsAt(stage, stop: stop).isNotEmpty,
       };
 
+  /// How many whole-order photos this stop still needs: the pickup and the
+  /// final drop want [DriverLimits.minOrderPhotos] as proof, an in-between
+  /// stop just one.
+  int orderPhotosMissing(PhotoStage stage, {TripWaypoint? stop}) {
+    if (!photoMode(stage).wantsOrderPhoto) return 0;
+    final need = stop == null ? DriverLimits.minOrderPhotos : 1;
+    final short = need - orderPhotos(stage, stop: stop).length;
+    return short < 0 ? 0 : short;
+  }
+
   bool orderPhotoMissing(PhotoStage stage, {TripWaypoint? stop}) =>
-      photoMode(stage).wantsOrderPhoto &&
-      orderPhotos(stage, stop: stop).isEmpty;
+      orderPhotosMissing(stage, stop: stop) > 0;
 
   int missingItemPhotos(PhotoStage stage, {TripWaypoint? stop}) =>
       photoMode(stage).wantsItemPhotos
@@ -657,6 +692,8 @@ class Trip extends Equatable {
         isPaid,
         totalFare,
         bonusFare,
+        extraBonusFare,
+        amountToCollect,
         routePolyline,
         codCollectedAt,
         invoiceUrl,

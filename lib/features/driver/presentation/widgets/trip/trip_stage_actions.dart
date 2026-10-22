@@ -10,9 +10,12 @@ import 'package:mob_driver/core/utils/formatters.dart';
 import 'package:mob_driver/core/widgets/buttons.dart';
 import 'package:mob_driver/core/widgets/swipe_button.dart';
 import 'package:mob_driver/core/widgets/top_snack_bar.dart';
+import 'package:mob_driver/features/driver/data/location/driver_location_service.dart';
+import 'package:mob_driver/features/driver/data/location/location_reporter.dart';
 import 'package:mob_driver/features/driver/domain/entities/trip.dart';
 import 'package:mob_driver/features/driver/domain/trip_reasons.dart';
 import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 /// Moving a trip along its stages — reached pickup, pickup order, each
 /// in-between stop, deliver order — and everything each step asks for first
@@ -54,10 +57,37 @@ mixin TripStageActions<T extends StatefulWidget> on State<T> {
     onSuccess?.call(trip);
   }
 
-  Future<void> reachedPickup() => _run(() => stageCubit.arrive(stageTripId));
+  /// How close the driver has to be for a step that says "I'm here".
+  static const _nearMeters = 100;
 
-  Future<void> reachedStop(TripWaypoint stop) =>
-      _run(() => stageCubit.arriveAtStop(stageTripId, stop.id));
+  /// Warns when the driver's last fix is more than [_nearMeters] from
+  /// ([lat], [lng]) and asks whether to move the order along anyway. Always
+  /// true when the spot or the driver's position isn't known.
+  Future<bool> _confirmNearby(double? lat, double? lng) async {
+    final me = stageCubit.lastPosition;
+    if (lat == null || lng == null || me == null) return true;
+    final away = LocationReporter.metersBetween(me, GeoPoint(lat, lng)).round();
+    if (away <= _nearMeters) return true;
+    AppHaptics.error();
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => PointerInterceptor(
+        child: _FarFromStopDialog(distance: formatDistance(away)),
+      ),
+    );
+    return go == true && mounted;
+  }
+
+  Future<void> reachedPickup() async {
+    final p = latestTrip?.pickup;
+    if (!await _confirmNearby(p?.latitude, p?.longitude)) return;
+    await _run(() => stageCubit.arrive(stageTripId));
+  }
+
+  Future<void> reachedStop(TripWaypoint stop) async {
+    if (!await _confirmNearby(stop.latitude, stop.longitude)) return;
+    await _run(() => stageCubit.arriveAtStop(stageTripId, stop.id));
+  }
 
   /// The stop's own screen: its photos, items and checks, then "done".
   Future<void> workStop(TripWaypoint stop) async {
@@ -80,6 +110,9 @@ mixin TripStageActions<T extends StatefulWidget> on State<T> {
   Future<void> pickupOrder() async {
     final trip = latestTrip;
     if (trip == null) return;
+    if (!await _confirmNearby(trip.pickup.latitude, trip.pickup.longitude)) {
+      return;
+    }
     if (!trip.hasPhotos(PhotoStage.pickup) &&
         !await ensurePhotos(PhotoStage.pickup)) {
       return;
@@ -93,6 +126,10 @@ mixin TripStageActions<T extends StatefulWidget> on State<T> {
   Future<void> deliverOrder() async {
     var trip = latestTrip;
     if (trip == null) return;
+    if (!await _confirmNearby(trip.drop.latitude, trip.drop.longitude) ||
+        !mounted) {
+      return;
+    }
     if (trip.needsItemVerification) {
       await context.push(AppRoutes.items(trip.id));
       trip = latestTrip;
@@ -117,11 +154,12 @@ mixin TripStageActions<T extends StatefulWidget> on State<T> {
   /// from their wallet for the company to collect — and goes straight to the
   /// customer's OTP. Otherwise the scan-to-pay code is shown.
   Future<void> _collectPayment(Trip trip) async {
-    final amount = formatMoney(trip.totalFare, currency: trip.currency);
+    final amount = formatMoney(trip.collectAmount, currency: trip.currency);
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => _PaymentChoiceSheet(amount: amount),
+      builder: (_) =>
+          PointerInterceptor(child: _PaymentChoiceSheet(amount: amount)),
     );
     if (!mounted || choice == null) return;
     if (choice == 'qr') {
@@ -130,7 +168,8 @@ mixin TripStageActions<T extends StatefulWidget> on State<T> {
     }
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => PointerInterceptor(
+          child: AlertDialog(
         title: Text(tr('Collected {amount}?', {'amount': amount})),
         content: Text(tr(
             'Confirm only once you have the money in hand. It’s added to what you owe the company (taken from your wallet), and the customer gets their delivery OTP.')),
@@ -143,7 +182,7 @@ mixin TripStageActions<T extends StatefulWidget> on State<T> {
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(tr('Yes, collected'))),
         ],
-      ),
+      )),
     );
     if (confirmed != true || !mounted) return;
     final (sent, failure) =
@@ -188,7 +227,8 @@ mixin TripStageActions<T extends StatefulWidget> on State<T> {
   Future<void> _completePrepaid() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => PointerInterceptor(
+          child: AlertDialog(
         title: Text(tr('Complete delivery?')),
         content:
             Text(tr('Confirm the order has been handed over to the customer.')),
@@ -200,7 +240,7 @@ mixin TripStageActions<T extends StatefulWidget> on State<T> {
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(tr('Complete'))),
         ],
-      ),
+      )),
     );
     if (confirmed != true || !mounted) return;
     await _run(
@@ -218,7 +258,7 @@ mixin TripStageActions<T extends StatefulWidget> on State<T> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _CancelSheet(),
+      builder: (_) => PointerInterceptor(child: const _CancelSheet()),
     );
     if (reason == null || !mounted) return;
     await _run(
@@ -504,4 +544,101 @@ class _PaymentOption extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// Gentle heads-up when the driver swipes a step while still far from the
+/// stop: a warning icon, the distance in bold, and a polite question — not an
+/// error. Pops true to carry on anyway.
+class _FarFromStopDialog extends StatelessWidget {
+  const _FarFromStopDialog({required this.distance});
+  final String distance;
+
+  @override
+  Widget build(BuildContext context) {
+    // The translated sentence, with the distance picked out in bold.
+    final sentence = tr('You are {p0} away from this stop.', {'p0': distance});
+    final at = sentence.indexOf(distance);
+    final base = TextStyle(color: AppColors.muted, fontSize: 16, height: 1.4);
+    return Dialog(
+      key: const Key('far_from_stop_dialog'),
+      backgroundColor: AppColors.card,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+                color: AppColors.orangeSoft, shape: BoxShape.circle),
+            child: Icon(Icons.location_off_rounded,
+                color: AppColors.orange, size: 32),
+          ),
+          const SizedBox(height: 16),
+          Text(tr('Looks like you are away from the location'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: AppColors.ink,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          Text.rich(
+            at < 0
+                ? TextSpan(text: sentence)
+                : TextSpan(children: [
+                    TextSpan(text: sentence.substring(0, at)),
+                    TextSpan(
+                        text: distance,
+                        style: TextStyle(
+                            color: AppColors.ink, fontWeight: FontWeight.w800)),
+                    TextSpan(text: sentence.substring(at + distance.length)),
+                  ]),
+            key: const Key('far_from_stop_text'),
+            textAlign: TextAlign.center,
+            style: base,
+          ),
+          const SizedBox(height: 6),
+          Text(tr('Do you still want to change the status?'),
+              textAlign: TextAlign.center, style: base),
+          const SizedBox(height: 20),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                key: const Key('far_from_stop_wait'),
+                onPressed: () => Navigator.pop(context, false),
+                icon: const Icon(Icons.close_rounded, size: 18),
+                label: Text(tr('Not yet')),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.ink,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  textStyle: const TextStyle(
+                      fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                key: const Key('far_from_stop_continue'),
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.check_rounded, size: 18),
+                label: Text(tr('Yes, change it')),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.button,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  textStyle: const TextStyle(
+                      fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ]),
+        ]),
+      ),
+    );
+  }
 }

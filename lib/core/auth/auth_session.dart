@@ -98,7 +98,10 @@ class AuthSession extends ChangeNotifier {
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
       validateStatus: (_) => true,
-      headers: {if (appPlatformHeaderValue() case final p?) 'platform': p},
+      headers: {
+        ...AppConfig.apiTunnelHeaders,
+        if (appPlatformHeaderValue() case final p?) 'platform': p,
+      },
     )).post<Object?>(_refreshPath, data: {'refreshToken': refreshToken});
 
     final status = response.statusCode ?? 0;

@@ -15,15 +15,21 @@ import 'package:mob_driver/core/utils/launchers.dart';
 import 'package:mob_driver/core/utils/polyline_codec.dart';
 import 'package:mob_driver/core/widgets/app_card.dart';
 import 'package:mob_driver/core/widgets/centered_message.dart';
+import 'package:mob_driver/core/widgets/swipe_button.dart';
 import 'package:mob_driver/features/driver/data/location/driver_location_service.dart';
 import 'package:mob_driver/features/driver/data/media/invoice_actions.dart';
 import 'package:mob_driver/features/driver/domain/entities/trip.dart';
 import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/map/map_sheet.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/map/trip_map.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/order/earnings_summary.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/order/order_section.dart'
+    show OrderSection, OrderSectionGap;
+import 'package:mob_driver/features/driver/presentation/widgets/order/shipment_list.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/order/stop_timeline.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/trip/trip_stage_actions.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/trip/voice_note_player.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 /// One trip, start to finish: the map with the route polyline and the leg to
 /// the next stop, a sheet with the stop the driver is heading to (pull it up
@@ -64,6 +70,7 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
   Trip? _trip;
   String? _loadError;
   List<LatLng> _legPoints = const [];
+  int? _legMeters;
 
   /// Which leg [_legPoints] is: the trip's stage plus the in-between stop
   /// it leads to, if any.
@@ -148,6 +155,7 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
       // The next stop changed (pickup → a stop in between → drop): the old
       // leg is now wrong.
       _legPoints = const [];
+      _legMeters = null;
       _legFor = _legKey(trip);
       unawaited(_refreshLeg());
     }
@@ -164,6 +172,7 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
     if (!mounted || route == null || now == null) return;
     if (_legKey(now) != _legKey(trip)) return;
     setState(() {
+      _legMeters = route.distanceMeters;
       _legPoints =
           route.points.map((p) => LatLng(p.latitude, p.longitude)).toList();
     });
@@ -205,6 +214,7 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
 
   TripMapData _mapData(Trip trip, GeoPoint? me) => TripMapData(
         status: trip.status,
+        menuAbove: true,
         stops: [
           for (final stop in trip.inBetweenStops)
             if (stop.latitude != null && stop.longitude != null)
@@ -240,6 +250,20 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
       },
       child: Scaffold(
         backgroundColor: AppColors.surface,
+        endDrawer: _trip == null
+            ? null
+            : _OrderDrawer(
+                trip: _trip!,
+                stops: _trip!.inBetweenStops.isEmpty
+                    ? const []
+                    : _timeline(_trip!),
+                onCancel: _trip!.canCancel && _trip!.status.isActive
+                    ? () {
+                        Navigator.of(context).pop();
+                        cancelTrip();
+                      }
+                    : null,
+              ),
         body: _trip == null ? _placeholder() : _content(_trip!),
       ),
     );
@@ -272,17 +296,6 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
     final stops = _timeline(trip);
     final current =
         stops.where((s) => s.progress == StopProgress.active).firstOrNull;
-    // While the trip is on, only the stop being worked on shows at rest; the
-    // ones still to come, then the ones done, are a pull of the sheet away.
-    final upcoming = [
-      for (final s in stops)
-        if (s.progress == StopProgress.upcoming) s
-    ];
-    final done = [
-      for (final s in stops)
-        if (s.progress == StopProgress.done) s
-    ];
-
     // Expanded: everything but the back button is positioned, so the stack
     // would otherwise shrink to that button's height.
     return Stack(fit: StackFit.expand, children: [
@@ -299,6 +312,18 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: _RoundBackButton(onTap: _goBack),
+          ),
+        ),
+      ),
+      Align(
+        alignment: Alignment.topRight,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Builder(
+              builder: (context) => _RoundMenuButton(
+                  onTap: () => Scaffold.of(context).openEndDrawer()),
+            ),
           ),
         ),
       ),
@@ -324,43 +349,21 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
                       compact: true),
                   const SizedBox(height: 16),
                 ],
-                TripTimeline(
-                    stops: active && current != null ? [current] : stops),
+                if (active && current != null) ...[
+                  _CurrentStopCard(stop: current, meters: _legMeters),
+                ] else
+                  TripTimeline(stops: stops),
               ]),
             ),
-            more: !active
-                ? _FinishedSummary(trip: trip)
-                : upcoming.isEmpty && done.isEmpty
-                    ? null
-                    : Column(mainAxisSize: MainAxisSize.min, children: [
-                        if (upcoming.isNotEmpty) ...[
-                          _TimelineLabel(tr('Up next')),
-                          TripTimeline(stops: upcoming),
-                        ],
-                        if (upcoming.isNotEmpty && done.isNotEmpty)
-                          const SizedBox(height: 22),
-                        if (done.isNotEmpty) ...[
-                          _TimelineLabel(tr('Done')),
-                          TripTimeline(stops: done),
-                        ],
-                      ]),
+            // While the trip is on the sheet holds just the stop card and the
+            // slide action — items, the other stops and cancel are in the
+            // hamburger — so it never moves.
+            more: active ? null : _FinishedSummary(trip: trip),
             footer: !active
                 ? null
                 : Column(mainAxisSize: MainAxisSize.min, children: [
                     const SizedBox(height: 8),
                     stageSwipe(trip, busy: busy),
-                    if (trip.canCancel)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: TextButton(
-                          key: const Key('trip_cancel'),
-                          onPressed: busy ? null : cancelTrip,
-                          child: Text(tr('Cancel trip'),
-                              style: TextStyle(
-                                  color: AppColors.muted,
-                                  fontWeight: FontWeight.w600)),
-                        ),
-                      ),
                   ]),
           ),
         ),
@@ -374,8 +377,6 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
     final finished = trip.status == TripStatus.completed;
     final atPickup = trip.status == TripStatus.assigned ||
         trip.status == TripStatus.arrivedAtPickup;
-    void viewDetails() =>
-        context.push(AppRoutes.orderDetails(trip.id, fromTrip: true));
     String name(TripStop stop, String fallback) =>
         (stop.contactName ?? '').isNotEmpty ? stop.contactName! : fallback;
 
@@ -391,7 +392,6 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
         progress: atPickup && trip.status.isActive
             ? StopProgress.active
             : StopProgress.done,
-        onViewDetails: viewDetails,
         onMap: trip.pickup.hasCoordinates
             ? () => Launchers.navigateTo(trip.pickup)
             : null,
@@ -411,7 +411,6 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
               : trip.nextStop?.id == stop.id
                   ? StopProgress.active
                   : StopProgress.upcoming,
-          onViewDetails: viewDetails,
           onMap: stop.latitude != null
               ? () => Launchers.navigateTo(stop.asStop)
               : null,
@@ -427,33 +426,12 @@ class _TripPageState extends State<TripPage> with TripStageActions<TripPage> {
             : trip.status == TripStatus.inProgress && trip.nextStop == null
                 ? StopProgress.active
                 : StopProgress.upcoming,
-        onViewDetails: viewDetails,
         onMap: trip.drop.hasCoordinates
             ? () => Launchers.navigateTo(trip.drop)
             : null,
       ),
     ];
   }
-}
-
-/// `UP NEXT` / `DONE` over a group of stops in the pulled-up sheet.
-class _TimelineLabel extends StatelessWidget {
-  const _TimelineLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(text.toUpperCase(),
-              style: TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: .8)),
-        ),
-      );
 }
 
 /// The panel rises from the bottom edge (with a fade) the first time the trip
@@ -509,16 +487,409 @@ class _RoundBackButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: AppColors.card,
-        elevation: 3,
-        shape: const CircleBorder(),
-        child: IconButton(
-          key: const Key('trip_back'),
-          icon: Icon(Icons.arrow_back_rounded, color: AppColors.ink),
-          onPressed: onTap,
+  Widget build(BuildContext context) => PointerInterceptor(
+        child: Material(
+          color: AppColors.card,
+          elevation: 3,
+          shape: const CircleBorder(),
+          child: IconButton(
+            key: const Key('trip_back'),
+            icon: Icon(Icons.arrow_back_rounded, color: AppColors.ink),
+            onPressed: onTap,
+          ),
         ),
       );
+}
+
+/// The stop the driver is heading to: whose it is, where, and one big button
+/// to get there.
+class _CurrentStopCard extends StatelessWidget {
+  const _CurrentStopCard({required this.stop, this.meters});
+  final TimelineStop stop;
+  final int? meters;
+
+  @override
+  Widget build(BuildContext context) {
+    final target = stop.isPickup ? tr('pickup') : tr('drop');
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      // Which stop this is — Pickup, Drop or an in-between one — as the pill
+      // the timeline always used.
+      Align(
+        alignment: Alignment.centerLeft,
+        child: StopTag(label: stop.tag, icon: stop.tagIcon, active: true),
+      ),
+      const SizedBox(height: 10),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+            color: AppColors.surfaceMuted,
+            borderRadius: BorderRadius.circular(22)),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+                color: AppColors.blueSoft,
+                borderRadius: BorderRadius.circular(16)),
+            child: Icon(Icons.home_rounded, color: AppColors.blue),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (stop.name.isNotEmpty)
+                Text(stop.name,
+                    key: const Key('current_stop_name'),
+                    style: TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              // The whole address — flat / shop number, area, pincode.
+              Text(stop.address,
+                  key: const Key('current_stop_address'),
+                  style: TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35)),
+            ]),
+          ),
+        ]),
+      ),
+      if (stop.onMap != null) ...[
+        const SizedBox(height: 16),
+        _NavigateButton(
+          title: tr('Navigate to {p0}', {'p0': target}),
+          subtitle: meters == null
+              ? tr('Opens Google Maps')
+              : '${tr('Opens Google Maps')} · ${formatDistance(meters)}',
+          onTap: stop.onMap!,
+        ),
+      ],
+    ]);
+  }
+}
+
+/// The big "Navigate" button. A deeper blue than the other actions, and it
+/// breathes a few times when it appears — then rests — so the eye finds it
+/// without a never-ending animation.
+class _NavigateButton extends StatefulWidget {
+  const _NavigateButton(
+      {required this.title, required this.subtitle, required this.onTap});
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  State<_NavigateButton> createState() => _NavigateButtonState();
+}
+
+class _NavigateButtonState extends State<_NavigateButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 900));
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started || MediaQuery.disableAnimationsOf(context)) return;
+    _started = true;
+    _pulse.repeat(reverse: true, count: 6);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Color.lerp(AppColors.button, AppColors.navy, .4)!;
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_pulse.value);
+        return Transform.scale(
+          scale: 1 + .02 * t,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                    color: color.withValues(alpha: .25 + .2 * t),
+                    blurRadius: 12 + 10 * t,
+                    offset: const Offset(0, 5)),
+              ],
+            ),
+            child: child,
+          ),
+        );
+      },
+      child: Material(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          key: const Key('trip_navigate'),
+          borderRadius: BorderRadius.circular(20),
+          onTap: widget.onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16)),
+                child: Icon(Icons.navigation_rounded, color: color, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.title,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 2),
+                      Text(widget.subtitle,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13)),
+                    ]),
+              ),
+              AnimatedBuilder(
+                animation: _pulse,
+                builder: (context, child) => Transform.translate(
+                    offset: Offset(3 * _pulse.value, -3 * _pulse.value),
+                    child: child),
+                child: const Icon(Icons.north_east_rounded,
+                    color: Colors.white, size: 22),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundMenuButton extends StatelessWidget {
+  const _RoundMenuButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => PointerInterceptor(
+        child: Material(
+          color: AppColors.card,
+          elevation: 3,
+          shape: const CircleBorder(),
+          child: IconButton(
+            key: const Key('trip_menu'),
+            tooltip: tr('Order details'),
+            icon: Icon(Icons.menu_rounded, color: AppColors.ink),
+            onPressed: onTap,
+          ),
+        ),
+      );
+}
+
+/// The hamburger's panel: the same sections, in the same look, as the order
+/// details screen — order reference, both stops with call / navigate, what
+/// it pays — with the way out (cancel) at the bottom.
+class _OrderDrawer extends StatelessWidget {
+  const _OrderDrawer(
+      {required this.trip, this.stops = const [], this.onCancel});
+  final Trip trip;
+
+  /// Every stop, when the trip has some in between (else the pickup and drop
+  /// below say it all).
+  final List<TimelineStop> stops;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final atDrop = trip.status == TripStatus.inProgress;
+    String name(TripStop s, String fallback) =>
+        (s.contactName ?? '').isNotEmpty ? s.contactName! : fallback;
+
+    return PointerInterceptor(
+        child: Drawer(
+      key: const Key('order_drawer'),
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(),
+      width: MediaQuery.sizeOf(context).width * .8,
+      child: Column(children: [
+        Material(
+          color: AppColors.card,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 8, 6),
+              child: Row(children: [
+                Expanded(
+                  child: Text(tr('Order details'),
+                      style: TextStyle(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 17)),
+                ),
+                IconButton(
+                    key: const Key('drawer_close'),
+                    icon: Icon(Icons.close_rounded, color: AppColors.ink),
+                    onPressed: () => Navigator.of(context).pop()),
+              ]),
+            ),
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  OrderSection(
+                    child: StopTimeline(
+                      pickup: StopInfo(
+                        name: name(trip.pickup, tr('Pickup')),
+                        address: trip.pickup.address,
+                        onCall: atDrop || trip.pickup.contactPhone == null
+                            ? null
+                            : () => Launchers.call(trip.pickup.contactPhone),
+                        onMap: !atDrop && trip.pickup.hasCoordinates
+                            ? () => Launchers.navigateTo(trip.pickup)
+                            : null,
+                      ),
+                      drop: StopInfo(
+                        name: name(trip.drop, tr('Drop')),
+                        address: trip.drop.address,
+                        onCall: atDrop && trip.drop.contactPhone != null
+                            ? () => Launchers.call(trip.drop.contactPhone)
+                            : null,
+                        onMap: atDrop && trip.drop.hasCoordinates
+                            ? () => Launchers.navigateTo(trip.drop)
+                            : null,
+                      ),
+                    ),
+                  ),
+                  if (stops.isNotEmpty) ...[
+                    const OrderSectionGap(),
+                    OrderSection(child: TripTimeline(stops: stops)),
+                  ],
+                  if (trip.hasItems) ...[
+                    const OrderSectionGap(),
+                    ColoredBox(
+                      color: AppColors.card,
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                              child: Text(
+                                  tr('{count} {p0} in shipment', {
+                                    'count': trip.items.length,
+                                    'p0': trip.items.length == 1
+                                        ? 'item'
+                                        : 'items'
+                                  }),
+                                  key: const Key('drawer_items_header'),
+                                  style: TextStyle(
+                                      color: AppColors.ink,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800)),
+                            ),
+                            ShipmentItemList(items: trip.items),
+                          ]),
+                    ),
+                  ],
+                  if (trip.drop.contactPhone != null) ...[
+                    const OrderSectionGap(),
+                    OrderSection(
+                      padding: const EdgeInsets.all(16),
+                      child: _CallCustomerButton(
+                        name: name(trip.drop, ''),
+                        onTap: () => Launchers.call(trip.drop.contactPhone),
+                      ),
+                    ),
+                  ],
+                  const OrderSectionGap(),
+                  OrderSection(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    child: EarningsSummary(
+                      tripFare: trip.totalFare,
+                      bonus: trip.bonusFare,
+                      extraBonus: trip.extraBonusFare,
+                      currency: trip.currency,
+                    ),
+                  ),
+                ]),
+          ),
+        ),
+        // Pinned under the scrolling details so it's always in reach — only
+        // offered while the order can still be given back (before pickup).
+        if (onCancel != null)
+          Material(
+            color: AppColors.card,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                child: FilledButton.icon(
+                  key: const Key('drawer_cancel'),
+                  onPressed: onCancel,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(tr('Cancel Trip')),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.red,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    textStyle: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ]),
+    ));
+  }
+}
+
+/// The one thing a driver most needs when stuck at a door: a big green slider
+/// that calls the customer. A slide, not a tap, so a pocket touch never rings
+/// a customer.
+class _CallCustomerButton extends StatelessWidget {
+  const _CallCustomerButton({required this.name, required this.onTap});
+  final String name;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (name.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(name,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: AppColors.ink,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800)),
+          ),
+        SwipeButton(
+          key: const Key('drawer_call_customer'),
+          label: tr('Slide to call customer'),
+          color: AppColors.green,
+          onConfirmed: () async => onTap(),
+        ),
+      ]);
 }
 
 class _FinishedSummary extends StatelessWidget {
@@ -534,6 +905,14 @@ class _FinishedSummary extends StatelessWidget {
             formatMoney(trip.distanceFare, currency: trip.currency)),
         InfoRow(
             tr('Time'), formatMoney(trip.timeFare, currency: trip.currency)),
+        if ((trip.bonusFare ?? 0) > 0)
+          InfoRow(tr('Unloading bonus'),
+              formatMoney(trip.bonusFare, currency: trip.currency),
+              valueColor: AppColors.orange),
+        if (trip.hasExtraBonus)
+          InfoRow(tr('Extra loading bonus'),
+              formatMoney(trip.extraBonusFare, currency: trip.currency),
+              valueColor: AppColors.orange),
         InfoRow(
             tr('Total'), formatMoney(trip.totalFare, currency: trip.currency),
             bold: true),

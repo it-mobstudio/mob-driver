@@ -31,7 +31,9 @@ class TonalButton extends StatelessWidget {
               Icon(icon, size: 17),
               const SizedBox(width: 6),
             ],
-            Text(label),
+            Flexible(
+                child:
+                    Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
           ]),
         ),
       );

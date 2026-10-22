@@ -6,6 +6,7 @@ import 'package:mob_driver/core/errors/app_failure.dart';
 import 'package:mob_driver/features/driver/data/media/photo_capture.dart';
 import 'package:mob_driver/features/driver/domain/entities/captured_photo.dart';
 import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
+import 'package:mob_driver/features/driver/domain/entities/my_vehicle.dart';
 import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:mob_driver/features/driver/presentation/pages/account/verification_page.dart';
 import 'package:mob_driver/features/driver/presentation/pages/onboarding_page.dart';
@@ -96,7 +97,7 @@ void main() {
         (tester, rig) async {
       await openOnboarding(
           tester, rig, newDriver(status: 'vehicle_required', kyc: kycJson()));
-      await tester.tap(find.text('Back to documents'));
+      await tapKey(tester, 'onboarding_back');
       await tester.pumpAndSettle();
       expect(find.text('Upload your documents'), findsOneWidget);
       expect(find.text('Continue to your vehicle'), findsOneWidget,
@@ -115,7 +116,7 @@ void main() {
         (tester, rig) async {
       await openOnboarding(
           tester, rig, newDriver(status: 'vehicle_required', kyc: kycJson()));
-      await tester.tap(find.text('Back to documents'));
+      await tapKey(tester, 'onboarding_back');
       await tester.pumpAndSettle();
       await tapKey(tester, 'onboarding_resume');
       expect(find.text('Add your vehicle'), findsOneWidget);
@@ -130,6 +131,30 @@ void main() {
     });
   });
 
+  rigTest('registration shows one editable vehicle and no extra add button',
+      (tester, rig) async {
+    rig.repo.myVehiclesValue.addAll([
+      const MyVehicle(
+          id: 'vehicle-1',
+          registrationNumber: 'KA01AA0001',
+          vehicleTypeName: 'Bike'),
+      const MyVehicle(
+          id: 'vehicle-2',
+          registrationNumber: 'KA01AA0002',
+          vehicleTypeName: 'Auto'),
+    ]);
+    await openOnboarding(
+        tester, rig, newDriver(status: 'under_review', kyc: kycJson()));
+    await tapKey(tester, 'onboarding_review_edit_vehicle');
+    expect(
+        find.byKey(const Key('onboarding_vehicle_vehicle-1')), findsOneWidget);
+    expect(find.byKey(const Key('onboarding_vehicle_vehicle-2')), findsNothing);
+    expect(find.byKey(const Key('onboarding_add_vehicle')), findsNothing);
+    expect(find.text('Add another vehicle'), findsNothing);
+    expect(find.text('Back to documents'), findsNothing);
+    expect(find.text('Done'), findsOneWidget);
+  });
+
   group('review', () {
     rigTest(
         'once submitted, the driver sees the review screen and can still edit, then come back',
@@ -141,7 +166,7 @@ void main() {
 
       await tapKey(tester, 'onboarding_review_edit_documents');
       expect(find.text('Upload your documents'), findsOneWidget);
-      expect(find.text('Done — back to review'), findsOneWidget);
+      expect(find.text('Done'), findsOneWidget);
       await tapKey(tester, 'onboarding_resume');
       expect(find.byKey(const Key('onboarding_review')), findsOneWidget);
 
@@ -151,9 +176,62 @@ void main() {
 
       await tapKey(tester, 'onboarding_review_edit_details');
       expect(find.text('Tell us about yourself'), findsOneWidget);
-      await tapKey(tester, 'onboarding_resume');
+      expect(find.byKey(const Key('onboarding_resume')), findsNothing);
+      rig.repo.profileChangeResult =
+          newDriver(status: 'under_review', kyc: kycJson());
+      await tapKey(tester, 'details_submit');
       expect(find.byKey(const Key('onboarding_review')), findsOneWidget);
     });
+  });
+
+  rigTest('driving city is selected separately from the address city',
+      (tester, rig) async {
+    await openOnboarding(
+        tester,
+        rig,
+        newDriver(extra: {
+          'city': 'Tumakuru',
+          'onboarding_options': {
+            'driving_cities': ['Bengaluru', 'Mysuru']
+          },
+        }));
+    await tapKey(tester, 'field_driving_city');
+    await tester.tap(find.text('Mysuru').last);
+    await tester.pumpAndSettle();
+    final addressCity = tester.widget<TextField>(find.descendant(
+        of: find.byKey(const Key('field_city')),
+        matching: find.byType(TextField)));
+    expect(addressCity.controller!.text, 'Tumakuru');
+    expect(find.text('Mysuru'), findsOneWidget);
+  });
+
+  rigTest('indemnity is unchecked until explicitly accepted',
+      (tester, rig) async {
+    await openOnboarding(
+        tester,
+        rig,
+        newDriver(extra: {
+          'onboarding_options': {
+            'driving_cities': ['Bengaluru'],
+            'indemnity': {
+              'version': 'v1',
+              'text': 'Test policy text',
+              'policy_url': 'https://example.com/privacy',
+              'accepted': false
+            },
+          },
+        }));
+    final box = find.byKey(const Key('field_indemnity'));
+    await tester.ensureVisible(box);
+    expect(tester.widget<CheckboxListTile>(box).value, isFalse);
+    await tapKey(tester, 'field_indemnity');
+    expect(tester.widget<CheckboxListTile>(box).value, isTrue);
+    await tester.ensureVisible(find.byKey(const Key('details_submit')));
+    await tapKey(tester, 'details_submit');
+    expect(
+        find.text('Enter your full name as on your licence.'), findsOneWidget);
+    expect(rig.repo.calls.where((call) => call.startsWith('updateProfile')),
+        isEmpty);
   });
 
   group('step 1: about you', () {
@@ -179,7 +257,8 @@ void main() {
       expect(find.text('Select your date of birth.'), findsOneWidget);
       expect(find.text('Enter a name.'), findsOneWidget);
       expect(find.text('Enter a 10-digit number.'), findsOneWidget);
-      expect(rig.repo.profileUpdates, isEmpty);
+      expect(rig.repo.calls.where((call) => call.startsWith('updateProfile')),
+          isEmpty);
     });
 
     rigTest('an error clears the moment it is fixed', (tester, rig) async {

@@ -6,6 +6,10 @@ abstract final class DriverLimits {
   /// Vehicles a driver can add as their own.
   static const maxOwnVehicles = 10;
 
+  /// Photos of the whole order the pickup and the drop each need as proof,
+  /// when the order asks for order photos at all. (The backend insists too.)
+  static const minOrderPhotos = 3;
+
   /// Photos of the whole order a driver can keep per stop.
   static const maxOrderPhotos = 10;
 

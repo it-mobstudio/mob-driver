@@ -14,9 +14,20 @@ final class AuthOtpSendRequested extends AuthEvent {
 }
 
 final class AuthOtpVerifyRequested extends AuthEvent {
-  AuthOtpVerifyRequested({required this.phoneNumber, required this.otp});
+  AuthOtpVerifyRequested(
+      {required this.phoneNumber,
+      required this.otp,
+      this.replaceSession = false});
+  final bool replaceSession;
   final String phoneNumber;
   final String otp;
+}
+
+final class AuthSessionConflict extends AuthState {
+  AuthSessionConflict(this.phoneNumber, this.otp, this.message);
+  final String phoneNumber;
+  final String otp;
+  final String message;
 }
 
 final class AuthSignOutRequested extends AuthEvent {}
@@ -85,9 +96,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final (result, failure) = await _repository.verifyOtp(
       phoneNumber: event.phoneNumber,
       otp: event.otp,
+      replaceSession: event.replaceSession,
     );
     if (result == null) {
       AppHaptics.error();
+      if (failure?.code == 'DRIVER_SESSION_EXISTS') {
+        emit(AuthSessionConflict(
+            event.phoneNumber, event.otp, failure!.message));
+        return;
+      }
       emit(AuthError(failure?.message ?? tr('OTP verification failed.')));
       return;
     }

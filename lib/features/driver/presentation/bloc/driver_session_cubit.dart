@@ -193,6 +193,12 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// (the payment QR waits for "paid") instead of it polling on its own.
   Stream<String> get tripChanges => _tripChanges.stream;
 
+  final _extraBonus = StreamController<ExtraBonusRaised>.broadcast();
+
+  /// The company added to a trip's extra loading bonus — for the "Hurray!"
+  /// card. The trip itself is re-read in the same breath.
+  Stream<ExtraBonusRaised> get extraBonusRaised => _extraBonus.stream;
+
   final _events = StreamController<DriverEvent>.broadcast();
   Stream<DriverEvent> get events => _events.stream;
 
@@ -695,6 +701,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
         if (_working || state.activeTrip?.id == tripId) {
           unawaited(_pollActiveTrip());
         }
+      case ExtraBonusRaised():
+        _extraBonus.add(push);
+        unawaited(_pollActiveTrip());
       case ProfileChanged():
         unawaited(load(silent: true));
       case HintReceived(:final hint):
@@ -776,6 +785,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     _pushSub?.cancel();
     _realtime?.stop();
     _tripChanges.close();
+    _extraBonus.close();
     _events.close();
     _reporter.dispose();
     dutyStartedAt.dispose();

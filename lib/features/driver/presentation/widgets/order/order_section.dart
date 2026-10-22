@@ -63,7 +63,7 @@ class HelpChip extends StatelessWidget {
 
   final VoidCallback? onTap;
 
-  void _explain(BuildContext context) => showDialog<void>(
+  static void explain(BuildContext context) => showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(tr('Need help?')),
@@ -86,7 +86,7 @@ class HelpChip extends StatelessWidget {
         child: InkWell(
           key: const Key('help_chip'),
           borderRadius: BorderRadius.circular(10),
-          onTap: onTap ?? () => _explain(context),
+          onTap: onTap ?? () => explain(context),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             child: Row(mainAxisSize: MainAxisSize.min, children: [

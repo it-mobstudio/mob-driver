@@ -10,6 +10,7 @@ abstract interface class AuthRemoteDatasource {
   Future<Map<String, dynamic>> verifyOtp({
     required String phoneNumber,
     required String otp,
+    bool replaceSession = false,
   });
 
   /// `POST driver/auth/logout` — revokes the refresh token.
@@ -34,10 +35,15 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
   Future<Map<String, dynamic>> verifyOtp({
     required String phoneNumber,
     required String otp,
+    bool replaceSession = false,
   }) async =>
       asMap((await _dio.post<dynamic>(
         '/driver/auth/otp/verify',
-        data: {'phone_number': phoneNumber, 'otp': otp},
+        data: {
+          'phone_number': phoneNumber,
+          'otp': otp,
+          'replace_session': replaceSession
+        },
       ))
           .data);
 

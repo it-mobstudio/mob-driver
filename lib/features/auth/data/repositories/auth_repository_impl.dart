@@ -35,11 +35,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<(AuthVerifyResult?, AppFailure?)> verifyOtp({
     required String phoneNumber,
     required String otp,
+    bool replaceSession = false,
   }) async {
     try {
       final body = await _datasource.verifyOtp(
         phoneNumber: phoneNumber,
         otp: otp,
+        replaceSession: replaceSession,
       );
 
       final accessToken = readString(body['accessToken']);

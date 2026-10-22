@@ -9,6 +9,13 @@ class AppConfig {
 
   static String get apiBaseUrl => _server.resolve('api/v1/').toString();
 
+  /// Prevent ngrok's browser interstitial from replacing API responses.
+  static Map<String, String> get apiTunnelHeaders => {
+        if (const ['.ngrok-free.dev', '.ngrok-free.app', '.ngrok.app']
+            .any(_server.host.endsWith))
+          'ngrok-skip-browser-warning': '1',
+      };
+
   static Uri get realtimeUrl => _server
       .resolve('ws/driver/')
       .replace(scheme: _server.scheme == 'https' ? 'wss' : 'ws');

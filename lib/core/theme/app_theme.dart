@@ -69,9 +69,14 @@ abstract final class AppTheme {
   /// column instead of stretching it.
   static Widget viewport(BuildContext context, Widget? child) {
     if (child == null) return const SizedBox.shrink();
-    final scaled = MediaQuery.withClampedTextScaling(
-      minScaleFactor: 0.9,
-      maxScaleFactor: 1.2,
+    // Drivers read this on the move, in sunlight: everything runs a notch
+    // larger than the phone's own setting, within what the dense screens can
+    // still lay out.
+    final media = MediaQuery.of(context);
+    final scaled = MediaQuery(
+      data: media.copyWith(
+          textScaler: TextScaler.linear(
+              (media.textScaler.scale(1) * _textBoost).clamp(1.05, 1.3))),
       child: child,
     );
     if (!kIsWeb && MediaQuery.sizeOf(context).width <= _maxPhoneWidth) {
@@ -89,6 +94,8 @@ abstract final class AppTheme {
     );
   }
 
+  /// How much larger than the phone's own text size the app writes.
+  static const _textBoost = 1.05;
   static const _maxPhoneWidth = 480.0;
   static const _phoneColumnWidth = 430.0;
 }

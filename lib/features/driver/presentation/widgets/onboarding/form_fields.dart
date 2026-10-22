@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mob_driver/core/theme/app_colors.dart';
 import 'package:mob_driver/core/utils/formatters.dart';
-
-OutlineInputBorder _border(Color color, [double width = 1]) =>
-    OutlineInputBorder(
-      borderRadius: BorderRadius.circular(13),
-      borderSide: BorderSide(color: color, width: width),
-    );
+import 'package:mob_driver/core/widgets/app_text_field.dart';
 
 InputDecoration driverInputDecoration({
   required String label,
@@ -18,29 +13,19 @@ InputDecoration driverInputDecoration({
   Widget? suffixIcon,
   bool enabled = true,
 }) =>
-    InputDecoration(
-      labelText: label,
+    appTextFieldDecoration(
+      label: label,
       hintText: hint,
-      helperText: helper,
-      helperMaxLines: 2,
-      errorText: errorText,
-      errorMaxLines: 3,
       prefixText: prefixText,
       suffixIcon: suffixIcon,
+      enabled: enabled,
+    ).copyWith(
+      helperText: helper,
+      helperMaxLines: 2,
+      helperStyle: AppTextFieldStyles.label,
+      errorText: errorText,
+      errorMaxLines: 3,
       counterText: '',
-      filled: true,
-      fillColor: enabled ? AppColors.card : AppColors.surfaceMuted,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-      labelStyle: TextStyle(color: AppColors.muted, fontSize: 14),
-      floatingLabelStyle:
-          TextStyle(color: AppColors.blue, fontWeight: FontWeight.w600),
-      helperStyle: TextStyle(color: AppColors.muted, fontSize: 11.5),
-      border: _border(AppColors.line),
-      enabledBorder: _border(AppColors.line),
-      disabledBorder: _border(AppColors.line),
-      focusedBorder: _border(AppColors.blue, 1.6),
-      errorBorder: _border(AppColors.red),
-      focusedErrorBorder: _border(AppColors.red, 1.6),
     );
 
 /// The app's text field: one look for every form (onboarding, edit profile,
@@ -93,8 +78,7 @@ class FormTextField extends StatelessWidget {
         autofillHints: autofillHints,
         onChanged: onChanged,
         onSubmitted: onSubmitted,
-        style: TextStyle(
-            color: AppColors.ink, fontSize: 15, fontWeight: FontWeight.w600),
+        style: AppTextFieldStyles.inputText,
         decoration: driverInputDecoration(
           label: label,
           hint: hint,
@@ -159,10 +143,7 @@ class FormDateField extends StatelessWidget {
           ),
           child: Text(
             value == null ? '' : formatDate(value),
-            style: TextStyle(
-                color: AppColors.ink,
-                fontSize: 15,
-                fontWeight: FontWeight.w600),
+            style: AppTextFieldStyles.inputText,
           ),
         ),
       );

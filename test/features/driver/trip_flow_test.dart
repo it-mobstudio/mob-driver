@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mob_driver/app/routes.dart';
 import 'package:mob_driver/core/errors/app_failure.dart';
 import 'package:mob_driver/core/utils/polyline_codec.dart';
 import 'package:mob_driver/core/widgets/buttons.dart';
@@ -32,6 +33,17 @@ Future<void> openTrip(WidgetTester tester, TestRig rig, Trip trip,
 Finder inDialog(String text) =>
     find.descendant(of: find.byType(AlertDialog), matching: find.text(text));
 
+/// Cancelling lives in the hamburger panel: open it and tap "Cancel trip".
+Future<void> openMenuAndCancel(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('trip_menu')));
+  await tester.pumpAndSettle();
+  final cancel = find.byKey(const Key('drawer_cancel'));
+  await tester.ensureVisible(cancel);
+  await tester.pumpAndSettle();
+  await tester.tap(cancel);
+  await tester.pumpAndSettle();
+}
+
 /// The trip panel's swipe label — what the driver does next.
 String action(WidgetTester tester) =>
     tester.widget<SwipeButton>(find.byKey(const Key('trip_swipe'))).label;
@@ -39,6 +51,48 @@ String action(WidgetTester tester) =>
 void main() {
   // Real Inter metrics, loaded outside fake-async time (it does real I/O).
   setUpAll(loadAppFonts);
+
+  group('moving the status along from far away', () {
+    Future<void> dragSwipe(WidgetTester tester, String label) async {
+      final knob = find.byKey(ValueKey('swipe_knob_$label'));
+      await tester.drag(knob, const Offset(800, 0));
+      await tester.pumpAndSettle();
+    }
+
+    rigTest('over 100 m from the stop warns, and still lets them continue',
+        (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip());
+      // ~1.3 km north of the pickup.
+      rig.location.stream.add(const GeoPoint(12.9833, 77.5946));
+      await tester.pump();
+
+      await dragSwipe(tester, 'Reached pickup');
+      expect(find.byKey(const Key('far_from_stop_dialog')), findsOneWidget);
+      expect(
+          tester
+              .widget<Text>(find.byKey(const Key('far_from_stop_text')))
+              .textSpan!
+              .toPlainText(),
+          'You are 1.3 km away from this stop.');
+      expect(
+          find.text('Do you still want to change the status?'), findsOneWidget);
+      expect(rig.repo.calls.where((c) => c.startsWith('arrive')), isEmpty);
+
+      await tester.tap(find.byKey(const Key('far_from_stop_continue')));
+      await tester.pumpAndSettle();
+      expect(rig.repo.calls.where((c) => c.startsWith('arrive')), isNotEmpty);
+    });
+
+    rigTest('within 100 m there is no warning', (tester, rig) async {
+      await openTrip(tester, rig, fakeTrip());
+      rig.location.stream.add(const GeoPoint(12.9716, 77.5946));
+      await tester.pump();
+
+      await dragSwipe(tester, 'Reached pickup');
+      expect(find.byKey(const Key('far_from_stop_dialog')), findsNothing);
+      expect(rig.repo.calls.where((c) => c.startsWith('arrive')), isNotEmpty);
+    });
+  });
 
   group('the map gets the route', () {
     rigTest(
@@ -113,9 +167,9 @@ void main() {
 
       expect(action(tester), 'Reached pickup');
       expect(find.text('MG Road Metro, Bengaluru'), findsOneWidget);
-      expect(find.byKey(const Key('timeline_map_0')), findsOneWidget,
+      expect(find.byKey(const Key('trip_navigate')), findsOneWidget);
+      expect(find.text('Navigate to pickup'), findsOneWidget,
           reason: 'the pickup is the active stop');
-      expect(find.byKey(const Key('timeline_map_1')), findsNothing);
 
       rig.repo.actionResult = (fakeTrip(status: 'arrived_at_pickup'), null);
       await swipe(tester, 'Reached pickup');
@@ -126,7 +180,7 @@ void main() {
       await swipe(tester, 'Pickup order');
       expect(action(tester), 'Deliver order');
       expect(rig.repo.calls, contains('start:$tripId'));
-      expect(find.byKey(const Key('timeline_map_1')), findsOneWidget,
+      expect(find.text('Navigate to drop'), findsOneWidget,
           reason: 'now the drop is');
     });
 
@@ -154,27 +208,14 @@ void main() {
     });
 
     rigTest(
-        'View details opens the order details, with the same next step pinned under them',
-        (tester, rig) async {
-      await openTrip(tester, rig, fakeTrip(status: 'in_progress'));
-      await tester.tap(find.byKey(const Key('timeline_view_details_1')));
-      await tester.pumpAndSettle();
-      expect(find.text('Order details'), findsOneWidget);
-      expect(find.byKey(const Key('order_details_accept')), findsNothing);
-      expect(find.byKey(const Key('order_details_problem')), findsNothing,
-          reason: 'too late to cancel');
-      expect(
-          tester
-              .widget<SwipeButton>(find.byKey(const Key('order_details_swipe')))
-              .label,
-          'Deliver order');
-    });
-
-    rigTest(
         'the trip can be moved along from the order details, stage by stage',
         (tester, rig) async {
-      await openTrip(tester, rig, fakeTrip());
-      await tester.tap(find.byKey(const Key('timeline_view_details_0')));
+      rig.repo.profileValue = fakeProfile(online: true);
+      rig.repo.activeTripValue = fakeTrip();
+      rig.repo.tripsById[tripId] = fakeTrip();
+      await rig.cubit.load();
+      await tester
+          .pumpWidget(rig.app(AppRoutes.orderDetails(tripId, fromTrip: true)));
       await tester.pumpAndSettle();
       String detailsAction() => tester
           .widget<SwipeButton>(find.byKey(const Key('order_details_swipe')))
@@ -203,31 +244,36 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.getTopLeft(find.byKey(const Key('order_details_swipe'))),
           before);
-
-      // Back on the trip screen, it has moved along too.
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(action(tester), 'Deliver order');
     });
 
     rigTest(
-        'at rest the sheet shows only the stop being worked on; the rest is a pull away',
+        'the sheet shows only the stop being worked on and the slide action',
         (tester, rig) async {
       await openTrip(tester, rig, fakeTrip());
 
-      expect(find.byKey(const Key('timeline_map_0')).hitTestable(),
-          findsOneWidget);
-      expect(find.byKey(const Key('timeline_view_details_1')).hitTestable(),
-          findsNothing,
-          reason: 'the drop is under the fold');
+      expect(
+          find.byKey(const Key('trip_navigate')).hitTestable(), findsOneWidget);
       expect(find.byKey(const Key('trip_swipe')).hitTestable(), findsOneWidget,
           reason: 'the action is always there');
+      // The sheet is just the stop and the slide: no items, no pull-up.
+      expect(find.byKey(const Key('trip_items_header')), findsNothing);
+      expect(find.byKey(const Key('map_sheet_grabber')), findsOneWidget);
+    });
 
-      await pullUpSheet(tester);
-      expect(find.text('UP NEXT'), findsOneWidget);
-      expect(find.byKey(const Key('timeline_view_details_1')).hitTestable(),
-          findsOneWidget);
-      expect(find.byKey(const Key('trip_swipe')).hitTestable(), findsOneWidget);
+    rigTest('the items are in the hamburger panel, not on the sheet',
+        (tester, rig) async {
+      await openTrip(
+          tester,
+          rig,
+          Trip.fromJson(tripJson(
+              items: [itemJson(), itemJson(id: 'i-2', name: 'Sand')])));
+      expect(find.byKey(const Key('drawer_items_header')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('trip_menu')));
+      await tester.pumpAndSettle();
+      final header = find.byKey(const Key('drawer_items_header'));
+      await tester.ensureVisible(header);
+      expect(tester.widget<Text>(header).data, contains('2 items in shipment'));
     });
 
     rigTest('COD in progress: Deliver order goes to payment collection',
@@ -238,6 +284,21 @@ void main() {
       await swipe(tester, 'Deliver order');
       await payByQrIfAsked(tester);
       expect(find.byType(PaymentQrPage), findsOneWidget);
+    });
+
+    rigTest(
+        'COD: the amount to collect includes the unloading and extra loading',
+        (tester, rig) async {
+      await openTrip(
+          tester,
+          rig,
+          Trip.fromJson({
+            ...tripJson(status: 'in_progress', bonusFare: '100.00'),
+            'extra_bonus_fare': '100.00',
+          }));
+      await swipe(tester, 'Deliver order');
+      expect(find.text('₹311.62'), findsOneWidget);
+      expect(find.text('₹111.62'), findsNothing);
     });
 
     rigTest('COD paid: Deliver order goes to the delivery OTP',
@@ -342,12 +403,15 @@ void main() {
 
       await tester.tap(find.byKey(const Key('order_photos_done')));
       await tester.pumpAndSettle();
-      expect(find.text('Add a photo of the package first.'), findsOneWidget);
+      expect(find.text('Add at least 3 photos of the package first (3 more).'),
+          findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('pickup_photo_box')));
-      await tester.pumpAndSettle();
-      expect(rig.repo.pickupPhotos, ['order']);
-      expect(rig.capture.stamps.single.caption, '#E2E-1 · Pickup');
+      for (var taken = 1; taken <= 3; taken++) {
+        await tester.tap(find.byKey(const Key('pickup_photo_box')));
+        await tester.pumpAndSettle();
+      }
+      expect(rig.repo.pickupPhotos, ['order', 'order', 'order']);
+      expect(rig.capture.stamps.first.caption, '#E2E-1 · Pickup');
 
       await tester.tap(find.byKey(const Key('order_photos_done')));
       await tester.pumpAndSettle();
@@ -414,8 +478,7 @@ void main() {
     rigTest('needs a reason, then cancels and returns home',
         (tester, rig) async {
       await openTrip(tester, rig, fakeTrip());
-      await tester.tap(find.byKey(const Key('trip_cancel')));
-      await tester.pumpAndSettle();
+      await openMenuAndCancel(tester);
 
       // The confirm button is disabled until a reason is chosen.
       final confirm = find.widgetWithText(ElevatedButton, 'Cancel trip');
@@ -441,8 +504,7 @@ void main() {
 
     rigTest('"Other" needs free text', (tester, rig) async {
       await openTrip(tester, rig, fakeTrip());
-      await tester.tap(find.byKey(const Key('trip_cancel')));
-      await tester.pumpAndSettle();
+      await openMenuAndCancel(tester);
 
       await tester.tap(find.byKey(const Key('cancel_reason_Other')));
       await tester.pump();

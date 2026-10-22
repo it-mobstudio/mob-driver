@@ -11,6 +11,7 @@ import 'package:mob_driver/core/utils/formatters.dart';
 import 'package:mob_driver/core/widgets/app_back_icon.dart';
 import 'package:mob_driver/core/widgets/otp_input.dart';
 import 'package:mob_driver/core/widgets/test_mode_otp_hint.dart';
+import 'package:mob_driver/core/widgets/top_snack_bar.dart';
 import 'package:mob_driver/features/auth/domain/auth_limits.dart';
 import 'package:mob_driver/features/auth/presentation/bloc/auth_bloc.dart';
 
@@ -89,9 +90,13 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         } else if (state is AuthVerified) {
           AnalyticsService.instance.logLogin(method: 'otp').catchError((_) {});
           context.go(AppRoutes.dashboard);
+        } else if (state is AuthSessionConflict) {
+          TopSnackBar.show(context,
+              message: state.message, type: TopSnackBarType.error);
         } else if (state is AuthError) {
           _otpKey.currentState?.clear();
-          _showDialog(context, tr('Could not continue'), state.message);
+          TopSnackBar.show(context,
+              message: state.message, type: TopSnackBarType.error);
         }
       },
       builder: (context, state) {
@@ -157,6 +162,20 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                       enabled: !isLoading,
                       onCompleted: _verify,
                     ),
+                    if (state is AuthSessionConflict) ...[
+                      const SizedBox(height: 16),
+                      TextButton(
+                        key: const Key('confirm_session_replacement'),
+                        onPressed: () => context.read<AuthBloc>().add(
+                              AuthOtpVerifyRequested(
+                                phoneNumber: state.phoneNumber,
+                                otp: state.otp,
+                                replaceSession: true,
+                              ),
+                            ),
+                        child: Text(tr('Log out and continue here')),
+                      ),
+                    ],
                     if (_debugOtp != null) ...[
                       const SizedBox(height: 16),
                       TestModeOtpHint(
@@ -204,24 +223,6 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
           ),
         );
       },
-    );
-  }
-
-  Future<void> _showDialog(
-      BuildContext context, String title, String message) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(tr('Ok')),
-          ),
-        ],
-      ),
     );
   }
 }

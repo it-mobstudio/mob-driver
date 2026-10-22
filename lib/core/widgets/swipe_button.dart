@@ -138,36 +138,51 @@ class _SwipeButtonState extends State<SwipeButton>
                           ),
                         // The label fades as the knob covers it.
                         Center(
-                          child: Opacity(
-                            opacity: (1 - _position.value * 1.6).clamp(0, 1),
-                            child:
-                                Row(mainAxisSize: MainAxisSize.min, children: [
-                              Text(widget.label,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700)),
-                              if (widget.trailing != null) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: .22),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(widget.trailing!,
-                                      key: const Key('swipe_trailing'),
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontFeatures: [
-                                            FontFeature.tabularFigures()
-                                          ],
-                                          fontWeight: FontWeight.w700)),
-                                ),
-                              ],
-                            ]),
+                          // Clear of the knob on both sides, so a long (Hindi,
+                          // Kannada) label shrinks to fit rather than overflow.
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: _knob + _inset * 2),
+                            child: Opacity(
+                              opacity: (1 - _position.value * 1.6).clamp(0, 1),
+                              child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(widget.label,
+                                            maxLines: 1,
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700)),
+                                      ),
+                                    ),
+                                    if (widget.trailing != null) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white
+                                              .withValues(alpha: .22),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Text(widget.trailing!,
+                                            key: const Key('swipe_trailing'),
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 13,
+                                                fontFeatures: [
+                                                  FontFeature.tabularFigures()
+                                                ],
+                                                fontWeight: FontWeight.w700)),
+                                      ),
+                                    ],
+                                  ]),
+                            ),
                           ),
                         ),
                         Positioned(

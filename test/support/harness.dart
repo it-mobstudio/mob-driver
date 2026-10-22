@@ -260,6 +260,12 @@ Future<void> swipe(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
   await tester.drag(knob, const Offset(800, 0));
   await tester.pumpAndSettle();
+  // The fake driver isn't within 100 m of every stop: go on past the warning.
+  final anyway = find.byKey(const Key('far_from_stop_continue'));
+  if (anyway.evaluate().isNotEmpty) {
+    await tester.tap(anyway);
+    await tester.pumpAndSettle();
+  }
 }
 
 /// Pulls a map screen's sheet all the way up, as a driver would to see what's

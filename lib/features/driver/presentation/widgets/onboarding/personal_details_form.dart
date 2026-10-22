@@ -11,6 +11,7 @@ import 'package:mob_driver/features/auth/presentation/pages/login_page.dart'
 import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
 import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/onboarding/form_fields.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$');
 
@@ -56,6 +57,13 @@ class _PersonalDetailsFormState extends State<PersonalDetailsForm> {
       text: _tenDigits(widget.profile.emergencyContactPhone));
   late DateTime? _dob = widget.profile.dateOfBirth;
 
+  late String? _drivingCity =
+      widget.profile.drivingCities.contains(widget.profile.drivingCity)
+          ? widget.profile.drivingCity
+          : widget.profile.drivingCities.length == 1
+              ? widget.profile.drivingCities.single
+              : null;
+  late bool _indemnityAccepted = widget.profile.indemnityAccepted;
   bool _submitted = false;
   bool _saving = false;
   String? _serverError;
@@ -115,6 +123,10 @@ class _PersonalDetailsFormState extends State<PersonalDetailsForm> {
   bool get _valid => [
         if (!_locked) _nameError,
         if (!_locked) _dobError,
+        if (widget.profile.drivingCities.isNotEmpty && _drivingCity == null)
+          tr('Select your driving city.'),
+        if (widget.profile.indemnityRequired && !_indemnityAccepted)
+          tr('Review and accept the indemnity to continue.'),
         _emailError,
         _pincodeError,
         _emergencyNameError,
@@ -135,6 +147,12 @@ class _PersonalDetailsFormState extends State<PersonalDetailsForm> {
     setState(() => _saving = true);
     final failure = await context.read<DriverSessionCubit>().updateProfile(
           ProfileUpdate(
+            drivingCity: _drivingCity,
+            indemnityAccepted:
+                widget.profile.indemnityRequired ? _indemnityAccepted : null,
+            indemnityVersion: widget.profile.indemnityRequired
+                ? widget.profile.indemnityVersion
+                : null,
             fullName: _locked ? null : _name.text.trim(),
             dateOfBirth: _locked ? null : _dob,
             email: _email.text.trim(),
@@ -170,102 +188,183 @@ class _PersonalDetailsFormState extends State<PersonalDetailsForm> {
             color: AppColors.blue,
           ),
         ),
-      FormTextField(
-        key: const Key('field_full_name'),
-        controller: _name,
-        label: tr('Full name'),
-        hint: tr('As on your driving licence'),
-        enabled: !_locked && !_saving,
-        textCapitalization: TextCapitalization.words,
-        errorText: _locked ? null : _shown(_nameError),
-        onChanged: (_) => setState(() {}),
-      ),
-      const SizedBox(height: 14),
-      FormDateField(
-        key: const Key('field_dob'),
-        label: tr('Date of birth'),
-        value: _dob,
-        enabled: !_locked && !_saving,
-        errorText: _locked ? null : _shown(_dobError),
-        firstDate: DateTime(now.year - 80, now.month, now.day),
-        lastDate: DateTime(now.year - 18, now.month, now.day),
-        initialDate: DateTime(now.year - 28, now.month, now.day),
-        helper: tr('You must be at least 18.'),
-        onChanged: (d) => setState(() => _dob = d),
-      ),
-      const SizedBox(height: 14),
-      FormTextField(
-        key: const Key('field_email'),
-        controller: _email,
-        label: tr('Email (optional)'),
-        keyboardType: TextInputType.emailAddress,
-        enabled: !_saving,
-        errorText: _shown(_emailError),
-        onChanged: (_) => setState(() {}),
-      ),
-      const SizedBox(height: 14),
-      FormTextField(
-        key: const Key('field_address'),
-        controller: _address,
-        label: tr('Address (optional)'),
-        textCapitalization: TextCapitalization.words,
-        enabled: !_saving,
-      ),
-      const SizedBox(height: 14),
-      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(
-          flex: 3,
-          child: FormTextField(
-            key: const Key('field_city'),
-            controller: _city,
-            label: tr('City'),
-            textCapitalization: TextCapitalization.words,
-            enabled: !_saving,
+      if (widget.profile.drivingCities.isNotEmpty) ...[
+        AppCard(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SectionTitle(tr('Where will you drive?')),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            key: const Key('field_driving_city'),
+            initialValue: _drivingCity,
+            isExpanded: true,
+            decoration: driverInputDecoration(
+              label: tr('Driving city'),
+              errorText: _submitted && _drivingCity == null
+                  ? tr('Select your driving city.')
+                  : null,
+            ),
+            items: [
+              for (final city in widget.profile.drivingCities)
+                DropdownMenuItem(value: city, child: Text(city)),
+            ],
+            onChanged: _saving
+                ? null
+                : (value) => setState(() => _drivingCity = value),
           ),
+        ])),
+        const SizedBox(height: 16),
+      ],
+      AppCard(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SectionTitle(tr('Your details')),
+        const SizedBox(height: 16),
+        FormTextField(
+          key: const Key('field_full_name'),
+          controller: _name,
+          label: tr('Full name'),
+          hint: tr('As on your driving licence'),
+          enabled: !_locked && !_saving,
+          textCapitalization: TextCapitalization.words,
+          errorText: _locked ? null : _shown(_nameError),
+          onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          flex: 2,
-          child: FormTextField(
-            key: const Key('field_pincode'),
-            controller: _pincode,
-            label: tr('Pincode'),
-            keyboardType: TextInputType.number,
-            inputFormatters: digitsOnly(6),
-            enabled: !_saving,
-            errorText: _shown(_pincodeError),
-            onChanged: (_) => setState(() {}),
+        const SizedBox(height: 14),
+        FormDateField(
+          key: const Key('field_dob'),
+          label: tr('Date of birth'),
+          value: _dob,
+          enabled: !_locked && !_saving,
+          errorText: _locked ? null : _shown(_dobError),
+          firstDate: DateTime(now.year - 80, now.month, now.day),
+          lastDate: DateTime(now.year - 18, now.month, now.day),
+          initialDate: DateTime(now.year - 28, now.month, now.day),
+          helper: tr('You must be at least 18.'),
+          onChanged: (d) => setState(() => _dob = d),
+        ),
+        const SizedBox(height: 14),
+        FormTextField(
+          key: const Key('field_email'),
+          controller: _email,
+          label: tr('Email (optional)'),
+          keyboardType: TextInputType.emailAddress,
+          enabled: !_saving,
+          errorText: _shown(_emailError),
+          onChanged: (_) => setState(() {}),
+        ),
+      ])),
+      const SizedBox(height: 16),
+      AppCard(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SectionTitle(tr('Address (optional)')),
+        const SizedBox(height: 16),
+        FormTextField(
+          key: const Key('field_address'),
+          controller: _address,
+          label: tr('Address (optional)'),
+          textCapitalization: TextCapitalization.words,
+          enabled: !_saving,
+        ),
+        const SizedBox(height: 14),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            flex: 3,
+            child: FormTextField(
+              key: const Key('field_city'),
+              controller: _city,
+              label: tr('City'),
+              textCapitalization: TextCapitalization.words,
+              enabled: !_saving,
+            ),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: FormTextField(
+              key: const Key('field_pincode'),
+              controller: _pincode,
+              label: tr('Pincode'),
+              keyboardType: TextInputType.number,
+              inputFormatters: digitsOnly(6),
+              enabled: !_saving,
+              errorText: _shown(_pincodeError),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+        ]),
+      ])),
+      const SizedBox(height: 16),
+      AppCard(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SectionTitle(tr('Emergency contact')),
+        const SizedBox(height: 4),
+        Text(tr('Someone we can call if there’s a problem on the road.'),
+            style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
+        const SizedBox(height: 12),
+        FormTextField(
+          key: const Key('field_emergency_name'),
+          controller: _emergencyName,
+          label: tr('Contact name'),
+          textCapitalization: TextCapitalization.words,
+          enabled: !_saving,
+          errorText: _shown(_emergencyNameError),
+          onChanged: (_) => setState(() {}),
         ),
-      ]),
-      const SizedBox(height: 22),
-      SectionTitle(tr('Emergency contact')),
-      const SizedBox(height: 4),
-      Text(tr('Someone we can call if there’s a problem on the road.'),
-          style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
-      const SizedBox(height: 12),
-      FormTextField(
-        key: const Key('field_emergency_name'),
-        controller: _emergencyName,
-        label: tr('Contact name'),
-        textCapitalization: TextCapitalization.words,
-        enabled: !_saving,
-        errorText: _shown(_emergencyNameError),
-        onChanged: (_) => setState(() {}),
-      ),
-      const SizedBox(height: 14),
-      FormTextField(
-        key: const Key('field_emergency_phone'),
-        controller: _emergencyPhone,
-        label: tr('Contact phone'),
-        prefixText: '+91  ',
-        keyboardType: TextInputType.phone,
-        inputFormatters: digitsOnly(10),
-        textInputAction: TextInputAction.done,
-        enabled: !_saving,
-        errorText: _shown(_emergencyPhoneError),
-        onChanged: (_) => setState(() {}),
-      ),
+        const SizedBox(height: 14),
+        FormTextField(
+          key: const Key('field_emergency_phone'),
+          controller: _emergencyPhone,
+          label: tr('Contact phone'),
+          prefixText: '+91  ',
+          keyboardType: TextInputType.phone,
+          inputFormatters: digitsOnly(10),
+          textInputAction: TextInputAction.done,
+          enabled: !_saving,
+          errorText: _shown(_emergencyPhoneError),
+          onChanged: (_) => setState(() {}),
+        ),
+      ])),
+      if (widget.profile.indemnityRequired) ...[
+        const SizedBox(height: 16),
+        AppCard(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SectionTitle(tr('Driver indemnity')),
+          const SizedBox(height: 8),
+          Text(widget.profile.indemnityText!,
+              style: TextStyle(color: AppColors.muted, height: 1.5)),
+          TextButton(
+            onPressed: () async {
+              final uri = Uri.tryParse(widget.profile.indemnityPolicyUrl!);
+              if (uri != null &&
+                  (uri.scheme == 'https' || uri.scheme == 'http')) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Text(tr('Privacy policy')),
+          ),
+          Material(
+            color: AppColors.card,
+            child: CheckboxListTile(
+              key: const Key('field_indemnity'),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(tr('I indemnify')),
+              value: _indemnityAccepted,
+              onChanged: _saving || widget.profile.indemnityAccepted
+                  ? null
+                  : (value) =>
+                      setState(() => _indemnityAccepted = value ?? false),
+            ),
+          ),
+          if (_submitted && !_indemnityAccepted)
+            Text(tr('Review and accept the indemnity to continue.'),
+                style: TextStyle(color: AppColors.red)),
+        ])),
+      ],
       AnimatedSize(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,

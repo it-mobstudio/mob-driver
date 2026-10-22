@@ -18,6 +18,8 @@ import 'package:mob_driver/features/driver/data/realtime/driver_realtime.dart';
 import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
 import 'package:mob_driver/features/driver/domain/entities/my_vehicle.dart';
 import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
+import 'package:mob_driver/features/driver/presentation/pages/account/profile_page.dart'
+    show showLanguagePicker;
 import 'package:mob_driver/features/driver/presentation/widgets/onboarding/documents_section.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/onboarding/personal_details_form.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/vehicle_art.dart';
@@ -114,7 +116,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
             backgroundColor: AppColors.surface,
             body: SafeArea(
               child: Column(children: [
-                _Header(step: step, steps: _steps, onSignOut: _signOut),
+                _Header(
+                  step: step,
+                  steps: _steps,
+                  onBack: step == 2 ? () => _goTo(1, profile) : null,
+                ),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 280),
@@ -139,9 +145,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             capture: widget.capture,
                             onEditDetails: () => _goTo(0, profile),
                           ),
-                        2 => _VehicleStep(
-                            onBack: () => _goTo(1, profile),
-                          ),
+                        2 => const _VehicleStep(),
                         _ => _ReviewStep(
                             profile: profile,
                             onEdit: (step) => _goTo(step, profile),
@@ -153,7 +157,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 AnimatedSize(
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOutCubic,
-                  child: revisiting
+                  child: revisiting && step != 0
                       ? Container(
                           width: double.infinity,
                           padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
@@ -168,7 +172,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           child: PrimaryButton(
                             key: const Key('onboarding_resume'),
                             label: natural >= 3
-                                ? tr('Done — back to review')
+                                ? tr('Done')
                                 : natural == 2
                                     ? tr('Continue to your vehicle')
                                     : tr('Continue to documents'),
@@ -178,6 +182,25 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         )
                       : const SizedBox(width: double.infinity),
                 ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      key: const Key('onboarding_sign_out'),
+                      onPressed: _signOut,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.red,
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.logout_rounded, size: 20),
+                      label: Text(tr('Sign out')),
+                    ),
+                  ),
+                ),
               ]),
             ),
           );
@@ -186,34 +209,46 @@ class _OnboardingPageState extends State<OnboardingPage> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header(
-      {required this.step, required this.steps, required this.onSignOut});
+  const _Header({required this.step, required this.steps, this.onBack});
+  final VoidCallback? onBack;
   final int step;
   final int steps;
-  final VoidCallback onSignOut;
 
   static const _names = ['About you', 'Documents', 'Your vehicle'];
 
   @override
   Widget build(BuildContext context) => Container(
-        color: AppColors.card,
-        padding: const EdgeInsets.fromLTRB(20, 8, 8, 16),
+        decoration: const BoxDecoration(
+          gradient: AppColors.brandGradient,
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 12, 20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
+            if (onBack != null)
+              IconButton(
+                key: const Key('onboarding_back'),
+                tooltip: tr('Back to documents'),
+                color: Colors.white,
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
             Expanded(
               child: Text(
                   step >= steps
                       ? tr('Almost there')
                       : tr('Set up your driver account'),
-                  style: TextStyle(
-                      color: AppColors.ink,
+                  style: const TextStyle(
+                      color: Colors.white,
                       fontSize: 17,
                       fontWeight: FontWeight.w800)),
             ),
-            TextButton(
-                key: const Key('onboarding_sign_out'),
-                onPressed: onSignOut,
-                child: Text(tr('Sign out'))),
+            TextButton.icon(
+                key: const Key('onboarding_language'),
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
+                onPressed: () => showLanguagePicker(context),
+                icon: const Icon(Icons.translate_rounded, size: 18),
+                label: Text(AppLanguageController.instance.value.nativeName)),
           ]),
           const SizedBox(height: 6),
           Padding(
@@ -228,8 +263,8 @@ class _Header extends StatelessWidget {
                       color: i < step
                           ? AppColors.green
                           : i == step
-                              ? AppColors.blue
-                              : AppColors.line,
+                              ? AppColors.mint
+                              : Colors.white24,
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -245,8 +280,8 @@ class _Header extends StatelessWidget {
                   : tr('Step {p0} of {steps} · {p1}',
                       {'p0': step + 1, 'steps': steps, 'p1': tr(_names[step])}),
               key: const Key('onboarding_step'),
-              style: TextStyle(
-                  color: AppColors.muted,
+              style: const TextStyle(
+                  color: Colors.white70,
                   fontSize: 12,
                   fontWeight: FontWeight.w700)),
         ]),
@@ -333,8 +368,7 @@ class _DocumentsStep extends StatelessWidget {
 /// The driver's own vehicle — its type (picked from pictures), number plate
 /// and photos. At least one vehicle with a photo moves them on to review.
 class _VehicleStep extends StatefulWidget {
-  const _VehicleStep({required this.onBack});
-  final VoidCallback onBack;
+  const _VehicleStep();
 
   @override
   State<_VehicleStep> createState() => _VehicleStepState();
@@ -372,23 +406,37 @@ class _VehicleStepState extends State<_VehicleStep> {
   @override
   Widget build(BuildContext context) {
     final vehicles = _vehicles;
+    // Keep existing registrations intact, but present only the vehicle used
+    // for signup. Prefer one with a photo if older accounts have several.
+    final displayed = vehicles == null || vehicles.isEmpty
+        ? <MyVehicle>[]
+        : [
+            vehicles.firstWhere((v) => v.photos.isNotEmpty,
+                orElse: () => vehicles.first)
+          ];
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
       children: [
-        Text(tr('Add your vehicle'),
+        Text(
+            tr(vehicles == null || vehicles.isEmpty
+                ? 'Add your vehicle'
+                : 'Your vehicle'),
             style: TextStyle(
                 color: AppColors.ink,
                 fontSize: 24,
                 fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
-        Text(tr('Pick what you drive — bike, auto, mini truck or truck — then add its number plate and a clear photo. This decides which orders you get.'),
+        Text(
+            tr(vehicles == null || vehicles.isEmpty
+                ? 'Add your vehicle number and one clear photo.'
+                : 'Tap your vehicle to edit its details or photo.'),
             style:
                 TextStyle(color: AppColors.muted, fontSize: 13.5, height: 1.4)),
         const SizedBox(height: 20),
         if (vehicles == null)
           const ListSkeletonInline(itemCount: 1, itemHeight: 96)
         else ...[
-          for (final v in vehicles) ...[
+          for (final v in displayed) ...[
             AppCard(
               key: Key('onboarding_vehicle_${v.id}'),
               padding: const EdgeInsets.all(12),
@@ -433,24 +481,15 @@ class _VehicleStepState extends State<_VehicleStep> {
             const SizedBox(height: 10),
           ],
           const SizedBox(height: 6),
-          PrimaryButton(
-            key: const Key('onboarding_add_vehicle'),
-            label: vehicles.isEmpty
-                ? tr('Add my vehicle')
-                : tr('Add another vehicle'),
-            icon: Icons.add_rounded,
-            loading: _busy,
-            onPressed: _add,
-          ),
+          if (vehicles.isEmpty)
+            PrimaryButton(
+              key: const Key('onboarding_add_vehicle'),
+              label: tr('Add my vehicle'),
+              icon: Icons.add_rounded,
+              loading: _busy,
+              onPressed: _add,
+            ),
         ],
-        const SizedBox(height: 12),
-        Center(
-          child: TextButton.icon(
-            onPressed: widget.onBack,
-            icon: const Icon(Icons.arrow_back_rounded, size: 18),
-            label: Text(tr('Back to documents')),
-          ),
-        ),
       ],
     );
   }

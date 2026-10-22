@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:mob_driver/core/theme/app_colors.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 /// The white sheet over a map screen. At rest only [peek] shows, so the map
 /// keeps most of the screen; dragging the sheet up reveals [more] and then
@@ -88,52 +89,58 @@ class _MapSheetState extends State<MapSheet> {
             initialChildSize: min,
             maxChildSize: max,
             snap: max - min > .01,
-            builder: (context, controller) => DecoratedBox(
-              decoration: const BoxDecoration(
-                borderRadius: _radius,
-                boxShadow: [
-                  BoxShadow(
-                      color: Color(0x1F001533),
-                      blurRadius: 14,
-                      offset: Offset(0, -2)),
-                ],
-              ),
-              child: Material(
-                color: AppColors.card,
-                borderRadius: _radius,
-                clipBehavior: Clip.antiAlias,
-                child: SingleChildScrollView(
-                  controller: controller,
-                  // Always scrollable: a fully open sheet whose content fits
-                  // must still take the drag that closes it.
-                  physics: const AlwaysScrollableScrollPhysics(
-                      parent: ClampingScrollPhysics()),
-                  child: _SizeReporter(
-                    onSize: (size) => _set(() => _contentHeight = size.height),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _SizeReporter(
-                          onSize: (size) =>
-                              _set(() => _peekHeight = size.height),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                const _Grabber(),
-                                widget.peek,
-                              ],
+            // On the web the map is an HTML element that would otherwise get
+            // the drags meant for the sheet: PointerInterceptor stops that.
+            builder: (context, controller) => PointerInterceptor(
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  borderRadius: _radius,
+                  boxShadow: [
+                    BoxShadow(
+                        color: Color(0x1F001533),
+                        blurRadius: 14,
+                        offset: Offset(0, -2)),
+                  ],
+                ),
+                child: Material(
+                  color: AppColors.card,
+                  borderRadius: _radius,
+                  clipBehavior: Clip.antiAlias,
+                  child: SingleChildScrollView(
+                    controller: controller,
+                    // Always scrollable: a fully open sheet whose content fits
+                    // must still take the drag that closes it.
+                    physics: const AlwaysScrollableScrollPhysics(
+                        parent: ClampingScrollPhysics()),
+                    child: _SizeReporter(
+                      onSize: (size) =>
+                          _set(() => _contentHeight = size.height),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _SizeReporter(
+                            onSize: (size) =>
+                                _set(() => _peekHeight = size.height),
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(20, 10, 20, 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const _Grabber(),
+                                  widget.peek,
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        if (widget.more != null)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                            child: widget.more,
-                          ),
-                        SizedBox(height: inset),
-                      ],
+                          if (widget.more != null)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                              child: widget.more,
+                            ),
+                          SizedBox(height: inset),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -145,13 +152,15 @@ class _MapSheetState extends State<MapSheet> {
       if (hasFooter)
         _SizeReporter(
           onSize: (size) => _set(() => _footerHeight = size.height),
-          child: Material(
-            color: AppColors.card,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                child: widget.footer,
+          child: PointerInterceptor(
+            child: Material(
+              color: AppColors.card,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  child: widget.footer,
+                ),
               ),
             ),
           ),

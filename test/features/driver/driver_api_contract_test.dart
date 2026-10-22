@@ -643,7 +643,7 @@ void main() {
       final (trip, failure) = await repo.addTripPhoto(id,
           stage: PhotoStage.pickup, photo: photo('p.jpg'));
       expect(failure, isNull);
-      expect(trip?.hasPhotos(PhotoStage.pickup), isTrue);
+      expect(trip?.pickupPhotos, hasLength(1));
       var (fields, files) =
           form(http.lastRequest('POST', '/driver/trips/$id/pickup-photo'));
       expect(fields, isEmpty);

@@ -32,6 +32,16 @@ final class TripChanged extends RealtimePush {
   final String event;
 }
 
+/// The company raised a trip's extra loading bonus by [added] (to [total]):
+/// the app says so with a small celebration.
+final class ExtraBonusRaised extends RealtimePush {
+  const ExtraBonusRaised(
+      {required this.tripId, required this.added, required this.total});
+  final String tripId;
+  final double added;
+  final double total;
+}
+
 /// The driver's own profile changed on the company's side (documents
 /// verified or sent back, account locked).
 final class ProfileChanged extends RealtimePush {
@@ -207,6 +217,14 @@ class DriverRealtime {
         if (tripId is String) {
           _pushes.add(
               TripChanged(tripId: tripId, event: '${decoded['event'] ?? ''}'));
+        }
+      case 'trip.extra_bonus':
+        final tripId = decoded['trip_id'];
+        final added = double.tryParse('${decoded['added']}');
+        final total = double.tryParse('${decoded['total']}');
+        if (tripId is String && added != null && total != null) {
+          _pushes.add(
+              ExtraBonusRaised(tripId: tripId, added: added, total: total));
         }
       case 'driver.changed':
         _pushes.add(const ProfileChanged());

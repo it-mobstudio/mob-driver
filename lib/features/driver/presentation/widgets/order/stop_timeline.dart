@@ -35,7 +35,8 @@ class PickupMark extends StatelessWidget {
       );
 }
 
-/// A stop's name with, for a pickup, [PickupMark] at the right end.
+/// A stop's name. (A pickup used to carry a small dotted mark at the right
+/// end; drivers found it confusing, so [pickup] no longer changes anything.)
 class _StopName extends StatelessWidget {
   const _StopName(this.name, {required this.pickup, required this.style});
   final String name;
@@ -43,15 +44,7 @@ class _StopName extends StatelessWidget {
   final TextStyle style;
 
   @override
-  Widget build(BuildContext context) {
-    final text = Text(name, style: style);
-    if (!pickup) return text;
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Expanded(child: text),
-      const SizedBox(width: 8),
-      const Padding(padding: EdgeInsets.only(top: 4), child: PickupMark()),
-    ]);
-  }
+  Widget build(BuildContext context) => Text(name, style: style);
 }
 
 /// Pickup over drop, joined by a line: a filled green dot and a hollow red
@@ -233,7 +226,6 @@ class TimelineStop {
     required this.address,
     required this.progress,
     this.index,
-    this.onViewDetails,
     this.onMap,
     this.isPickup = false,
   });
@@ -252,7 +244,6 @@ class TimelineStop {
   final String name;
   final String address;
   final StopProgress progress;
-  final VoidCallback? onViewDetails;
 
   /// Only shown on the active stop.
   final VoidCallback? onMap;
@@ -316,7 +307,7 @@ class _TimelineRow extends StatelessWidget {
             padding: EdgeInsets.only(bottom: lineBelow == null ? 0 : 22),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _StopTag(label: stop.tag, icon: stop.tagIcon, active: active),
+              StopTag(label: stop.tag, icon: stop.tagIcon, active: active),
               const SizedBox(height: 8),
               _StopName(stop.name,
                   pickup: stop.isPickup,
@@ -328,38 +319,25 @@ class _TimelineRow extends StatelessWidget {
               Text(stop.address,
                   style: TextStyle(
                       color: AppColors.muted, fontSize: 13, height: 1.35)),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(
-                  child: TonalButton(
-                    key: Key('timeline_view_details_$index'),
-                    label: tr('View details'),
-                    onPressed: stop.onViewDetails,
+              if (active && stop.onMap != null) ...[
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  key: Key('timeline_map_$index'),
+                  onPressed: stop.onMap,
+                  icon: const Icon(Icons.navigation_rounded, size: 16),
+                  label: Text(tr('Map')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.button,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    minimumSize: const Size.fromHeight(44),
+                    textStyle: const TextStyle(
+                        fontFamily: 'Inter', fontWeight: FontWeight.w700),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: active && stop.onMap != null
-                      ? ElevatedButton.icon(
-                          key: Key('timeline_map_$index'),
-                          onPressed: stop.onMap,
-                          icon: const Icon(Icons.navigation_rounded, size: 16),
-                          label: Text(tr('Map')),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.button,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            minimumSize: const Size.fromHeight(44),
-                            textStyle: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ]),
+              ],
             ]),
           ),
         ),
@@ -409,9 +387,14 @@ class _TimelineNode extends StatelessWidget {
       );
 }
 
-class _StopTag extends StatelessWidget {
-  const _StopTag(
-      {required this.label, required this.icon, required this.active});
+/// The small `Pickup` / `Drop` pill over a stop (green while it's the one
+/// being worked on).
+class StopTag extends StatelessWidget {
+  const StopTag(
+      {super.key,
+      required this.label,
+      required this.icon,
+      required this.active});
   final String label;
   final Widget icon;
   final bool active;

@@ -282,6 +282,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
           child: EarningsSummary(
             tripFare: trip.totalFare,
             bonus: trip.bonusFare,
+            extraBonus: trip.extraBonusFare,
             currency: trip.currency,
           ),
         ),
@@ -327,7 +328,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
               // back to the offer screen, which owns accepting.
               SwipeButton(
                 key: const Key('order_details_accept'),
-                label: tr('Accept order'),
+                label: trip.acceptOrderLabel,
                 loading: _busy,
                 onConfirmed: () async => context.pop(true),
               ),

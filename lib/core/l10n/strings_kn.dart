@@ -576,6 +576,40 @@ const Map<String, String> kKannadaStrings = {
   'Show whole route': 'ಪೂರ್ಣ ಮಾರ್ಗ ತೋರಿಸಿ',
   'Trip fare': 'ಟ್ರಿಪ್ ದರ',
   'Unloading bonus': 'ಇಳಿಸುವಿಕೆ ಬೋನಸ್',
+  'Cancel Trip': 'ಟ್ರಿಪ್ ರದ್ದುಮಾಡಿ',
+  'Looks like you are away from the location':
+      'ನೀವು ಸ್ಥಳದಿಂದ ದೂರದಲ್ಲಿದ್ದೀರಿ ಎಂದು ಕಾಣುತ್ತದೆ',
+  'You are {p0} away from this stop.':
+      'ನೀವು ಈ ನಿಲುಗಡೆಯಿಂದ {p0} ದೂರದಲ್ಲಿದ್ದೀರಿ.',
+  'Do you still want to change the status?':
+      'ಆದರೂ ನೀವು ಸ್ಥಿತಿಯನ್ನು ಬದಲಾಯಿಸಲು ಬಯಸುವಿರಾ?',
+  'Yes, change it': 'ಹೌದು, ಬದಲಾಯಿಸಿ',
+  "Customer's Flat no./Shop name": 'ಗ್ರಾಹಕರ ಫ್ಲ್ಯಾಟ್ ನಂ./ಅಂಗಡಿ ಹೆಸರು',
+  'Navigate to {p0}': '{p0} ಗೆ ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ',
+  'pickup': 'ಪಿಕಪ್',
+  'drop': 'ಡ್ರಾಪ್',
+  'Opens Google Maps': 'ಗೂಗಲ್ ಮ್ಯಾಪ್ಸ್ ತೆರೆಯುತ್ತದೆ',
+  'Slide to call customer': 'ಗ್ರಾಹಕರಿಗೆ ಕರೆ ಮಾಡಲು ಸ್ಲೈಡ್ ಮಾಡಿ',
+  'Add at least {p0} photos of the package first ({p1} more).':
+      'ಮೊದಲು ಪ್ಯಾಕೇಜ್‌ನ ಕನಿಷ್ಠ {p0} ಫೋಟೋ ಸೇರಿಸಿ ({p1} ಇನ್ನೂ).',
+  'Add at least {p0} photos of the delivered package first ({p1} more).':
+      'ಮೊದಲು ತಲುಪಿಸಿದ ಪ್ಯಾಕೇಜ್‌ನ ಕನಿಷ್ಠ {p0} ಫೋಟೋ ಸೇರಿಸಿ ({p1} ಇನ್ನೂ).',
+  'Add at least {p0} photos ({p1} added)':
+      'ಕನಿಷ್ಠ {p0} ಫೋಟೋ ಸೇರಿಸಿ ({p1} ಸೇರಿಸಲಾಗಿದೆ)',
+  'Hurray!': 'ಹುರ್ರೇ!',
+  'Hurray! Loading charges increased': 'ಹುರ್ರೇ! ಲೋಡಿಂಗ್ ಶುಲ್ಕ ಹೆಚ್ಚಾಗಿದೆ',
+  'Loading charges increased': 'ಲೋಡಿಂಗ್ ಶುಲ್ಕ ಹೆಚ್ಚಾಗಿದೆ',
+  'Extra loading bonus': 'ಹೆಚ್ಚುವರಿ ಲೋಡಿಂಗ್ ಬೋನಸ್',
+  '+{p0} extra loading bonus': '+{p0} ಹೆಚ್ಚುವರಿ ಲೋಡಿಂಗ್ ಬೋನಸ್',
+  '+{p0} extra loading': '+{p0} ಹೆಚ್ಚುವರಿ ಲೋಡಿಂಗ್',
+  'Great': 'ಅದ್ಭುತ',
+  'You’re not at the right location': 'ನೀವು ಸರಿಯಾದ ಸ್ಥಳದಲ್ಲಿ ಇಲ್ಲ',
+  'You are {p0} away from this stop. You can still change the status.':
+      'ನೀವು ಈ ನಿಲುಗಡೆಯಿಂದ {p0} ದೂರದಲ್ಲಿದ್ದೀರಿ. ಆದರೂ ನೀವು ಸ್ಥಿತಿಯನ್ನು ಬದಲಾಯಿಸಬಹುದು.',
+  'Change status anyway': 'ಆದರೂ ಸ್ಥಿತಿ ಬದಲಾಯಿಸಿ',
+  'Call Customer': 'ಗ್ರಾಹಕರಿಗೆ ಕರೆ ಮಾಡಿ',
+  '+{p0} unloading': '+{p0} ಇಳಿಸುವಿಕೆ ಬೋನಸ್',
+  ' · +{p0} unloading': ' · +{p0} ಇಳಿಸುವಿಕೆ ಬೋನಸ್',
   'Invoice {invoiceNumber}': 'ಇನ್‌ವಾಯ್ಸ್ {invoiceNumber}',
   'Invoice': 'ಇನ್‌ವಾಯ್ಸ್',
   'Hi{p0}, here is your {what}: {url}':
@@ -720,4 +754,8 @@ const Map<String, String> kKannadaStrings = {
   'Same as phone': 'ಫೋನ್‌ನಂತೆಯೇ',
   'Light': 'ಲೈಟ್',
   'Dark': 'ಡಾರ್ಕ್',
+  'Add your vehicle number and one clear photo.':
+      'ನಿಮ್ಮ ವಾಹನದ ಸಂಖ್ಯೆ ಮತ್ತು ಒಂದು ಸ್ಪಷ್ಟ ಫೋಟೋ ಸೇರಿಸಿ.',
+  'Tap your vehicle to edit its details or photo.':
+      'ವಿವರಗಳು ಅಥವಾ ಫೋಟೋ ಬದಲಿಸಲು ನಿಮ್ಮ ವಾಹನವನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ.',
 };

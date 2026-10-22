@@ -19,25 +19,21 @@ import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubi
 import 'package:mob_driver/features/driver/presentation/widgets/duty/duty_header.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/map/map_sheet.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/map/trip_map.dart';
-import 'package:mob_driver/features/driver/presentation/widgets/order/stop_timeline.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/order/earnings_summary.dart'
+    show HeavyUnloadingBanner;
 import 'package:mob_driver/features/driver/presentation/widgets/trip/fare_chips.dart';
 
-/// The full-screen offer shown the moment a trip is assigned: what it pays,
-/// how far the pickup is, and a countdown to answer before it's declined for
-/// them. There's no separate "offered" state on the backend yet — Accept
-/// opens the trip as normal; Reject (or letting the countdown run out)
-/// simply cancels it, the same way declining from the trip screen would.
+/// An assigned order stays visible until the driver responds or the backend
+/// withdraws it. The app never expires or cancels an offer on a local clock.
 class IncomingOrderPage extends StatefulWidget {
   const IncomingOrderPage({
     super.key,
     required this.tripId,
-    this.countdownSeconds = 30,
     this.mapBuilder,
     this.alert,
   });
 
   final String tripId;
-  final int countdownSeconds;
 
   /// Replaces the Google map — used by tests, which can't host a platform view.
   final TripMapBuilder? mapBuilder;
@@ -51,8 +47,6 @@ class IncomingOrderPage extends StatefulWidget {
 
 class _IncomingOrderPageState extends State<IncomingOrderPage> {
   late final DriverSessionCubit _cubit = context.read<DriverSessionCubit>();
-  late int _secondsLeft = widget.countdownSeconds;
-  Timer? _timer;
   Trip? _trip;
   NavRoute? _leg;
   bool _busy = false;
@@ -60,8 +54,7 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
   /// How much of the map's bottom edge the offer covers.
   double _sheetHeight = 420;
 
-  /// Set the moment a decision is made (accept, reject, or the clock running
-  /// out), so a race between the countdown and a tap can't fire twice.
+  /// Prevents repeated decisions while navigation or cancellation is pending.
   bool _resolved = false;
 
   @override
@@ -71,7 +64,6 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
     _trip = (live != null && live.id == widget.tripId) ? live : null;
     if (_trip == null) unawaited(_fetch());
     unawaited(_loadLeg());
-    _timer = Timer.periodic(const Duration(seconds: 1), _tick);
     // Ring and buzz until the driver answers (or the offer lapses).
     unawaited(_alert.start());
     AppHaptics.success();
@@ -81,15 +73,21 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
 
   @override
   void dispose() {
-    _timer?.cancel();
     unawaited(_alert.stop());
     super.dispose();
   }
 
   Future<void> _fetch() async {
-    final (trip, _) = await _cubit.fetchTrip(widget.tripId);
-    if (!mounted || trip == null) return;
-    setState(() => _trip = trip);
+    final (trip, failure) = await _cubit.fetchTrip(widget.tripId);
+    if (!mounted) return;
+    if (trip != null && trip.status != TripStatus.assigned ||
+        failure?.code == 'NOT_FOUND') {
+      _resolved = true;
+      unawaited(_alert.stop());
+      context.go(AppRoutes.dashboard);
+      return;
+    }
+    if (trip != null) setState(() => _trip = trip);
   }
 
   Future<void> _loadLeg() async {
@@ -98,27 +96,12 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
     setState(() => _leg = route);
   }
 
-  void _tick(Timer timer) {
-    if (_resolved) {
-      timer.cancel();
-      return;
-    }
-    if (_secondsLeft <= 1) {
-      timer.cancel();
-      if (mounted) setState(() => _secondsLeft = 0);
-      unawaited(_respond(accept: false, reason: tr('No response from driver')));
-      return;
-    }
-    if (mounted) setState(() => _secondsLeft -= 1);
-  }
-
   Future<void> _respond(
       {required bool accept, String reason = 'Rejected by driver'}) async {
     if (_resolved || _busy) return;
     unawaited(_alert.stop());
     if (accept) {
       _resolved = true;
-      _timer?.cancel();
       AppHaptics.success();
       if (mounted) context.pushReplacement(AppRoutes.trip(widget.tripId));
       return;
@@ -127,7 +110,6 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
     setState(() => _busy = true);
     final (_, failure) = await _cubit.cancel(widget.tripId, reason);
     _resolved = true;
-    _timer?.cancel();
     if (!mounted) return;
     if (failure != null) {
       // Couldn't decline (e.g. it already moved on) — showing the trip as it
@@ -150,90 +132,110 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
   @override
   Widget build(BuildContext context) {
     final trip = _trip;
-    return PopScope(
-      // Answer the offer first — no dismissing it with the back gesture.
-      canPop: false,
-      child: Scaffold(
-        backgroundColor: AppColors.surface,
-        body: trip == null
-            ? const Center(child: CircularProgressIndicator())
-            : Column(children: [
-                // The same white header as the dashboard.
-                DutyHeaderSurface(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                    // Read-only: this isn't the place to go off duty or open
-                    // the menu, only to answer.
-                    child: BlocBuilder<DriverSessionCubit, DriverSessionState>(
-                      buildWhen: (a, b) =>
-                          a.activeTrip != b.activeTrip ||
-                          a.profile != b.profile ||
-                          a.stats != b.stats,
-                      builder: (context, state) =>
-                          Column(mainAxisSize: MainAxisSize.min, children: [
-                        DutyStatusRow(
-                          online: state.isOnline,
-                          avatar: state.profile == null
-                              ? null
-                              : ProfileAvatar(state.profile!.fullName,
-                                  size: 44, photoUrl: state.profile!.photoUrl),
-                        ),
-                        const SizedBox(height: 10),
-                        WorkingTimeBanner(
-                          online: state.isOnline,
-                          dutyStartedAt: _cubit.dutyStartedAt,
-                          todayEarnings: state.stats.today.earnings,
-                        ),
-                      ]),
+    return BlocListener<DriverSessionCubit, DriverSessionState>(
+      listenWhen: (previous, next) => previous.activeTrip != next.activeTrip,
+      listener: (context, state) {
+        if (_resolved) return;
+        final current = state.activeTrip;
+        if (current?.id != widget.tripId ||
+            current?.status != TripStatus.assigned) {
+          _resolved = true;
+          unawaited(_alert.stop());
+          if (current?.id == widget.tripId && current!.status.isActive) {
+            context.pushReplacement(AppRoutes.trip(widget.tripId));
+          } else {
+            context.go(AppRoutes.dashboard);
+          }
+        } else {
+          setState(() => _trip = current);
+        }
+      },
+      child: PopScope(
+        // Answer the offer first — no dismissing it with the back gesture.
+        canPop: false,
+        child: Scaffold(
+          backgroundColor: AppColors.surface,
+          body: trip == null
+              ? const Center(child: CircularProgressIndicator())
+              : Column(children: [
+                  // The same white header as the dashboard.
+                  DutyHeaderSurface(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                      // Read-only: this isn't the place to go off duty or open
+                      // the menu, only to answer.
+                      child:
+                          BlocBuilder<DriverSessionCubit, DriverSessionState>(
+                        buildWhen: (a, b) =>
+                            a.activeTrip != b.activeTrip ||
+                            a.profile != b.profile ||
+                            a.stats != b.stats,
+                        builder: (context, state) =>
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          DutyStatusRow(
+                            online: state.isOnline,
+                            avatar: state.profile == null
+                                ? null
+                                : ProfileAvatar(state.profile!.fullName,
+                                    size: 44,
+                                    photoUrl: state.profile!.photoUrl),
+                          ),
+                          const SizedBox(height: 10),
+                          WorkingTimeBanner(
+                            online: state.isOnline,
+                            dutyStartedAt: _cubit.dutyStartedAt,
+                            todayEarnings: state.stats.today.earnings,
+                          ),
+                        ]),
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Stack(children: [
-                    // The trip on the map — pickup, drop and the route
-                    // between — to glance at while deciding.
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: (widget.mapBuilder ?? defaultTripMapBuilder)(
-                            context, _mapData(trip), _sheetHeight),
-                      ),
-                    ),
-                    Positioned.fill(
-                      // Rises in once, with a gentle ease — the moment a job
-                      // arrives.
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 1, end: 0),
-                        duration: const Duration(milliseconds: 420),
-                        curve: Curves.easeOutCubic,
-                        builder: (_, t, child) => Transform.translate(
-                          offset: Offset(0, 120 * t),
-                          child: Opacity(opacity: 1 - t, child: child),
-                        ),
-                        child: MapSheet(
-                          onRestingHeight: (height) {
-                            if ((height - _sheetHeight).abs() > 1) {
-                              setState(() => _sheetHeight = height);
-                            }
-                          },
-                          peek: _OfferSummary(
-                            trip: trip,
-                            leg: _leg,
-                            onViewDetails: _openDetails,
-                          ),
-                          // The answer stays put, whatever the sheet shows.
-                          footer: _OfferActions(
-                            secondsLeft: _secondsLeft,
-                            totalSeconds: widget.countdownSeconds,
-                            busy: _busy,
-                            onAccept: () => _respond(accept: true),
-                            onReject: () => _respond(accept: false),
-                          ),
+                  Expanded(
+                    child: Stack(children: [
+                      // The trip on the map — pickup, drop and the route
+                      // between — to glance at while deciding.
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: (widget.mapBuilder ?? defaultTripMapBuilder)(
+                              context, _mapData(trip), _sheetHeight),
                         ),
                       ),
-                    ),
-                  ]),
-                ),
-              ]),
+                      Positioned.fill(
+                        // Rises in once, with a gentle ease — the moment a job
+                        // arrives.
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 1, end: 0),
+                          duration: const Duration(milliseconds: 420),
+                          curve: Curves.easeOutCubic,
+                          builder: (_, t, child) => Transform.translate(
+                            offset: Offset(0, 120 * t),
+                            child: Opacity(opacity: 1 - t, child: child),
+                          ),
+                          child: MapSheet(
+                            onRestingHeight: (height) {
+                              if ((height - _sheetHeight).abs() > 1) {
+                                setState(() => _sheetHeight = height);
+                              }
+                            },
+                            peek: _OfferSummary(
+                              trip: trip,
+                              leg: _leg,
+                              onViewDetails: _openDetails,
+                            ),
+                            // The answer stays put, whatever the sheet shows.
+                            footer: _OfferActions(
+                              trip: trip,
+                              busy: _busy,
+                              onAccept: () => _respond(accept: true),
+                              onReject: () => _respond(accept: false),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ]),
+                  ),
+                ]),
+        ),
       ),
     );
   }
@@ -271,8 +273,9 @@ class _OfferSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bonus = trip.bonusFare;
-    final hasBonus = bonus != null && bonus > 0;
-    final total = (trip.totalFare ?? 0) + (bonus ?? 0);
+    final extra = trip.hasExtraBonus ? trip.extraBonusFare : null;
+    final hasBonus = (bonus != null && bonus > 0) || extra != null;
+    final total = (trip.totalFare ?? 0) + (bonus ?? 0) + (extra ?? 0);
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Text(tr('New order'),
@@ -293,7 +296,13 @@ class _OfferSummary extends StatelessWidget {
       if (hasBonus) ...[
         const SizedBox(height: 14),
         FareChips(
-            tripFare: trip.totalFare, bonus: bonus, currency: trip.currency),
+            tripFare: trip.totalFare,
+            bonus: bonus ?? 0,
+            extraBonus: extra,
+            currency: trip.currency),
+        // Unloading is real work: say so before the driver accepts.
+        const SizedBox(height: 12),
+        const HeavyUnloadingBanner(),
       ],
       const SizedBox(height: 22),
       _StopRow(
@@ -364,18 +373,16 @@ class _OfferSummary extends StatelessWidget {
   }
 }
 
-/// Accept (a swipe, against the countdown) or reject.
+/// Accept with the required unloading work made explicit, or reject.
 class _OfferActions extends StatelessWidget {
   const _OfferActions({
-    required this.secondsLeft,
-    required this.totalSeconds,
+    required this.trip,
     required this.busy,
     required this.onAccept,
     required this.onReject,
   });
 
-  final int secondsLeft;
-  final int totalSeconds;
+  final Trip trip;
   final bool busy;
   final VoidCallback onAccept;
   final VoidCallback onReject;
@@ -386,10 +393,7 @@ class _OfferActions extends StatelessWidget {
         const SizedBox(height: 8),
         SwipeButton(
           key: const Key('offer_accept'),
-          label: tr('Accept order'),
-          trailing: '${secondsLeft}s',
-          remaining: totalSeconds == 0 ? 0 : secondsLeft / totalSeconds,
-          color: secondsLeft <= 10 ? AppColors.orange : AppColors.button,
+          label: trip.acceptOrderLabel,
           loading: busy,
           onConfirmed: () async => onAccept(),
         ),
@@ -469,27 +473,16 @@ class _StopRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
               ],
-              // One wrapping sentence — the name in bold, the address
-              // trailing it in grey — not two stacked lines.
-              Text.rich(
-                  TextSpan(children: [
-                    TextSpan(
-                        text: name,
-                        style: TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800)),
-                    TextSpan(text: ' - $address'),
-                  ]),
+              // Just the address — area and pincode included, as the company
+              // sent it — and no shop or customer name before the driver accepts.
+              Text(address,
                   style: TextStyle(
-                      color: AppColors.muted, fontSize: 12.5, height: 1.35)),
+                      color: AppColors.ink,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      height: 1.4)),
             ]),
           ),
-          if (isPickup) ...[
-            const SizedBox(width: 8),
-            const Padding(
-                padding: EdgeInsets.only(top: 4), child: PickupMark()),
-          ],
         ],
       );
 }

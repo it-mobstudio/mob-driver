@@ -31,6 +31,7 @@ abstract interface class AuthRepository {
   Future<(AuthVerifyResult?, AppFailure?)> verifyOtp({
     required String phoneNumber,
     required String otp,
+    bool replaceSession = false,
   });
 
   /// Revokes the refresh token server-side (best effort) and clears the

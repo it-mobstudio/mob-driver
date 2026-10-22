@@ -573,6 +573,38 @@ const Map<String, String> kHindiStrings = {
   'Show whole route': 'पूरा रास्ता दिखाएँ',
   'Trip fare': 'ट्रिप किराया',
   'Unloading bonus': 'सामान उतारने का बोनस',
+  'Cancel Trip': 'यात्रा रद्द करें',
+  'Looks like you are away from the location': 'लगता है आप सही जगह से दूर हैं',
+  'You are {p0} away from this stop.': 'आप इस स्टॉप से {p0} दूर हैं।',
+  'Do you still want to change the status?':
+      'क्या आप फिर भी स्टेटस बदलना चाहते हैं?',
+  'Yes, change it': 'हाँ, बदलें',
+  "Customer's Flat no./Shop name": 'ग्राहक का फ्लैट नं./दुकान का नाम',
+  'Navigate to {p0}': '{p0} तक नेविगेट करें',
+  'pickup': 'पिकअप',
+  'drop': 'ड्रॉप',
+  'Opens Google Maps': 'गूगल मैप्स खुलेगा',
+  'Slide to call customer': 'ग्राहक को कॉल करने के लिए स्लाइड करें',
+  'Add at least {p0} photos of the package first ({p1} more).':
+      'पहले पैकेज की कम से कम {p0} फ़ोटो लें ({p1} और)।',
+  'Add at least {p0} photos of the delivered package first ({p1} more).':
+      'पहले डिलीवर किए पैकेज की कम से कम {p0} फ़ोटो लें ({p1} और)।',
+  'Add at least {p0} photos ({p1} added)':
+      'कम से कम {p0} फ़ोटो जोड़ें ({p1} जुड़ीं)',
+  'Hurray!': 'वाह!',
+  'Hurray! Loading charges increased': 'वाह! लोडिंग चार्ज बढ़ गया',
+  'Loading charges increased': 'लोडिंग चार्ज बढ़ गया',
+  'Extra loading bonus': 'अतिरिक्त लोडिंग बोनस',
+  '+{p0} extra loading bonus': '+{p0} अतिरिक्त लोडिंग बोनस',
+  '+{p0} extra loading': '+{p0} अतिरिक्त लोडिंग',
+  'Great': 'बढ़िया',
+  'You’re not at the right location': 'आप सही जगह पर नहीं हैं',
+  'You are {p0} away from this stop. You can still change the status.':
+      'आप इस स्टॉप से {p0} दूर हैं। फिर भी आप स्टेटस बदल सकते हैं।',
+  'Change status anyway': 'फिर भी स्टेटस बदलें',
+  'Call Customer': 'ग्राहक को कॉल करें',
+  '+{p0} unloading': '+{p0} सामान उतारने का बोनस',
+  ' · +{p0} unloading': ' · +{p0} सामान उतारने का बोनस',
   'Invoice {invoiceNumber}': 'इनवॉइस {invoiceNumber}',
   'Invoice': 'इनवॉइस',
   'Hi{p0}, here is your {what}: {url}': 'नमस्ते{p0}, यह रहा आपका {what}: {url}',
@@ -717,4 +749,8 @@ const Map<String, String> kHindiStrings = {
   'Same as phone': 'फ़ोन के जैसा',
   'Light': 'लाइट',
   'Dark': 'डार्क',
+  'Add your vehicle number and one clear photo.':
+      'अपने वाहन का नंबर और एक साफ़ फ़ोटो जोड़ें।',
+  'Tap your vehicle to edit its details or photo.':
+      'जानकारी या फ़ोटो बदलने के लिए अपने वाहन पर टैप करें।',
 };

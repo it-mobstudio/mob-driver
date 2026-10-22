@@ -149,20 +149,24 @@ void main() {
     expect(find.text('Upload photos'), findsOneWidget);
 
     await swipe(tester, 'Pickup order');
-    expect(find.text('Add a photo of the package first.'), findsOneWidget);
+    expect(find.text('Add at least 3 photos of the package first (3 more).'),
+        findsOneWidget);
     expect(rig.capture.cameraCalls, 0);
 
-    await tester.tap(find.byKey(const Key('pickup_photo_box')));
-    await tester.pumpAndSettle();
-    expect(rig.capture.cameraCalls, 1);
+    // Three photos are the proof the pickup needs.
+    for (var taken = 1; taken <= 3; taken++) {
+      await tester.tap(find.byKey(const Key('pickup_photo_box')));
+      await tester.pumpAndSettle();
+    }
+    expect(rig.capture.cameraCalls, 3);
     expect(rig.capture.galleryCalls, 0); // camera only
-    expect(rig.repo.pickupPhotos, ['order']);
-    final stamp = rig.capture.stamps.single;
+    expect(rig.repo.pickupPhotos, ['order', 'order', 'order']);
+    final stamp = rig.capture.stamps.first;
     expect((stamp.latitude, stamp.longitude), (12.9716, 77.5946));
     expect(stamp.caption, '#E2E-1 · Pickup');
     // Compressed once, after the stamp — what goes up is the small WebP.
-    expect(rig.capture.optimized, hasLength(1));
-    expect(find.text('1 photo added'), findsOneWidget);
+    expect(rig.capture.optimized, hasLength(3));
+    expect(find.text('3 photos added'), findsOneWidget);
 
     await swipe(tester, 'Pickup order');
     expect(rig.repo.calls, contains('start:$tripId'));
@@ -216,9 +220,10 @@ void main() {
     await tester.tap(find.byKey(const Key('photo_remove_confirm')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Tap to add photo of the package'), findsOneWidget);
+    expect(find.text('Add at least 3 photos (0 added)'), findsOneWidget);
     await swipe(tester, 'Pickup order');
-    expect(find.text('Add a photo of the package first.'), findsOneWidget);
+    expect(find.text('Add at least 3 photos of the package first (3 more).'),
+        findsOneWidget);
   });
 
   rigTest('a photo that could not be removed stays, and says why',
@@ -295,7 +300,7 @@ void main() {
 
     expect(find.textContaining('Turn on location'), findsOneWidget);
     expect(rig.repo.pickupPhotos, isEmpty);
-    expect(find.textContaining('added'), findsNothing);
+    expect(find.textContaining('photo added'), findsNothing);
   });
 
   rigTest('a failed upload drops the photo and says why', (tester, rig) async {
@@ -307,8 +312,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Upload failed.'), findsOneWidget);
-    expect(find.textContaining('added'), findsNothing);
-    expect(find.text('Tap to add photo of the package'), findsOneWidget);
+    expect(find.textContaining('photo added'), findsNothing);
+    expect(find.text('Add at least 3 photos (0 added)'), findsOneWidget);
   });
 
   rigTest('the company\'s note shows when there is one, and not otherwise',
@@ -347,7 +352,7 @@ void main() {
     await tester.tap(find.byKey(const Key('pickup_photo_box')));
     await tester.pumpAndSettle();
     await swipe(tester, 'Pickup order');
-    expect(find.text('Take a photo of every item first (2 left).'),
+    expect(find.text('Add at least 3 photos of the package first (2 more).'),
         findsOneWidget);
     expect(rig.repo.pickupPhotos, ['order']);
   });

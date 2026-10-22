@@ -128,6 +128,9 @@ class ProfileUpdate extends Equatable {
     this.email,
     this.addressLine,
     this.city,
+    this.drivingCity,
+    this.indemnityAccepted,
+    this.indemnityVersion,
     this.pincode,
     this.emergencyContactName,
     this.emergencyContactPhone,
@@ -142,6 +145,9 @@ class ProfileUpdate extends Equatable {
   final String? email;
   final String? addressLine;
   final String? city;
+  final String? drivingCity;
+  final bool? indemnityAccepted;
+  final String? indemnityVersion;
   final String? pincode;
   final String? emergencyContactName;
   final String? emergencyContactPhone;
@@ -156,6 +162,9 @@ class ProfileUpdate extends Equatable {
         if (email != null) 'email': email,
         if (addressLine != null) 'address_line': addressLine,
         if (city != null) 'city': city,
+        if (drivingCity != null) 'driving_city': drivingCity,
+        if (indemnityAccepted != null) 'indemnity_accepted': indemnityAccepted,
+        if (indemnityVersion != null) 'indemnity_version': indemnityVersion,
         if (pincode != null) 'pincode': pincode,
         if (emergencyContactName != null)
           'emergency_contact_name': emergencyContactName,
@@ -192,6 +201,12 @@ class DriverProfile extends Equatable {
     this.dateOfBirth,
     this.addressLine,
     this.city,
+    this.drivingCity,
+    this.drivingCities = const [],
+    this.indemnityVersion,
+    this.indemnityText,
+    this.indemnityPolicyUrl,
+    this.indemnityAccepted = false,
     this.pincode,
     this.photoUrl,
     this.payout = const PayoutDetails(),
@@ -201,6 +216,8 @@ class DriverProfile extends Equatable {
   /// Parses `DriverMeSerializer`, which is also embedded in the OTP-verify
   /// response as `driver`.
   factory DriverProfile.fromJson(Map<String, dynamic> json) {
+    final options = asMap(json['onboarding_options']);
+    final indemnity = asMap(options['indemnity']);
     final vehicle = json['current_vehicle'];
     final kyc = asMap(json['kyc']);
     final aadhar = asMap(kyc['aadhar']);
@@ -259,6 +276,14 @@ class DriverProfile extends Equatable {
       dateOfBirth: DateTime.tryParse(readString(json['date_of_birth']) ?? ''),
       addressLine: readString(json['address_line']),
       city: readString(json['city']),
+      drivingCity: readString(json['driving_city']),
+      drivingCities: (options['driving_cities'] is List)
+          ? (options['driving_cities'] as List).whereType<String>().toList()
+          : const [],
+      indemnityVersion: readString(indemnity['version']),
+      indemnityText: readString(indemnity['text']),
+      indemnityPolicyUrl: readString(indemnity['policy_url']),
+      indemnityAccepted: readBool(indemnity['accepted']),
       pincode: readString(json['pincode']),
       photoUrl: readString(json['profile_photo_url']),
       payout: PayoutDetails.fromJson(asMap(json['payout'])),
@@ -290,6 +315,17 @@ class DriverProfile extends Equatable {
   final DateTime? dateOfBirth;
   final String? addressLine;
   final String? city;
+  final String? drivingCity;
+  final List<String> drivingCities;
+  final String? indemnityVersion;
+  final String? indemnityText;
+  final String? indemnityPolicyUrl;
+  final bool indemnityAccepted;
+
+  bool get indemnityRequired =>
+      (indemnityVersion?.isNotEmpty ?? false) &&
+      (indemnityText?.isNotEmpty ?? false) &&
+      (indemnityPolicyUrl?.isNotEmpty ?? false);
   final String? pincode;
   final String? photoUrl;
   final PayoutDetails payout;
@@ -364,6 +400,12 @@ class DriverProfile extends Equatable {
         dateOfBirth: dateOfBirth,
         addressLine: addressLine,
         city: city,
+        drivingCity: drivingCity,
+        drivingCities: drivingCities,
+        indemnityVersion: indemnityVersion,
+        indemnityText: indemnityText,
+        indemnityPolicyUrl: indemnityPolicyUrl,
+        indemnityAccepted: indemnityAccepted,
         pincode: pincode,
         photoUrl: photoUrl,
         payout: payout,
@@ -391,6 +433,12 @@ class DriverProfile extends Equatable {
         dateOfBirth,
         addressLine,
         city,
+        drivingCity,
+        drivingCities,
+        indemnityVersion,
+        indemnityText,
+        indemnityPolicyUrl,
+        indemnityAccepted,
         pincode,
         photoUrl,
         payout,

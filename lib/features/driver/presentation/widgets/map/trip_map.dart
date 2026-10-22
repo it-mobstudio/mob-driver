@@ -11,6 +11,7 @@ import 'package:mob_driver/features/driver/presentation/widgets/map/map_pins.dar
 import 'package:mob_driver/features/driver/presentation/widgets/map/map_style.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/map/svg_marker.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/map/vehicle_glide.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 /// An extra pickup / drop between the trip's main pickup and final drop.
 class MapStop {
@@ -37,6 +38,7 @@ class TripMapData {
     this.driver,
     this.route = const [],
     this.leg = const [],
+    this.menuAbove = false,
   });
 
   final TripStatus status;
@@ -52,6 +54,10 @@ class TripMapData {
 
   /// The leg from the driver to the next stop (pickup, then drop).
   final List<LatLng> leg;
+
+  /// The screen puts a round button in the top-right corner, so the map's own
+  /// "show whole route" button sits beneath it instead.
+  final bool menuAbove;
 
   List<LatLng> get _allPoints => [
         ...route,
@@ -323,15 +329,19 @@ class _TripMapState extends State<TripMap> with SingleTickerProviderStateMixin {
       ),
       Positioned(
         right: 14,
-        top: MediaQuery.paddingOf(context).top + 12,
-        child: Material(
-          color: AppColors.card,
-          elevation: 3,
-          shape: const CircleBorder(),
-          child: IconButton(
-            tooltip: tr('Show whole route'),
-            icon: Icon(Icons.center_focus_strong_rounded, color: AppColors.ink),
-            onPressed: _frame,
+        top: MediaQuery.paddingOf(context).top +
+            (widget.data.menuAbove ? 72 : 12),
+        child: PointerInterceptor(
+          child: Material(
+            color: AppColors.card,
+            elevation: 3,
+            shape: const CircleBorder(),
+            child: IconButton(
+              tooltip: tr('Show whole route'),
+              icon:
+                  Icon(Icons.center_focus_strong_rounded, color: AppColors.ink),
+              onPressed: _frame,
+            ),
           ),
         ),
       ),

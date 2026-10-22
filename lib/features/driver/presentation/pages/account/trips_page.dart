@@ -214,6 +214,31 @@ class _TripTile extends StatelessWidget {
           Text(formatDateTime(when),
               style: TextStyle(color: AppColors.muted, fontSize: 12)),
           const Spacer(),
+          if ((trip.bonusFare ?? 0) > 0) ...[
+            Text(
+                tr('+{p0} unloading', {
+                  'p0': formatMoney(trip.bonusFare, currency: trip.currency)
+                }),
+                key: Key('trip_bonus_${trip.id}'),
+                style: TextStyle(
+                    color: AppColors.orange,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(width: 8),
+          ],
+          if (trip.hasExtraBonus) ...[
+            Text(
+                tr('+{p0} extra loading', {
+                  'p0':
+                      formatMoney(trip.extraBonusFare, currency: trip.currency)
+                }),
+                key: Key('trip_extra_bonus_${trip.id}'),
+                style: TextStyle(
+                    color: AppColors.orange,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(width: 8),
+          ],
           Text(formatMoney(trip.totalFare, currency: trip.currency),
               style: TextStyle(
                   color: AppColors.ink,

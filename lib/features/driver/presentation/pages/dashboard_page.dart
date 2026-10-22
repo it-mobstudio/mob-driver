@@ -757,6 +757,31 @@ class _ActiveTripDetails extends StatelessWidget {
                   fontSize: 22,
                   letterSpacing: -.5,
                   fontWeight: FontWeight.w800)),
+          if ((trip.bonusFare ?? 0) > 0) ...[
+            const SizedBox(width: 8),
+            Text(
+                tr('+{p0} unloading', {
+                  'p0': formatMoney(trip.bonusFare, currency: trip.currency)
+                }),
+                key: const Key('active_trip_bonus'),
+                style: TextStyle(
+                    color: AppColors.orange,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800)),
+          ],
+          if (trip.hasExtraBonus) ...[
+            const SizedBox(width: 8),
+            Text(
+                tr('+{p0} extra loading', {
+                  'p0':
+                      formatMoney(trip.extraBonusFare, currency: trip.currency)
+                }),
+                key: const Key('active_trip_extra_bonus'),
+                style: TextStyle(
+                    color: AppColors.orange,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800)),
+          ],
           const Spacer(),
           Icon(Icons.route_rounded, size: 16, color: AppColors.muted),
           const SizedBox(width: 4),

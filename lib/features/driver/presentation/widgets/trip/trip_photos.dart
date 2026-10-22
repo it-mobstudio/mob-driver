@@ -192,9 +192,14 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
       ],
       enabled: enabled,
       canAdd: saved.length + pending.length < DriverLimits.maxOrderPhotos,
-      hint: stage == PhotoStage.pickup
-          ? tr('Tap to add photo of the package')
-          : tr('Tap to add photo of the delivered package'),
+      hint: stop == null
+          ? tr('Add at least {p0} photos ({p1} added)', {
+              'p0': DriverLimits.minOrderPhotos,
+              'p1': saved.length + pending.length
+            })
+          : stage == PhotoStage.pickup
+              ? tr('Tap to add photo of the package')
+              : tr('Tap to add photo of the delivered package'),
       onAdd: () => takeTripPhoto(trip, stage, null, stop),
       onRemove: (id) => removeTripPhoto(trip, id),
     );
@@ -220,7 +225,16 @@ mixin TripPhotoSlots<T extends StatefulWidget> on State<T> {
     if (photoUploading) {
       return tr('Wait a moment — the photo is still uploading.');
     }
-    if (trip.orderPhotoMissing(stage, stop: stop)) {
+    final short = trip.orderPhotosMissing(stage, stop: stop);
+    if (short > 0) {
+      if (stop == null) {
+        return stage == PhotoStage.pickup
+            ? tr('Add at least {p0} photos of the package first ({p1} more).',
+                {'p0': DriverLimits.minOrderPhotos, 'p1': short})
+            : tr(
+                'Add at least {p0} photos of the delivered package first ({p1} more).',
+                {'p0': DriverLimits.minOrderPhotos, 'p1': short});
+      }
       return stage == PhotoStage.pickup
           ? tr('Add a photo of the package first.')
           : tr('Add a photo of the delivered package first.');

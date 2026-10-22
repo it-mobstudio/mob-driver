@@ -82,11 +82,12 @@ void main() {
         'pickup_photos': [
           {'id': 'a', 'url': 'https://cdn.example.com/1.jpg'},
           {'id': 'b', 'url': 'https://cdn.example.com/2.jpg'},
+          {'id': 'c', 'url': 'https://cdn.example.com/3.jpg'},
         ],
         'delivery_photos': <Map<String, dynamic>>[],
       });
       expect(trip.pickupPhotos.map((p) => (p.id, p.canRemove)),
-          [('a', true), ('b', true)]);
+          [('a', true), ('b', true), ('c', true)]);
       expect(trip.hasPhotos(PhotoStage.pickup), isTrue);
       expect(trip.hasPhotos(PhotoStage.delivery), isFalse);
     });
@@ -100,7 +101,9 @@ void main() {
       });
       expect(trip.pickupPhotos.single.url, 'https://cdn.example.com/only.jpg');
       expect(trip.pickupPhotos.single.canRemove, isFalse);
-      expect(trip.hasPhotos(PhotoStage.pickup), isTrue);
+      // One photo is a start, but the pickup needs three.
+      expect(trip.hasPhotos(PhotoStage.pickup), isFalse);
+      expect(trip.orderPhotosMissing(PhotoStage.pickup), 2);
     });
   });
 

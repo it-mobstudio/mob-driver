@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:mob_driver/core/config/app_config.dart';
 import 'package:mob_driver/core/network/auth_interceptor.dart';
 import 'package:mob_driver/core/network/logging_interceptor.dart';
 import 'package:sentry_dio/sentry_dio.dart';
@@ -16,7 +17,8 @@ class DioClient {
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 25),
         receiveTimeout: const Duration(seconds: 25),
-        headers: const {
+        headers: {
+          ...AppConfig.apiTunnelHeaders,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
