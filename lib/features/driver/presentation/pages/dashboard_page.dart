@@ -67,14 +67,20 @@ class _DashboardPageState extends State<DashboardPage> {
     return days != null && days >= 0 && days <= 30 ? days : null;
   }
 
-  HomeMapData _mapData(GeoPoint? point, Trip? trip) {
+  HomeMapData _mapData(GeoPoint? point, Trip? trip,
+      {required bool online, String? city}) {
     final driver =
         point == null ? null : LatLng(point.latitude, point.longitude);
     if (trip == null || !trip.status.isActive) {
-      return HomeMapData(driver: driver);
+      return HomeMapData(
+        driver: driver,
+        city: city,
+        showCity: !online && trip == null,
+      );
     }
     return HomeMapData(
       driver: driver,
+      city: city,
       pickup: trip.pickup.hasCoordinates
           ? LatLng(trip.pickup.latitude!, trip.pickup.longitude!)
           : null,
@@ -87,6 +93,11 @@ class _DashboardPageState extends State<DashboardPage> {
               .toList(),
     );
   }
+
+  String? _workCity(DriverProfile profile) =>
+      (profile.drivingCity ?? '').trim().isNotEmpty
+          ? profile.drivingCity
+          : profile.city;
 
   void _openStats(DriverStats stats) => showModalBottomSheet<void>(
         context: context,
@@ -186,6 +197,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       checkPermission: widget.checkLocationPermission)
                   : endDutyFlow(context),
               onProfileTap: () => context.go(AppRoutes.profile),
+              onSos: () => _openSos(profile),
             ),
             AnimatedSize(
               duration: const Duration(milliseconds: 240),
@@ -247,9 +259,9 @@ class _DashboardPageState extends State<DashboardPage> {
               valueListenable: _cubit.position,
               builder: (context, point, _) => mapBuilder(
                 context,
-                _mapData(point, trip),
+                _mapData(point, trip,
+                    online: state.isOnline, city: _workCity(profile)),
                 _panelHeight,
-                () => _openSos(profile),
               ),
             ),
           ),

@@ -8,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:mob_driver/core/constants/app_assets.dart';
 import 'package:mob_driver/core/theme/app_colors.dart';
+import 'package:mob_driver/features/driver/presentation/widgets/map/city_view.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/map/map_style.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/map/svg_marker.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/map/vehicle_glide.dart';
@@ -19,6 +20,8 @@ class HomeMapData {
     this.pickup,
     this.drop,
     this.route = const [],
+    this.city,
+    this.showCity = false,
   });
 
   /// The driver's live position — null until the first GPS fix arrives.
@@ -29,6 +32,8 @@ class HomeMapData {
   final LatLng? pickup;
   final LatLng? drop;
   final List<LatLng> route;
+  final String? city;
+  final bool showCity;
 }
 
 /// Builds the full-screen map behind [DashboardPage]. Injectable so
@@ -38,23 +43,20 @@ typedef HomeMapBuilder = Widget Function(
   BuildContext context,
   HomeMapData data,
   double bottomPadding,
-  VoidCallback onSos,
 );
 
-Widget defaultHomeMapBuilder(BuildContext context, HomeMapData data,
-        double bottomPadding, VoidCallback onSos) =>
-    HomeMap(data: data, bottomPadding: bottomPadding, onSos: onSos);
+Widget defaultHomeMapBuilder(
+        BuildContext context, HomeMapData data, double bottomPadding) =>
+    HomeMap(data: data, bottomPadding: bottomPadding);
 
 class HomeMap extends StatefulWidget {
   const HomeMap({
     super.key,
     required this.data,
-    required this.onSos,
     this.bottomPadding = 0,
   });
 
   final HomeMapData data;
-  final VoidCallback onSos;
 
   /// Space at the bottom covered by the "looking for orders" panel, so the
   /// camera's centre and the floating buttons stay above it.
@@ -77,6 +79,8 @@ class _HomeMapState extends State<HomeMap> with SingleTickerProviderStateMixin {
   /// "the driver moved it" — cleared once that move settles.
   bool _following = true;
   bool _programmaticMove = false;
+
+  CityView? _cityView;
 
   BitmapDescriptor? _vehicleIcon;
   BitmapDescriptor? _dotIcon;
@@ -112,6 +116,22 @@ class _HomeMapState extends State<HomeMap> with SingleTickerProviderStateMixin {
     final start = widget.data.driver;
     if (start != null) _glide.moveTo(start, animate: false);
     _idleTurns = Timer.periodic(_idleTurnAfter, (_) => _turnWhileIdle());
+    unawaited(_loadCity());
+  }
+
+  Future<void> _loadCity() async {
+    final city = widget.data.city;
+    final view = await cityViewFor(city);
+    if (!mounted || city != widget.data.city) return;
+    _cityView = view;
+    if (widget.data.showCity) unawaited(_showCity());
+  }
+
+  Future<void> _showCity() async {
+    final view = _cityView;
+    if (view == null) return;
+    if (_following) setState(() => _following = false);
+    await _moveTo(view.centre, zoom: view.zoom);
   }
 
   void _turnWhileIdle() {
@@ -163,10 +183,15 @@ class _HomeMapState extends State<HomeMap> with SingleTickerProviderStateMixin {
   @override
   void didUpdateWidget(covariant HomeMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.data.city != oldWidget.data.city) unawaited(_loadCity());
     final point = widget.data.driver;
     if (point != null && point != oldWidget.data.driver) {
       _glide.moveTo(point, animate: !MediaQuery.disableAnimationsOf(context));
-      if (_following) unawaited(_moveTo(point));
+    }
+    if (widget.data.showCity != oldWidget.data.showCity) {
+      unawaited(widget.data.showCity ? _showCity() : _recenter());
+    } else if (_following && point != null && point != oldWidget.data.driver) {
+      unawaited(_moveTo(point));
     }
   }
 
@@ -306,7 +331,11 @@ class _HomeMapState extends State<HomeMap> with SingleTickerProviderStateMixin {
             // Opened centred on the driver — which on the web (no `padding`)
             // is behind the bottom panel. Aim above it straight away.
             final driver = widget.data.driver;
-            if (kIsWeb && driver != null) unawaited(_moveTo(driver));
+            if (widget.data.showCity && _cityView != null) {
+              unawaited(_showCity());
+            } else if (kIsWeb && driver != null) {
+              unawaited(_moveTo(driver));
+            }
           },
         ),
       // Fades away once the map exists, so there's no white flash while
@@ -323,21 +352,11 @@ class _HomeMapState extends State<HomeMap> with SingleTickerProviderStateMixin {
       ),
       Positioned(
         right: 16,
-        bottom: widget.bottomPadding + 84,
+        bottom: widget.bottomPadding + 24,
         child: _MapFab(
           key: const Key('recenter_button'),
           assetPath: AppAssets.recenter,
           onTap: _recenter,
-        ),
-      ),
-      Positioned(
-        right: 16,
-        bottom: widget.bottomPadding + 24,
-        child: _MapFab(
-          key: const Key('sos_button'),
-          assetPath: AppAssets.sos,
-          iconSize: 26,
-          onTap: widget.onSos,
         ),
       ),
     ]);
@@ -349,12 +368,11 @@ class _MapFab extends StatelessWidget {
     super.key,
     required this.assetPath,
     required this.onTap,
-    this.iconSize = 22,
   });
 
   final String assetPath;
   final VoidCallback onTap;
-  final double iconSize;
+  static const iconSize = 22.0;
 
   @override
   Widget build(BuildContext context) => Material(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -242,6 +244,36 @@ void main() {
 
       expect(rig.repo.walletEntryCalls, ['1:', '2:', '3:']);
       expect(find.byKey(const Key('wallet_entry_e24')), findsOneWidget);
+    });
+
+    rigTest('a refresh while a later page loads starts from the newest entry',
+        (tester, rig) async {
+      rig.repo.walletEntryPageSize = 10;
+      await openWallet(tester, rig, entries: [
+        for (var i = 0; i < 25; i++)
+          entry('e$i', WalletKind.tripEarning, 10.0 + i,
+              at: DateTime.now().subtract(Duration(minutes: i))),
+      ]);
+      final page2 = rig.repo.walletLaterPagesGate = Completer<void>();
+      await tester.scrollUntilVisible(
+          find.byKey(const Key('wallet_entry_e9')), 400,
+          scrollable: find.byType(Scrollable).first);
+      await tester.pump();
+      expect(rig.repo.walletEntryCalls, ['1:', '2:']);
+
+      rig.repo.statsValue =
+          const DriverStats(allTime: PeriodStats(tripsCompleted: 7));
+      await rig.cubit.load(silent: true);
+      await tester.pump();
+      page2.complete();
+      rig.repo.walletLaterPagesGate = null;
+      await tester.pumpAndSettle();
+
+      expect(rig.repo.walletEntryCalls.sublist(0, 3), ['1:', '2:', '1:']);
+      await tester.scrollUntilVisible(
+          find.byKey(const Key('wallet_entry_e0')), -400,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.byKey(const Key('wallet_entry_e0')), findsOneWidget);
     });
 
     rigTest('an empty statement says what will appear', (tester, rig) async {

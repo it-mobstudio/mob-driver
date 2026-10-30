@@ -73,9 +73,8 @@ void main() {
               .widget<Text>(find.byKey(const Key('far_from_stop_text')))
               .textSpan!
               .toPlainText(),
-          'You are 1.3 km away from this stop.');
-      expect(
-          find.text('Do you still want to change the status?'), findsOneWidget);
+          'You are 1.3 km away.');
+      expect(find.text('Change status anyway?'), findsOneWidget);
       expect(rig.repo.calls.where((c) => c.startsWith('arrive')), isEmpty);
 
       await tester.tap(find.byKey(const Key('far_from_stop_continue')));

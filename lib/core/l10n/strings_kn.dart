@@ -168,8 +168,8 @@ const Map<String, String> kKannadaStrings = {
   'My vehicles': 'ನನ್ನ ವಾಹನಗಳು',
   'Could not load your vehicles': 'ನಿಮ್ಮ ವಾಹನಗಳು ಲೋಡ್ ಆಗಲಿಲ್ಲ',
   'No vehicles yet': 'ಇನ್ನೂ ವಾಹನಗಳಿಲ್ಲ',
-  'Add your own bike, auto or truck with pictures, then go on duty with it.':
-      'ಫೋಟೋಗಳೊಂದಿಗೆ ನಿಮ್ಮ ಬೈಕ್, ಆಟೋ ಅಥವಾ ಟ್ರಕ್ ಸೇರಿಸಿ, ನಂತರ ಅದರೊಂದಿಗೆ ಡ್ಯೂಟಿಗೆ ಹೋಗಿ.',
+  'Add your own bike, auto or truck with pictures, then go on duty with it. Company vehicles you’re allowed to drive are offered separately when you go on duty.':
+      'ನಿಮ್ಮ ಸ್ವಂತ ಬೈಕ್, ಆಟೋ ಅಥವಾ ಟ್ರಕ್ ಅನ್ನು ಫೋಟೋಗಳೊಂದಿಗೆ ಸೇರಿಸಿ, ನಂತರ ಅದರೊಂದಿಗೆ ಡ್ಯೂಟಿಗೆ ಹೋಗಿ. ನೀವು ಓಡಿಸಲು ಅನುಮತಿ ಇರುವ ಕಂಪನಿ ವಾಹನಗಳನ್ನು ಡ್ಯೂಟಿಗೆ ಹೋಗುವಾಗ ಪ್ರತ್ಯೇಕವಾಗಿ ತೋರಿಸಲಾಗುತ್ತದೆ.',
   'You have {max} vehicles (the limit)':
       'ನಿಮ್ಮ ಬಳಿ {max} ವಾಹನಗಳಿವೆ (ಗರಿಷ್ಠ ಮಿತಿ)',
   'Add a vehicle': 'ವಾಹನ ಸೇರಿಸಿ',
@@ -376,6 +376,7 @@ const Map<String, String> kKannadaStrings = {
   'Tell us what happened': 'ಏನಾಯಿತು ಎಂದು ತಿಳಿಸಿ',
   'Photo of the problem': 'ಸಮಸ್ಯೆಯ ಫೋಟೋ',
   'Record as not delivered': 'ಡೆಲಿವರಿ ಆಗಿಲ್ಲ ಎಂದು ದಾಖಲಿಸಿ',
+  'SOS': 'SOS',
   'Emergency SOS': 'ತುರ್ತು SOS',
   'No emergency contact is saved yet. Add one from your profile so it’s ready if you ever need it.':
       'ಇನ್ನೂ ಯಾವುದೇ ತುರ್ತು ಸಂಪರ್ಕ ಉಳಿಸಿಲ್ಲ. ಅಗತ್ಯವಿದ್ದಾಗ ಸಿದ್ಧವಿರಲು ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ನಿಂದ ಒಂದನ್ನು ಸೇರಿಸಿ.',
@@ -553,6 +554,7 @@ const Map<String, String> kKannadaStrings = {
   'No vehicle available': 'ಯಾವುದೇ ವಾಹನ ಲಭ್ಯವಿಲ್ಲ',
   'There is no active vehicle free that your licence covers. Ask your operations team.':
       'ನಿಮ್ಮ ಲೈಸೆನ್ಸ್‌ಗೆ ಹೊಂದುವ ಯಾವುದೇ ಖಾಲಿ ವಾಹನ ಲಭ್ಯವಿಲ್ಲ. ನಿಮ್ಮ ಆಪರೇಷನ್ಸ್ ತಂಡವನ್ನು ಕೇಳಿ.',
+  'COMPANY': 'ಕಂಪನಿ',
   'YOURS': 'ನಿಮ್ಮದು',
   'You can’t go on duty yet': 'ನೀವು ಇನ್ನೂ ಡ್ಯೂಟಿಗೆ ಹೋಗಲು ಆಗುವುದಿಲ್ಲ',
   'Your account isn’t eligible for trips right now.':
@@ -577,13 +579,11 @@ const Map<String, String> kKannadaStrings = {
   'Trip fare': 'ಟ್ರಿಪ್ ದರ',
   'Unloading bonus': 'ಇಳಿಸುವಿಕೆ ಬೋನಸ್',
   'Cancel Trip': 'ಟ್ರಿಪ್ ರದ್ದುಮಾಡಿ',
-  'Looks like you are away from the location':
-      'ನೀವು ಸ್ಥಳದಿಂದ ದೂರದಲ್ಲಿದ್ದೀರಿ ಎಂದು ಕಾಣುತ್ತದೆ',
-  'You are {p0} away from this stop.':
-      'ನೀವು ಈ ನಿಲುಗಡೆಯಿಂದ {p0} ದೂರದಲ್ಲಿದ್ದೀರಿ.',
-  'Do you still want to change the status?':
-      'ಆದರೂ ನೀವು ಸ್ಥಿತಿಯನ್ನು ಬದಲಾಯಿಸಲು ಬಯಸುವಿರಾ?',
-  'Yes, change it': 'ಹೌದು, ಬದಲಾಯಿಸಿ',
+  'You are far from here': 'ನೀವು ಇಲ್ಲಿಂದ ದೂರದಲ್ಲಿದ್ದೀರಿ',
+  'You are {p0} away.': 'ನೀವು {p0} ದೂರದಲ್ಲಿದ್ದೀರಿ.',
+  'Change status anyway?': 'ಆದರೂ ಸ್ಥಿತಿ ಬದಲಾಯಿಸಬೇಕೇ?',
+  'Yes, change': 'ಹೌದು, ಬದಲಾಯಿಸಿ',
+  'No, wait': 'ಬೇಡ, ಕಾಯಿರಿ',
   "Customer's Flat no./Shop name": 'ಗ್ರಾಹಕರ ಫ್ಲ್ಯಾಟ್ ನಂ./ಅಂಗಡಿ ಹೆಸರು',
   'Navigate to {p0}': '{p0} ಗೆ ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ',
   'pickup': 'ಪಿಕಪ್',

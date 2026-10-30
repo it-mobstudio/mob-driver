@@ -58,24 +58,32 @@ class LoginBanner extends StatelessWidget {
               // The truck sits on the banner's bottom edge, its cab near the
               // left; the driver stands in front of its box.
               Positioned(
-                left: unit * .058,
-                bottom: 0,
-                width: truckWidth,
-                height: truckWidth / _truckAspect,
-                child: Image.asset(
-                  AppAssets.loginVehicle,
-                  fit: BoxFit.fill,
-                ),
-              ),
-              Positioned(
                 right: 0,
                 bottom: 0,
-                width: personWidth,
+                width: unit,
                 height: personWidth / _personAspect,
-                child: Image.asset(
-                  AppAssets.loginDriver,
-                  fit: BoxFit.fill,
-                ),
+                child: Stack(clipBehavior: Clip.none, children: [
+                  Positioned(
+                    left: unit * .058,
+                    bottom: 0,
+                    width: truckWidth,
+                    height: truckWidth / _truckAspect,
+                    child: Image.asset(
+                      AppAssets.loginVehicle,
+                      fit: BoxFit.fill,
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    width: personWidth,
+                    height: personWidth / _personAspect,
+                    child: Image.asset(
+                      AppAssets.loginDriver,
+                      fit: BoxFit.fill,
+                    ),
+                  ),
+                ]),
               ),
               SafeArea(
                 bottom: false,

@@ -43,13 +43,16 @@ class LocationReporter {
 
   bool get isRunning => _heartbeat != null;
 
+  int _run = 0;
+
   /// Where the driver is now: the latest fix, else a fresh one. Null when
   /// none can be had.
   Future<GeoPoint?> currentFix() async {
     final known = position.value;
     if (known != null) return known;
+    final run = _run;
     final fresh = await _location.currentPosition();
-    if (fresh != null) position.value = fresh;
+    if (fresh != null && run == _run) position.value = fresh;
     return fresh;
   }
 
@@ -65,6 +68,7 @@ class LocationReporter {
   }
 
   void stop() {
+    _run++;
     _heartbeat?.cancel();
     _heartbeat = null;
     unawaited(_positions?.cancel());
@@ -104,8 +108,10 @@ class LocationReporter {
     if (!isRunning || _sendingHeartbeat) return;
     if (_positions == null) _listen();
     _sendingHeartbeat = true;
+    final run = _run;
     try {
       final fix = await currentFix();
+      if (run != _run) return;
       if (fix == null) {
         _setAvailable(false);
         return;
@@ -113,7 +119,7 @@ class LocationReporter {
       _setAvailable(true);
       await _send(fix);
     } finally {
-      _sendingHeartbeat = false;
+      if (run == _run) _sendingHeartbeat = false;
     }
   }
 

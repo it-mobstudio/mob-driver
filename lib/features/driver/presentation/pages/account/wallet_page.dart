@@ -48,6 +48,8 @@ class _WalletPageState extends State<WalletPage> {
   bool _loading = false;
   String? _error;
 
+  int _generation = 0;
+
   @override
   void initState() {
     super.initState();
@@ -66,9 +68,12 @@ class _WalletPageState extends State<WalletPage> {
     super.dispose();
   }
 
+  int _summaryRequest = 0;
+
   Future<void> _loadSummary() async {
+    final request = ++_summaryRequest;
     final (summary, failure) = await _cubit.loadWallet();
-    if (!mounted) return;
+    if (!mounted || request != _summaryRequest) return;
     setState(() {
       if (summary != null) {
         _summary = summary;
@@ -79,11 +84,17 @@ class _WalletPageState extends State<WalletPage> {
     });
   }
 
-  Future<void> _refresh() async {
+  void _restart() {
+    _generation++;
     _entries.clear();
     _page = 0;
     _hasNext = true;
+    _loading = false;
     _error = null;
+  }
+
+  Future<void> _refresh() async {
+    setState(_restart);
     await Future.wait([_loadSummary(), _loadMore()]);
   }
 
@@ -94,11 +105,12 @@ class _WalletPageState extends State<WalletPage> {
       _error = null;
     });
     final filter = _filter;
+    final generation = _generation;
     final (result, failure) = await _cubit.loadWalletEntries(
       page: _page + 1,
       kinds: filter.kinds,
     );
-    if (!mounted || filter != _filter) return; // the filter changed mid-flight
+    if (!mounted || generation != _generation) return;
     setState(() {
       _loading = false;
       if (result == null) {
@@ -115,11 +127,7 @@ class _WalletPageState extends State<WalletPage> {
     if (filter == _filter) return;
     setState(() {
       _filter = filter;
-      _entries.clear();
-      _page = 0;
-      _hasNext = true;
-      _loading = false;
-      _error = null;
+      _restart();
     });
     _loadMore();
   }

@@ -79,13 +79,13 @@ class ShipmentItemRow extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          NetworkThumb(item.imageUrl, size: 52, radius: 10),
+          NetworkThumb(item.imageUrl, size: 64, radius: 12),
           const SizedBox(width: 12),
           Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(item.name,
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                       color: AppColors.ink,
@@ -143,6 +143,8 @@ class _ShipmentQuantity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(minWidth: 44),
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
             color: AppColors.surfaceMuted,

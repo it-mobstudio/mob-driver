@@ -40,6 +40,8 @@ class _TripsPageState extends State<TripsPage> {
   bool _loading = false;
   String? _error;
 
+  int _generation = 0;
+
   @override
   void initState() {
     super.initState();
@@ -57,11 +59,17 @@ class _TripsPageState extends State<TripsPage> {
     if (_scroll.position.extentAfter < 400) _loadMore();
   }
 
-  Future<void> _refresh() {
+  void _restart() {
+    _generation++;
     _trips.clear();
     _page = 0;
     _hasNext = true;
+    _loading = false;
     _error = null;
+  }
+
+  Future<void> _refresh() {
+    setState(_restart);
     return _loadMore();
   }
 
@@ -72,10 +80,11 @@ class _TripsPageState extends State<TripsPage> {
       _error = null;
     });
     final filter = _filter;
+    final generation = _generation;
     final (result, failure) = await context
         .read<DriverSessionCubit>()
         .loadTrips(page: _page + 1, statuses: filter.statuses);
-    if (!mounted || filter != _filter) return; // the filter changed mid-flight
+    if (!mounted || generation != _generation) return;
     setState(() {
       _loading = false;
       if (result == null) {
@@ -92,11 +101,7 @@ class _TripsPageState extends State<TripsPage> {
     if (filter == _filter) return;
     setState(() {
       _filter = filter;
-      _trips.clear();
-      _page = 0;
-      _hasNext = true;
-      _loading = false;
-      _error = null;
+      _restart();
     });
     _loadMore();
   }

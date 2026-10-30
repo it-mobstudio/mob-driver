@@ -167,8 +167,8 @@ const Map<String, String> kHindiStrings = {
   'My vehicles': 'मेरे वाहन',
   'Could not load your vehicles': 'आपके वाहन लोड नहीं हो सके',
   'No vehicles yet': 'अभी कोई वाहन नहीं',
-  'Add your own bike, auto or truck with pictures, then go on duty with it.':
-      'फ़ोटो के साथ अपनी बाइक, ऑटो या ट्रक जोड़ें, फिर उससे ड्यूटी पर जाएँ।',
+  'Add your own bike, auto or truck with pictures, then go on duty with it. Company vehicles you’re allowed to drive are offered separately when you go on duty.':
+      'अपनी बाइक, ऑटो या ट्रक फ़ोटो के साथ जोड़ें, फिर उसी से ड्यूटी पर जाएँ। जिन कंपनी वाहनों को चलाने की आपको अनुमति है, वे ड्यूटी पर जाते समय अलग से दिखाए जाते हैं।',
   'You have {max} vehicles (the limit)':
       'आपके पास {max} वाहन हैं (अधिकतम सीमा)',
   'Add a vehicle': 'वाहन जोड़ें',
@@ -374,6 +374,7 @@ const Map<String, String> kHindiStrings = {
   'Tell us what happened': 'बताएँ क्या हुआ',
   'Photo of the problem': 'समस्या की फ़ोटो',
   'Record as not delivered': 'डिलीवर नहीं हुआ दर्ज करें',
+  'SOS': 'SOS',
   'Emergency SOS': 'आपातकालीन SOS',
   'No emergency contact is saved yet. Add one from your profile so it’s ready if you ever need it.':
       'अभी कोई आपातकालीन संपर्क सेव नहीं है। ज़रूरत के समय के लिए अपनी प्रोफ़ाइल से एक जोड़ लें।',
@@ -551,6 +552,7 @@ const Map<String, String> kHindiStrings = {
   'No vehicle available': 'कोई वाहन उपलब्ध नहीं',
   'There is no active vehicle free that your licence covers. Ask your operations team.':
       'आपके लाइसेंस वाला कोई खाली वाहन उपलब्ध नहीं है। अपनी ऑपरेशंस टीम से पूछें।',
+  'COMPANY': 'कंपनी',
   'YOURS': 'आपका',
   'You can’t go on duty yet': 'आप अभी ड्यूटी पर नहीं जा सकते',
   'Your account isn’t eligible for trips right now.':
@@ -574,11 +576,11 @@ const Map<String, String> kHindiStrings = {
   'Trip fare': 'ट्रिप किराया',
   'Unloading bonus': 'सामान उतारने का बोनस',
   'Cancel Trip': 'यात्रा रद्द करें',
-  'Looks like you are away from the location': 'लगता है आप सही जगह से दूर हैं',
-  'You are {p0} away from this stop.': 'आप इस स्टॉप से {p0} दूर हैं।',
-  'Do you still want to change the status?':
-      'क्या आप फिर भी स्टेटस बदलना चाहते हैं?',
-  'Yes, change it': 'हाँ, बदलें',
+  'You are far from here': 'आप यहाँ से दूर हैं',
+  'You are {p0} away.': 'आप {p0} दूर हैं।',
+  'Change status anyway?': 'फिर भी स्टेटस बदलें?',
+  'Yes, change': 'हाँ, बदलें',
+  'No, wait': 'नहीं, रुकें',
   "Customer's Flat no./Shop name": 'ग्राहक का फ्लैट नं./दुकान का नाम',
   'Navigate to {p0}': '{p0} तक नेविगेट करें',
   'pickup': 'पिकअप',

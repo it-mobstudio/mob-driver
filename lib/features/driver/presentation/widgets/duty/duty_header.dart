@@ -47,6 +47,7 @@ class DutyStatusRow extends StatelessWidget {
     this.busy = false,
     this.onToggle,
     this.onProfileTap,
+    this.onSos,
     this.avatar,
   });
 
@@ -55,22 +56,57 @@ class DutyStatusRow extends StatelessWidget {
   final ValueChanged<bool>? onToggle;
   final VoidCallback? onProfileTap;
 
+  final VoidCallback? onSos;
+
   /// The driver's picture or initial for the profile button (an icon if null).
   final Widget? avatar;
 
   /// Both sides get the same width, so the duty pill sits exactly in the
   /// middle of the screen.
   static const _side = 44.0;
+  static const _sideSlot = 68.0;
 
   @override
   Widget build(BuildContext context) => Row(children: [
-        const SizedBox(width: _side),
+        SizedBox(
+          width: _sideSlot,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: onSos == null ? null : _sosButton(),
+          ),
+        ),
         Expanded(
           child: Center(
               child: _DutyPill(online: online, busy: busy, onToggle: onToggle)),
         ),
-        _profileButton(),
+        SizedBox(
+          width: _sideSlot,
+          child:
+              Align(alignment: Alignment.centerRight, child: _profileButton()),
+        ),
       ]);
+
+  Widget _sosButton() => Material(
+        color: AppColors.red,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          key: const Key('sos_button'),
+          borderRadius: BorderRadius.circular(12),
+          onTap: onSos,
+          child: SizedBox(
+            width: 64,
+            height: 40,
+            child: Center(
+              child: Text(tr('SOS'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      letterSpacing: .4)),
+            ),
+          ),
+        ),
+      );
 
   Widget _profileButton() => Material(
         color: AppColors.navy,

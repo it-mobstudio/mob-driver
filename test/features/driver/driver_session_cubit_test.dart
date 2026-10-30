@@ -498,6 +498,73 @@ void main() {
     expect(repo.pings.length, before);
   });
 
+  group('answers that arrive after sign-out', () {
+    test('a late profile does not bring the old driver back or restart GPS',
+        () async {
+      repo.profileValue = fakeProfile(online: true);
+      repo.profileGate = Completer<void>();
+      final loading = cubit.load();
+      await settle(10);
+
+      cubit.reset();
+      repo.profileGate!.complete();
+      await loading;
+      await settle(80);
+
+      expect(cubit.state.profile, isNull);
+      expect(cubit.state.load, SessionLoad.initial);
+      expect(repo.pings, isEmpty);
+    });
+
+    test('a late cached snapshot is not painted into the next session',
+        () async {
+      repo.cachedProfile = fakeProfile();
+      repo.profileGate = Completer<void>();
+      final loading = cubit.load();
+      cubit.reset();
+      await settle(10);
+
+      expect(cubit.state.profile, isNull);
+      repo.profileGate!.complete();
+      await loading;
+    });
+
+    test('the next driver gets a load of their own while the old one hangs',
+        () async {
+      final slow = repo.profileGate = Completer<void>();
+      final first = cubit.load();
+      await settle(10);
+
+      cubit.reset();
+      repo.profileGate = null;
+      await cubit.load();
+
+      expect(repo.calls.where((c) => c == 'profile').length, 2);
+      expect(cubit.state.profile, isNotNull);
+      slow.complete();
+      await first;
+    });
+
+    test('a trip action finishing after sign-out changes nothing', () async {
+      final trip = Trip.fromJson(tripJson());
+      repo.activeTripValue = trip;
+      repo.profileValue = fakeProfile(online: true);
+      await cubit.load();
+      repo.actionResult =
+          (Trip.fromJson(tripJson(status: 'arrived_at_pickup')), null);
+      repo.actionGate = Completer<void>();
+      final action = cubit.arrive(trip.id);
+      await settle(10);
+
+      cubit.reset();
+      repo.actionGate!.complete();
+      await action;
+
+      expect(cubit.state.activeTrip, isNull);
+      expect(cubit.state.tripBusy, isFalse);
+    });
+  });
+
   group('onboarding', () {
     DriverProfile signedUp({String status = 'profile_incomplete'}) =>
         DriverProfile.fromJson(profileJson(

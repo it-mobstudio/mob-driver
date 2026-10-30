@@ -556,7 +556,7 @@ class _FarFromStopDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // The translated sentence, with the distance picked out in bold.
-    final sentence = tr('You are {p0} away from this stop.', {'p0': distance});
+    final sentence = tr('You are {p0} away.', {'p0': distance});
     final at = sentence.indexOf(distance);
     final base = TextStyle(color: AppColors.muted, fontSize: 16, height: 1.4);
     return Dialog(
@@ -576,7 +576,7 @@ class _FarFromStopDialog extends StatelessWidget {
                 color: AppColors.orange, size: 32),
           ),
           const SizedBox(height: 16),
-          Text(tr('Looks like you are away from the location'),
+          Text(tr('You are far from here'),
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: AppColors.ink,
@@ -599,44 +599,38 @@ class _FarFromStopDialog extends StatelessWidget {
             style: base,
           ),
           const SizedBox(height: 6),
-          Text(tr('Do you still want to change the status?'),
+          Text(tr('Change status anyway?'),
               textAlign: TextAlign.center, style: base),
           const SizedBox(height: 20),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                key: const Key('far_from_stop_wait'),
-                onPressed: () => Navigator.pop(context, false),
-                icon: const Icon(Icons.close_rounded, size: 18),
-                label: Text(tr('Not yet')),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.ink,
-                  minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  textStyle: const TextStyle(
-                      fontFamily: 'Inter', fontWeight: FontWeight.w700),
-                ),
-              ),
+          FilledButton.icon(
+            key: const Key('far_from_stop_continue'),
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.check_rounded, size: 18),
+            label: Text(tr('Yes, change')),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.button,
+              minimumSize: const Size.fromHeight(50),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              textStyle: const TextStyle(
+                  fontFamily: 'Inter', fontWeight: FontWeight.w700),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton.icon(
-                key: const Key('far_from_stop_continue'),
-                onPressed: () => Navigator.pop(context, true),
-                icon: const Icon(Icons.check_rounded, size: 18),
-                label: Text(tr('Yes, change it')),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.button,
-                  minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  textStyle: const TextStyle(
-                      fontFamily: 'Inter', fontWeight: FontWeight.w700),
-                ),
-              ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            key: const Key('far_from_stop_wait'),
+            onPressed: () => Navigator.pop(context, false),
+            icon: const Icon(Icons.close_rounded, size: 18),
+            label: Text(tr('No, wait')),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.ink,
+              minimumSize: const Size.fromHeight(50),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              textStyle: const TextStyle(
+                  fontFamily: 'Inter', fontWeight: FontWeight.w700),
             ),
-          ]),
+          ),
         ]),
       ),
     );

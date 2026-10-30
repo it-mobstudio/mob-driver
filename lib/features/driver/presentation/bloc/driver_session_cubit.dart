@@ -237,6 +237,10 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// be discarded instead of resurrecting a trip the driver just completed.
   int _epoch = 0;
 
+  int _session = 0;
+
+  bool _stale(int session) => isClosed || session != _session;
+
   void _set(DriverSessionState next) {
     if (!isClosed) emit(next);
   }
@@ -248,6 +252,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   Future<void> load({bool silent = false}) async {
     if (_loading) return;
     _loading = true;
+    final session = _session;
     final firstLoad = state.profile == null;
     if (!silent || firstLoad) {
       _set(state.copyWith(load: SessionLoad.loading, clearLoadError: true));
@@ -264,7 +269,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       // read — milliseconds) so a relaunch opens on the dashboard, not a
       // spinner. Only the profile/stats: a trip is never guessed at.
       final cached = await _repo.cachedSnapshot();
-      if (!isClosed && state.profile == null && cached.profile != null) {
+      if (!_stale(session) && state.profile == null && cached.profile != null) {
         _set(state.copyWith(
           load: SessionLoad.ready,
           profile: cached.profile,
@@ -276,8 +281,8 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     final (profile, profileFailure) = await profileCall;
     final (trip, tripFailure) = await tripCall;
     final (stats, _) = await statsCall;
+    if (_stale(session)) return;
     _loading = false;
-    if (isClosed) return;
 
     if (profile == null) {
       // A refresh that fails keeps showing what we have (fresh or cached);
@@ -326,7 +331,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   }
 
   Future<void> _refreshStats() async {
+    final session = _session;
     final (stats, _) = await _repo.stats();
+    if (_stale(session)) return;
     if (stats != null) _set(state.copyWith(stats: stats));
   }
 
@@ -339,6 +346,10 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     dutyStartedAt.value = null;
     demandHint.value = null;
     _epoch++;
+    _session++;
+    _loading = false;
+    _polling = false;
+    _syncAgain = false;
     // Personal data must not outlive the session it belonged to.
     unawaited(_repo.clearCache());
     _set(const DriverSessionState());
@@ -352,7 +363,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   Future<AppFailure?> _profileCall(
     Future<(DriverProfile?, AppFailure?)> Function() call,
   ) async {
+    final session = _session;
     final (profile, failure) = await call();
+    if (_stale(session)) return const UnknownFailure();
     if (profile == null) return failure ?? const UnknownFailure();
     _set(state.copyWith(profile: profile, load: SessionLoad.ready));
     return null;
@@ -450,9 +463,11 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// Puts the driver on duty with [vehicleId]. Returns null on success.
   Future<AppFailure?> goOnline(String vehicleId) async {
     if (state.dutyBusy) return null;
+    final session = _session;
     _set(state.copyWith(dutyBusy: true));
 
     final position = await _location.currentPosition();
+    if (_stale(session)) return const UnknownFailure();
     if (position == null) {
       _set(state.copyWith(dutyBusy: false));
       return BusinessFailure(
@@ -466,6 +481,7 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       latitude: position.latitude,
       longitude: position.longitude,
     );
+    if (_stale(session)) return const UnknownFailure();
     if (profile == null) {
       _set(state.copyWith(dutyBusy: false));
       return failure ?? const UnknownFailure();
@@ -486,9 +502,11 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// while a trip is active (`DRIVER_HAS_ACTIVE_TRIP`).
   Future<AppFailure?> goOffline() async {
     if (state.dutyBusy) return null;
+    final session = _session;
     _set(state.copyWith(dutyBusy: true));
 
     final (profile, failure) = await _repo.endDuty();
+    if (_stale(session)) return const UnknownFailure();
     if (profile == null) {
       _set(state.copyWith(dutyBusy: false));
       return failure ?? const UnknownFailure();
@@ -579,9 +597,11 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       return (null, BusinessFailure(tr('Please wait a moment…')));
     }
     _epoch++;
+    final session = _session;
     _set(state.copyWith(tripBusy: true));
 
     final (trip, failure) = await call();
+    if (_stale(session)) return (null, failure ?? const UnknownFailure());
     _epoch++;
     if (trip == null) {
       _set(state.copyWith(tripBusy: false));
@@ -612,11 +632,13 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   Future<(DeliveryOtpSent?, AppFailure?)> collectPayment(String tripId,
       {String method = 'qr'}) async {
     _epoch++;
+    final session = _session;
     final (sent, failure) = await _repo.collectPayment(tripId, method: method);
+    if (_stale(session)) return (sent, failure);
     if (sent != null || failure?.code == 'ALREADY_PAID') {
       await _refreshTrip(tripId);
     }
-    _epoch++;
+    if (!_stale(session)) _epoch++;
     return (sent, failure);
   }
 
@@ -641,7 +663,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
   /// something happened elsewhere (the customer paid, and Razorpay told the
   /// server). Null if the trip couldn't be fetched right now.
   Future<Trip?> refreshTrip(String tripId) async {
+    final session = _session;
     final (trip, _) = await _repo.trip(tripId);
+    if (_stale(session)) return null;
     if (trip != null) _applyTrip(trip);
     return trip;
   }
@@ -735,14 +759,17 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     }
     _polling = true;
     final epoch = _epoch;
+    final session = _session;
     try {
       final (trip, failure) = await _repo.activeTrip();
       // A transient network error must not look like "the trip vanished".
-      if (failure != null || epoch != _epoch || isClosed) return;
+      if (failure != null || epoch != _epoch || _stale(session)) return;
       await _reconcileActiveTrip(trip, epoch);
     } finally {
-      _polling = false;
-      if (!state.tripBusy) _flushDeferredSync();
+      if (!_stale(session)) {
+        _polling = false;
+        if (!state.tripBusy) _flushDeferredSync();
+      }
     }
   }
 
@@ -771,8 +798,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
 
     // We had a trip, the server no longer does, and the driver didn't end it
     // from this device (that path clears it itself): the company cancelled.
+    final session = _session;
     final (fresh, _) = await _repo.trip(previous.id);
-    if (epoch != _epoch || isClosed) return;
+    if (epoch != _epoch || _stale(session)) return;
     _set(state.copyWith(clearActiveTrip: true));
     _events.add(TripEndedExternally(fresh ?? previous));
     unawaited(_refreshStats());

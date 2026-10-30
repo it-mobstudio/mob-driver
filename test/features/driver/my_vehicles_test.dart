@@ -639,8 +639,12 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      expect(find.text('YOURS'), findsOneWidget,
-          reason: 'only the driver\'s own vehicle is tagged');
+      expect(find.byKey(const Key('vehicle_own_b')), findsOneWidget);
+      expect(find.byKey(const Key('vehicle_fleet_a')), findsOneWidget,
+          reason: 'a fleet vehicle says where it comes from, since it never '
+              'shows under My vehicles');
+      expect(find.text('YOURS'), findsOneWidget);
+      expect(find.text('COMPANY'), findsOneWidget);
       expect(find.text('KA01FLEET01'), findsOneWidget);
       expect(find.text('KA05MN7788'), findsOneWidget);
     });

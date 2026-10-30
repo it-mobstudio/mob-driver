@@ -182,16 +182,22 @@ class _VehiclePickerSheetState extends State<_VehiclePickerSheet> {
                                           vehicle.vehicleTypeName!,
                                         if (vehicle.categoryLabel.isNotEmpty)
                                           vehicle.categoryLabel,
+                                        if (vehicle.capacityKg case final kg?)
+                                          '${kg.toStringAsFixed(0)} kg',
                                       ].join(' · '),
                                       style: TextStyle(
                                           color: AppColors.muted, fontSize: 12),
                                     ),
                                   ]),
                             ),
-                            if (vehicle.isOwn) ...[
-                              StatusPill(tr('YOURS'), color: AppColors.blue),
-                              const SizedBox(width: 6),
-                            ],
+                            vehicle.isOwn
+                                ? StatusPill(tr('YOURS'),
+                                    key: Key('vehicle_own_${vehicle.id}'),
+                                    color: AppColors.blue)
+                                : StatusPill(tr('COMPANY'),
+                                    key: Key('vehicle_fleet_${vehicle.id}'),
+                                    color: AppColors.muted),
+                            const SizedBox(width: 6),
                             if (vehicle.isCurrent ||
                                 vehicle.id == widget.currentVehicleId)
                               StatusPill(tr('CURRENT'), color: AppColors.green),

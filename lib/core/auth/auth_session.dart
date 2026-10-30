@@ -53,11 +53,14 @@ class AuthSession extends ChangeNotifier {
     }
   }
 
+  int _generation = 0;
+
   Future<void> saveSession({
     required String accessToken,
     String? refreshToken,
     Map<String, dynamic>? userDetails,
   }) async {
+    _generation++;
     _accessToken = _clean(accessToken);
     _refreshToken = _clean(refreshToken);
     _userDetails = userDetails == null ? null : Map.of(userDetails);
@@ -74,6 +77,7 @@ class AuthSession extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    _generation++;
     _accessToken = null;
     _refreshToken = null;
     _userDetails = null;
@@ -91,6 +95,7 @@ class AuthSession extends ChangeNotifier {
   Future<String?> refreshAccessToken() async {
     final refreshToken = _refreshToken;
     if (refreshToken == null) return null;
+    final generation = _generation;
 
     // A bare client: the app's own one would try to refresh on a 401 here.
     final response = await Dio(BaseOptions(
@@ -116,6 +121,10 @@ class AuthSession extends ChangeNotifier {
     if (newAccess == null) return null;
     final newRefresh =
         _firstString(body, const ['refreshToken', 'refresh_token', 'refresh']);
+
+    if (generation != _generation) {
+      throw StateError('Session changed during token refresh.');
+    }
 
     _accessToken = newAccess;
     _refreshToken = newRefresh ?? refreshToken;

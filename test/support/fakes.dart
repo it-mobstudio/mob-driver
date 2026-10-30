@@ -297,6 +297,8 @@ class FakeDriverRepository implements DriverRepository {
   int walletEntryPageSize = 20;
   final List<String> walletEntryCalls = [];
 
+  Completer<void>? walletLaterPagesGate;
+
   // -- items ---------------------------------------------------------------
   /// The trip whose items [verifyItem]/[resetItem] edit; set by
   /// [startItemTrip].
@@ -563,6 +565,8 @@ class FakeDriverRepository implements DriverRepository {
     List<WalletKind> kinds = const [],
   }) async {
     walletEntryCalls.add('$page:${kinds.map((k) => k.wire).join(',')}');
+    final gate = page > 1 ? walletLaterPagesGate : null;
+    if (gate != null) await gate.future;
     final all = walletEntriesValue
         .where((e) => kinds.isEmpty || kinds.contains(e.kind))
         .toList();

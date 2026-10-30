@@ -722,21 +722,21 @@ class _OrderDrawer extends StatelessWidget {
       key: const Key('order_drawer'),
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(),
-      width: MediaQuery.sizeOf(context).width * .8,
+      width: MediaQuery.sizeOf(context).width,
       child: Column(children: [
         Material(
           color: AppColors.card,
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 6, 8, 6),
+              padding: const EdgeInsets.fromLTRB(20, 10, 8, 10),
               child: Row(children: [
                 Expanded(
                   child: Text(tr('Order details'),
                       style: TextStyle(
                           color: AppColors.ink,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17)),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20)),
                 ),
                 IconButton(
                     key: const Key('drawer_close'),
@@ -825,6 +825,7 @@ class _OrderDrawer extends StatelessWidget {
                       currency: trip.currency,
                     ),
                   ),
+                  const SizedBox(height: 24),
                 ]),
           ),
         ),
@@ -833,6 +834,7 @@ class _OrderDrawer extends StatelessWidget {
         if (onCancel != null)
           Material(
             color: AppColors.card,
+            elevation: 8,
             child: SafeArea(
               top: false,
               child: Padding(

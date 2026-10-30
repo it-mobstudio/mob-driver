@@ -48,31 +48,17 @@ Widget stubMap(BuildContext context, TripMapData data, double bottomPadding) =>
     ]);
 
 /// Stand-in for the dashboard's full-screen Google map, for the same reason
-/// as [stubMap]. Exposes an SOS trigger so the dialog it opens is testable —
-/// bottom-right, like the real floating button, so it isn't hidden under the
-/// dashboard's own top overlay (banners painted later in the same Stack).
-Widget stubHomeMap(BuildContext context, HomeMapData data, double bottomPadding,
-        VoidCallback onSos) =>
-    Stack(children: [
-      Align(
-        alignment: Alignment.topLeft,
-        child: Text(
-          'driver=${data.driver != null} pickup=${data.pickup != null} '
-          'route=${data.route.length}',
-          key: const Key('map'),
-        ),
+/// as [stubMap].
+Widget stubHomeMap(
+        BuildContext context, HomeMapData data, double bottomPadding) =>
+    Align(
+      alignment: Alignment.topLeft,
+      child: Text(
+        'driver=${data.driver != null} pickup=${data.pickup != null} '
+        'route=${data.route.length} city=${data.showCity ? data.city : null}',
+        key: const Key('map'),
       ),
-      Align(
-        alignment: Alignment.bottomRight,
-        child: Padding(
-          padding: EdgeInsets.only(bottom: bottomPadding + 24, right: 16),
-          child: TextButton(
-              key: const Key('map_sos'),
-              onPressed: onSos,
-              child: const Text('SOS')),
-        ),
-      ),
-    ]);
+    );
 
 class TestRig {
   TestRig()

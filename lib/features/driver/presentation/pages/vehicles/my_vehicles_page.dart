@@ -128,7 +128,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                             icon: Icons.two_wheeler_rounded,
                             title: tr('No vehicles yet'),
                             message: tr(
-                                'Add your own bike, auto or truck with pictures, then go on duty with it.'),
+                                'Add your own bike, auto or truck with pictures, then go on duty with it. Company vehicles you’re allowed to drive are offered separately when you go on duty.'),
                           )
                         : RefreshIndicator(
                             onRefresh: () => _load(quietly: true),

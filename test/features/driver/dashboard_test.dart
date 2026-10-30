@@ -619,7 +619,7 @@ void main() {
       await tester.pumpWidget(dashboardApp(rig));
       await settle(tester);
 
-      await tester.tap(find.byKey(const Key('map_sos')));
+      await tester.tap(find.byKey(const Key('sos_button')));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Seed Emergency Contact'), findsOneWidget);
@@ -638,7 +638,7 @@ void main() {
       await tester.pumpWidget(dashboardApp(rig));
       await settle(tester);
 
-      await tester.tap(find.byKey(const Key('map_sos')));
+      await tester.tap(find.byKey(const Key('sos_button')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('sos_call')), findsNothing);
