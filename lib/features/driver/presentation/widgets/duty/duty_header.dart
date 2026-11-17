@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mob_driver/core/l10n/tr.dart';
@@ -35,7 +32,7 @@ class DutyHeaderSurface extends StatelessWidget {
       );
 }
 
-/// The duty pill, centred, with the profile button on the right — shared by
+/// SOS and the duty pill on the left, the profile button on the right — shared by
 /// the map home screen and the incoming-order screen, so the two always look
 /// the same. A null [onToggle]/[onProfileTap] makes that part decorative
 /// (shown, not interactive) rather than disabled-looking: the incoming-order
@@ -67,24 +64,29 @@ class DutyStatusRow extends StatelessWidget {
   static const _sideSlot = 68.0;
 
   @override
-  Widget build(BuildContext context) => Row(children: [
-        SizedBox(
-          width: _sideSlot,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: onSos == null ? null : _sosButton(),
-          ),
-        ),
-        Expanded(
-          child: Center(
-              child: _DutyPill(online: online, busy: busy, onToggle: onToggle)),
-        ),
-        SizedBox(
-          width: _sideSlot,
-          child:
-              Align(alignment: Alignment.centerRight, child: _profileButton()),
-        ),
+  Widget build(BuildContext context) {
+    final pill = _DutyPill(online: online, busy: busy, onToggle: onToggle);
+    // With SOS: SOS and the duty pill together on the left, profile on the
+    // right. Without it (the incoming-order screen) the pill stays centred.
+    if (onSos != null) {
+      return Row(children: [
+        _sosButton(),
+        const SizedBox(width: 10),
+        Flexible(child: pill),
+        const Spacer(),
+        const SizedBox(width: 10),
+        _profileButton(),
       ]);
+    }
+    return Row(children: [
+      const SizedBox(width: _sideSlot),
+      Expanded(child: Center(child: pill)),
+      SizedBox(
+        width: _sideSlot,
+        child: Align(alignment: Alignment.centerRight, child: _profileButton()),
+      ),
+    ]);
+  }
 
   Widget _sosButton() => Material(
         color: AppColors.red,
@@ -184,120 +186,56 @@ class _DutyPill extends StatelessWidget {
       );
 }
 
-/// Working time while online, or today's earnings while not. A null [onTap]
-/// makes it decorative.
-class WorkingTimeBanner extends StatelessWidget {
-  const WorkingTimeBanner({
+/// Today's earnings, as a slim bar under the duty row. A null [onTap] makes
+/// it decorative.
+class TodayEarningsBanner extends StatelessWidget {
+  const TodayEarningsBanner({
     super.key,
-    required this.online,
-    required this.dutyStartedAt,
     required this.todayEarnings,
     this.onTap,
   });
 
-  final bool online;
-  final ValueListenable<DateTime?> dutyStartedAt;
   final double todayEarnings;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final label = TextStyle(
-        color: AppColors.muted, fontSize: 12, fontWeight: FontWeight.w500);
-    final value = TextStyle(
-        color: AppColors.ink,
-        fontWeight: FontWeight.w800,
-        fontSize: 16,
-        letterSpacing: -.2);
-    return Material(
-      color: AppColors.surfaceMuted,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        key: const Key('summary_banner'),
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-          child: Row(children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(12)),
-              child: Icon(
-                  online
-                      ? Icons.timer_outlined
-                      : Icons.account_balance_wallet_outlined,
-                  size: 19,
-                  color: AppColors.ink),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(online ? tr('Working time') : tr('Today’s earnings'),
-                        style: label),
-                    const SizedBox(height: 2),
-                    online
-                        ? ValueListenableBuilder<DateTime?>(
-                            valueListenable: dutyStartedAt,
-                            builder: (_, since, __) =>
-                                _ElapsedLabel(since: since, style: value),
-                          )
-                        : Text(formatMoneyShort(todayEarnings),
-                            key: const Key('stat_earnings_teaser'),
-                            style: value),
-                  ]),
-            ),
-            if (onTap != null) ...[
-              Text(online ? tr('Today') : tr('Stats'),
+  Widget build(BuildContext context) => Material(
+        color: AppColors.blueSoft,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          key: const Key('summary_banner'),
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+            child: Row(children: [
+              Expanded(
+                child: Text(tr('Today’s earnings'),
+                    style: TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600)),
+              ),
+              Text(formatMoneyShort(todayEarnings),
+                  key: const Key('stat_earnings_teaser'),
                   style: TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
-              Icon(Icons.chevron_right_rounded,
-                  color: AppColors.muted, size: 22),
-            ],
-          ]),
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      letterSpacing: -.2)),
+              if (onTap != null) ...[
+                const SizedBox(width: 10),
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                      color: AppColors.card, shape: BoxShape.circle),
+                  child: Icon(Icons.chevron_right_rounded,
+                      color: AppColors.ink, size: 18),
+                ),
+              ],
+            ]),
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _ElapsedLabel extends StatefulWidget {
-  const _ElapsedLabel({required this.since, required this.style});
-  final DateTime? since;
-  final TextStyle style;
-
-  @override
-  State<_ElapsedLabel> createState() => _ElapsedLabelState();
-}
-
-class _ElapsedLabelState extends State<_ElapsedLabel> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(
-        const Duration(seconds: 30), (_) => mounted ? setState(() {}) : null);
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final since = widget.since;
-    final text = since == null
-        ? '—'
-        : formatDuration(DateTime.now().difference(since).inSeconds);
-    return Text(text, key: const Key('working_time'), style: widget.style);
-  }
+      );
 }

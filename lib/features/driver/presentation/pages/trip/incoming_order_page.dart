@@ -181,10 +181,8 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
                                     photoUrl: state.profile!.photoUrl),
                           ),
                           const SizedBox(height: 10),
-                          WorkingTimeBanner(
-                            online: state.isOnline,
-                            dutyStartedAt: _cubit.dutyStartedAt,
-                            todayEarnings: state.stats.today.earnings,
+                          TodayEarningsBanner(
+                                                        todayEarnings: state.stats.today.earnings,
                           ),
                         ]),
                       ),

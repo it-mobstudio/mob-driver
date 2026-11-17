@@ -34,7 +34,7 @@ import 'package:mob_driver/features/driver/presentation/widgets/map/home_map.dar
 import 'package:mob_driver/features/driver/presentation/widgets/map/map_sheet.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/vehicle_art.dart';
 
-/// "Today": the duty toggle and the day's working time over a map centred on
+/// "Today": the duty toggle and the day's earnings over a map centred on
 /// the driver, with a sheet that shows the active trip (or the wait for one)
 /// — and the profile button, which opens the profile page: the way to
 /// everything else (trips, wallet, vehicles, documents).
@@ -179,7 +179,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final trip = state.activeTrip;
 
     return Column(children: [
-      // The pill, any warning banners, and the working-time bar sit on a
+      // The pill, any warning banners, and the earnings bar sit on a
       // solid white header — the map only starts below it, never bleeding
       // through behind them (a transparent overlay here was the bug).
       DutyHeaderSurface(
@@ -243,10 +243,8 @@ class _DashboardPageState extends State<DashboardPage> {
               ]),
             ),
             const SizedBox(height: 10),
-            WorkingTimeBanner(
-              online: state.isOnline,
-              dutyStartedAt: _cubit.dutyStartedAt,
-              todayEarnings: state.stats.today.earnings,
+            TodayEarningsBanner(
+                            todayEarnings: state.stats.today.earnings,
               onTap: () => _openStats(state.stats),
             ),
           ]),
