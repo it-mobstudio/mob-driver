@@ -49,6 +49,68 @@ class _WalletPageState extends State<WalletPage> {
   String? _error;
 
   int _generation = 0;
+  Map<String, dynamic>? _withdrawals;
+  bool _submitting = false;
+  String? _withdrawalError;
+  int _withdrawalPage = 1;
+
+  Future<void> _loadWithdrawals({int page = 1}) async {
+    final (data, error) = await _cubit.loadWithdrawals(page: page);
+    if (!mounted) return;
+    setState(() {
+      _withdrawalError = error?.message;
+      if (data != null) {
+        _withdrawals = data;
+        _withdrawalPage = page;
+      }
+    });
+  }
+
+  Future<void> _withdraw() async {
+    final amount = await showDialog<String>(
+        context: context, builder: (context) => const _WithdrawalDialog());
+    if (amount == null || !mounted) return;
+    setState(() => _submitting = true);
+    final (_, failure) = await _cubit.requestWithdrawal(amount);
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(failure?.message ??
+            'Withdrawal requested. Awaiting admin approval.')));
+    await Future.wait([_loadSummary(), _loadWithdrawals()]);
+  }
+
+  Widget _withdrawalSection() =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const SizedBox(height: 16),
+        Text(
+            'Available to withdraw: ₹${_withdrawals?['available_balance'] ?? '—'}'),
+        Text(
+            'Reserved for withdrawals: ₹${_withdrawals?['reserved_balance'] ?? '—'}'),
+        FilledButton(
+            onPressed: _submitting || _withdrawals == null ? null : _withdraw,
+            child: Text(_submitting ? 'Requesting…' : 'Request withdrawal')),
+        const Text('Withdrawals require admin approval before transfer.'),
+        if (_withdrawalError != null)
+          TextButton(
+              onPressed: _loadWithdrawals, child: Text(_withdrawalError!)),
+        for (final row in (_withdrawals?['results'] as List? ?? []))
+          ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('₹${row['amount']} · ${row['status']}'),
+              subtitle: Text(
+                  '${row['created_at']}\n${row['utr'] ?? ''} ${row['note'] ?? ''}')),
+        Row(children: [
+          if (_withdrawalPage > 1)
+            TextButton(
+                onPressed: () => _loadWithdrawals(page: _withdrawalPage - 1),
+                child: const Text('Previous requests')),
+          if (_withdrawals?['next'] != null)
+            TextButton(
+                onPressed: () => _loadWithdrawals(page: _withdrawalPage + 1),
+                child: const Text('More requests')),
+        ]),
+      ]);
 
   @override
   void initState() {
@@ -60,6 +122,7 @@ class _WalletPageState extends State<WalletPage> {
     });
     _loadSummary();
     _loadMore();
+    _loadWithdrawals();
   }
 
   @override
@@ -95,7 +158,7 @@ class _WalletPageState extends State<WalletPage> {
 
   Future<void> _refresh() async {
     setState(_restart);
-    await Future.wait([_loadSummary(), _loadMore()]);
+    await Future.wait([_loadSummary(), _loadMore(), _loadWithdrawals()]);
   }
 
   Future<void> _loadMore() async {
@@ -185,7 +248,10 @@ class _WalletPageState extends State<WalletPage> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
         itemCount: rows.length + 1,
         itemBuilder: (context, i) {
-          if (i == 0) return _Overview(summary: summary);
+          if (i == 0) {
+            return Column(
+                children: [_Overview(summary: summary), _withdrawalSection()]);
+          }
           return rows[i - 1](context);
         },
       ),
@@ -696,4 +762,48 @@ class _EntryTile extends StatelessWidget {
       ]),
     );
   }
+}
+
+class _WithdrawalDialog extends StatefulWidget {
+  const _WithdrawalDialog();
+  @override
+  State<_WithdrawalDialog> createState() => _WithdrawalDialogState();
+}
+
+class _WithdrawalDialogState extends State<_WithdrawalDialog> {
+  final _amount = TextEditingController();
+  final _form = GlobalKey<FormState>();
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+          title: const Text('Request withdrawal'),
+          content: Form(
+              key: _form,
+              child: TextFormField(
+                  controller: _amount,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Amount (INR)'),
+                  validator: (value) =>
+                      RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(value ?? '') &&
+                              (double.tryParse(value ?? '') ?? 0) >= 1
+                          ? null
+                          : 'Enter at least ₹1 with up to two decimals')),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () {
+                  if (_form.currentState!.validate()) {
+                    Navigator.pop(context, _amount.text);
+                  }
+                },
+                child: const Text('Send for approval'))
+          ]);
 }

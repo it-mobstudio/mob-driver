@@ -30,8 +30,42 @@ class DocumentsSection extends StatefulWidget {
   State<DocumentsSection> createState() => _DocumentsSectionState();
 }
 
-class _DocumentsSectionState extends State<DocumentsSection> {
+class _DocumentsSectionState extends State<DocumentsSection>
+    with WidgetsBindingObserver {
   bool _photoBusy = false;
+
+  /// The driver went off to DigiLocker: re-read the profile when they come
+  /// back, since the backend verified (or didn't) the Aadhaar meanwhile.
+  bool _awaitingDigilocker = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_awaitingDigilocker) return;
+    _awaitingDigilocker = false;
+    context.read<DriverSessionCubit>().load(silent: true);
+  }
+
+  @override
+  void didUpdateWidget(DocumentsSection old) {
+    super.didUpdateWidget(old);
+    if (old.profile.aadhar.status != KycStatus.verified &&
+        widget.profile.aadhar.status == KycStatus.verified &&
+        widget.profile.aadharViaDigilocker) {
+      _done(tr('Aadhaar verified with DigiLocker.'));
+    }
+  }
 
   void _done(String message) {
     AppHaptics.success();
@@ -42,8 +76,13 @@ class _DocumentsSectionState extends State<DocumentsSection> {
   }
 
   Future<void> _aadhar() async {
-    if (await showAadharSheet(context,
-        capture: widget.capture, current: widget.profile.aadhar)) {
+    if (await showAadharSheet(
+      context,
+      capture: widget.capture,
+      current: widget.profile.aadhar,
+      digilocker: widget.profile.digilockerEnabled,
+      onDigilockerOpened: () => _awaitingDigilocker = true,
+    )) {
       _done(tr('Aadhaar submitted for review.'));
     }
   }
@@ -87,7 +126,9 @@ class _DocumentsSectionState extends State<DocumentsSection> {
         cardKey: 'doc_aadhar',
         icon: Icons.badge_outlined,
         title: tr('Aadhaar card'),
-        hint: tr('Front and back, with the 12-digit number'),
+        hint: p.digilockerEnabled
+            ? tr('Verify instantly with DigiLocker, or upload both sides')
+            : tr('Front and back, with the 12-digit number'),
         item: p.aadhar,
         required: true,
         onOpen: _aadhar,

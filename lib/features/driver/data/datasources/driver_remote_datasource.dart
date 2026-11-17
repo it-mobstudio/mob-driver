@@ -35,6 +35,10 @@ class DriverRemoteDatasource {
         files: {'front': front, 'back': back},
       );
 
+  /// Opens a DigiLocker session; `authorization_url` is where the driver
+  /// signs in and consents.
+  Future<Json> startDigilocker() => _post(DriverEndpoints.aadhaarDigilocker);
+
   Future<Json> submitLicence({
     required String number,
     required String expiryDate,
@@ -77,6 +81,11 @@ class DriverRemoteDatasource {
     required double longitude,
   }) =>
       _post(DriverEndpoints.location, _coordinates(latitude, longitude));
+
+  Future<Json> withdrawals({int page = 1}) =>
+      _get('${DriverEndpoints.wallet}/withdrawals', query: {'page': page});
+  Future<Json> requestWithdrawal(String amount) =>
+      _post('${DriverEndpoints.wallet}/withdrawals', {'amount': amount});
 
   // -- wallet ----------------------------------------------------------------
 

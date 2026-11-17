@@ -5,6 +5,7 @@ abstract final class DriverEndpoints {
   static const me = '/driver/me';
   static const photo = '/driver/me/photo';
   static const aadhaar = '/driver/me/kyc/aadhar';
+  static const aadhaarDigilocker = '/driver/me/kyc/aadhar/digilocker';
   static const licence = '/driver/me/kyc/dl';
   static const police = '/driver/me/kyc/police';
   static const stats = '/driver/stats';

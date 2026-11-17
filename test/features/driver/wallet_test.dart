@@ -158,6 +158,25 @@ void main() {
     });
   });
 
+  rigTest('withdrawals validate amount and send request for approval',
+      (tester, rig) async {
+    await openWallet(tester, rig);
+    await tester.ensureVisible(find.text('Request withdrawal'));
+    await tester.tap(find.text('Request withdrawal'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), '0.50');
+    await tester.tap(find.text('Send for approval'));
+    await tester.pumpAndSettle();
+    expect(
+        find.text('Enter at least ₹1 with up to two decimals'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), '100.00');
+    await tester.tap(find.text('Send for approval'));
+    await tester.pumpAndSettle();
+    expect(rig.repo.calls, contains('requestWithdrawal:100.00'));
+    expect(find.text('Withdrawal requested. Awaiting admin approval.'),
+        findsOneWidget);
+  });
+
   group('the statement', () {
     rigTest('rows are grouped by day, with direction, kind and running balance',
         (tester, rig) async {
@@ -178,11 +197,13 @@ void main() {
       expect(find.text('YESTERDAY'), findsOneWidget);
       expect(textOf(tester, 'wallet_amount_a'), '+₹68.00');
       expect(textOf(tester, 'wallet_amount_b'), '−₹40.00');
-      expect(textOf(tester, 'wallet_amount_c'), '+₹25.00');
-      expect(textOf(tester, 'wallet_amount_d'), '−₹10.00');
       expect(find.text('Delivery to Indiranagar'), findsOneWidget);
       expect(find.textContaining('Ref UTR998877'), findsOneWidget);
       expect(find.text('Bal ₹260.00'), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+      await tester.pumpAndSettle();
+      expect(textOf(tester, 'wallet_amount_c'), '+₹25.00');
+      expect(textOf(tester, 'wallet_amount_d'), '−₹10.00');
     });
 
     rigTest('money in is green and money out is red', (tester, rig) async {

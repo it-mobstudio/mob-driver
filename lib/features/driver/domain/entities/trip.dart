@@ -392,6 +392,9 @@ class Trip extends Equatable {
     this.items = const [],
     this.stops = const [],
     this.driverEarning,
+    this.platformFee,
+    this.platformFeePercent,
+    this.paymentMethod,
     this.cancellationReason,
     this.cancelledBy,
     this.assignedAt,
@@ -448,6 +451,9 @@ class Trip extends Equatable {
       items: asMapList(json['items']).map(TripItem.fromJson).toList(),
       stops: asMapList(json['stops']).map(TripWaypoint.fromJson).toList(),
       driverEarning: readDouble(json['driver_earning']),
+      platformFee: readDouble(json['platform_fee']),
+      platformFeePercent: readInt(json['platform_fee_percent']),
+      paymentMethod: readString(json['payment_method']),
       cancellationReason: readString(json['cancellation_reason']),
       cancelledBy: readString(json['cancelled_by']),
       assignedAt: readDateTime(json['assigned_at']),
@@ -463,7 +469,7 @@ class Trip extends Equatable {
   final TripStatus status;
   final String? referenceId;
 
-  /// Our order number, `OD20260925000123`.
+  /// Our order number, `TR20260925000123`.
   final String? orderNumber;
 
   /// The company's note for the driver about the whole order.
@@ -566,6 +572,14 @@ class Trip extends Equatable {
 
   /// What this trip paid the driver (set once it's completed).
   final double? driverEarning;
+
+  /// The company's cut of [totalFare]: total − fee + bonuses = [driverEarning].
+  final double? platformFee;
+  final int? platformFeePercent;
+
+  /// How a paid COD fare was taken: `cash` (in the driver's hands, debited
+  /// from their wallet) or `qr`. Null for prepaid or unpaid trips.
+  final String? paymentMethod;
   final String? cancellationReason;
 
   /// `company`, `driver` or `system`.
@@ -578,6 +592,19 @@ class Trip extends Equatable {
   final DateTime? createdAt;
 
   bool get isCod => paymentMode == PaymentMode.cod;
+
+  /// The company's cut, from the backend — or, from an older backend that
+  /// doesn't send it, worked out the same way from the amounts it does send.
+  double? get effectivePlatformFee {
+    if (platformFee != null) return platformFee;
+    final total = totalFare, earning = driverEarning;
+    if (total == null || earning == null) return null;
+    final fee = total + (bonusFare ?? 0) + (extraBonusFare ?? 0) - earning;
+    return fee < 0 ? 0 : (fee * 100).round() / 100;
+  }
+
+  bool get paidInCash => isCod && isPaid && paymentMethod == 'cash';
+  bool get paidByQr => isCod && isPaid && paymentMethod == 'qr';
 
   /// The driver must collect the fare from the customer (scan-to-pay QR)
   /// before the delivery can be finished.
@@ -709,6 +736,9 @@ class Trip extends Equatable {
         items,
         stops,
         driverEarning,
+        platformFee,
+        platformFeePercent,
+        paymentMethod,
         arrivedAtPickupAt,
         startedAt,
         completedAt,

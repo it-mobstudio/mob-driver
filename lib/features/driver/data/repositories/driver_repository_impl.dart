@@ -88,6 +88,16 @@ class DriverRepositoryImpl implements DriverRepository {
           number: number, front: front, back: back)));
 
   @override
+  Future<(String?, AppFailure?)> startDigilocker() => _guard(() async {
+        final url =
+            readString((await _remote.startDigilocker())['authorization_url']);
+        if (url == null || url.isEmpty) {
+          throw StateError('No DigiLocker link was returned.');
+        }
+        return url;
+      });
+
+  @override
   Future<(DriverProfile?, AppFailure?)> submitLicence({
     required String number,
     required DateTime expiry,
@@ -173,6 +183,15 @@ class DriverRepositoryImpl implements DriverRepository {
     if (failure == null) await clearCache();
     return failure;
   }
+
+  @override
+  Future<(Map<String, dynamic>?, AppFailure?)> withdrawals({int page = 1}) =>
+      _guard(() => _remote.withdrawals(page: page));
+
+  @override
+  Future<(Map<String, dynamic>?, AppFailure?)> requestWithdrawal(
+          String amount) =>
+      _guard(() => _remote.requestWithdrawal(amount));
 
   @override
   Future<(WalletSummary?, AppFailure?)> wallet() =>

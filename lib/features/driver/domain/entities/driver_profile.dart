@@ -203,6 +203,8 @@ class DriverProfile extends Equatable {
     this.city,
     this.drivingCity,
     this.drivingCities = const [],
+    this.digilockerEnabled = false,
+    this.aadharViaDigilocker = false,
     this.indemnityVersion,
     this.indemnityText,
     this.indemnityPolicyUrl,
@@ -280,6 +282,9 @@ class DriverProfile extends Equatable {
       drivingCities: (options['driving_cities'] is List)
           ? (options['driving_cities'] as List).whereType<String>().toList()
           : const [],
+      digilockerEnabled: readBool(options['digilocker_enabled']),
+      aadharViaDigilocker:
+          readString(aadhar['verification_method']) == 'digilocker',
       indemnityVersion: readString(indemnity['version']),
       indemnityText: readString(indemnity['text']),
       indemnityPolicyUrl: readString(indemnity['policy_url']),
@@ -317,6 +322,12 @@ class DriverProfile extends Equatable {
   final String? city;
   final String? drivingCity;
   final List<String> drivingCities;
+
+  /// The backend can verify Aadhaar through DigiLocker (no scans to upload).
+  final bool digilockerEnabled;
+
+  /// The Aadhaar was verified through DigiLocker rather than a reviewed scan.
+  final bool aadharViaDigilocker;
   final String? indemnityVersion;
   final String? indemnityText;
   final String? indemnityPolicyUrl;
@@ -402,6 +413,8 @@ class DriverProfile extends Equatable {
         city: city,
         drivingCity: drivingCity,
         drivingCities: drivingCities,
+        digilockerEnabled: digilockerEnabled,
+        aadharViaDigilocker: aadharViaDigilocker,
         indemnityVersion: indemnityVersion,
         indemnityText: indemnityText,
         indemnityPolicyUrl: indemnityPolicyUrl,
@@ -435,6 +448,8 @@ class DriverProfile extends Equatable {
         city,
         drivingCity,
         drivingCities,
+        digilockerEnabled,
+        aadharViaDigilocker,
         indemnityVersion,
         indemnityText,
         indemnityPolicyUrl,

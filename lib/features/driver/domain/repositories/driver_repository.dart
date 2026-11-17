@@ -54,6 +54,10 @@ abstract interface class DriverRepository {
     required CapturedPhoto front,
     required CapturedPhoto back,
   });
+
+  /// The DigiLocker page to open for Aadhaar verification. The backend marks
+  /// the Aadhaar verified once the driver finishes there; re-read the profile.
+  Future<(String?, AppFailure?)> startDigilocker();
   Future<(DriverProfile?, AppFailure?)> submitLicence({
     required String number,
     required DateTime expiry,
@@ -64,6 +68,9 @@ abstract interface class DriverRepository {
 
   /// Closes the account. Null on success.
   Future<AppFailure?> deleteAccount();
+
+  Future<(Map<String, dynamic>?, AppFailure?)> withdrawals({int page = 1});
+  Future<(Map<String, dynamic>?, AppFailure?)> requestWithdrawal(String amount);
 
   // -- wallet ----------------------------------------------------------------
   Future<(WalletSummary?, AppFailure?)> wallet();

@@ -528,6 +528,30 @@ class FakeDriverRepository implements DriverRepository {
   }
 
   @override
+  Future<(Map<String, dynamic>?, AppFailure?)> withdrawals(
+      {int page = 1}) async {
+    calls.add('withdrawals:$page');
+    return (<String, dynamic>{'results': <dynamic>[], 'count': 0}, null);
+  }
+
+  @override
+  Future<(Map<String, dynamic>?, AppFailure?)> requestWithdrawal(
+      String amount) async {
+    calls.add('requestWithdrawal:$amount');
+    return (<String, dynamic>{'amount': amount, 'status': 'pending'}, null);
+  }
+
+  String? digilockerUrl = 'https://digilocker.example/auth';
+
+  @override
+  Future<(String?, AppFailure?)> startDigilocker() async {
+    calls.add('startDigilocker');
+    return digilockerUrl == null
+        ? (null, const UnknownFailure())
+        : (digilockerUrl, null);
+  }
+
+  @override
   Future<(DriverProfile?, AppFailure?)> submitLicence({
     required String number,
     required DateTime expiry,

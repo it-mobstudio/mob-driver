@@ -758,4 +758,31 @@ const Map<String, String> kKannadaStrings = {
       'ನಿಮ್ಮ ವಾಹನದ ಸಂಖ್ಯೆ ಮತ್ತು ಒಂದು ಸ್ಪಷ್ಟ ಫೋಟೋ ಸೇರಿಸಿ.',
   'Tap your vehicle to edit its details or photo.':
       'ವಿವರಗಳು ಅಥವಾ ಫೋಟೋ ಬದಲಿಸಲು ನಿಮ್ಮ ವಾಹನವನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ.',
+  'Verify instantly with DigiLocker — sign in with your Aadhaar-linked mobile number. No photos needed.':
+      'DigiLocker ಮೂಲಕ ತಕ್ಷಣ ಪರಿಶೀಲಿಸಿ — ಆಧಾರ್‌ಗೆ ಲಿಂಕ್ ಆಗಿರುವ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯಿಂದ ಸೈನ್ ಇನ್ ಮಾಡಿ. ಫೋಟೋಗಳು ಬೇಕಿಲ್ಲ.',
+  'Verify with DigiLocker':
+      'DigiLocker ಮೂಲಕ ಪರಿಶೀಲಿಸಿ',
+  'or upload photos':
+      'ಅಥವಾ ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ',
+  'Couldn’t open DigiLocker. Try again.':
+      'DigiLocker ತೆರೆಯಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+  'Aadhaar verified with DigiLocker.':
+      'DigiLocker ಮೂಲಕ ಆಧಾರ್ ಪರಿಶೀಲಿಸಲಾಗಿದೆ.',
+  'Verify instantly with DigiLocker, or upload both sides':
+      'DigiLocker ಮೂಲಕ ತಕ್ಷಣ ಪರಿಶೀಲಿಸಿ, ಅಥವಾ ಎರಡೂ ಬದಿಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ',
+  'Status': 'ಸ್ಥಿತಿ',
+  'Completed on': 'ಪೂರ್ಣಗೊಂಡಿದ್ದು',
+  'Date': 'ದಿನಾಂಕ',
+  'Vehicle': 'ವಾಹನ',
+  'Distance ({p0})': 'ದೂರ ({p0})',
+  'Time ({p0})': 'ಸಮಯ ({p0})',
+  'Surge': 'ಸರ್ಜ್',
+  'Platform fee': 'ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ',
+  'Platform fee ({p0}%)': 'ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ ({p0}%)',
+  'Cash': 'ನಗದು',
+  'Paid via QR': 'QR ಮೂಲಕ ಪಾವತಿ',
+  'Payment': 'ಪಾವತಿ',
+  'Cash collected': 'ನಗದು ಪಡೆಯಲಾಗಿದೆ',
+  'Debited from wallet': 'ವಾಲೆಟ್‌ನಿಂದ ಕಡಿತ',
+  'Collected via QR': 'QR ಮೂಲಕ ಪಡೆಯಲಾಗಿದೆ',
 };

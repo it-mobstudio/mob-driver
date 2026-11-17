@@ -898,33 +898,101 @@ class _FinishedSummary extends StatelessWidget {
   const _FinishedSummary({required this.trip});
   final Trip trip;
 
+  String _money(double? amount) => formatMoney(amount, currency: trip.currency);
+
+  /// `KA01SEED0009 · Bike`, or whichever half is known.
+  String? get _vehicle {
+    final parts = [trip.vehicleRegistration, trip.vehicleTypeName]
+        .whereType<String>()
+        .where((p) => p.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  /// When it ended (or, failing that, when it was booked).
+  DateTime? get _when =>
+      trip.completedAt ?? trip.cancelledAt ?? trip.createdAt;
+
+  /// Cash in hand / QR / prepaid, in the driver's words.
+  String get _paymentLabel {
+    if (!trip.isCod) return tr('Prepaid');
+    if (trip.paidInCash) return tr('Cash');
+    if (trip.paidByQr) return tr('Paid via QR');
+    return tr('Cash on delivery');
+  }
+
   @override
-  Widget build(BuildContext context) => Column(children: [
-        const Divider(height: 22),
-        InfoRow(tr('Base fare'),
-            formatMoney(trip.baseFare, currency: trip.currency)),
-        InfoRow(tr('Distance'),
-            formatMoney(trip.distanceFare, currency: trip.currency)),
+  Widget build(BuildContext context) {
+    final completed = trip.status == TripStatus.completed;
+    final fee = completed ? trip.effectivePlatformFee : null;
+    final feePercent = trip.platformFeePercent;
+    final cashCollected = trip.amountToCollect ?? trip.totalFare;
+    final vehicle = _vehicle;
+
+    return Column(children: [
+      const Divider(height: 22),
+      // -- the trip --------------------------------------------------------
+      InfoRow(tr('Status'), trip.status.label,
+          key: const Key('trip_summary_status'),
+          bold: true,
+          valueColor: completed
+              ? AppColors.green
+              : trip.status == TripStatus.cancelled
+                  ? AppColors.red
+                  : null),
+      if (_when != null)
+        InfoRow(completed ? tr('Completed on') : tr('Date'),
+            formatDateTime(_when!.toLocal())),
+      if (vehicle != null) InfoRow(tr('Vehicle'), vehicle),
+      InfoRow(tr('Order'), trip.displayReference),
+      const Divider(height: 22),
+      // -- the fare, then how it became the driver's earning ---------------
+      InfoRow(tr('Base fare'), _money(trip.baseFare)),
+      InfoRow(
+          trip.distanceMeters == null
+              ? tr('Distance')
+              : tr('Distance ({p0})',
+                  {'p0': formatDistance(trip.distanceMeters)}),
+          _money(trip.distanceFare)),
+      InfoRow(
+          trip.durationSeconds == null
+              ? tr('Time')
+              : tr('Time ({p0})', {'p0': formatDuration(trip.durationSeconds)}),
+          _money(trip.timeFare)),
+      if ((trip.surgeMultiplier ?? 1) > 1)
+        InfoRow(tr('Surge'), '× ${trip.surgeMultiplier!.toStringAsFixed(2)}'),
+      InfoRow(tr('Total'), _money(trip.totalFare), bold: true),
+      if (fee != null && fee > 0)
         InfoRow(
-            tr('Time'), formatMoney(trip.timeFare, currency: trip.currency)),
-        if ((trip.bonusFare ?? 0) > 0)
-          InfoRow(tr('Unloading bonus'),
-              formatMoney(trip.bonusFare, currency: trip.currency),
-              valueColor: AppColors.orange),
-        if (trip.hasExtraBonus)
-          InfoRow(tr('Extra loading bonus'),
-              formatMoney(trip.extraBonusFare, currency: trip.currency),
-              valueColor: AppColors.orange),
-        InfoRow(
-            tr('Total'), formatMoney(trip.totalFare, currency: trip.currency),
-            bold: true),
-        if (trip.driverEarning != null)
-          InfoRow(tr('You earned'),
-              formatMoney(trip.driverEarning, currency: trip.currency),
-              bold: true, valueColor: AppColors.green),
-        if (trip.status == TripStatus.cancelled &&
-            (trip.cancellationReason ?? '').isNotEmpty)
-          InfoRow(tr('Reason'), trip.cancellationReason!),
-        InfoRow(tr('Order'), trip.displayReference),
-      ]);
+            feePercent == null
+                ? tr('Platform fee')
+                : tr('Platform fee ({p0}%)', {'p0': feePercent}),
+            '−${_money(fee)}',
+            key: const Key('trip_summary_fee'),
+            valueColor: AppColors.red),
+      // Bonuses are paid in full on top of the driver's share of the fare.
+      if ((trip.bonusFare ?? 0) > 0)
+        InfoRow(tr('Unloading bonus'), '+${_money(trip.bonusFare)}',
+            valueColor: AppColors.orange),
+      if (trip.hasExtraBonus)
+        InfoRow(tr('Extra loading bonus'), '+${_money(trip.extraBonusFare)}',
+            valueColor: AppColors.orange),
+      if (trip.driverEarning != null)
+        InfoRow(tr('You earned'), _money(trip.driverEarning),
+            bold: true, valueColor: AppColors.green),
+      const Divider(height: 22),
+      // -- the money ---------------------------------------------------------
+      InfoRow(tr('Payment'), _paymentLabel,
+          key: const Key('trip_summary_payment')),
+      if (trip.paidInCash) ...[
+        InfoRow(tr('Cash collected'), _money(cashCollected)),
+        InfoRow(tr('Debited from wallet'), '−${_money(cashCollected)}',
+            valueColor: AppColors.red),
+      ] else if (trip.paidByQr)
+        InfoRow(tr('Collected via QR'), _money(cashCollected)),
+      if (trip.status == TripStatus.cancelled &&
+          (trip.cancellationReason ?? '').isNotEmpty)
+        InfoRow(tr('Reason'), trip.cancellationReason!),
+    ]);
+  }
 }

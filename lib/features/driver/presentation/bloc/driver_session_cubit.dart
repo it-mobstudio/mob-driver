@@ -385,6 +385,9 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
       _profileCall(
           () => _repo.submitAadhar(number: number, front: front, back: back));
 
+  /// The DigiLocker page for Aadhaar verification (see DriverRepository).
+  Future<(String?, AppFailure?)> startDigilocker() => _repo.startDigilocker();
+
   Future<AppFailure?> submitLicence({
     required String number,
     required DateTime expiry,
@@ -408,6 +411,13 @@ class DriverSessionCubit extends Cubit<DriverSessionState> {
     if (failure == null) reset();
     return failure;
   }
+
+  Future<(Map<String, dynamic>?, AppFailure?)> loadWithdrawals(
+          {int page = 1}) =>
+      _repo.withdrawals(page: page);
+  Future<(Map<String, dynamic>?, AppFailure?)> requestWithdrawal(
+          String amount) =>
+      _repo.requestWithdrawal(amount);
 
   // -- wallet ----------------------------------------------------------------
 

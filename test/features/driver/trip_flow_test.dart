@@ -563,6 +563,43 @@ void main() {
       expect(rig.repo.calls, contains('trip:${done.id}'));
     });
 
+    rigTest(
+        'a finished cash trip reconciles: units, platform fee, payment, vehicle',
+        (tester, rig) async {
+      final done = Trip.fromJson({
+        ...tripJson(status: 'completed', paymentStatus: 'paid'),
+        'payment_mode': 'cod',
+        'payment_method': 'cash',
+        'distance_meters': 3700,
+        'duration_seconds': 540,
+        'base_fare': '30.00',
+        'distance_fare': '37.06',
+        'time_fare': '9.25',
+        'total_fare': '76.31',
+        'amount_to_collect': '76.31',
+        'bonus_fare': null,
+        'extra_bonus_fare': null,
+        'driver_earning': '61.05',
+        'platform_fee': '15.26',
+        'platform_fee_percent': 20,
+        'completed_at': '2026-10-08T16:10:00Z',
+      });
+      rig.repo.tripsById[done.id] = done;
+      await tester.pumpWidget(rig.app('/driver/trip/${done.id}'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Distance (3.7 km)'), findsOneWidget);
+      expect(find.text('Time (9 min)'), findsOneWidget);
+      expect(find.text('Platform fee (20%)'), findsOneWidget);
+      expect(find.textContaining('15.26'), findsOneWidget);
+      expect(find.text('Cash'), findsOneWidget);
+      expect(find.text('Cash collected'), findsOneWidget);
+      expect(find.text('Debited from wallet'), findsOneWidget);
+      expect(find.text('Completed on'), findsOneWidget);
+      expect(find.textContaining('KA01SEED0000'), findsWidgets);
+    });
+
     rigTest('an unknown trip shows an error with retry', (tester, rig) async {
       await tester.pumpWidget(rig.app('/driver/trip/nope'));
       await tester.pump();

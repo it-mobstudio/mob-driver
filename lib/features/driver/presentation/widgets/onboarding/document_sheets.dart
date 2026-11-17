@@ -12,6 +12,7 @@ import 'package:mob_driver/features/driver/domain/entities/driver_profile.dart';
 import 'package:mob_driver/features/driver/presentation/bloc/driver_session_cubit.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/onboarding/form_fields.dart';
 import 'package:mob_driver/features/driver/presentation/widgets/photo_widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// The frame every bottom sheet in the driver app shares: rounded top, a grab
 /// handle, a title, and content that scrolls above the keyboard.
@@ -93,8 +94,17 @@ Future<bool> showAadharSheet(
   BuildContext context, {
   PhotoCapture capture = const DevicePhotoCapture(),
   KycItem? current,
+  bool digilocker = false,
+  VoidCallback? onDigilockerOpened,
 }) =>
-    _showSheet(context, _AadharSheet(capture: capture, current: current));
+    _showSheet(
+        context,
+        _AadharSheet(
+          capture: capture,
+          current: current,
+          digilocker: digilocker,
+          onDigilockerOpened: onDigilockerOpened,
+        ));
 
 /// Driving licence: number, expiry and the card's front (and, optionally, back).
 Future<bool> showLicenceSheet(
@@ -199,9 +209,21 @@ mixin _SheetState<T extends StatefulWidget> on State<T> {
 // -- Aadhaar -----------------------------------------------------------------
 
 class _AadharSheet extends StatefulWidget {
-  const _AadharSheet({required this.capture, this.current});
+  const _AadharSheet({
+    required this.capture,
+    this.current,
+    this.digilocker = false,
+    this.onDigilockerOpened,
+  });
   final PhotoCapture capture;
   final KycItem? current;
+
+  /// Offer instant verification through DigiLocker above the upload form.
+  final bool digilocker;
+
+  /// Called once the DigiLocker page is open in the browser, so the caller
+  /// can re-read the profile when the driver comes back.
+  final VoidCallback? onDigilockerOpened;
 
   @override
   State<_AadharSheet> createState() => _AadharSheetState();
@@ -220,6 +242,62 @@ class _AadharSheetState extends State<_AadharSheet> with _SheetState {
     _number.dispose();
     super.dispose();
   }
+
+  bool _openingDigilocker = false;
+
+  /// Asks the backend for a DigiLocker session and opens it in the browser.
+  /// The backend verifies the Aadhaar when the driver finishes there.
+  Future<void> _verifyWithDigilocker() async {
+    setState(() {
+      _openingDigilocker = true;
+      error = null;
+    });
+    final (url, failure) =
+        await context.read<DriverSessionCubit>().startDigilocker();
+    if (!mounted) return;
+    final uri = url == null ? null : Uri.tryParse(url);
+    final opened = uri != null &&
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!mounted) return;
+    if (!opened) {
+      AppHaptics.error();
+      setState(() {
+        _openingDigilocker = false;
+        error = failure?.message ?? tr('Couldn’t open DigiLocker. Try again.');
+      });
+      return;
+    }
+    widget.onDigilockerOpened?.call();
+    Navigator.pop(context, false);
+  }
+
+  Widget _digilockerOption() =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        InfoBanner(
+          text: tr(
+              'Verify instantly with DigiLocker — sign in with your Aadhaar-linked mobile number. No photos needed.'),
+          icon: Icons.verified_user_outlined,
+          color: AppColors.green,
+        ),
+        const SizedBox(height: 12),
+        PrimaryButton(
+          key: const Key('aadhar_digilocker'),
+          label: tr('Verify with DigiLocker'),
+          loading: _openingDigilocker,
+          onPressed: busy ? null : _verifyWithDigilocker,
+        ),
+        const SizedBox(height: 18),
+        Row(children: [
+          Expanded(child: Divider(color: AppColors.line)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(tr('or upload photos'),
+                style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
+          ),
+          Expanded(child: Divider(color: AppColors.line)),
+        ]),
+        const SizedBox(height: 14),
+      ]);
 
   String get _digits => _number.text.replaceAll(' ', '');
   bool get _ready => _numberError == null && _front != null && _back != null;
@@ -244,6 +322,7 @@ class _AadharSheetState extends State<_AadharSheet> with _SheetState {
             'Photograph both sides clearly. We only keep the last 4 digits of the number.'),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _RejectionNote(widget.current),
+          if (widget.digilocker) _digilockerOption(),
           FormTextField(
             key: const Key('field_aadhar_number'),
             controller: _number,
@@ -253,7 +332,7 @@ class _AadharSheetState extends State<_AadharSheet> with _SheetState {
             keyboardType: TextInputType.number,
             inputFormatters: const [GroupedDigitsFormatter()],
             textInputAction: TextInputAction.done,
-            enabled: !busy,
+            enabled: !busy && !_openingDigilocker,
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 14),
